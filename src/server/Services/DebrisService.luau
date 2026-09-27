@@ -1,11 +1,20 @@
 --!strict
 -- Debris rocks between meteors (spec §5.7). The rocks are placed by hand in
 -- Workspace.Map.Debris; this service only gives them HP and respawns them.
+--
+-- Like the meteor, debris adapts to the lobby (spec §5.3): each rock is sized for
+-- one active player's pickaxe, picked at random, so it takes that player about
+-- Config.Debris.Hp hits. A lone veteran among newcomers still gets rocks worth
+-- swinging at, and newcomers still get rocks they break in a few hits. Rocks pick
+-- again when they respawn, and untouched rocks re-pick every RerollInterval so a
+-- player who just joined or upgraded soon finds rocks sized for them. Tougher
+-- rocks get tinted, glowing flecks.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 
 local DebrisService = Knit.CreateService({
 	Name = "DebrisService",
@@ -13,6 +22,25 @@ local DebrisService = Knit.CreateService({
 })
 
 local NodeService
+local ActivityService
+
+-- Fleck tint by the tier a rock is sized for; tiers 1-2 keep the flecks as built
+local TIER_TINTS: { [number]: Color3 } = {
+	[3] = Color3.fromRGB(90, 200, 220),
+	[4] = Color3.fromRGB(90, 200, 220),
+	[5] = Color3.fromRGB(190, 110, 255),
+	[6] = Color3.fromRGB(190, 110, 255),
+	[7] = Color3.fromRGB(255, 200, 70),
+	[8] = Color3.fromRGB(255, 200, 70),
+}
+
+type Rock = {
+	Part: BasePart,
+	Id: number,
+	Flecks: { [BasePart]: { Color: Color3, Material: Enum.Material } },
+}
+
+local rocks: { Rock } = {}
 
 local function setVisible(rock: BasePart, visible: boolean)
 	rock.Transparency = if visible then 0 else 1
@@ -26,36 +54,81 @@ local function setVisible(rock: BasePart, visible: boolean)
 	end
 end
 
-function DebrisService:_track(rock: BasePart)
-	local id
-	id = NodeService:Register(rock, {
+-- The pickaxe tier of a random active player (tier 1 when nobody is active).
+local function pickTier(): number
+	local tiers = ActivityService:GetActiveTiers()
+	return if #tiers > 0 then tiers[math.random(1, #tiers)] else 1
+end
+
+-- Sizes a rock for a pickaxe tier and tints its flecks to match.
+local function size(rock: Rock, tier: number)
+	rock.Part:SetAttribute("Tier", tier)
+	NodeService:SetMaxHp(rock.Id, Config.Debris.Hp * MiningPower.power(tier))
+	local tint = TIER_TINTS[tier]
+	for fleck, original in rock.Flecks do
+		fleck.Color = tint or original.Color
+		fleck.Material = if tint then Enum.Material.Neon else original.Material
+	end
+end
+
+function DebrisService:_track(part: BasePart)
+	local flecks = {}
+	for _, child in part:GetDescendants() do
+		if child:IsA("BasePart") then
+			flecks[child] = { Color = child.Color, Material = child.Material }
+		end
+	end
+
+	local rock: Rock
+	local id = NodeService:Register(part, {
 		Kind = "Debris",
 		MaxHp = Config.Debris.Hp,
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
 		OnBroken = function()
-			setVisible(rock, false)
+			setVisible(part, false)
 			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()
-				if rock.Parent then
-					NodeService:SetMaxHp(id, Config.Debris.Hp)
-					setVisible(rock, true)
+				if part.Parent then
+					size(rock, pickTier())
+					setVisible(part, true)
 				end
 			end)
 		end,
 	})
+	rock = { Part = part, Id = id, Flecks = flecks }
+	size(rock, pickTier())
+	table.insert(rocks, rock)
+end
+
+-- Re-picks the tier of rocks nobody has hit yet.
+function DebrisService:_reroll()
+	for _, rock in rocks do
+		local hp, maxHp = NodeService:GetHp(rock.Id)
+		if hp > 0 and hp >= maxHp then
+			size(rock, pickTier())
+		end
+	end
 end
 
 function DebrisService:KnitInit()
 	NodeService = Knit.GetService("NodeService")
+	ActivityService = Knit.GetService("ActivityService")
 end
 
 function DebrisService:KnitStart()
 	local folder = workspace:WaitForChild("Map"):WaitForChild("Debris")
-	for _, rock in folder:GetChildren() do
-		if rock:IsA("BasePart") then
-			self:_track(rock)
+	for _, part in folder:GetChildren() do
+		if part:IsA("BasePart") then
+			self:_track(part)
 		end
 	end
+
+	task.spawn(function()
+		while true do
+			task.wait(Config.Debris.RerollInterval)
+			self:_reroll()
+		end
+	end)
 end
 
 return DebrisService

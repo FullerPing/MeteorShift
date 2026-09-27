@@ -107,22 +107,8 @@ local function pickType(): Config.MeteorType
 end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
--- In Studio, ServerStorage's DevFakeTiers attribute ("1,1,8") adds pretend active
--- players so sizing and rescaling can be tested solo.
 local function serverPower(): number
-	local PlayerStateService = Knit.GetService("PlayerStateService")
-	local ActivityService = Knit.GetService("ActivityService")
-	local tiers = {}
-	for _, player in ActivityService:GetActivePlayers() do
-		table.insert(tiers, PlayerStateService:GetPickaxe(player).Tier)
-	end
-	local fake = ServerStorage:GetAttribute("DevFakeTiers")
-	if RunService:IsStudio() and typeof(fake) == "string" then
-		for tier in string.gmatch(fake, "%d+") do
-			table.insert(tiers, tonumber(tier) :: number)
-		end
-	end
-	return MiningPower.serverPower(tiers)
+	return MiningPower.serverPower(Knit.GetService("ActivityService"):GetActiveTiers())
 end
 
 -- Moves a part and the decorative parts parented under it together.

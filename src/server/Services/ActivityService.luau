@@ -8,6 +8,8 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -36,6 +38,23 @@ function ActivityService:GetActivePlayers(): { Player }
 		end
 	end
 	return list
+end
+
+-- Pickaxe tiers of the active players. In Studio, ServerStorage's DevFakeTiers
+-- attribute ("1,1,8") adds pretend active players so sizing can be tested solo.
+function ActivityService:GetActiveTiers(): { number }
+	local PlayerStateService = Knit.GetService("PlayerStateService")
+	local tiers = {}
+	for _, player in self:GetActivePlayers() do
+		table.insert(tiers, PlayerStateService:GetPickaxe(player).Tier)
+	end
+	local fake = ServerStorage:GetAttribute("DevFakeTiers")
+	if RunService:IsStudio() and typeof(fake) == "string" then
+		for tier in string.gmatch(fake, "%d+") do
+			table.insert(tiers, tonumber(tier) :: number)
+		end
+	end
+	return tiers
 end
 
 function ActivityService.Client:Ping(player: Player)

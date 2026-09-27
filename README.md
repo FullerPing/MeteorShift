@@ -18,7 +18,7 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Per-player ore drops straight into your backpack
 - Core unlocks when 60% of the crust is broken, cooling timer of 2:30
 - Server-side contribution tally (core hits count double), core rewards with a 5-shard floor, a contribution share and +10/+6/+3 for the top three, announced to the server
-- Debris rocks in town that respawn, yielding ore at a quarter of the meteor rate
+- Debris rocks in town that respawn, yielding ore at a quarter of the meteor rate. Each rock is sized for a random active player's pickaxe (about 4 hits for them), so a lone veteran still gets rocks worth hitting next to newcomers. Rocks for tier 3+ pickaxes have glowing tinted flecks, and untouched rocks re-pick every minute
 
 **Week 2, the home loop**
 - Saved profiles (schema v1) with a session lock, autosave every 60 s, save on leave and shutdown

@@ -105,6 +105,14 @@ function NodeService:Rescale(id: number, ratio: number)
 	target.Dirty = false
 end
 
+function NodeService:GetHp(id: number): (number, number)
+	local target = targets[id]
+	if not target then
+		return 0, 0
+	end
+	return target.Hp, target.Def.MaxHp
+end
+
 function NodeService:IsAlive(id: number): boolean
 	local target = targets[id]
 	return target ~= nil and target.Hp > 0
