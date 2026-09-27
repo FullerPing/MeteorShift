@@ -10,11 +10,13 @@ local UserInputService = game:GetService("UserInputService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local player = Players.LocalPlayer
 
 local MiningController = Knit.CreateController({
 	Name = "MiningController",
+	Hit = Signal.new(), -- (part) after the server accepts one of your swings
 })
 
 local NodeService
@@ -237,6 +239,7 @@ function MiningController:_swing(tool: Tool)
 	task.spawn(function()
 		local ok, damage = NodeService:Swing(id)
 		if ok and damage then
+			MiningController.Hit:Fire(target)
 			floater(
 				position,
 				Format.number(damage),

@@ -1,6 +1,7 @@
 --!strict
--- Health bars above meteor ore clusters, the core and debris rocks. Bars show on
--- anything damaged, and on everything within reach so you can pick a target.
+-- Health bars above meteor ore clusters, the core and debris rocks. A cluster or
+-- rock only gets a bar on your screen after you have hit it yourself. The core's
+-- big bar is shared: everyone sees it once the core is exposed (or when close).
 -- HP comes from the Hp / MaxHp attributes NodeService replicates at ~10 Hz.
 
 local Players = game:GetService("Players")
@@ -17,6 +18,9 @@ local NodeHealthController = Knit.CreateController({
 })
 
 local NEAR_DISTANCE = 26
+
+-- Parts the local player has landed a hit on
+local hitByMe: { [BasePart]: boolean } = {}
 
 type Bar = {
 	Part: BasePart,
@@ -60,6 +64,7 @@ local function remove(part: BasePart)
 		return
 	end
 	bars[part] = nil
+	hitByMe[part] = nil
 	for _, connection in bar.Connections do
 		connection:Disconnect()
 	end
@@ -133,6 +138,11 @@ local function add(part: BasePart)
 
 	table.insert(bar.Connections, part:GetAttributeChangedSignal("Hp"):Connect(function()
 		update(bar)
+		-- A respawned debris rock comes back at full HP: forget the old hits
+		local hp, maxHp = part:GetAttribute("Hp"), part:GetAttribute("MaxHp")
+		if typeof(hp) == "number" and typeof(maxHp) == "number" and hp >= maxHp then
+			hitByMe[part] = nil
+		end
 	end))
 	table.insert(bar.Connections, part:GetAttributeChangedSignal("MaxHp"):Connect(function()
 		update(bar)
@@ -172,6 +182,10 @@ local function watch(container: Instance)
 end
 
 function NodeHealthController:KnitStart()
+	Knit.GetController("MiningController").Hit:Connect(function(part: BasePart)
+		hitByMe[part] = true
+	end)
+
 	local map = workspace:WaitForChild("Map")
 	watch(map:WaitForChild("Crater"):WaitForChild("ActiveMeteor"))
 	watch(map:WaitForChild("Debris"))
@@ -184,7 +198,7 @@ function NodeHealthController:KnitStart()
 		end)
 	end
 
-	-- Show bars on damaged targets and on everything near you
+	-- Your own targets show their bar; the core's bar is for everyone
 	local accumulator = 0
 	RunService.Heartbeat:Connect(function(dt)
 		accumulator += dt
@@ -197,12 +211,13 @@ function NodeHealthController:KnitStart()
 		for part, bar in bars do
 			local hp = part:GetAttribute("Hp")
 			local maxHp = part:GetAttribute("MaxHp")
-			local alive = typeof(hp) == "number" and hp > 0 and part.Transparency < 1
-			local damaged = alive and typeof(maxHp) == "number" and hp < maxHp
-			local near = alive and root ~= nil and (part.Position - root.Position).Magnitude < NEAR_DISTANCE
-			local show = alive and (bar.IsCore or damaged or near)
+			local alive = typeof(hp) == "number" and typeof(maxHp) == "number" and hp > 0 and part.Transparency < 1
+			local show
 			if bar.IsCore then
-				show = alive and part:GetAttribute("Unlocked") == true or (alive and near)
+				local near = root ~= nil and (part.Position - root.Position).Magnitude < NEAR_DISTANCE
+				show = alive and (part:GetAttribute("Unlocked") == true or near)
+			else
+				show = alive and hitByMe[part] == true and hp < maxHp
 			end
 			bar.Gui.Enabled = show
 		end

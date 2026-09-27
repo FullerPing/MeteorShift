@@ -30,9 +30,9 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Plots start empty. When you join, a production line is placed on your plot: hopper, conveyor, refinery, collection post. It is removed when you leave.
 - Ore rides the conveyor while the line runs. The line makes min(conveyor rate, refinery rate) bars per second and stops when the collection post is full.
 - All four stations are upgradable from a prompt on each (F): hopper and collection post raise capacity, conveyor and refinery raise speed. Higher levels also cost Core Shards.
-- Bigger plots (52 x 52) on a wider ring, with the outer wall pushed out and reshaped into a natural slope
+- Bigger plots (52 x 52) on a wider ring, with the outer wall pushed out and reshaped into a rough, rocky slope
 - New meteor look: a dark core with glowing veins and embers, crust made of ore clusters with metal crystals and glowing bits
-- Health bars over meteor clusters, the core and debris rocks (shown when damaged or when you are close)
+- Health bars over meteor clusters and debris rocks appear only after you hit them, and only on your screen. The core has a big shared bar everyone sees once it is exposed.
 - Profiles migrate from schema v1 to v2 (station levels, one hopper and one collection post)
 
 ## Layout
