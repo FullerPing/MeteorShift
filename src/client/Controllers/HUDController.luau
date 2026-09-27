@@ -1,5 +1,5 @@
 --!strict
--- HUD built with Fusion (spec §10, early version):
+-- HUD built with Fusion (spec §10):
 --   * countdown / cooling timer and the sky countdown over the crater
 --   * cash, shards, backpack meter (red when full), bars, hopper and production line
 --   * "While you were away" panel (spec §6.4)
@@ -26,13 +26,13 @@ local HUDController = Knit.CreateController({
 
 local FONT = Enum.Font.FredokaOne
 local WHITE = Color3.fromRGB(255, 255, 255)
-local PANEL = Color3.fromRGB(24, 22, 30)
-local ORANGE = Color3.fromRGB(255, 150, 60)
-local SHARD = Color3.fromRGB(130, 220, 255)
+local ORANGE = Color3.fromRGB(255, 174, 52)
+local SHARD = Color3.fromRGB(66, 190, 255)
 local RED = Color3.fromRGB(235, 70, 70)
-local GREEN = Color3.fromRGB(110, 220, 120)
-local CASH = Color3.fromRGB(120, 235, 120)
-local BAR = Color3.fromRGB(225, 220, 210)
+local GREEN = Color3.fromRGB(105, 240, 103)
+local CASH = Color3.fromRGB(255, 207, 55)
+local BAR = Color3.fromRGB(232, 171, 89)
+local OUTLINE = Color3.fromRGB(31, 22, 19)
 
 type Scope = Fusion.Scope<typeof(Fusion)>
 
@@ -42,9 +42,9 @@ end
 
 local function stroke(scope: Scope, transparency: number?)
 	return scope:New("UIStroke")({
-		Color = Color3.fromRGB(0, 0, 0),
-		Thickness = 2,
-		Transparency = transparency or 0.4,
+		Color = OUTLINE,
+		Thickness = 3,
+		Transparency = transparency or 0,
 		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 	})
 end
@@ -54,7 +54,8 @@ local function label(scope: Scope, props: { [any]: any })
 		BackgroundTransparency = 1,
 		Font = FONT,
 		TextColor3 = WHITE,
-		TextStrokeTransparency = 0.5,
+		TextStrokeColor3 = OUTLINE,
+		TextStrokeTransparency = 0,
 		TextScaled = false,
 	}
 	for key, value in props do
@@ -63,20 +64,41 @@ local function label(scope: Scope, props: { [any]: any })
 	return scope:New("TextLabel")(base)
 end
 
-local function pill(scope: Scope, order: number, color: Color3, text: Fusion.UsedAs<string>, size: number)
+local function stat(
+	scope: Scope,
+	order: number,
+	symbol: string,
+	color: Color3,
+	value: Fusion.UsedAs<string>,
+	caption: Fusion.UsedAs<string>
+)
 	return scope:New("Frame")({
 		LayoutOrder = order,
-		Size = UDim2.new(1, 0, 0, size + 12),
-		BackgroundColor3 = PANEL,
-		BackgroundTransparency = 0.25,
+		Size = UDim2.new(1, 0, 0, 60),
+		BackgroundTransparency = 1,
 		[Children] = {
-			corner(scope, 10),
-			stroke(scope),
 			label(scope, {
-				Size = UDim2.fromScale(1, 1),
-				Text = text,
-				TextSize = size,
+				Name = "Icon",
+				Position = UDim2.fromOffset(1, 2),
+				Size = UDim2.fromOffset(43, 43),
+				Rotation = -8,
+				Text = symbol,
+				TextSize = 37,
 				TextColor3 = color,
+			}),
+			label(scope, {
+				Position = UDim2.fromOffset(55, 0),
+				Size = UDim2.new(1, -55, 0, 39),
+				Text = value,
+				TextSize = 33,
+				TextXAlignment = Enum.TextXAlignment.Left,
+			}),
+			label(scope, {
+				Position = UDim2.fromOffset(56, 34),
+				Size = UDim2.new(1, -56, 0, 18),
+				Text = caption,
+				TextSize = 14,
+				TextXAlignment = Enum.TextXAlignment.Left,
 			}),
 		},
 	})
@@ -97,22 +119,29 @@ local function bar(scope: Scope, props: {
 		Size = props.Size,
 		AnchorPoint = props.AnchorPoint or Vector2.zero,
 		LayoutOrder = props.LayoutOrder or 0,
-		BackgroundColor3 = Color3.fromRGB(12, 10, 16),
-		BackgroundTransparency = 0.2,
+		BackgroundTransparency = 1,
 		[Children] = {
-			corner(scope, 8),
-			stroke(scope),
 			scope:New("Frame")({
-				Size = scope:Computed(function(use)
-					return UDim2.fromScale(math.clamp(use(animated), 0, 1), 1)
-				end),
-				BackgroundColor3 = props.Color,
-				[Children] = { corner(scope, 8) },
+				Position = UDim2.new(0, 0, 1, -4),
+				Size = UDim2.new(1, 0, 0, 4),
+				BackgroundColor3 = OUTLINE,
+				BackgroundTransparency = 0.3,
+				[Children] = {
+					corner(scope, 2),
+					scope:New("Frame")({
+						Size = scope:Computed(function(use)
+							return UDim2.fromScale(math.clamp(use(animated), 0, 1), 1)
+						end),
+						BackgroundColor3 = props.Color,
+						[Children] = { corner(scope, 2) },
+					}),
+				},
 			}),
 			label(scope, {
-				Size = UDim2.fromScale(1, 1),
+				Size = UDim2.new(1, 0, 1, -4),
 				Text = props.Text,
-				TextSize = 16,
+				TextSize = 13,
+				TextXAlignment = Enum.TextXAlignment.Left,
 				ZIndex = 2,
 			}),
 		},
@@ -286,8 +315,20 @@ function HUDController:KnitStart()
 	-- Sky countdown over the crater (the board itself is saved in the map)
 	task.spawn(function()
 		local board = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("SkyTimer"):WaitForChild("Board")
-		scope:Hydrate(board:WaitForChild("Title"))({ Text = timerTitle })
-		scope:Hydrate(board:WaitForChild("Time"))({ Text = timerText, TextColor3 = timerColor })
+		scope:Hydrate(board:WaitForChild("Title"))({
+			Text = timerTitle,
+			Font = FONT,
+			TextColor3 = ORANGE,
+			TextStrokeColor3 = OUTLINE,
+			TextStrokeTransparency = 0,
+		})
+		scope:Hydrate(board:WaitForChild("Time"))({
+			Text = timerText,
+			Font = FONT,
+			TextColor3 = timerColor,
+			TextStrokeColor3 = OUTLINE,
+			TextStrokeTransparency = 0,
+		})
 	end)
 
 	local carried = scope:Computed(function(use)
@@ -309,95 +350,95 @@ function HUDController:KnitStart()
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
 		Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
-			-- Top-centre timer
+			-- Floating event clock
 			scope:New("Frame")({
 				Name = "Timer",
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 8),
-				Size = UDim2.fromOffset(260, 74),
-				BackgroundColor3 = PANEL,
-				BackgroundTransparency = 0.25,
+				Position = UDim2.new(0.5, 0, 0, 10),
+				Size = UDim2.fromOffset(250, 66),
+				BackgroundTransparency = 1,
 				[Children] = {
-					corner(scope, 14),
-					stroke(scope),
 					label(scope, {
-						Position = UDim2.fromOffset(0, 6),
-						Size = UDim2.new(1, 0, 0, 22),
+						Position = UDim2.fromOffset(0, 4),
+						Size = UDim2.new(1, 0, 0, 21),
 						Text = timerTitle,
-						TextSize = 20,
+						TextSize = 18,
 						TextColor3 = ORANGE,
 					}),
 					label(scope, {
-						Position = UDim2.fromOffset(0, 28),
+						Position = UDim2.fromOffset(0, 22),
 						Size = UDim2.new(1, 0, 0, 40),
 						Text = timerText,
-						TextSize = 38,
+						TextSize = 36,
 						TextColor3 = timerColor,
 					}),
 				},
 			}),
 
-			-- Left: currencies, backpack and home
+			-- Open stat stack, like the reference HUD's left rail
 			scope:New("Frame")({
 				Name = "Stats",
-				AnchorPoint = Vector2.new(0, 0.5),
-				Position = UDim2.new(0, 12, 0.5, 0),
-				Size = UDim2.fromOffset(240, 280),
+				Position = UDim2.fromOffset(14, 70),
+				Size = UDim2.fromOffset(232, 310),
 				BackgroundTransparency = 1,
 				[Children] = {
-					scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
-					pill(
+					scope:New("UIListLayout")({ Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }),
+					stat(
 						scope,
 						1,
+						"$",
 						CASH,
 						scope:Computed(function(use)
 							local s = use(playerState)
-							return Format.cash(if s then s.cash else 0)
+							return Format.number(if s then s.cash else 0)
 						end),
-						26
+						"CASH"
 					),
-					pill(
+					stat(
 						scope,
 						2,
+						"◆",
 						SHARD,
 						scope:Computed(function(use)
 							local s = use(playerState)
-							return "◆ " .. Format.number(if s then s.shards else 0) .. " Core Shards"
+							return Format.number(if s then s.shards else 0)
 						end),
-						20
+						"CORE SHARDS"
 					),
-					bar(scope, {
-						LayoutOrder = 3,
-						Position = UDim2.new(),
-						Size = UDim2.new(1, 0, 0, 30),
-						Fill = scope:Computed(function(use)
-							return use(carried) / math.max(use(capacity), 1)
-						end),
-						Color = scope:Computed(function(use)
-							return if use(full) then RED else Color3.fromRGB(90, 160, 235)
-						end),
-						Text = scope:Computed(function(use)
-							local text = "Backpack " .. Format.number(use(carried)) .. " / " .. Format.number(use(capacity))
-							return if use(full) then text .. "  FULL" else text
-						end),
-					}),
-					pill(
+					stat(
 						scope,
-						4,
+						3,
+						"▲",
+						Color3.fromRGB(177, 125, 81),
+						scope:Computed(function(use)
+							return Format.number(use(carried))
+						end),
+						scope:Computed(function(use)
+							return "ORE  "
+								.. Format.number(use(carried))
+								.. "/"
+								.. Format.number(use(capacity))
+								.. (if use(full) then "  FULL" else "")
+						end)
+					),
+					stat(
+						scope,
+						5,
+						"≡",
 						BAR,
 						scope:Computed(function(use)
 							local s = use(playerState)
-							if not s or s.bars == 0 then
-								return "No bars yet"
-							end
-							return Format.number(s.bars) .. " bars · worth " .. Format.cash(s.barValue)
+							return Format.number(if s then s.bars else 0)
 						end),
-						17
+						scope:Computed(function(use)
+							local s = use(playerState)
+							return "BARS  ·  " .. Format.cash(if s then s.barValue else 0)
+						end)
 					),
 					bar(scope, {
-						LayoutOrder = 5,
+						LayoutOrder = 6,
 						Position = UDim2.new(),
-						Size = UDim2.new(1, 0, 0, 26),
+						Size = UDim2.new(1, -8, 0, 18),
 						Fill = scope:Computed(function(use)
 							local s = use(playerState)
 							return if s then s.line.hopper.amount / math.max(s.line.hopper.capacity, 1) else 0
@@ -412,8 +453,8 @@ function HUDController:KnitStart()
 						end),
 					}),
 					label(scope, {
-						LayoutOrder = 6,
-						Size = UDim2.new(1, 0, 0, 40),
+						LayoutOrder = 7,
+						Size = UDim2.new(1, 0, 0, 34),
 						Text = scope:Computed(function(use)
 							local s = use(playerState)
 							if not s then
@@ -429,7 +470,7 @@ function HUDController:KnitStart()
 								Format.number(line.collector.capacity)
 							)
 						end),
-						TextSize = 15,
+						TextSize = 13,
 						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
@@ -441,15 +482,18 @@ function HUDController:KnitStart()
 				Name = "WhileAway",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.fromOffset(360, 250),
-				BackgroundColor3 = PANEL,
-				BackgroundTransparency = 0.1,
+				Size = UDim2.fromOffset(390, 260),
+				BackgroundColor3 = Color3.fromRGB(187, 137, 91),
 				Visible = scope:Computed(function(use)
 					return use(whileAway) ~= nil
 				end),
 				[Children] = {
 					corner(scope, 16),
-					stroke(scope, 0.2),
+					stroke(scope),
+					scope:New("UIGradient")({
+						Rotation = 90,
+						Color = ColorSequence.new(Color3.fromRGB(221, 177, 118), Color3.fromRGB(133, 94, 64)),
+					}),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 12),
 						Size = UDim2.new(1, 0, 0, 34),
@@ -493,36 +537,28 @@ function HUDController:KnitStart()
 						AnchorPoint = Vector2.new(0.5, 1),
 						Position = UDim2.new(0.5, 0, 1, -12),
 						Size = UDim2.fromOffset(140, 36),
-						BackgroundColor3 = ORANGE,
+						BackgroundColor3 = CASH,
 						Font = FONT,
 						Text = "Nice!",
 						TextSize = 20,
-						TextColor3 = WHITE,
+						TextColor3 = OUTLINE,
 						[OnEvent("Activated")] = function()
 							whileAway:set(nil)
 						end,
-						[Children] = { corner(scope, 10) },
+						[Children] = { corner(scope, 10), stroke(scope) },
 					}),
 				},
 			}),
 
-			-- Right: event panel (core HP, lock, rank, top three)
+			-- Event information stays at the edge of the play view
 			scope:New("Frame")({
 				Name = "EventPanel",
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -12, 0, 90),
-				Size = UDim2.fromOffset(250, 200),
-				BackgroundColor3 = PANEL,
-				BackgroundTransparency = 0.25,
+				Position = UDim2.new(1, -18, 0, 82),
+				Size = UDim2.fromOffset(238, 184),
+				BackgroundTransparency = 1,
 				Visible = inEvent,
 				[Children] = {
-					corner(scope, 12),
-					stroke(scope),
-					scope:New("UIPadding")({
-						PaddingLeft = UDim.new(0, 10),
-						PaddingRight = UDim.new(0, 10),
-						PaddingTop = UDim.new(0, 8),
-					}),
 					scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 					label(scope, {
 						LayoutOrder = 1,
@@ -538,7 +574,8 @@ function HUDController:KnitStart()
 							local needed = math.ceil(s.crustTotal * 0.6)
 							return string.format("Core locked: crust %d/%d", s.crustBroken, needed)
 						end),
-						TextSize = 18,
+						TextSize = 16,
+						TextXAlignment = Enum.TextXAlignment.Right,
 						TextColor3 = scope:Computed(function(use)
 							local s = use(meteorState)
 							return if s and s.unlocked then ORANGE else WHITE
@@ -547,7 +584,7 @@ function HUDController:KnitStart()
 					bar(scope, {
 						LayoutOrder = 2,
 						Position = UDim2.new(),
-						Size = UDim2.new(1, 0, 0, 26),
+						Size = UDim2.new(1, 0, 0, 22),
 						Fill = scope:Computed(function(use)
 							return use(coreHp) / math.max(use(coreMaxHp), 1e-6)
 						end),
@@ -571,8 +608,9 @@ function HUDController:KnitStart()
 							end
 							return string.format("You: #%d of %d  ·  %s ore", s.rank, s.players, Format.number(s.ore))
 						end),
-						TextSize = 17,
+						TextSize = 16,
 						TextColor3 = GREEN,
+						TextXAlignment = Enum.TextXAlignment.Right,
 					}),
 					label(scope, {
 						LayoutOrder = 4,
@@ -588,8 +626,8 @@ function HUDController:KnitStart()
 							end
 							return table.concat(lines, "\n")
 						end),
-						TextSize = 16,
-						TextXAlignment = Enum.TextXAlignment.Left,
+						TextSize = 14,
+						TextXAlignment = Enum.TextXAlignment.Right,
 						TextYAlignment = Enum.TextYAlignment.Top,
 					}),
 				},
@@ -624,15 +662,18 @@ function HUDController:KnitStart()
 				Name = "Results",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.55),
-				Size = UDim2.fromOffset(320, 220),
-				BackgroundColor3 = PANEL,
-				BackgroundTransparency = 0.15,
+				Size = UDim2.fromOffset(370, 245),
+				BackgroundColor3 = Color3.fromRGB(187, 137, 91),
 				Visible = scope:Computed(function(use)
 					return use(results) ~= nil
 				end),
 				[Children] = {
 					corner(scope, 16),
-					stroke(scope, 0.2),
+					stroke(scope),
+					scope:New("UIGradient")({
+						Rotation = 90,
+						Color = ColorSequence.new(Color3.fromRGB(221, 177, 118), Color3.fromRGB(133, 94, 64)),
+					}),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 10),
 						Size = UDim2.new(1, 0, 0, 34),
@@ -677,15 +718,15 @@ function HUDController:KnitStart()
 						AnchorPoint = Vector2.new(0.5, 1),
 						Position = UDim2.new(0.5, 0, 1, -10),
 						Size = UDim2.fromOffset(120, 34),
-						BackgroundColor3 = ORANGE,
+						BackgroundColor3 = CASH,
 						Font = FONT,
 						Text = "Nice!",
 						TextSize = 20,
-						TextColor3 = WHITE,
+						TextColor3 = OUTLINE,
 						[OnEvent("Activated")] = function()
 							results:set(nil)
 						end,
-						[Children] = { corner(scope, 10) },
+						[Children] = { corner(scope, 10), stroke(scope) },
 					}),
 				},
 			}),
@@ -722,7 +763,7 @@ function HUDController:KnitStart()
 						scope:New("TextButton")({
 							Name = "DevSkip",
 							Size = UDim2.new(1, 0, 0, 30),
-							BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+							BackgroundColor3 = Color3.fromRGB(164, 118, 82),
 							Font = FONT,
 							Text = "[Studio] Meteor now",
 							TextSize = 16,
@@ -733,12 +774,12 @@ function HUDController:KnitStart()
 							[OnEvent("Activated")] = function()
 								MeteorService:DevSkipCountdown()
 							end,
-							[Children] = { corner(scope, 8) },
+							[Children] = { corner(scope, 8), stroke(scope) },
 						}),
 						scope:New("TextButton")({
 							Name = "DevAway",
 							Size = UDim2.new(1, 0, 0, 30),
-							BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+							BackgroundColor3 = Color3.fromRGB(164, 118, 82),
 							Font = FONT,
 							Text = "[Studio] Away 1 hour",
 							TextSize = 16,
@@ -746,7 +787,7 @@ function HUDController:KnitStart()
 							[OnEvent("Activated")] = function()
 								RefineryService:DevSimulateAway(3600)
 							end,
-							[Children] = { corner(scope, 8) },
+							[Children] = { corner(scope, 8), stroke(scope) },
 						}),
 					},
 				})

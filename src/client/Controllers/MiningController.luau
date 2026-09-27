@@ -173,7 +173,8 @@ local function floater(position: Vector3, text: string, color: Color3, size: num
 	label.Text = text
 	label.TextColor3 = color
 	label.TextSize = size
-	label.TextStrokeTransparency = 0.2
+	label.TextStrokeColor3 = Color3.fromRGB(31, 22, 19)
+	label.TextStrokeTransparency = 0
 	label.Parent = gui
 	anchor.Parent = workspace.CurrentCamera
 

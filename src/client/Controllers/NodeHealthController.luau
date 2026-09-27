@@ -32,8 +32,8 @@ type Bar = {
 
 local bars: { [BasePart]: Bar } = {}
 
-local GREEN = Color3.fromRGB(110, 220, 120)
-local YELLOW = Color3.fromRGB(245, 205, 80)
+local GREEN = Color3.fromRGB(105, 240, 103)
+local YELLOW = Color3.fromRGB(255, 210, 72)
 local RED = Color3.fromRGB(235, 80, 70)
 
 local function colorFor(fraction: number): Color3
@@ -51,7 +51,7 @@ local function update(bar: Bar)
 	end
 	local fraction = math.clamp(hp / maxHp, 0, 1)
 	bar.Fill.Size = UDim2.fromScale(fraction, 1)
-	bar.Fill.BackgroundColor3 = if bar.IsCore then Color3.fromRGB(255, 140, 50) else colorFor(fraction)
+	bar.Fill.BackgroundColor3 = if bar.IsCore then Color3.fromRGB(255, 174, 52) else colorFor(fraction)
 	if bar.Label then
 		-- HP runs on hidden Mining Power (spec §5.3), so show how much is left
 		bar.Label.Text = string.format("%d%%", math.ceil(fraction * 100))
@@ -89,16 +89,17 @@ local function add(part: BasePart)
 
 	local back = Instance.new("Frame")
 	back.Size = UDim2.fromScale(1, 1)
-	back.BackgroundColor3 = Color3.fromRGB(18, 16, 22)
-	back.BackgroundTransparency = 0.15
+	back.BackgroundColor3 = Color3.fromRGB(66, 49, 37)
+	back.BackgroundTransparency = 0.05
 	back.BorderSizePixel = 0
 	back.Parent = gui
 	local corner = Instance.new("UICorner")
 	corner.CornerRadius = UDim.new(0.5, 0)
 	corner.Parent = back
 	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 1.5
-	stroke.Transparency = 0.3
+	stroke.Color = Color3.fromRGB(31, 22, 19)
+	stroke.Thickness = 3
+	stroke.Transparency = 0
 	stroke.Parent = back
 
 	local fill = Instance.new("Frame")
@@ -117,7 +118,8 @@ local function add(part: BasePart)
 		text.Font = Enum.Font.FredokaOne
 		text.TextScaled = true
 		text.TextColor3 = Color3.new(1, 1, 1)
-		text.TextStrokeTransparency = 0.3
+		text.TextStrokeColor3 = Color3.fromRGB(31, 22, 19)
+		text.TextStrokeTransparency = 0
 		text.ZIndex = 2
 		text.Parent = back
 		label = text
