@@ -1,12 +1,14 @@
 --!strict
--- Hopper deposits, refineries (online ticking + offline catch-up) and bar
--- collection on each player's plot (spec §6.2 - §6.4).
+-- The plot production line: hopper -> conveyor -> refinery -> collection post
+-- (spec §6, reworked). Handles deposits, the online tick, offline catch-up,
+-- collecting bars and keeping the station displays and upgrade prompts current.
 --
--- Every plot in Workspace.Map.Plots has, saved in the place:
---   Hopper            Model with an Intake part (touch to deposit) and a Display
---   Refineries        Refinery1..Refinery6, each with a Machine model, an
---                     OutputBin part (touch to collect) and a Display
--- Displays are BillboardGuis named "Display" holding a TextLabel named "Text".
+-- The line is cloned onto a plot by PlotService when someone claims it. Each
+-- station is a Model with a StationId attribute ("hopper", "conveyor",
+-- "refinery", "collector") containing:
+--   Display   BillboardGui with a TextLabel "Text"
+--   Upgrade   ProximityPrompt (handled by UpgradeService)
+-- plus Hopper.Intake (touch to deposit) and CollectionPost.Bin (touch to collect).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,15 +19,12 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 
-local LOCKED_TRANSPARENCY = 0.8
-
 local RefineryService = Knit.CreateService({
 	Name = "RefineryService",
 	Client = {
 		Deposited = Knit.CreateSignal(), -- (amount, hopperFull)
 		Collected = Knit.CreateSignal(), -- (bars)
-		-- (report { seconds, capped, bars, oreLeft })
-		WhileAway = Knit.CreateSignal(),
+		WhileAway = Knit.CreateSignal(), -- (report)
 		Notice = Knit.CreateSignal(), -- (text)
 	},
 })
@@ -35,17 +34,21 @@ local PlotService
 local PlayerStateService
 
 local touchCooldown: { [Player]: { [string]: number } } = {}
+local blockedBy: { [Player]: Refining.Blocked } = {}
 
-local function sum(t: { [string]: number }): number
-	local total = 0
-	for _, v in t do
-		total += v
-	end
-	return total
-end
+local sum = Refining.sum
 
 local function formatRate(rate: number): string
 	return if rate < 100 then string.format("%g", rate) else Format.number(rate)
+end
+
+local function station(stations: Model, id: string): Instance?
+	for _, child in stations:GetChildren() do
+		if child:GetAttribute("StationId") == id then
+			return child
+		end
+	end
+	return nil
 end
 
 local function setDisplay(container: Instance?, text: string)
@@ -56,91 +59,90 @@ local function setDisplay(container: Instance?, text: string)
 	end
 end
 
-local function setLocked(machine: Instance, locked: boolean)
-	for _, part in machine:GetDescendants() do
-		if part:IsA("BasePart") then
-			local base = part:GetAttribute("BaseTransparency")
-			if base == nil then
-				base = part.Transparency
-				part:SetAttribute("BaseTransparency", base)
-			end
-			part.Transparency = if locked then math.max(base :: number, LOCKED_TRANSPARENCY) else base :: number
-		elseif part:IsA("Light") or part:IsA("ParticleEmitter") or part:IsA("Fire") or part:IsA("Smoke") then
-			(part :: any).Enabled = not locked
-		end
+local function priceText(level: Config.Level): string
+	local text = Format.cash(level.Cost)
+	if level.Shards > 0 then
+		text ..= " + " .. level.Shards .. " ◆"
+	end
+	return text
+end
+
+local function setPrompt(container: Instance?, stationId: string, currentLevel: number)
+	local prompt = container and container:FindFirstChild("Upgrade", true)
+	if not prompt or not prompt:IsA("ProximityPrompt") then
+		return
+	end
+	local levels = Config.Home.Stations[stationId].Levels
+	local nextLevel = levels[currentLevel + 1]
+	if nextLevel then
+		prompt.ActionText = "Upgrade to Lv " .. (currentLevel + 1)
+		prompt.ObjectText = priceText(nextLevel)
+		prompt:SetAttribute("Maxed", false)
+	else
+		prompt.ActionText = "Max level"
+		prompt.ObjectText = Config.Home.Stations[stationId].Name
+		prompt:SetAttribute("Maxed", true)
 	end
 end
 
-local function refineryModels(plot: Model): { Instance }
-	local list = {}
-	local folder = plot:FindFirstChild("Refineries")
-	if folder then
-		for index = 1, Config.Home.MaxRefineryPads + 1 do
-			local model = folder:FindFirstChild("Refinery" .. index)
-			if model then
-				list[index] = model
-			end
-		end
-	end
-	return list
-end
-
--- Brings the plot's hopper and refinery machines in line with the owner's data.
-function RefineryService:RefreshPlot(player: Player?, plot: Model)
-	local data = if player then PlayerStateService:Get(player) else nil
-	local hopper = plot:FindFirstChild("Hopper")
-
-	if not data then
-		setDisplay(hopper, "Hopper")
-		for index, model in refineryModels(plot) do
-			local machine = model:FindFirstChild("Machine")
-			if machine then
-				setLocked(machine, index > 1)
-			end
-			setDisplay(model, if index == 1 then "Refinery" else "Locked")
-		end
+-- Brings the owner's station displays, prompts and conveyor state up to date.
+function RefineryService:RefreshPlot(player: Player)
+	local data = PlayerStateService:Get(player)
+	local stations = PlotService:GetStations(player)
+	if not data or not stations then
 		return
 	end
 
-	local capacity = PlayerStateService:GetHopperCapacity(player :: Player)
-	setDisplay(hopper, string.format("Hopper\n%s / %s ore", Format.number(sum(data.hopper)), Format.number(capacity)))
+	local s = data.stations
+	local hopper = station(stations, "hopper")
+	local conveyor = station(stations, "conveyor")
+	local refinery = station(stations, "refinery")
+	local collector = station(stations, "collector")
 
-	for index, model in refineryModels(plot) do
-		local refinery = data.refineries[index]
-		local machine = model:FindFirstChild("Machine")
-		if machine then
-			setLocked(machine, refinery == nil)
-		end
-		if refinery then
-			setDisplay(
-				model,
-				string.format(
-					"Refinery Lv %d · %s/s\n%s bars ready",
-					refinery.level,
-					formatRate(Refining.throughput(refinery)),
-					Format.number(sum(refinery.bin))
-				)
-			)
-		else
-			local slot = Config.Home.RefinerySlots[index]
-			local price = if slot then Format.cash(slot.Cost) else "Pass"
-			if slot and slot.Shards > 0 then
-				price ..= " + " .. slot.Shards .. " shards"
+	setDisplay(hopper, string.format(
+		"Hopper · Lv %d\n%s / %s ore",
+		s.hopper,
+		Format.number(sum(data.hopper)),
+		Format.number(Refining.hopperCapacity(data))
+	))
+	setDisplay(conveyor, string.format("Conveyor · Lv %d\n%s ore/s", s.conveyor, formatRate(Refining.conveyorRate(data))))
+	setDisplay(refinery, string.format("Refinery · Lv %d\n%s bars/s", s.refinery, formatRate(Refining.refineryRate(data))))
+	local binText = string.format(
+		"Collection Post · Lv %d\n%s / %s bars",
+		s.collector,
+		Format.number(sum(data.bin)),
+		Format.number(Refining.collectorCapacity(data))
+	)
+	if blockedBy[player] == "collector" then
+		binText ..= "\nFULL - collect!"
+	end
+	setDisplay(collector, binText)
+
+	setPrompt(hopper, "hopper", s.hopper)
+	setPrompt(conveyor, "conveyor", s.conveyor)
+	setPrompt(refinery, "refinery", s.refinery)
+	setPrompt(collector, "collector", s.collector)
+
+	-- Clients animate ore on the belt while the line is running
+	local running = sum(data.hopper) > 0 and blockedBy[player] ~= "collector"
+	stations:SetAttribute("Running", running)
+	stations:SetAttribute("LineRate", Refining.lineRate(data))
+	for _, model in { refinery, conveyor } do
+		if model then
+			for _, fx in model:GetDescendants() do
+				if fx:IsA("Smoke") or fx:IsA("ParticleEmitter") or fx:IsA("Fire") then
+					(fx :: any).Enabled = running
+				end
 			end
-			setDisplay(model, "Locked\nslot " .. index .. ": " .. price)
 		end
 	end
 end
 
-function RefineryService:_refresh(player: Player)
-	local plot = PlotService:GetPlot(player)
-	if plot then
-		self:RefreshPlot(player, plot)
-	end
+function RefineryService:Refresh(player: Player)
+	self:RefreshPlot(player)
 	PlayerStateService:Replicate(player)
 end
 
--- Throttle touch handlers per player and per pad
 local function touchReady(player: Player, key: string): boolean
 	local entry = touchCooldown[player]
 	if not entry then
@@ -160,7 +162,7 @@ function RefineryService:Deposit(player: Player): number
 	if not data then
 		return 0
 	end
-	local space = PlayerStateService:GetHopperCapacity(player) - sum(data.hopper)
+	local space = Refining.hopperCapacity(data) - sum(data.hopper)
 	local moved = 0
 	for oreType, amount in data.backpack do
 		local n = math.min(amount, space - moved)
@@ -175,11 +177,12 @@ function RefineryService:Deposit(player: Player): number
 			data.backpack[oreType] = nil
 		end
 	end
-	if moved > 0 or sum(data.backpack) > 0 then
-		self.Client.Deposited:Fire(player, moved, sum(data.backpack) > 0)
+	local leftover = sum(data.backpack)
+	if moved > 0 or leftover > 0 then
+		self.Client.Deposited:Fire(player, moved, leftover > 0)
 	end
 	if moved > 0 then
-		self:_refresh(player)
+		self:Refresh(player)
 	end
 	return moved
 end
@@ -190,24 +193,23 @@ function RefineryService:Collect(player: Player): number
 		return 0
 	end
 	local collected = 0
-	for _, refinery in data.refineries do
-		for oreType, n in refinery.bin do
-			if n > 0 then
-				data.bars[oreType] = (data.bars[oreType] or 0) + n
-				collected += n
-			end
+	for oreType, n in data.bin do
+		if n > 0 then
+			data.bars[oreType] = (data.bars[oreType] or 0) + n
+			collected += n
 		end
-		table.clear(refinery.bin)
 	end
+	table.clear(data.bin)
 	if collected > 0 then
+		blockedBy[player] = nil
 		self.Client.Collected:Fire(player, collected)
-		self:_refresh(player)
+		self:Refresh(player)
 	end
 	return collected
 end
 
--- Offline catch-up (spec §6.4): refineries keep consuming hopper stock for the
--- time away, capped.
+-- Offline catch-up (spec §6.4): the line keeps running on hopper stock for the
+-- time away, capped, and stops when the collection post is full.
 function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	local data = PlayerStateService:Get(player)
 	if not data or awaySeconds <= 0 then
@@ -215,53 +217,45 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	end
 	local cap = Config.Home.OfflineCap -- Offline Hours+ pass raises this in Week 4
 	local seconds = math.min(awaySeconds, cap)
-	local _, bars = Refining.run(data, seconds)
+	local made, bars, blocked = Refining.run(data, seconds)
+	blockedBy[player] = blocked
+	local value = 0
+	for oreType, n in made do
+		value += n * (Config.Home.BarPrices[oreType] or 0)
+	end
 	self.Client.WhileAway:Fire(player, {
 		seconds = seconds,
 		away = awaySeconds,
 		capped = awaySeconds > cap,
 		bars = bars,
-		value = bars * (Config.Home.BarPrices.iron or 0),
-		oreLeft = sum(data.hopper),
+		value = value,
+		blocked = blocked,
 	})
 end
 
-function RefineryService:_connectPlot(plot: Model)
-	local function ownerFromHit(hit: BasePart): Player?
-		local player = Players:GetPlayerFromCharacter(hit.Parent)
-		if not player then
-			return nil
-		end
-		if PlotService:GetOwner(plot) ~= player then
-			if touchReady(player, "notOwner") then
-				self.Client.Notice:Fire(player, "This is someone else's plot. Yours is Plot " .. tostring(player:GetAttribute("PlotId")) .. ".")
-			end
-			return nil
-		end
-		return player
+function RefineryService:_connectStations(player: Player, stations: Model)
+	local function isOwner(hit: BasePart): boolean
+		return Players:GetPlayerFromCharacter(hit.Parent) == player
 	end
 
-	local hopper = plot:FindFirstChild("Hopper")
+	local hopper = station(stations, "hopper")
 	local intake = hopper and hopper:FindFirstChild("Intake", true)
 	if intake and intake:IsA("BasePart") then
 		intake.Touched:Connect(function(hit)
-			local player = ownerFromHit(hit)
-			if player and touchReady(player, "hopper") then
+			if isOwner(hit) and touchReady(player, "hopper") then
 				self:Deposit(player)
 			end
 		end)
 	end
 
-	for _, model in refineryModels(plot) do
-		local bin = model:FindFirstChild("OutputBin", true)
-		if bin and bin:IsA("BasePart") then
-			bin.Touched:Connect(function(hit)
-				local player = ownerFromHit(hit)
-				if player and touchReady(player, "bin") then
-					self:Collect(player)
-				end
-			end)
-		end
+	local collector = station(stations, "collector")
+	local bin = collector and collector:FindFirstChild("Bin", true)
+	if bin and bin:IsA("BasePart") then
+		bin.Touched:Connect(function(hit)
+			if isOwner(hit) and touchReady(player, "bin") then
+				self:Collect(player)
+			end
+		end)
 	end
 end
 
@@ -269,7 +263,7 @@ end
 function RefineryService.Client:DevSimulateAway(player: Player, seconds: number)
 	if RunService:IsStudio() and typeof(seconds) == "number" then
 		self.Server:CatchUp(player, math.clamp(seconds, 0, 24 * 3600))
-		self.Server:_refresh(player)
+		self.Server:Refresh(player)
 	end
 end
 
@@ -280,20 +274,12 @@ function RefineryService:KnitInit()
 end
 
 function RefineryService:KnitStart()
-	for _, plot in workspace:WaitForChild("Map"):WaitForChild("Plots"):GetChildren() do
-		if plot:IsA("Model") then
-			self:_connectPlot(plot)
-			self:RefreshPlot(nil, plot)
+	PlotService.PlotAssigned:Connect(function(player, _plot)
+		local stations = PlotService:GetStations(player)
+		if stations then
+			self:_connectStations(player, stations)
 		end
-	end
-
-	PlotService.PlotAssigned:Connect(function(player, plot)
-		self:RefreshPlot(player, plot)
-	end)
-	PlotService.PlotReleased:Connect(function(_player, plot)
-		task.defer(function()
-			self:RefreshPlot(nil, plot)
-		end)
+		self:RefreshPlot(player)
 	end)
 
 	DataService.ProfileLoaded:Connect(function(player, profile)
@@ -302,11 +288,12 @@ function RefineryService:KnitStart()
 			self:CatchUp(player, os.time() - lastSeen)
 		end
 		profile.Data.lastSeen = os.time()
-		self:_refresh(player)
+		self:Refresh(player)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		touchCooldown[player] = nil
+		blockedBy[player] = nil
 	end)
 
 	-- Online tick
@@ -320,9 +307,11 @@ function RefineryService:KnitStart()
 			for _, player in Players:GetPlayers() do
 				local data = PlayerStateService:Get(player)
 				if data then
-					local _, made = Refining.run(data, dt)
-					if made > 0 then
-						self:_refresh(player)
+					local before = blockedBy[player]
+					local _, made, blocked = Refining.run(data, dt)
+					blockedBy[player] = blocked
+					if made > 0 or blocked ~= before then
+						self:Refresh(player)
 					end
 				end
 			end

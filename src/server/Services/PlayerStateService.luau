@@ -50,7 +50,7 @@ end
 
 function PlayerStateService:GetHopperCapacity(player: Player): number
 	local data = self:Get(player)
-	return (Config.Home.Hoppers[if data then data.hopperLevel else 1] or Config.Home.Hoppers[1]).Capacity
+	return if data then Refining.hopperCapacity(data) else Config.Home.Stations.hopper.Levels[1].Capacity :: number
 end
 
 function PlayerStateService:IsBackpackFull(player: Player): boolean
@@ -73,14 +73,13 @@ function PlayerStateService:Replicate(player: Player)
 		return
 	end
 
-	local refineries = {}
-	for index, refinery in data.refineries do
-		refineries[index] = {
-			level = refinery.level,
-			rate = Refining.throughput(refinery),
-			bin = sum(refinery.bin),
-		}
-	end
+	local line = {
+		hopper = { level = data.stations.hopper, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data) },
+		conveyor = { level = data.stations.conveyor, rate = Refining.conveyorRate(data) },
+		refinery = { level = data.stations.refinery, rate = Refining.refineryRate(data) },
+		collector = { level = data.stations.collector, amount = sum(data.bin), capacity = Refining.collectorCapacity(data) },
+		rate = Refining.lineRate(data),
+	}
 
 	self.Client.State:SetFor(player, {
 		pickaxeTier = data.pickaxeTier,
@@ -94,7 +93,7 @@ function PlayerStateService:Replicate(player: Player)
 		barValue = self:BarValue(data.bars),
 		hopper = sum(data.hopper),
 		hopperCapacity = self:GetHopperCapacity(player),
-		refineries = refineries,
+		line = line,
 		plotId = player:GetAttribute("PlotId"),
 	})
 

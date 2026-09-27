@@ -1,49 +1,105 @@
 --!strict
--- Home loop tuning (spec §6): hopper, refineries, offline income, bar prices.
+-- Home loop tuning (spec §6, reworked): every plot runs one production line
+--
+--   hopper -> conveyor -> refinery -> collection post
+--
+-- and each of the four stations upgrades on its own. Ore flows at the slower of
+-- the conveyor and the refinery; the hopper caps how much ore waits, the
+-- collection post caps how many bars wait to be picked up (and so how much
+-- offline income piles up). Prices climb roughly ×10–13 per level (spec §7).
 
 local Home = {}
 
--- Hopper capacity per level (spec §6.2)
-Home.Hoppers = {
-	{ Level = 1, Capacity = 2e3, Cost = 0 },
-	{ Level = 2, Capacity = 8e3, Cost = 5e3 },
-	{ Level = 3, Capacity = 32e3, Cost = 100e3 },
-	{ Level = 4, Capacity = 128e3, Cost = 2e6 },
-	{ Level = 5, Capacity = 512e3, Cost = 40e6 },
-	{ Level = 6, Capacity = 2e6, Cost = 800e6 },
-	{ Level = 7, Capacity = 8e6, Cost = 15e9 },
+export type Level = {
+	Cost: number,
+	Shards: number,
+	Capacity: number?, -- hopper (ore), collector (bars)
+	Rate: number?, -- conveyor and refinery (ore per second)
 }
 
--- Refinery throughput per level, 1 ore -> 1 bar (spec §6.3)
-Home.Refineries = {
-	{ Level = 1, Throughput = 0.25, Cost = 0, Shards = 0 },
-	{ Level = 2, Throughput = 0.75, Cost = 1.5e3, Shards = 0 },
-	{ Level = 3, Throughput = 2.5, Cost = 20e3, Shards = 0 },
-	{ Level = 4, Throughput = 8, Cost = 250e3, Shards = 0 },
-	{ Level = 5, Throughput = 25, Cost = 3e6, Shards = 25 },
-	{ Level = 6, Throughput = 80, Cost = 40e6, Shards = 60 },
-	{ Level = 7, Throughput = 250, Cost = 500e6, Shards = 150 },
-	{ Level = 8, Throughput = 800, Cost = 6e9, Shards = 400 },
+export type Station = {
+	Id: string,
+	Name: string,
+	Levels: { Level },
 }
 
--- Refinery slot prices (spec §7.3). Purchases arrive in Week 3; slot 1 is free.
-Home.RefinerySlots = {
-	{ Slot = 1, Cost = 0, Shards = 0 },
-	{ Slot = 2, Cost = 2e3, Shards = 0 },
-	{ Slot = 3, Cost = 25e3, Shards = 0 },
-	{ Slot = 4, Cost = 300e3, Shards = 25 },
-	{ Slot = 5, Cost = 4e6, Shards = 60 },
-	{ Slot = 6, Cost = 50e6, Shards = 120 },
+local function levels(list: { { number } }, key: string): { Level }
+	local out = {}
+	for index, row in list do
+		local level: any = { Cost = row[2], Shards = row[3] or 0 }
+		level[key] = row[1]
+		out[index] = level
+	end
+	return out
+end
+
+Home.Stations = {
+	-- { stat, cash cost, shards }
+	hopper = {
+		Id = "hopper",
+		Name = "Hopper",
+		Levels = levels({
+			{ 2e3, 0 },
+			{ 8e3, 5e3 },
+			{ 32e3, 100e3 },
+			{ 128e3, 2e6 },
+			{ 512e3, 40e6 },
+			{ 2e6, 800e6 },
+			{ 8e6, 15e9 },
+		}, "Capacity"),
+	} :: Station,
+	conveyor = {
+		Id = "conveyor",
+		Name = "Conveyor",
+		Levels = levels({
+			{ 0.3, 0 },
+			{ 1, 1.2e3 },
+			{ 3, 15e3 },
+			{ 10, 200e3 },
+			{ 30, 2.5e6, 20 },
+			{ 100, 30e6, 50 },
+			{ 300, 400e6, 120 },
+			{ 1000, 5e9, 300 },
+		}, "Rate"),
+	} :: Station,
+	refinery = {
+		Id = "refinery",
+		Name = "Refinery",
+		Levels = levels({
+			{ 0.25, 0 },
+			{ 0.75, 1.5e3 },
+			{ 2.5, 20e3 },
+			{ 8, 250e3 },
+			{ 25, 3e6, 25 },
+			{ 80, 40e6, 60 },
+			{ 250, 500e6, 150 },
+			{ 800, 6e9, 400 },
+		}, "Rate"),
+	} :: Station,
+	collector = {
+		Id = "collector",
+		Name = "Collection Post",
+		Levels = levels({
+			{ 2e3, 0 },
+			{ 8e3, 4e3 },
+			{ 32e3, 80e3 },
+			{ 128e3, 1.5e6 },
+			{ 512e3, 30e6 },
+			{ 2e6, 600e6 },
+			{ 8e6, 12e9 },
+		}, "Capacity"),
+	} :: Station,
 }
-Home.MaxRefineryPads = 6 -- a 7th pad comes with the Extra Refinery pass (Week 4)
+
+Home.StationOrder = { "hopper", "conveyor", "refinery", "collector" }
 
 -- Offline income (spec §6.4)
 Home.OfflineCap = 2 * 3600
 Home.OfflineCapPass = 8 * 3600
 
-Home.TickInterval = 1 -- online refinery tick, seconds
+Home.TickInterval = 1 -- online production tick, seconds
 
--- Order in which a refinery pulls ore types from the hopper
+-- Order in which the conveyor pulls ore types from the hopper
 Home.OreOrder = { "iron", "frost" }
 
 -- Bar sell prices (spec §6.5)

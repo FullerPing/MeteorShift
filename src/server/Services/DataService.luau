@@ -67,7 +67,29 @@ local function reconcile(data: { [any]: any }, template: { [any]: any })
 end
 
 local function migrate(data: { [any]: any }): { [any]: any }
-	-- version 1 is the first schema; future migrations go here, keyed by data.version
+	-- v1 -> v2: six refinery slots became one hopper -> conveyor -> refinery ->
+	-- collection post line. Keep the hopper and refinery levels, pour every
+	-- refinery bin into the collection post.
+	if (data.version or 1) < 2 then
+		local refineries = data.refineries or {}
+		local bin = {}
+		for _, refinery in refineries do
+			for oreType, n in refinery.bin or {} do
+				bin[oreType] = (bin[oreType] or 0) + n
+			end
+		end
+		data.stations = {
+			hopper = data.hopperLevel or 1,
+			conveyor = 1,
+			refinery = if refineries[1] then refineries[1].level else 1,
+			collector = 1,
+		}
+		data.bin = bin
+		data.progress = 0
+		data.refineries = nil
+		data.hopperLevel = nil
+		data.version = 2
+	end
 	data.version = Template.version
 	return data
 end

@@ -1,10 +1,15 @@
 --!strict
--- Plot assignment (spec §2): a free plot on join, cleared on leave. The plots,
--- hoppers and refinery machines are saved in Workspace.Map.Plots; this service
--- only claims them and updates their signs and lock visuals.
+-- Plot assignment (spec §2): a free plot on join, cleared on leave.
+--
+-- The plot pads, fences and signs are saved in Workspace.Map.Plots. A plot is
+-- empty until someone claims it: then the production line (hopper, conveyor,
+-- refinery, collection post) is cloned from ServerStorage.Assets.PlotStations,
+-- whose pivot is the top centre of a pad with -Z facing the crater. The line is
+-- removed again when the owner leaves.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -38,6 +43,27 @@ function PlotService:GetOwner(plot: Model): Player?
 	return owners[plot]
 end
 
+-- The owner's production line on their plot, if they have one.
+function PlotService:GetStations(player: Player): Model?
+	local plot = byPlayer[player]
+	local stations = plot and plot:FindFirstChild("Stations")
+	return if stations and stations:IsA("Model") then stations else nil
+end
+
+local function spawnStations(plot: Model): Model?
+	local template = ServerStorage:WaitForChild("Assets"):FindFirstChild("PlotStations")
+	local pad = plot:FindFirstChild("Pad")
+	if not template or not pad or not pad:IsA("BasePart") then
+		warn("[PlotService] missing PlotStations template or Pad on", plot:GetFullName())
+		return nil
+	end
+	local stations = (template :: Model):Clone()
+	stations.Name = "Stations"
+	stations:PivotTo(pad.CFrame * CFrame.new(0, pad.Size.Y / 2, 0))
+	stations.Parent = plot
+	return stations
+end
+
 -- The plot a part belongs to, if any.
 function PlotService:PlotOf(part: Instance): Model?
 	local node: Instance? = part
@@ -58,6 +84,7 @@ function PlotService:_assign(player: Player)
 			plot:SetAttribute("OwnerUserId", player.UserId)
 			player:SetAttribute("PlotId", plot:GetAttribute("PlotId"))
 			setSign(plot, player.DisplayName .. "'s Colony")
+			spawnStations(plot)
 			self.PlotAssigned:Fire(player, plot)
 			return
 		end
@@ -74,6 +101,10 @@ function PlotService:_release(player: Player)
 	owners[plot] = nil
 	byPlayer[player] = nil
 	plot:SetAttribute("OwnerUserId", nil)
+	local stations = plot:FindFirstChild("Stations")
+	if stations then
+		stations:Destroy()
+	end
 	setSign(plot, "Plot " .. tostring(plot:GetAttribute("PlotId")) .. " · free")
 end
 

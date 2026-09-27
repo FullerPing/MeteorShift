@@ -1,19 +1,25 @@
 --!strict
--- Profile schema v1 (spec §12.4). New keys added here are filled into old
+-- Profile schema v2 (spec §12.4, with the plot production line instead of
+-- refinery slots). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 1,
+	version = 2,
 	cash = 0,
 	shards = 0,
 	pickaxeTier = 1,
 	backpackTier = 1,
 	backpack = {}, -- ore carried, by type
-	hopper = {}, -- ore waiting to be refined, by type
-	hopperLevel = 1,
-	refineries = {
-		{ level = 1, progress = 0, bin = {} },
+	-- Plot production line: hopper -> conveyor -> refinery -> collection post
+	stations = {
+		hopper = 1,
+		conveyor = 1,
+		refinery = 1,
+		collector = 1,
 	},
+	hopper = {}, -- ore waiting, by type
+	bin = {}, -- bars waiting at the collection post, by type
+	progress = 0, -- fractional ore between production ticks
 	bars = {}, -- bars carried, by type
 	decor = {}, -- placed items, survives rebirth
 	index = {}, -- discovered minerals

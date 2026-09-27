@@ -114,6 +114,39 @@ local function serverDps(): number
 	return math.max(dps, MeteorConfig.MinServerDps)
 end
 
+-- Moves a part and the decorative parts parented under it together.
+local function place(part: BasePart, cframe: CFrame)
+	local offsets = {}
+	for _, child in part:GetDescendants() do
+		if child:IsA("BasePart") then
+			offsets[child] = part.CFrame:ToObjectSpace(child.CFrame)
+		end
+	end
+	part.CFrame = cframe
+	for child, offset in offsets do
+		child.CFrame = cframe * offset
+	end
+end
+
+-- Recolours a cluster: the rock itself, its "Ore" chunks and "Ember" glints.
+local function paintCluster(piece: BasePart, meteorType: Config.MeteorType)
+	piece.Color = meteorType.CrustColors[math.random(1, #meteorType.CrustColors)]
+	piece.Material = meteorType.CrustMaterial
+	for _, child in piece:GetDescendants() do
+		if child:IsA("BasePart") then
+			if child.Name == "Ore" then
+				child.Color = meteorType.OreColor
+				child.Material = meteorType.OreMaterial
+			elseif child.Name == "Ember" then
+				child.Color = meteorType.GlowColor
+			elseif child.Name == "Rock" then
+				child.Color = piece.Color
+				child.Material = piece.Material
+			end
+		end
+	end
+end
+
 local function waitUntil(predicate: () -> boolean)
 	while not predicate() do
 		task.wait(0.1)
@@ -142,6 +175,13 @@ function MeteorService:_unlockCore(meteor: Meteor)
 	core.Material = Enum.Material.Neon
 	core.Color = meteor.Type.CoreColor
 	core:SetAttribute("Unlocked", true)
+	for _, child in core:GetDescendants() do
+		if child:IsA("BasePart") and child.Name == "Vein" then
+			child.Transparency = 1 -- the whole core glows now
+		elseif child:IsA("ParticleEmitter") then
+			child.Rate *= 3
+		end
+	end
 	local light = core:FindFirstChildOfClass("PointLight")
 	if light then
 		light.Enabled = true
@@ -159,10 +199,15 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	model.Name = meteorType.Id .. "Meteor"
 
 	local core = (assets:WaitForChild("Meteor"):WaitForChild("Core") :: BasePart):Clone()
-	core.CFrame = spawnPoint.CFrame
+	place(core, spawnPoint.CFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
 	core.Anchored = true
-	core.Material = Enum.Material.Slate
-	core.Color = meteorType.CoreColor:Lerp(Color3.new(0, 0, 0), 0.55)
+	core.Material = Enum.Material.Basalt
+	core.Color = meteorType.CoreColor:Lerp(Color3.new(0, 0, 0), 0.7)
+	for _, vein in core:GetDescendants() do
+		if vein:IsA("BasePart") and vein.Name == "Vein" then
+			vein.Color = meteorType.GlowColor
+		end
+	end
 	core.Parent = model
 	model.PrimaryPart = core
 
@@ -202,19 +247,8 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index
 		piece.Anchored = true
-		-- Decorations (ore glints) are anchored children; carry them along with the piece
-		local offsets = {}
-		for _, child in piece:GetDescendants() do
-			if child:IsA("BasePart") then
-				offsets[child] = piece.CFrame:ToObjectSpace(child.CFrame)
-			end
-		end
-		piece.CFrame = slot.WorldCFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0)
-		for child, offset in offsets do
-			child.CFrame = piece.CFrame * offset
-		end
-		piece.Color = meteorType.CrustColors[math.random(1, #meteorType.CrustColors)]
-		piece.Material = meteorType.CrustMaterial
+		place(piece, slot.WorldCFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
+		paintCluster(piece, meteorType)
 		piece.Parent = crustFolder
 
 		local id = NodeService:Register(piece, {

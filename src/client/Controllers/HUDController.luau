@@ -1,7 +1,7 @@
 --!strict
 -- HUD built with Fusion (spec §10, early version):
 --   * countdown / cooling timer and the sky countdown over the crater
---   * cash, shards, backpack meter (red when full), bars, hopper and refineries
+--   * cash, shards, backpack meter (red when full), bars, hopper and production line
 --   * "While you were away" panel (spec §6.4)
 --   * event panel: core HP bar, core lock, your rank, top three
 --   * announcement banner, results panel, small toasts
@@ -126,6 +126,7 @@ function HUDController:KnitStart()
 	local RewardService = Knit.GetService("RewardService")
 	local RefineryService = Knit.GetService("RefineryService")
 	local EconomyService = Knit.GetService("EconomyService")
+	local UpgradeService = Knit.GetService("UpgradeService")
 
 	local scope = Fusion.scoped(Fusion)
 
@@ -196,7 +197,7 @@ function HUDController:KnitStart()
 		end
 	end)
 	RefineryService.Collected:Connect(function(bars: number)
-		showToast("Collected " .. Format.number(bars) .. " bars. Sell them at the Trading Post!")
+		showToast("Picked up " .. Format.number(bars) .. " bars. Sell them at the Trading Post!")
 	end)
 	RefineryService.WhileAway:Connect(function(report)
 		if report.bars > 0 then
@@ -205,6 +206,11 @@ function HUDController:KnitStart()
 	end)
 	RefineryService.Notice:Connect(showToast)
 	EconomyService.Notice:Connect(showToast)
+	UpgradeService.Notice:Connect(showToast)
+	UpgradeService.Upgraded:Connect(function(stationId: string, level: number)
+		local names = { hopper = "Hopper", conveyor = "Conveyor", refinery = "Refinery", collector = "Collection Post" }
+		showToast((names[stationId] or stationId) .. " upgraded to Lv " .. level .. "!")
+	end)
 	EconomyService.Sold:Connect(function(bars: number, cash: number)
 		showToast("Sold " .. Format.number(bars) .. " bars for +" .. Format.cash(cash))
 	end)
@@ -394,7 +400,7 @@ function HUDController:KnitStart()
 						Size = UDim2.new(1, 0, 0, 26),
 						Fill = scope:Computed(function(use)
 							local s = use(playerState)
-							return if s then s.hopper / math.max(s.hopperCapacity, 1) else 0
+							return if s then s.line.hopper.amount / math.max(s.line.hopper.capacity, 1) else 0
 						end),
 						Color = Color3.fromRGB(196, 120, 52),
 						Text = scope:Computed(function(use)
@@ -402,7 +408,7 @@ function HUDController:KnitStart()
 							if not s then
 								return "Hopper"
 							end
-							return "Hopper " .. Format.number(s.hopper) .. " / " .. Format.number(s.hopperCapacity)
+							return "Hopper " .. Format.number(s.line.hopper.amount) .. " / " .. Format.number(s.line.hopper.capacity)
 						end),
 					}),
 					label(scope, {
@@ -413,19 +419,14 @@ function HUDController:KnitStart()
 							if not s then
 								return ""
 							end
-							local rate, ready = 0, 0
-							for _, refinery in s.refineries do
-								rate += refinery.rate
-								ready += refinery.bin
-							end
+							local line = s.line
 							local plot = if s.plotId then "Plot " .. s.plotId else "No plot"
 							return string.format(
-								"%s · %d refiner%s · %g ore/s\n%s bars ready to collect",
+								"%s · line %g bars/s\nCollection post: %s / %s bars",
 								plot,
-								#s.refineries,
-								if #s.refineries == 1 then "y" else "ies",
-								rate,
-								Format.number(ready)
+								line.rate,
+								Format.number(line.collector.amount),
+								Format.number(line.collector.capacity)
 							)
 						end),
 						TextSize = 15,
@@ -470,15 +471,17 @@ function HUDController:KnitStart()
 								else string.format("%d minutes", math.floor(r.away / 60))
 							local lines = {
 								"You were gone " .. awayText .. ".",
-								"Your refineries made " .. Format.number(r.bars) .. " bars (" .. Format.cash(r.value) .. ").",
+								"Your production line made " .. Format.number(r.bars) .. " bars (" .. Format.cash(r.value) .. ").",
 							}
 							if r.capped then
 								table.insert(lines, "Offline time is capped at " .. math.floor(r.seconds / 3600) .. " hours.")
 							end
-							if r.oreLeft == 0 then
+							if r.blocked == "hopper" then
 								table.insert(lines, "Your hopper ran dry. Fill it up before you log off!")
+							elseif r.blocked == "collector" then
+								table.insert(lines, "Your collection post filled up. Upgrade it to store more!")
 							end
-							table.insert(lines, "Collect the bars from the bins on your plot.")
+							table.insert(lines, "Pick them up at your collection post.")
 							return table.concat(lines, "\n")
 						end),
 						TextSize = 17,

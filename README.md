@@ -6,7 +6,7 @@ Every few minutes a meteor slams into the crater in the middle of town and the w
 
 ## Status
 
-Weeks 1 and 2 of the MVP plan are in. See the spec in the project thread "Meteor Shift game spec".
+Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and the meteor. See the spec in the project thread "Meteor Shift game spec".
 
 **Week 1, the meteor event**
 - Sky countdown and HUD timer, streak in the sky for the last 10 s, rumble and camera shake
@@ -26,6 +26,15 @@ Weeks 1 and 2 of the MVP plan are in. See the spec in the project thread "Meteor
 - Offline income: refineries keep working on your hopper for up to 2 hours while you're away, with a "While you were away" panel on return
 - Sell bars at the Trading Post counter (Iron bar = $5)
 
+**Round 3, plots and meteor polish**
+- Plots start empty. When you join, a production line is placed on your plot: hopper, conveyor, refinery, collection post. It is removed when you leave.
+- Ore rides the conveyor while the line runs. The line makes min(conveyor rate, refinery rate) bars per second and stops when the collection post is full.
+- All four stations are upgradable from a prompt on each (F): hopper and collection post raise capacity, conveyor and refinery raise speed. Higher levels also cost Core Shards.
+- Bigger plots (52 x 52) on a wider ring, with the outer wall pushed out and reshaped into a natural slope
+- New meteor look: a dark core with glowing veins and embers, crust made of ore clusters with metal crystals and glowing bits
+- Health bars over meteor clusters, the core and debris rocks (shown when damaged or when you are close)
+- Profiles migrate from schema v1 to v2 (station levels, one hopper and one collection post)
+
 ## Layout
 
 ```
@@ -37,9 +46,9 @@ src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (hopper, refineries, offline catch-up), `EconomyService` (selling). `src/server/Lib` holds the profile template and the pure refinery simulation.
+Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `EconomyService` (selling). `src/server/Lib` holds the profile template and the pure refinery simulation.
 
-Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`.
+Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`.
 
 All tuning numbers live in `src/shared/Config`.
 
@@ -49,13 +58,13 @@ Nothing builds the world at runtime. The crater town, plots, debris rocks, sky c
 
 | Instance | What it is |
 |---|---|
-| `Workspace.Map` | Ground, crater, town square (Trading Post with sell counter, Pickaxe Shop, spawn), 20 plots each with a hopper and 6 refinery machines, roads, debris rocks, trees, boundary cliffs |
-| `ServerStorage.Assets` | Meteor core (with `NodeSlot` attachments) and the crust node pieces |
+| `Workspace.Map` | Ground, crater, town square (Trading Post with sell counter, Pickaxe Shop, spawn), 20 empty plot pads with signs, roads, debris rocks, trees, boundary cliffs |
+| `ServerStorage.Assets` | Meteor core (with `NodeSlot` attachments and glowing `Vein` parts), the ore cluster pieces, and `PlotStations` (the production line template) |
 | `StarterPack.Pickaxe` | The Basic Pickaxe tool |
 
-The only thing spawned at runtime is the meteor itself, cloned from `ServerStorage.Assets` when it lands.
+Two things are cloned at runtime from `ServerStorage.Assets`: the meteor when it lands, and a player's production line (`PlotStations`) when they claim a plot. The plot pads themselves stay in Workspace.
 
-`default.project.json` only syncs code, so Rojo never touches the map. Edit the map in Studio and save the place. `assets/*.rbxm` are Studio exports of the same instances, kept in git as a backup; use Studio's *Insert from File* to restore them. `assets/Terrain.rbxm` holds the terrain as a TerrainRegion; restore it with `workspace.Terrain:PasteRegion(region, workspace.Terrain.MaxExtents.Min, true)`. (Rojo 7.6 can't read the newest Studio binary format, so they aren't wired into a Rojo project.)
+`default.project.json` only syncs code, so Rojo never touches the map. Edit the map in Studio and save the place. `assets/*.rbxm` are Studio exports of the same instances, kept in git as a backup; use Studio's *Insert from File* to restore them. `assets/Terrain.rbxm` holds the terrain as a TerrainRegion; restore it with `workspace.Terrain:PasteRegion(region, Vector3int16.new(-160, -32, -160), true)`. (Rojo 7.6 can't read the newest Studio binary format, so they aren't wired into a Rojo project.)
 
 ## Working on it
 

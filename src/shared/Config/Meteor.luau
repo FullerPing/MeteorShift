@@ -48,6 +48,8 @@ export type MeteorType = {
 	YieldMult: number,
 	CrustColors: { Color3 },
 	CrustMaterial: Enum.Material,
+	OreColor: Color3, -- the ore chunks studding each cluster
+	OreMaterial: Enum.Material,
 	CoreColor: Color3,
 	GlowColor: Color3,
 	Weight: number,
@@ -65,6 +67,8 @@ Meteor.Types = {
 			Color3.fromRGB(70, 64, 62),
 		},
 		CrustMaterial = Enum.Material.Basalt,
+		OreColor = Color3.fromRGB(196, 170, 150),
+		OreMaterial = Enum.Material.Metal,
 		CoreColor = Color3.fromRGB(215, 78, 24),
 		GlowColor = Color3.fromRGB(255, 150, 60),
 		Weight = 1,
