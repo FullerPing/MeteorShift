@@ -55,7 +55,7 @@ Nothing builds the world at runtime. The crater town, plots, debris rocks, sky c
 
 The only thing spawned at runtime is the meteor itself, cloned from `ServerStorage.Assets` when it lands.
 
-`default.project.json` only syncs code, so Rojo never touches the map. Edit the map in Studio and save the place. `assets/*.rbxm` are Studio exports of the same instances, kept in git as a backup; use Studio's *Insert from File* to restore them. (Rojo 7.6 can't read the newest Studio binary format, so they aren't wired into a Rojo project.)
+`default.project.json` only syncs code, so Rojo never touches the map. Edit the map in Studio and save the place. `assets/*.rbxm` are Studio exports of the same instances, kept in git as a backup; use Studio's *Insert from File* to restore them. `assets/Terrain.rbxm` holds the terrain as a TerrainRegion; restore it with `workspace.Terrain:PasteRegion(region, workspace.Terrain.MaxExtents.Min, true)`. (Rojo 7.6 can't read the newest Studio binary format, so they aren't wired into a Rojo project.)
 
 ## Working on it
 
