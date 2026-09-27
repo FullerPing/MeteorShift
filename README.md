@@ -12,7 +12,9 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Sky countdown and HUD timer, streak in the sky for the last 10 s, rumble and camera shake
 - Impact with shockwave: knockback only, no damage
 - Meteor assembled from reusable node pieces: 36 crust nodes around a core
-- Node and core HP sized from the server's total mining power at impact
+- Node and core HP run on a hidden Mining Power stat (1.25× per pickaxe tier), so a maxed veteran mines ~8× faster than a newcomer instead of ~900×. Hits still pop the big damage number, and ore per hit still comes from your pickaxe
+- HP is sized at impact from players with input in the last 2 minutes (AFK players don't count), never smaller than 4 Basic Pickaxes. If the active crowd's power shifts by more than 15% mid-event, the remaining HP rescales, keeping the same percent done (at most every 10 s)
+- Contribution for shards counts Mining Power, so newcomers earn a fair share on top of the 5-shard floor
 - Per-player ore drops straight into your backpack
 - Core unlocks when 60% of the crust is broken, cooling timer of 2:30
 - Server-side contribution tally (core hits count double), core rewards with a 5-shard floor, a contribution share and +10/+6/+3 for the top three, announced to the server
@@ -70,4 +72,4 @@ Two things are cloned at runtime from `ServerStorage.Assets`: the meteor when it
 
 1. Open the saved place in Studio.
 2. `rojo serve` in this folder, then connect from the Rojo plugin.
-3. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only. In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings), and a **[Studio] Meteor now** button skips to the last 10 s. **[Studio] Away 1 hour** runs an hour of offline refining so you can check the "While you were away" panel.
+3. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only. In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings), and a **[Studio] Meteor now** button skips to the last 10 s. **[Studio] Away 1 hour** runs an hour of offline refining so you can check the "While you were away" panel. To test meteor sizing solo, set a `DevFakeTiers` string attribute on ServerStorage during play (e.g. `1,1,1,8`): each number adds a pretend active player with that pickaxe tier; the meteor model's `ServerPower` attribute shows what it is sized for.

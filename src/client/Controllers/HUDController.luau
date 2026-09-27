@@ -549,14 +549,16 @@ function HUDController:KnitStart()
 						Position = UDim2.new(),
 						Size = UDim2.new(1, 0, 0, 26),
 						Fill = scope:Computed(function(use)
-							return use(coreHp) / math.max(use(coreMaxHp), 1)
+							return use(coreHp) / math.max(use(coreMaxHp), 1e-6)
 						end),
 						Color = scope:Computed(function(use)
 							local s = use(meteorState)
 							return if s and s.unlocked then ORANGE else Color3.fromRGB(120, 110, 110)
 						end),
 						Text = scope:Computed(function(use)
-							return "Core " .. Format.number(use(coreHp)) .. " / " .. Format.number(use(coreMaxHp))
+							-- HP runs on hidden Mining Power (spec §5.3), so show how much is left
+							local fraction = use(coreHp) / math.max(use(coreMaxHp), 1e-6)
+							return string.format("Core %d%%", math.ceil(math.clamp(fraction, 0, 1) * 100))
 						end),
 					}),
 					label(scope, {

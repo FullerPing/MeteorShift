@@ -16,11 +16,16 @@ Meteor.StreakLeadTime = 10 -- streak is visible for the last N seconds of the co
 -- Shorter countdown while playtesting in Studio. Set to nil to use the real timings.
 Meteor.StudioCountdown = 25 :: number?
 
--- HP sizing at impact (spec §5.3)
+-- HP sizing at impact, in Mining Power (spec §5.3, see Shared.MiningPower)
+Meteor.PowerGrowth = 1.25 -- Mining Power per pickaxe tier: tier 1 = 1.0, tier 4 ≈ 2.0, tier 8 ≈ 4.8
 Meteor.CrustSeconds = 70
 Meteor.CoreSeconds = 45
 Meteor.CoreUnlockFraction = 0.6
-Meteor.MinServerDps = 5 / 0.6 -- a server of zero players still sizes like one basic pickaxe
+Meteor.ActiveWindow = 120 -- players with no input for this long don't count toward HP
+Meteor.FloorPlayers = 4 -- a meteor is never smaller than this many Basic Pickaxes
+Meteor.RescaleThreshold = 0.15 -- rescale remaining HP when server power drifts more than this
+Meteor.RescaleCooldown = 10 -- at most one rescale per this many seconds
+Meteor.RescaleCheckInterval = 1
 
 -- Contribution and rewards (spec §5.5, §5.6)
 Meteor.CoreContributionMult = 2
@@ -52,6 +57,7 @@ export type MeteorType = {
 	OreMaterial: Enum.Material,
 	CoreColor: Color3,
 	GlowColor: Color3,
+	HpMult: number, -- type HP multiplier (spec §5.3)
 	Weight: number,
 }
 
@@ -71,6 +77,7 @@ Meteor.Types = {
 		OreMaterial = Enum.Material.Metal,
 		CoreColor = Color3.fromRGB(215, 78, 24),
 		GlowColor = Color3.fromRGB(255, 150, 60),
+		HpMult = 1,
 		Weight = 1,
 	} :: MeteorType,
 }

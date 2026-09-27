@@ -16,6 +16,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 
 local MeteorConfig = Config.Meteor
 
@@ -45,6 +46,8 @@ type Meteor = {
 	Unlocked: boolean,
 	Cracked: boolean,
 	Type: Config.MeteorType,
+	SizedPower: number, -- server power the current HP is sized for
+	LastRescale: number,
 }
 
 local state = {
@@ -103,15 +106,23 @@ local function pickType(): Config.MeteorType
 	return MeteorConfig.Types.Iron
 end
 
--- Sum of every online player's pickaxe DPS (spec §5.3)
-local function serverDps(): number
+-- Mining Power per second of the active players, with the floor (spec §5.3).
+-- In Studio, ServerStorage's DevFakeTiers attribute ("1,1,8") adds pretend active
+-- players so sizing and rescaling can be tested solo.
+local function serverPower(): number
 	local PlayerStateService = Knit.GetService("PlayerStateService")
-	local dps = 0
-	for _, player in Players:GetPlayers() do
-		local pickaxe = PlayerStateService:GetPickaxe(player)
-		dps += pickaxe.Damage / pickaxe.Swing
+	local ActivityService = Knit.GetService("ActivityService")
+	local tiers = {}
+	for _, player in ActivityService:GetActivePlayers() do
+		table.insert(tiers, PlayerStateService:GetPickaxe(player).Tier)
 	end
-	return math.max(dps, MeteorConfig.MinServerDps)
+	local fake = ServerStorage:GetAttribute("DevFakeTiers")
+	if RunService:IsStudio() and typeof(fake) == "string" then
+		for tier in string.gmatch(fake, "%d+") do
+			table.insert(tiers, tonumber(tier) :: number)
+		end
+	end
+	return MiningPower.serverPower(tiers)
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -211,7 +222,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	core.Parent = model
 	model.PrimaryPart = core
 
-	local dps = serverDps()
+	local power = serverPower()
 	local slots = {}
 	for _, child in core:GetChildren() do
 		if child:IsA("Attachment") and child.Name == "NodeSlot" then
@@ -230,10 +241,12 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		Unlocked = false,
 		Cracked = false,
 		Type = meteorType,
+		SizedPower = power,
+		LastRescale = os.clock(),
 	}
+	model:SetAttribute("ServerPower", power)
 
-	local crustHp = math.ceil(dps * MeteorConfig.CrustSeconds / math.max(#slots, 1))
-	local coreHp = math.ceil(dps * MeteorConfig.CoreSeconds)
+	local crustHp, coreHp = MiningPower.size(power, #slots, meteorType.HpMult)
 
 	local function isActive(): boolean
 		return state.phase == Phase.Active and current == meteor
@@ -259,8 +272,8 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 			CanHit = function()
 				return isActive()
 			end,
-			OnHit = function(player, damage, ore)
-				ContributionService:AddCrust(player, damage, ore)
+			OnHit = function(player, power, ore)
+				ContributionService:AddCrust(player, power, ore)
 			end,
 			OnBroken = function()
 				meteor.CrustBroken += 1
@@ -282,8 +295,8 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		CanHit = function()
 			return isActive() and meteor.Unlocked
 		end,
-		OnHit = function(player, damage)
-			ContributionService:AddCore(player, damage)
+		OnHit = function(player, power)
+			ContributionService:AddCore(player, power)
 		end,
 		OnBroken = function()
 			meteor.Cracked = true
@@ -292,6 +305,28 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 
 	model.Parent = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("ActiveMeteor")
 	return meteor
+end
+
+-- Mid-event joins and leaves (spec §5.3): when the active server power drifts more
+-- than 15% from what the meteor was sized for, rescale the remaining HP of every
+-- node and the core to the new power, keeping the same fraction done. At most once
+-- every RescaleCooldown seconds.
+function MeteorService:_checkRescale(meteor: Meteor)
+	if os.clock() - meteor.LastRescale < MeteorConfig.RescaleCooldown then
+		return
+	end
+	local power = serverPower()
+	if not MiningPower.shouldRescale(meteor.SizedPower, power) then
+		return
+	end
+	local ratio = power / meteor.SizedPower
+	for _, id in meteor.CrustIds do
+		NodeService:Rescale(id, ratio)
+	end
+	NodeService:Rescale(meteor.CoreId, ratio)
+	meteor.SizedPower = power
+	meteor.LastRescale = os.clock()
+	meteor.Model:SetAttribute("ServerPower", power)
 end
 
 -- Push anyone standing where the meteor lands out of the way (clients also get knockback).
@@ -349,7 +384,12 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 
 	-- Active: mine the crust, crack the core before it cools
 	self:_publish({ phase = Phase.Active, endsAt = now() + MeteorConfig.ActiveDuration })
+	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
 	waitUntil(function()
+		if os.clock() >= nextCheck then
+			nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
+			self:_checkRescale(meteor)
+		end
 		return meteor.Cracked or now() >= state.endsAt
 	end)
 	ContributionService:Stop()

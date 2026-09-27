@@ -2,6 +2,9 @@
 -- Mineable targets (meteor crust nodes, the core, debris rocks): HP, hit validation,
 -- per-player ore drops and batched HP replication (spec §5.4, §12.2).
 --
+-- HP is measured in Mining Power (spec §5.3): each hit takes MiningPower.power(tier)
+-- off the target, while the client still pops the pickaxe's big damage number.
+--
 -- Other services register a BasePart with a TargetDef. The part gets a TargetId
 -- attribute so clients can find it; HP is replicated through the Hp / MaxHp
 -- attributes, flushed at ~10 Hz for changed targets only.
@@ -12,6 +15,7 @@ local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 
 export type TargetKind = "Crust" | "Core" | "Debris"
 
@@ -21,7 +25,7 @@ export type TargetDef = {
 	Ore: string?, -- ore type dropped per hit, nil for none
 	OreMult: number, -- multiplier on the pickaxe's ore per hit
 	CanHit: ((player: Player) -> boolean)?,
-	OnHit: ((player: Player, damage: number, ore: number) -> ())?,
+	OnHit: ((player: Player, power: number, ore: number) -> ())?, -- power is the hit's Mining Power
 	OnBroken: ((player: Player) -> ())?,
 }
 
@@ -42,6 +46,7 @@ local NodeService = Knit.CreateService({
 })
 
 local PlayerStateService
+local ActivityService
 
 local targets: { [number]: Target } = {}
 local nextId = 0
@@ -84,6 +89,19 @@ function NodeService:SetMaxHp(id: number, maxHp: number)
 	target.Hp = maxHp
 	target.Part:SetAttribute("MaxHp", maxHp)
 	target.Part:SetAttribute("Hp", maxHp)
+	target.Dirty = false
+end
+
+-- Rescales a target's remaining and max HP by ratio, keeping the same fraction done
+-- (mid-event joins and leaves, spec §5.3). Broken targets stay broken.
+function NodeService:Rescale(id: number, ratio: number)
+	local target = targets[id]
+	if not target or target.Hp <= 0 then
+		return
+	end
+	target.Hp, target.Def.MaxHp = MiningPower.rescale(target.Hp, target.Def.MaxHp, ratio)
+	target.Part:SetAttribute("MaxHp", target.Def.MaxHp)
+	target.Part:SetAttribute("Hp", target.Hp)
 	target.Dirty = false
 end
 
@@ -135,9 +153,13 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	end
 
 	lastSwing[player] = now
+	ActivityService:Touch(player)
 
-	local damage = math.min(pickaxe.Damage, target.Hp)
-	target.Hp -= damage
+	local power = MiningPower.power(pickaxe.Tier)
+	target.Hp -= power
+	if target.Hp < 1e-6 then
+		target.Hp = 0
+	end
 	target.Dirty = true
 
 	local ore = 0
@@ -149,10 +171,10 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	end
 
 	if def.OnHit then
-		def.OnHit(player, damage, ore)
+		def.OnHit(player, power, ore)
 	end
 
-	if target.Hp <= 0 then
+	if target.Hp == 0 then
 		target.Part:SetAttribute("Hp", 0)
 		target.Dirty = false
 		if def.OnBroken then
@@ -160,6 +182,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 		end
 	end
 
+	-- The displayed number is the pickaxe's damage; HP went down by its Mining Power
 	return true, pickaxe.Damage
 end
 
@@ -169,6 +192,7 @@ end
 
 function NodeService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
+	ActivityService = Knit.GetService("ActivityService")
 end
 
 function NodeService:KnitStart()

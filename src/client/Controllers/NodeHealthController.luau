@@ -9,7 +9,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
-local Format = require(ReplicatedStorage.Shared.Format)
 
 local player = Players.LocalPlayer
 
@@ -54,7 +53,8 @@ local function update(bar: Bar)
 	bar.Fill.Size = UDim2.fromScale(fraction, 1)
 	bar.Fill.BackgroundColor3 = if bar.IsCore then Color3.fromRGB(255, 140, 50) else colorFor(fraction)
 	if bar.Label then
-		bar.Label.Text = Format.number(hp) .. " / " .. Format.number(maxHp)
+		-- HP runs on hidden Mining Power (spec §5.3), so show how much is left
+		bar.Label.Text = string.format("%d%%", math.ceil(fraction * 100))
 	end
 end
 

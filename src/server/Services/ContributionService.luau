@@ -1,6 +1,9 @@
 --!strict
 -- Per-event contribution tally (spec §5.5). Lives only on the server; clients get a
 -- throttled view with their own rank and the top three.
+--
+-- Contribution is counted in Mining Power, not displayed damage, so a newcomer who
+-- mines the whole event earns a fair shard share next to a veteran (spec §5.3).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -45,21 +48,21 @@ function ContributionService:Stop()
 	tracking = false
 end
 
-function ContributionService:AddCrust(player: Player, damage: number, ore: number)
+function ContributionService:AddCrust(player: Player, power: number, ore: number)
 	if not tracking then
 		return
 	end
 	local entry = entryFor(player)
-	entry.Contribution += damage
+	entry.Contribution += power
 	entry.Ore += ore
 end
 
-function ContributionService:AddCore(player: Player, damage: number)
+function ContributionService:AddCore(player: Player, power: number)
 	if not tracking then
 		return
 	end
 	local entry = entryFor(player)
-	entry.Contribution += damage * Config.Meteor.CoreContributionMult
+	entry.Contribution += power * Config.Meteor.CoreContributionMult
 	entry.HitCore = true
 end
 
