@@ -8,4 +8,5 @@ return {
 	Pickaxes = require(script.Pickaxes),
 	Backpacks = require(script.Backpacks),
 	Debris = require(script.Debris),
+	Home = require(script.Home),
 }

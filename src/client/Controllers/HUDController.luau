@@ -1,7 +1,8 @@
 --!strict
--- Week 1 HUD built with Fusion (spec §10, early version):
+-- HUD built with Fusion (spec §10, early version):
 --   * countdown / cooling timer and the sky countdown over the crater
---   * shards, backpack meter (red when full), stored ore
+--   * cash, shards, backpack meter (red when full), bars, hopper and refineries
+--   * "While you were away" panel (spec §6.4)
 --   * event panel: core HP bar, core lock, your rank, top three
 --   * announcement banner, results panel, small toasts
 
@@ -30,6 +31,8 @@ local ORANGE = Color3.fromRGB(255, 150, 60)
 local SHARD = Color3.fromRGB(130, 220, 255)
 local RED = Color3.fromRGB(235, 70, 70)
 local GREEN = Color3.fromRGB(110, 220, 120)
+local CASH = Color3.fromRGB(120, 235, 120)
+local BAR = Color3.fromRGB(225, 220, 210)
 
 type Scope = Fusion.Scope<typeof(Fusion)>
 
@@ -58,6 +61,25 @@ local function label(scope: Scope, props: { [any]: any })
 		base[key] = value
 	end
 	return scope:New("TextLabel")(base)
+end
+
+local function pill(scope: Scope, order: number, color: Color3, text: Fusion.UsedAs<string>, size: number)
+	return scope:New("Frame")({
+		LayoutOrder = order,
+		Size = UDim2.new(1, 0, 0, size + 12),
+		BackgroundColor3 = PANEL,
+		BackgroundTransparency = 0.25,
+		[Children] = {
+			corner(scope, 10),
+			stroke(scope),
+			label(scope, {
+				Size = UDim2.fromScale(1, 1),
+				Text = text,
+				TextSize = size,
+				TextColor3 = color,
+			}),
+		},
+	})
 end
 
 local function bar(scope: Scope, props: {
@@ -102,7 +124,8 @@ function HUDController:KnitStart()
 	local ContributionService = Knit.GetService("ContributionService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local RewardService = Knit.GetService("RewardService")
-	local SiloService = Knit.GetService("SiloService")
+	local RefineryService = Knit.GetService("RefineryService")
+	local EconomyService = Knit.GetService("EconomyService")
 
 	local scope = Fusion.scoped(Fusion)
 
@@ -115,6 +138,7 @@ function HUDController:KnitStart()
 	local announcement = scope:Value(nil :: any)
 	local results = scope:Value(nil :: any)
 	local toast = scope:Value(nil :: string?)
+	local whileAway = scope:Value(nil :: any)
 
 	MeteorService.State:Observe(function(value)
 		meteorState:set(value)
@@ -162,10 +186,27 @@ function HUDController:KnitStart()
 		end)
 	end
 	PlayerStateService.BackpackFull:Connect(function()
-		showToast("Backpack full! Drop your ore at the Ore Silo in town.")
+		showToast("Backpack full! Take your ore home to your hopper.")
 	end)
-	SiloService.Deposited:Connect(function(amount: number)
-		showToast("Stored " .. Format.number(amount) .. " ore")
+	RefineryService.Deposited:Connect(function(amount: number, hopperFull: boolean)
+		if hopperFull then
+			showToast("Hopper full! " .. Format.number(amount) .. " ore in, the rest stays in your backpack.")
+		else
+			showToast("Deposited " .. Format.number(amount) .. " ore into your hopper")
+		end
+	end)
+	RefineryService.Collected:Connect(function(bars: number)
+		showToast("Collected " .. Format.number(bars) .. " bars. Sell them at the Trading Post!")
+	end)
+	RefineryService.WhileAway:Connect(function(report)
+		if report.bars > 0 then
+			whileAway:set(report)
+		end
+	end)
+	RefineryService.Notice:Connect(showToast)
+	EconomyService.Notice:Connect(showToast)
+	EconomyService.Sold:Connect(function(bars: number, cash: number)
+		showToast("Sold " .. Format.number(bars) .. " bars for +" .. Format.cash(cash))
 	end)
 
 	-- Clock and core HP polling (cheap: a handful of attribute reads)
@@ -290,38 +331,39 @@ function HUDController:KnitStart()
 				},
 			}),
 
-			-- Left: currencies and backpack
+			-- Left: currencies, backpack and home
 			scope:New("Frame")({
 				Name = "Stats",
 				AnchorPoint = Vector2.new(0, 0.5),
 				Position = UDim2.new(0, 12, 0.5, 0),
-				Size = UDim2.fromOffset(220, 128),
+				Size = UDim2.fromOffset(240, 280),
 				BackgroundTransparency = 1,
 				[Children] = {
-					scope:New("UIListLayout")({ Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }),
-					scope:New("Frame")({
-						LayoutOrder = 1,
-						Size = UDim2.new(1, 0, 0, 36),
-						BackgroundColor3 = PANEL,
-						BackgroundTransparency = 0.25,
-						[Children] = {
-							corner(scope, 10),
-							stroke(scope),
-							label(scope, {
-								Size = UDim2.fromScale(1, 1),
-								Text = scope:Computed(function(use)
-									local s = use(playerState)
-									return "◆ " .. Format.number(if s then s.shards else 0) .. " Core Shards"
-								end),
-								TextSize = 20,
-								TextColor3 = SHARD,
-							}),
-						},
-					}),
+					scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+					pill(
+						scope,
+						1,
+						CASH,
+						scope:Computed(function(use)
+							local s = use(playerState)
+							return Format.cash(if s then s.cash else 0)
+						end),
+						26
+					),
+					pill(
+						scope,
+						2,
+						SHARD,
+						scope:Computed(function(use)
+							local s = use(playerState)
+							return "◆ " .. Format.number(if s then s.shards else 0) .. " Core Shards"
+						end),
+						20
+					),
 					bar(scope, {
-						LayoutOrder = 2,
+						LayoutOrder = 3,
 						Position = UDim2.new(),
-						Size = UDim2.new(1, 0, 0, 32),
+						Size = UDim2.new(1, 0, 0, 30),
 						Fill = scope:Computed(function(use)
 							return use(carried) / math.max(use(capacity), 1)
 						end),
@@ -333,15 +375,130 @@ function HUDController:KnitStart()
 							return if use(full) then text .. "  FULL" else text
 						end),
 					}),
-					label(scope, {
-						LayoutOrder = 3,
-						Size = UDim2.new(1, 0, 0, 22),
+					pill(
+						scope,
+						4,
+						BAR,
+						scope:Computed(function(use)
+							local s = use(playerState)
+							if not s or s.bars == 0 then
+								return "No bars yet"
+							end
+							return Format.number(s.bars) .. " bars · worth " .. Format.cash(s.barValue)
+						end),
+						17
+					),
+					bar(scope, {
+						LayoutOrder = 5,
+						Position = UDim2.new(),
+						Size = UDim2.new(1, 0, 0, 26),
+						Fill = scope:Computed(function(use)
+							local s = use(playerState)
+							return if s then s.hopper / math.max(s.hopperCapacity, 1) else 0
+						end),
+						Color = Color3.fromRGB(196, 120, 52),
 						Text = scope:Computed(function(use)
 							local s = use(playerState)
-							return "Stored at silo: " .. Format.number(if s then s.stored else 0) .. " ore"
+							if not s then
+								return "Hopper"
+							end
+							return "Hopper " .. Format.number(s.hopper) .. " / " .. Format.number(s.hopperCapacity)
 						end),
-						TextSize = 16,
+					}),
+					label(scope, {
+						LayoutOrder = 6,
+						Size = UDim2.new(1, 0, 0, 40),
+						Text = scope:Computed(function(use)
+							local s = use(playerState)
+							if not s then
+								return ""
+							end
+							local rate, ready = 0, 0
+							for _, refinery in s.refineries do
+								rate += refinery.rate
+								ready += refinery.bin
+							end
+							local plot = if s.plotId then "Plot " .. s.plotId else "No plot"
+							return string.format(
+								"%s · %d refiner%s · %g ore/s\n%s bars ready to collect",
+								plot,
+								#s.refineries,
+								if #s.refineries == 1 then "y" else "ies",
+								rate,
+								Format.number(ready)
+							)
+						end),
+						TextSize = 15,
+						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
+					}),
+				},
+			}),
+
+			-- While you were away (spec §6.4)
+			scope:New("Frame")({
+				Name = "WhileAway",
+				AnchorPoint = Vector2.new(0.5, 0.5),
+				Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromOffset(360, 250),
+				BackgroundColor3 = PANEL,
+				BackgroundTransparency = 0.1,
+				Visible = scope:Computed(function(use)
+					return use(whileAway) ~= nil
+				end),
+				[Children] = {
+					corner(scope, 16),
+					stroke(scope, 0.2),
+					label(scope, {
+						Position = UDim2.fromOffset(0, 12),
+						Size = UDim2.new(1, 0, 0, 34),
+						Text = "While you were away",
+						TextSize = 28,
+						TextColor3 = CASH,
+					}),
+					label(scope, {
+						Position = UDim2.fromOffset(18, 56),
+						Size = UDim2.new(1, -36, 1, -110),
+						Text = scope:Computed(function(use)
+							local r = use(whileAway)
+							if not r then
+								return ""
+							end
+							local hours = r.away / 3600
+							local awayText = if hours >= 1
+								then string.format("%.1f hours", hours)
+								else string.format("%d minutes", math.floor(r.away / 60))
+							local lines = {
+								"You were gone " .. awayText .. ".",
+								"Your refineries made " .. Format.number(r.bars) .. " bars (" .. Format.cash(r.value) .. ").",
+							}
+							if r.capped then
+								table.insert(lines, "Offline time is capped at " .. math.floor(r.seconds / 3600) .. " hours.")
+							end
+							if r.oreLeft == 0 then
+								table.insert(lines, "Your hopper ran dry. Fill it up before you log off!")
+							end
+							table.insert(lines, "Collect the bars from the bins on your plot.")
+							return table.concat(lines, "\n")
+						end),
+						TextSize = 17,
+						TextWrapped = true,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextYAlignment = Enum.TextYAlignment.Top,
+					}),
+					scope:New("TextButton")({
+						AnchorPoint = Vector2.new(0.5, 1),
+						Position = UDim2.new(0.5, 0, 1, -12),
+						Size = UDim2.fromOffset(140, 36),
+						BackgroundColor3 = ORANGE,
+						Font = FONT,
+						Text = "Nice!",
+						TextSize = 20,
+						TextColor3 = WHITE,
+						[OnEvent("Activated")] = function()
+							whileAway:set(nil)
+						end,
+						[Children] = { corner(scope, 10) },
 					}),
 				},
 			}),
@@ -544,27 +701,52 @@ function HUDController:KnitStart()
 				end),
 			}),
 
-			-- Studio-only playtest helper
+			-- Studio-only playtest helpers
 			if RunService:IsStudio()
-				then scope:New("TextButton")({
-					Name = "DevSkip",
+				then scope:New("Frame")({
+					Name = "Dev",
 					AnchorPoint = Vector2.new(1, 1),
 					Position = UDim2.new(1, -12, 1, -12),
-					Size = UDim2.fromOffset(150, 30),
-					BackgroundColor3 = Color3.fromRGB(80, 60, 120),
-					Font = FONT,
-					Text = "[Studio] Meteor now",
-					TextSize = 16,
-					TextColor3 = WHITE,
-					Visible = scope:Computed(function(use)
-						return use(phase) == Phase.Countdown
-					end),
-					[OnEvent("Activated")] = function()
-						MeteorService:DevSkipCountdown()
-					end,
-					[Children] = { corner(scope, 8) },
+					Size = UDim2.fromOffset(170, 66),
+					BackgroundTransparency = 1,
+					[Children] = {
+						scope:New("UIListLayout")({
+							Padding = UDim.new(0, 6),
+							VerticalAlignment = Enum.VerticalAlignment.Bottom,
+						}),
+						scope:New("TextButton")({
+							Name = "DevSkip",
+							Size = UDim2.new(1, 0, 0, 30),
+							BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+							Font = FONT,
+							Text = "[Studio] Meteor now",
+							TextSize = 16,
+							TextColor3 = WHITE,
+							Visible = scope:Computed(function(use)
+								return use(phase) == Phase.Countdown
+							end),
+							[OnEvent("Activated")] = function()
+								MeteorService:DevSkipCountdown()
+							end,
+							[Children] = { corner(scope, 8) },
+						}),
+						scope:New("TextButton")({
+							Name = "DevAway",
+							Size = UDim2.new(1, 0, 0, 30),
+							BackgroundColor3 = Color3.fromRGB(80, 60, 120),
+							Font = FONT,
+							Text = "[Studio] Away 1 hour",
+							TextSize = 16,
+							TextColor3 = WHITE,
+							[OnEvent("Activated")] = function()
+								RefineryService:DevSimulateAway(3600)
+							end,
+							[Children] = { corner(scope, 8) },
+						}),
+					},
 				})
 				else nil,
+
 		},
 	})
 

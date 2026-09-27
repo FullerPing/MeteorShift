@@ -1,23 +1,15 @@
 --!strict
--- Week 1 placeholder for player state: pickaxe, backpack, stored ore and Core Shards.
--- Lives in memory only. Week 2's DataService (ProfileStore) replaces the storage,
--- keeping this service's API so gameplay code doesn't change.
+-- Gameplay-facing view of a player's saved profile: pickaxe, backpack, currencies,
+-- hopper and refineries. Storage is DataService; this service owns the rules and
+-- replicates a compact snapshot to the owning client.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
-
-export type State = {
-	pickaxeTier: number,
-	backpackTier: number,
-	backpack: { [string]: number }, -- ore carried
-	stored: { [string]: number }, -- ore dropped at the town silo (stands in for the Week 2 hopper)
-	oreRemainder: { [string]: number }, -- fractional ore from debris, paid out once it reaches 1
-	cash: number,
-	shards: number,
-}
+local Format = require(ReplicatedStorage.Shared.Format)
+local Refining = require(script.Parent.Parent.Lib.Refining)
 
 local PlayerStateService = Knit.CreateService({
 	Name = "PlayerStateService",
@@ -27,7 +19,10 @@ local PlayerStateService = Knit.CreateService({
 	},
 })
 
-local states: { [Player]: State } = {}
+local DataService
+
+-- Fractional ore from debris, paid out once it reaches 1. Not saved.
+local oreRemainder: { [Player]: { [string]: number } } = {}
 local lastFullNotice: { [Player]: number } = {}
 
 local function sum(t: { [string]: number }): number
@@ -38,64 +33,90 @@ local function sum(t: { [string]: number }): number
 	return total
 end
 
-function PlayerStateService:_replicate(player: Player)
-	local state = states[player]
-	if not state then
+function PlayerStateService:Get(player: Player): any
+	local profile = DataService:GetProfile(player)
+	return if profile then profile.Data else nil
+end
+
+function PlayerStateService:GetPickaxe(player: Player): typeof(Config.Pickaxes[1])
+	local data = self:Get(player)
+	return Config.Pickaxes[if data then data.pickaxeTier else 1] or Config.Pickaxes[1]
+end
+
+function PlayerStateService:GetCapacity(player: Player): number
+	local data = self:Get(player)
+	return (Config.Backpacks[if data then data.backpackTier else 1] or Config.Backpacks[1]).Capacity
+end
+
+function PlayerStateService:GetHopperCapacity(player: Player): number
+	local data = self:Get(player)
+	return (Config.Home.Hoppers[if data then data.hopperLevel else 1] or Config.Home.Hoppers[1]).Capacity
+end
+
+function PlayerStateService:IsBackpackFull(player: Player): boolean
+	local data = self:Get(player)
+	return data ~= nil and sum(data.backpack) >= self:GetCapacity(player)
+end
+
+-- Value of the bars a player carries, before sale multipliers.
+function PlayerStateService:BarValue(bars: { [string]: number }): number
+	local value = 0
+	for oreType, n in bars do
+		value += n * (Config.Home.BarPrices[oreType] or 0)
+	end
+	return value
+end
+
+function PlayerStateService:Replicate(player: Player)
+	local data = self:Get(player)
+	if not data then
 		return
 	end
-	local capacity = self:GetCapacity(player)
+
+	local refineries = {}
+	for index, refinery in data.refineries do
+		refineries[index] = {
+			level = refinery.level,
+			rate = Refining.throughput(refinery),
+			bin = sum(refinery.bin),
+		}
+	end
+
 	self.Client.State:SetFor(player, {
-		pickaxeTier = state.pickaxeTier,
-		backpackTier = state.backpackTier,
-		backpack = state.backpack,
-		carried = sum(state.backpack),
-		capacity = capacity,
-		stored = sum(state.stored),
-		cash = state.cash,
-		shards = state.shards,
+		pickaxeTier = data.pickaxeTier,
+		backpackTier = data.backpackTier,
+		backpack = data.backpack,
+		carried = sum(data.backpack),
+		capacity = self:GetCapacity(player),
+		cash = data.cash,
+		shards = data.shards,
+		bars = sum(data.bars),
+		barValue = self:BarValue(data.bars),
+		hopper = sum(data.hopper),
+		hopperCapacity = self:GetHopperCapacity(player),
+		refineries = refineries,
+		plotId = player:GetAttribute("PlotId"),
 	})
 
 	local leaderstats = player:FindFirstChild("leaderstats")
 	if leaderstats then
-		(leaderstats:FindFirstChild("Shards") :: IntValue).Value = state.shards;
-		(leaderstats:FindFirstChild("Ore") :: IntValue).Value = sum(state.stored) + sum(state.backpack)
+		(leaderstats:FindFirstChild("Cash") :: StringValue).Value = Format.cash(data.cash);
+		(leaderstats:FindFirstChild("Shards") :: IntValue).Value = data.shards
 	end
-end
-
-function PlayerStateService:Get(player: Player): State?
-	return states[player]
-end
-
-function PlayerStateService:GetPickaxe(player: Player): typeof(Config.Pickaxes[1])
-	local state = states[player]
-	return Config.Pickaxes[if state then state.pickaxeTier else 1]
-end
-
-function PlayerStateService:GetCapacity(player: Player): number
-	local state = states[player]
-	return Config.Backpacks[if state then state.backpackTier else 1].Capacity
-end
-
-function PlayerStateService:IsBackpackFull(player: Player): boolean
-	local state = states[player]
-	return state ~= nil and sum(state.backpack) >= self:GetCapacity(player)
 end
 
 -- Adds ore to the backpack up to its capacity. Fractional amounts (debris) are
 -- banked until they add up to a whole ore. Returns the whole ore actually added.
 function PlayerStateService:AddOre(player: Player, oreType: string, amount: number): number
-	local state = states[player]
-	if not state or amount <= 0 then
+	local data = self:Get(player)
+	local remainders = oreRemainder[player]
+	if not data or not remainders or amount <= 0 then
 		return 0
 	end
 
-	local pending = (state.oreRemainder[oreType] or 0) + amount
-	local whole = math.floor(pending)
-	local space = self:GetCapacity(player) - sum(state.backpack)
-	local added = math.clamp(whole, 0, math.max(space, 0))
-
+	local space = self:GetCapacity(player) - sum(data.backpack)
 	if space <= 0 then
-		state.oreRemainder[oreType] = 0
+		remainders[oreType] = 0
 		local now = os.clock()
 		if now - (lastFullNotice[player] or 0) > 3 then
 			lastFullNotice[player] = now
@@ -104,70 +125,64 @@ function PlayerStateService:AddOre(player: Player, oreType: string, amount: numb
 		return 0
 	end
 
-	state.oreRemainder[oreType] = pending - whole
-	state.backpack[oreType] = (state.backpack[oreType] or 0) + added
-	self:_replicate(player)
+	local pending = (remainders[oreType] or 0) + amount
+	local whole = math.floor(pending)
+	local added = math.min(whole, space)
+	remainders[oreType] = pending - whole
+	if added > 0 then
+		data.backpack[oreType] = (data.backpack[oreType] or 0) + added
+		self:Replicate(player)
+	end
 	return added
 end
 
--- Placeholder drop-off until the Week 2 hopper exists.
-function PlayerStateService:DepositAll(player: Player): number
-	local state = states[player]
-	if not state then
-		return 0
-	end
-	local moved = 0
-	for oreType, amount in state.backpack do
-		state.stored[oreType] = (state.stored[oreType] or 0) + amount
-		moved += amount
-	end
-	table.clear(state.backpack)
-	if moved > 0 then
-		self:_replicate(player)
-	end
-	return moved
-end
-
 function PlayerStateService:AddShards(player: Player, amount: number)
-	local state = states[player]
-	if not state then
+	local data = self:Get(player)
+	if not data then
 		return
 	end
-	state.shards += amount
-	self:_replicate(player)
+	data.shards += amount
+	self:Replicate(player)
+end
+
+function PlayerStateService:AddCash(player: Player, amount: number)
+	local data = self:Get(player)
+	if not data then
+		return
+	end
+	data.cash += amount
+	self:Replicate(player)
+end
+
+function PlayerStateService:KnitInit()
+	DataService = Knit.GetService("DataService")
 end
 
 function PlayerStateService:KnitStart()
-	local function onPlayerAdded(player: Player)
-		states[player] = {
-			pickaxeTier = 1,
-			backpackTier = 1,
-			backpack = {},
-			stored = {},
-			oreRemainder = {},
-			cash = 0,
-			shards = 0,
-		}
-
+	local function addLeaderstats(player: Player)
 		local leaderstats = Instance.new("Folder")
 		leaderstats.Name = "leaderstats"
+		local cash = Instance.new("StringValue")
+		cash.Name = "Cash"
+		cash.Parent = leaderstats
 		local shards = Instance.new("IntValue")
 		shards.Name = "Shards"
 		shards.Parent = leaderstats
-		local ore = Instance.new("IntValue")
-		ore.Name = "Ore"
-		ore.Parent = leaderstats
 		leaderstats.Parent = player
-
-		self:_replicate(player)
 	end
 
-	Players.PlayerAdded:Connect(onPlayerAdded)
+	Players.PlayerAdded:Connect(addLeaderstats)
 	for _, player in Players:GetPlayers() do
-		task.spawn(onPlayerAdded, player)
+		addLeaderstats(player)
 	end
+
+	DataService.ProfileLoaded:Connect(function(player)
+		oreRemainder[player] = {}
+		self:Replicate(player)
+	end)
+
 	Players.PlayerRemoving:Connect(function(player)
-		states[player] = nil
+		oreRemainder[player] = nil
 		lastFullNotice[player] = nil
 	end)
 end

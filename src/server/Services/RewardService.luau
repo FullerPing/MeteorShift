@@ -81,6 +81,15 @@ function RewardService:Finish(cracked: boolean)
 
 	for index, entry in ranked do
 		local reward = rewards[index]
+		local data = PlayerStateService:Get(entry.Player)
+		if data then
+			data.stats.meteorsJoined += 1
+			data.flags.firstMeteor = true
+			if reward then
+				data.stats.coresCracked += 1
+				data.flags.firstCoreReward = true
+			end
+		end
 		if reward then
 			PlayerStateService:AddShards(entry.Player, reward.Total)
 		end

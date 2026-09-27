@@ -6,17 +6,25 @@ Every few minutes a meteor slams into the crater in the middle of town and the w
 
 ## Status
 
-Week 1 of the MVP plan (the meteor event loop) is in. See the spec in the project thread "Meteor Shift game spec".
+Weeks 1 and 2 of the MVP plan are in. See the spec in the project thread "Meteor Shift game spec".
 
+**Week 1, the meteor event**
 - Sky countdown and HUD timer, streak in the sky for the last 10 s, rumble and camera shake
 - Impact with shockwave: knockback only, no damage
 - Meteor assembled from reusable node pieces: 36 crust nodes around a core
 - Node and core HP sized from the server's total mining power at impact
-- Per-player ore drops straight into your backpack (50 ore placeholder backpack)
+- Per-player ore drops straight into your backpack
 - Core unlocks when 60% of the crust is broken, cooling timer of 2:30
 - Server-side contribution tally (core hits count double), core rewards with a 5-shard floor, a contribution share and +10/+6/+3 for the top three, announced to the server
 - Debris rocks in town that respawn, yielding ore at a quarter of the meteor rate
-- Ore Silo in the town square as a temporary drop-off until plots get hoppers in Week 2
+
+**Week 2, the home loop**
+- Saved profiles (schema v1) with a session lock, autosave every 60 s, save on leave and shutdown
+- A free plot on join, with your name on the sign and a "YOUR PLOT" beacon
+- Hopper: step on the green DROP ORE pad to empty your backpack into it (2,000 ore at level 1)
+- Refineries turn 1 ore into 1 bar over time (0.25 ore/s at level 1); step on a bin to collect all bars
+- Offline income: refineries keep working on your hopper for up to 2 hours while you're away, with a "While you were away" panel on return
+- Sell bars at the Trading Post counter (Iron bar = $5)
 
 ## Layout
 
@@ -29,9 +37,9 @@ src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `PlayerStateService` (in-memory placeholder until the Week 2 DataService), `SiloService`.
+Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (hopper, refineries, offline catch-up), `EconomyService` (selling). `src/server/Lib` holds the profile template and the pure refinery simulation.
 
-Client controllers: `MiningController`, `MeteorFXController`, `HUDController`.
+Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`.
 
 All tuning numbers live in `src/shared/Config`.
 
@@ -41,7 +49,7 @@ Nothing builds the world at runtime. The crater town, plots, debris rocks, sky c
 
 | Instance | What it is |
 |---|---|
-| `Workspace.Map` | Ground, crater, town square (Ore Silo, Trading Post, Pickaxe Shop, spawn), 20 plots, roads, debris rocks, trees, boundary cliffs |
+| `Workspace.Map` | Ground, crater, town square (Trading Post with sell counter, Pickaxe Shop, spawn), 20 plots each with a hopper and 6 refinery machines, roads, debris rocks, trees, boundary cliffs |
 | `ServerStorage.Assets` | Meteor core (with `NodeSlot` attachments) and the crust node pieces |
 | `StarterPack.Pickaxe` | The Basic Pickaxe tool |
 
@@ -53,4 +61,4 @@ The only thing spawned at runtime is the meteor itself, cloned from `ServerStora
 
 1. Open the saved place in Studio.
 2. `rojo serve` in this folder, then connect from the Rojo plugin.
-3. Play. In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings), and a **[Studio] Meteor now** button skips to the last 10 s.
+3. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only. In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings), and a **[Studio] Meteor now** button skips to the last 10 s. **[Studio] Away 1 hour** runs an hour of offline refining so you can check the "While you were away" panel.
