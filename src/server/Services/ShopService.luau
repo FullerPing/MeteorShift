@@ -7,8 +7,8 @@
 -- square (Workspace.Map.TownSquare.PickaxeShop: its ProximityPrompt, or one made
 -- on its ShopPoint part if none was saved).
 --
--- The Pickaxe tool (StarterPack) is renamed after the tier you own, and parts
--- in it with a Tint attribute take that tier's colour.
+-- The Pickaxe tool keeps its original handle, grip and input bindings while
+-- EquipmentModels gives each purchased tier its own visible geometry.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,6 +17,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Price = require(ReplicatedStorage.Shared.Price)
+local EquipmentModels = require(ReplicatedStorage.Shared.EquipmentModels)
 
 local ShopService = Knit.CreateService({
 	Name = "ShopService",
@@ -44,11 +45,7 @@ local function styleTool(tool: Tool, pickaxe: typeof(Config.Pickaxes[1]))
 	tool.Name = pickaxe.Name
 	tool.ToolTip = string.format("%s · %d ore per hit", pickaxe.Name, pickaxe.OrePerHit)
 	tool:SetAttribute("Tier", pickaxe.Tier)
-	for _, part in tool:GetDescendants() do
-		if part:IsA("BasePart") and part:GetAttribute("Tint") then
-			part.Color = pickaxe.Color
-		end
-	end
+	EquipmentModels.applyToTool(tool, pickaxe.Tier)
 end
 
 local function isPickaxe(instance: Instance): boolean
@@ -143,11 +140,34 @@ function ShopService:KnitStart()
 
 	-- StarterPack hands out a fresh Basic Pickaxe on every spawn; restyle it
 	local function watch(player: Player)
-		player.DescendantAdded:Connect(function(descendant)
-			if isPickaxe(descendant) and PlayerStateService:Get(player) then
-				styleTool(descendant :: Tool, PlayerStateService:GetPickaxe(player))
+		local function added(descendant: Instance)
+			-- Generated model parts never schedule another restyle. A deferred
+			-- call also lets a newly cloned Tool finish receiving its Handle.
+			local tool = if isPickaxe(descendant) then descendant
+				elseif descendant.Name == "Handle" and descendant.Parent and isPickaxe(descendant.Parent)
+				then descendant.Parent else nil
+			if tool then
+				task.defer(function()
+					if tool.Parent and PlayerStateService:Get(player) then
+						styleTool(tool :: Tool, PlayerStateService:GetPickaxe(player))
+					end
+				end)
 			end
-		end)
+		end
+		player.DescendantAdded:Connect(added)
+		local function characterAdded(character: Model)
+			character.DescendantAdded:Connect(added)
+			for _, descendant in character:GetChildren() do
+				added(descendant)
+			end
+		end
+		player.CharacterAdded:Connect(characterAdded)
+		if player.Character then
+			characterAdded(player.Character)
+		end
+		if PlayerStateService:Get(player) then
+			self:ApplyPickaxe(player)
+		end
 	end
 	Players.PlayerAdded:Connect(watch)
 	for _, player in Players:GetPlayers() do

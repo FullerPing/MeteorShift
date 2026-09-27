@@ -201,6 +201,28 @@ function TutorialController:KnitStart()
 	local ShopController = Knit.GetController("ShopController")
 
 	local scope = Fusion.scoped(Fusion)
+	local viewport = scope:Value(Vector2.new(1280, 720))
+	local viewportConnection: RBXScriptConnection? = nil
+	local function observeCamera()
+		if viewportConnection then viewportConnection:Disconnect() end
+		local camera = workspace.CurrentCamera
+		if camera then
+			local function updateViewport()
+				viewport:set(camera.ViewportSize)
+			end
+			updateViewport()
+			viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateViewport)
+		end
+	end
+	observeCamera()
+	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(observeCamera)
+	local hudScale = scope:Computed(function(use)
+		local size = use(viewport)
+		return math.clamp(math.min(size.X / 1050, size.Y / 760), 0.45, 1)
+	end)
+	local compact = scope:Computed(function(use)
+		return use(viewport).X < 1000
+	end)
 	local step = scope:Value(nil :: any)
 	local meteorState = scope:Value(nil :: any)
 	local serverNow = scope:Value(workspace:GetServerTimeNow())
@@ -254,52 +276,61 @@ function TutorialController:KnitStart()
 		[Children] = {
 			scope:New("Frame")({
 				Name = "Card",
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 138),
-				Size = UDim2.fromOffset(380, 100),
-				BackgroundColor3 = UI.PANEL,
+				AnchorPoint = scope:Computed(function(use)
+					return if use(compact) then Vector2.new(1, 0) else Vector2.new(0.5, 0)
+				end),
+				Position = scope:Computed(function(use)
+					return if use(compact)
+						then UDim2.new(1, -18, 0, 354 * use(hudScale))
+						else UDim2.new(0.5, 0, 0, 138 * use(hudScale))
+				end),
+				Size = UDim2.fromOffset(380, 116),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.04,
 				Visible = scope:Computed(function(use)
 					return use(step) ~= nil or use(finished)
 				end),
 				[Children] = {
-					UI.panelFill(scope),
-					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 6),
+					scope:New("UIScale")({ Scale = hudScale }),
+					UI.cardFill(scope),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 10),
 						Size = UDim2.new(1, -90, 0, 18),
 						Text = scope:Computed(function(use)
 							local s = use(step)
-							return if s then string.format("STEP %d / %d", s.index, s.total) else "TUTORIAL"
+							return if s then string.format("MINER TRAINING  ·  %d / %d", s.index, s.total) else "TRAINING COMPLETE"
 						end),
-						TextSize = 15,
+						TextSize = 12,
 						TextColor3 = UI.ORANGE,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 24),
+						Position = UDim2.fromOffset(14, 31),
 						Size = UDim2.new(1, -28, 0, 30),
 						Text = scope:Computed(function(use)
 							local info = use(current)
 							return if info then info.Text else "You're all set. Have fun, miner!"
 						end),
-						TextSize = 26,
+						TextSize = 23,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
-					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 56),
-						Size = UDim2.new(1, -28, 0, 38),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 65),
+						Size = UDim2.new(1, -28, 0, 35),
 						Text = hint,
-						TextSize = 15,
+						TextSize = 14,
+						TextColor3 = UI.SUBTEXT,
 						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextYAlignment = Enum.TextYAlignment.Top,
 					}),
 					UI.button(scope, {
 						AnchorPoint = Vector2.new(1, 0),
-						Position = UDim2.new(1, -10, 0, 8),
-						Size = UDim2.fromOffset(64, 26),
+						Position = UDim2.new(1, -10, 0, 7),
+						Size = UDim2.fromOffset(58, 25),
 						Text = "Skip",
 						TextSize = 15,
-						BackgroundColor3 = UI.MUTED,
+						BackgroundColor3 = UI.CARD,
 						TextColor3 = UI.WHITE,
 						Visible = scope:Computed(function(use)
 							return use(step) ~= nil
@@ -309,6 +340,24 @@ function TutorialController:KnitStart()
 								TutorialService:Skip()
 							end)
 						end,
+					}),
+					scope:New("Frame")({
+						Position = UDim2.new(0, 14, 1, -9),
+						Size = UDim2.new(1, -28, 0, 4),
+						BorderSizePixel = 0,
+						BackgroundColor3 = UI.OUTLINE,
+						[Children] = {
+							UI.corner(scope, 2),
+							scope:New("Frame")({
+								Size = scope:Computed(function(use)
+									local s = use(step)
+									return UDim2.fromScale(if s then (s.index - 1) / math.max(s.total, 1) else 1, 1)
+								end),
+								BorderSizePixel = 0,
+								BackgroundColor3 = GUIDE_COLOR,
+								[Children] = { UI.corner(scope, 2) },
+							}),
+						},
 					}),
 				},
 			}),

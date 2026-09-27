@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local UI = require(script.Parent.Parent.UI)
 
 local player = Players.LocalPlayer
 
@@ -51,7 +52,7 @@ local function showBeacon(plotId: number?)
 	local gui = Instance.new("BillboardGui")
 	gui.Name = "YourPlotBeacon"
 	gui.Adornee = pad
-	gui.Size = UDim2.fromOffset(150, 36)
+	gui.Size = UDim2.fromOffset(174, 38)
 	gui.StudsOffsetWorldSpace = Vector3.new(0, 26, 0)
 	gui.AlwaysOnTop = true
 	gui.LightInfluence = 0
@@ -59,14 +60,24 @@ local function showBeacon(plotId: number?)
 
 	local label = Instance.new("TextLabel")
 	label.Size = UDim2.fromScale(1, 1)
-	label.BackgroundTransparency = 1
-	label.Font = Enum.Font.FredokaOne
+	label.BackgroundColor3 = UI.PANEL_DARK
+	label.BackgroundTransparency = 0.12
+	label.BorderSizePixel = 0
+	label.Font = UI.FONT
 	label.Text = "⌂ YOUR PLOT"
-	label.TextColor3 = Color3.fromRGB(255, 223, 98)
+	label.TextColor3 = UI.CASH
 	label.TextSize = 19
-	label.TextStrokeColor3 = Color3.fromRGB(31, 22, 19)
+	label.TextStrokeColor3 = UI.OUTLINE
 	label.TextStrokeTransparency = 0
 	label.Parent = gui
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0, 10)
+	corner.Parent = label
+	local border = Instance.new("UIStroke")
+	border.Color = UI.OUTLINE
+	border.Thickness = 2
+	border.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+	border.Parent = label
 	gui.Parent = player:WaitForChild("PlayerGui")
 	beacon = gui
 end

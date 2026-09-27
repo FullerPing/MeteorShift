@@ -220,6 +220,9 @@ local function oreFlyIn(from: Vector3, amount: number)
 end
 
 function MiningController:_swing(tool: Tool)
+	if player:GetAttribute("ShopOpen") then
+		return
+	end
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
@@ -253,13 +256,14 @@ end
 
 function MiningController:_bindTool(tool: Tool)
 	tool.Activated:Connect(function()
+		if player:GetAttribute("ShopOpen") then return end
 		holding = true
 		if swinging then
 			return
 		end
 		swinging = true
 		-- Holding the button keeps swinging at the pickaxe's speed
-		while holding and tool.Parent == player.Character do
+		while holding and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") do
 			self:_swing(tool)
 			task.wait(Config.Pickaxes[pickaxeTier].Swing)
 		end
