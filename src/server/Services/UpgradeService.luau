@@ -1,14 +1,15 @@
 --!strict
 -- Upgrades for the four plot stations (hopper, conveyor, refinery, collection
 -- post). Each station carries an "Upgrade" ProximityPrompt; the server checks
--- ownership, price and max level. Pickaxe and backpack purchases join this in
--- the Week 3 shop.
+-- ownership, price and max level. The shop's Plot tab buys the same upgrades
+-- from anywhere; pickaxes and backpacks are ShopService.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
-local Format = require(ReplicatedStorage.Shared.Format)
+local Price = require(ReplicatedStorage.Shared.Price)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local UpgradeService = Knit.CreateService({
 	Name = "UpgradeService",
@@ -17,6 +18,8 @@ local UpgradeService = Knit.CreateService({
 		Notice = Knit.CreateSignal(), -- (text)
 	},
 })
+
+UpgradeService.StationUpgraded = Signal.new() -- (player, stationId, newLevel)
 
 local PlayerStateService
 local PlotService
@@ -35,23 +38,9 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 		self.Client.Notice:Fire(player, stationConfig.Name .. " is already at max level.")
 		return false
 	end
-	if data.cash < nextLevel.Cost then
-		self.Client.Notice:Fire(player, string.format(
-			"Need %s for %s Lv %d (you have %s).",
-			Format.cash(nextLevel.Cost),
-			stationConfig.Name,
-			current + 1,
-			Format.cash(data.cash)
-		))
-		return false
-	end
-	if data.shards < nextLevel.Shards then
-		self.Client.Notice:Fire(player, string.format(
-			"Need %d Core Shards for %s Lv %d. Crack meteor cores to earn them!",
-			nextLevel.Shards,
-			stationConfig.Name,
-			current + 1
-		))
+	local shortfall = Price.shortfall(data, nextLevel.Cost, nextLevel.Shards, stationConfig.Name .. " Lv " .. (current + 1))
+	if shortfall then
+		self.Client.Notice:Fire(player, shortfall)
 		return false
 	end
 
@@ -63,7 +52,20 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 	end
 	self.Client.Upgraded:Fire(player, stationId, current + 1)
 	RefineryService:Refresh(player)
+	self.StationUpgraded:Fire(player, stationId, current + 1)
 	return true
+end
+
+-- The shop's Plot tab. Needs a plot, like the prompts on the stations.
+function UpgradeService.Client:BuyStation(player: Player, stationId: string): boolean
+	if typeof(stationId) ~= "string" or not Config.Home.Stations[stationId] then
+		return false
+	end
+	if not PlotService:GetStations(player) then
+		self.Notice:Fire(player, "You need a plot first.")
+		return false
+	end
+	return self.Server:BuyStation(player, stationId)
 end
 
 function UpgradeService:_connect(player: Player, stations: Model)

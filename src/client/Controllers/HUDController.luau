@@ -1,7 +1,8 @@
 --!strict
 -- HUD built with Fusion (spec §10):
 --   * countdown / cooling timer and the sky countdown over the crater
---   * cash, shards, backpack meter (red when full), bars, hopper and production line
+--   * cash (counts up on every sale, "+$" floater), shards, pickaxe, backpack
+--     meter (red when full), bars, hopper and production line
 --   * "While you were away" panel (spec §6.4)
 --   * event panel: core HP bar, core lock, your rank, top three
 --   * announcement banner, results panel, small toasts
@@ -9,11 +10,14 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local UI = require(script.Parent.Parent.UI)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -24,45 +28,21 @@ local HUDController = Knit.CreateController({
 	Name = "HUDController",
 })
 
-local FONT = Enum.Font.FredokaOne
-local WHITE = Color3.fromRGB(255, 255, 255)
-local ORANGE = Color3.fromRGB(255, 174, 52)
-local SHARD = Color3.fromRGB(66, 190, 255)
-local RED = Color3.fromRGB(235, 70, 70)
-local GREEN = Color3.fromRGB(105, 240, 103)
-local CASH = Color3.fromRGB(255, 207, 55)
-local BAR = Color3.fromRGB(232, 171, 89)
-local OUTLINE = Color3.fromRGB(31, 22, 19)
+local FONT = UI.FONT
+local WHITE = UI.WHITE
+local ORANGE = UI.ORANGE
+local SHARD = UI.SHARD
+local RED = UI.RED
+local GREEN = UI.GREEN
+local CASH = UI.CASH
+local BAR = UI.BAR
+local OUTLINE = UI.OUTLINE
 
-type Scope = Fusion.Scope<typeof(Fusion)>
+type Scope = UI.Scope
 
-local function corner(scope: Scope, radius: number)
-	return scope:New("UICorner")({ CornerRadius = UDim.new(0, radius) })
-end
-
-local function stroke(scope: Scope, transparency: number?)
-	return scope:New("UIStroke")({
-		Color = OUTLINE,
-		Thickness = 3,
-		Transparency = transparency or 0,
-		ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-	})
-end
-
-local function label(scope: Scope, props: { [any]: any })
-	local base = {
-		BackgroundTransparency = 1,
-		Font = FONT,
-		TextColor3 = WHITE,
-		TextStrokeColor3 = OUTLINE,
-		TextStrokeTransparency = 0,
-		TextScaled = false,
-	}
-	for key, value in props do
-		base[key] = value
-	end
-	return scope:New("TextLabel")(base)
-end
+local corner = UI.corner
+local stroke = UI.stroke
+local label = UI.label
 
 local function stat(
 	scope: Scope,
@@ -156,6 +136,7 @@ function HUDController:KnitStart()
 	local RefineryService = Knit.GetService("RefineryService")
 	local EconomyService = Knit.GetService("EconomyService")
 	local UpgradeService = Knit.GetService("UpgradeService")
+	local ShopService = Knit.GetService("ShopService")
 
 	local scope = Fusion.scoped(Fusion)
 
@@ -240,8 +221,12 @@ function HUDController:KnitStart()
 		local names = { hopper = "Hopper", conveyor = "Conveyor", refinery = "Refinery", collector = "Collection Post" }
 		showToast((names[stationId] or stationId) .. " upgraded to Lv " .. level .. "!")
 	end)
-	EconomyService.Sold:Connect(function(bars: number, cash: number)
-		showToast("Sold " .. Format.number(bars) .. " bars for +" .. Format.cash(cash))
+	ShopService.Notice:Connect(showToast)
+	ShopService.Purchased:Connect(function(kind: string, tier: number)
+		local item = if kind == "pickaxe" then Config.Pickaxes[tier] else Config.Backpacks[tier]
+		if item then
+			showToast("You got the " .. item.Name .. "!")
+		end
 	end)
 
 	-- Clock and core HP polling (cheap: a handful of attribute reads)
@@ -343,6 +328,15 @@ function HUDController:KnitStart()
 		return use(carried) >= use(capacity)
 	end)
 
+	-- The cash counter counts up to the new total instead of jumping (spec §7.5)
+	local cashShown = scope:Tween(
+		scope:Computed(function(use)
+			local s = use(playerState)
+			return if s then s.cash else 0
+		end),
+		TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+	)
+
 	local ui = scope:New("ScreenGui")({
 		Name = "MeteorHUD",
 		ResetOnSpawn = false,
@@ -379,7 +373,7 @@ function HUDController:KnitStart()
 			scope:New("Frame")({
 				Name = "Stats",
 				Position = UDim2.fromOffset(14, 70),
-				Size = UDim2.fromOffset(232, 310),
+				Size = UDim2.fromOffset(232, 372),
 				BackgroundTransparency = 1,
 				[Children] = {
 					scope:New("UIListLayout")({ Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }),
@@ -389,8 +383,7 @@ function HUDController:KnitStart()
 						"$",
 						CASH,
 						scope:Computed(function(use)
-							local s = use(playerState)
-							return Format.number(if s then s.cash else 0)
+							return Format.number(use(cashShown))
 						end),
 						"CASH"
 					),
@@ -419,6 +412,21 @@ function HUDController:KnitStart()
 								.. "/"
 								.. Format.number(use(capacity))
 								.. (if use(full) then "  FULL" else "")
+						end)
+					),
+					stat(
+						scope,
+						4,
+						"⚒",
+						Color3.fromRGB(200, 208, 220),
+						scope:Computed(function(use)
+							local s = use(playerState)
+							return "Tier " .. (if s then s.pickaxeTier else 1)
+						end),
+						scope:Computed(function(use)
+							local s = use(playerState)
+							local pickaxe = Config.Pickaxes[if s then s.pickaxeTier else 1] or Config.Pickaxes[1]
+							return string.upper(pickaxe.Name)
 						end)
 					),
 					stat(
@@ -797,6 +805,32 @@ function HUDController:KnitStart()
 	})
 
 	self.Gui = ui
+
+	-- "+$4.8M" rises off the cash counter on every sale
+	EconomyService.Sold:Connect(function(bars: number, cash: number)
+		showToast("Sold " .. Format.number(bars) .. " bars")
+		local floater = Instance.new("TextLabel")
+		floater.BackgroundTransparency = 1
+		floater.Position = UDim2.fromOffset(69, 64)
+		floater.Size = UDim2.fromOffset(200, 36)
+		floater.Font = FONT
+		floater.Text = "+" .. Format.cash(cash)
+		floater.TextSize = 30
+		floater.TextColor3 = CASH
+		floater.TextStrokeColor3 = OUTLINE
+		floater.TextStrokeTransparency = 0
+		floater.TextXAlignment = Enum.TextXAlignment.Left
+		floater.Parent = ui
+		local info = TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		TweenService:Create(floater, info, {
+			Position = UDim2.fromOffset(69, 22),
+			TextTransparency = 1,
+			TextStrokeTransparency = 1,
+		}):Play()
+		task.delay(1.5, function()
+			floater:Destroy()
+		end)
+	end)
 end
 
 return HUDController

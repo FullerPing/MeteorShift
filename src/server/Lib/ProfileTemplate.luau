@@ -25,6 +25,7 @@ return {
 	index = {}, -- discovered minerals
 	rebirths = 0,
 	lastSeen = 0,
+	tutorialStep = 1, -- next tutorial step (spec §11); flags.tutorialDone ends it
 	flags = {
 		tutorialDone = false,
 		firstMeteor = false,

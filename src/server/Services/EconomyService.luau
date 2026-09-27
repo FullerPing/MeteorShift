@@ -9,6 +9,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local EconomyService = Knit.CreateService({
 	Name = "EconomyService",
@@ -17,6 +18,8 @@ local EconomyService = Knit.CreateService({
 		Notice = Knit.CreateSignal(), -- (text)
 	},
 })
+
+EconomyService.BarsSold = Signal.new() -- (player, bars, cash)
 
 local PlayerStateService
 
@@ -49,6 +52,7 @@ function EconomyService:SellAll(player: Player): number
 	data.stats.barsSold = (data.stats.barsSold or 0) + bars
 	PlayerStateService:AddCash(player, cash)
 	self.Client.Sold:Fire(player, bars, cash)
+	self.BarsSold:Fire(player, bars, cash)
 	return cash
 end
 

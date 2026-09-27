@@ -6,7 +6,7 @@ Every few minutes a meteor slams into the crater in the middle of town and the w
 
 ## Status
 
-Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and the meteor. See the spec in the project thread "Meteor Shift game spec".
+Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and the meteor. Week 3 (upgrades and UI) is under way. See the spec in the project thread "Meteor Shift game spec".
 
 **Week 1, the meteor event**
 - Sky countdown and HUD timer, streak in the sky for the last 10 s, rumble and camera shake
@@ -37,20 +37,29 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Health bars over meteor clusters and debris rocks appear only after you hit them, and only on your screen. The core has a big shared bar everyone sees once it is exposed.
 - Profiles migrate from schema v1 to v2 (station levels, one hopper and one collection post)
 
+**Week 3, upgrades and UI (in progress)**
+- Shop with Pickaxes, Backpacks and Plot tabs, opened from the SHOP button or the Pickaxe Shop in town. Every tier is listed; only the next one can be bought (cash, plus Core Shards at the top tiers), and the server re-checks the price. The Plot tab buys the same station upgrades as the prompts on your plot.
+- Your pickaxe tool is renamed after the tier you own; parts in it with a `Tint` attribute take the tier's colour
+- HUD shows your pickaxe, the cash counter counts up to the new total, and a "+$" floater rises off it on every sale
+- Tutorial (spec §11): 10 steps from "Mine a debris rock" to "Buy an upgrade", each completed by the real action on the server, with a step card, a marker over the target and a beam from you to it. Doing a later step's action first also completes the steps before it, so joining mid-event never gets you stuck. Skippable, saved in the profile (`tutorialStep`), and each step is logged as an onboarding funnel step
+- Still to do this week: tutorial and shop polish from playtests, mobile layout pass
+
 ## Layout
 
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config, Format, Phase
+src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower
 src/server/            ServerScriptService.Server: Knit services
-src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD
+src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD, shared UI styles (UI.luau)
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `EconomyService` (selling). `src/server/Lib` holds the profile template and the pure refinery simulation.
+Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`. `src/server/Lib` holds the profile template and the pure refinery simulation.
 
-Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`.
+Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`.
+
+Services announce what players do through server-side signals (`NodeService.Hit`, `MeteorService.Landed`, `RewardService.ShardsAwarded`, `RefineryService.OreDeposited` / `BarsCollected`, `EconomyService.BarsSold`, `ShopService.ItemBought`, `UpgradeService.StationUpgraded`). The tutorial listens to them, and Week 4 analytics can too.
 
 All tuning numbers live in `src/shared/Config`.
 
@@ -62,7 +71,9 @@ Nothing builds the world at runtime. The crater town, plots, debris rocks, sky c
 |---|---|
 | `Workspace.Map` | Ground, crater, town square (Trading Post with sell counter, Pickaxe Shop, spawn), 20 empty plot pads with signs, roads, debris rocks, trees, boundary cliffs |
 | `ServerStorage.Assets` | Meteor core (with `NodeSlot` attachments and glowing `Vein` parts), the ore cluster pieces, and `PlotStations` (the production line template) |
-| `StarterPack.Pickaxe` | The Basic Pickaxe tool |
+| `StarterPack.Pickaxe` | The Basic Pickaxe tool (mark the parts to recolour per tier with a `Tint` attribute) |
+
+The Pickaxe Shop (`Workspace.Map.TownSquare.PickaxeShop`) opens the shop through its saved ProximityPrompt; if it has none, one is added on a part named `ShopPoint` inside it. Without either, the shop still opens from the HUD button.
 
 Two things are cloned at runtime from `ServerStorage.Assets`: the meteor when it lands, and a player's production line (`PlotStations`) when they claim a plot. The plot pads themselves stay in Workspace.
 
@@ -72,4 +83,4 @@ Two things are cloned at runtime from `ServerStorage.Assets`: the meteor when it
 
 1. Open the saved place in Studio.
 2. `rojo serve` in this folder, then connect from the Rojo plugin.
-3. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only. In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings), and a **[Studio] Meteor now** button skips to the last 10 s. **[Studio] Away 1 hour** runs an hour of offline refining so you can check the "While you were away" panel. To test meteor sizing solo, set a `DevFakeTiers` string attribute on ServerStorage during play (e.g. `1,1,1,8`): each number adds a pretend active player with that pickaxe tier; the meteor model's `ServerPower` attribute shows what it is sized for.
+3. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only. In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings), and a **[Studio] Meteor now** button skips to the last 10 s. **[Studio] Away 1 hour** runs an hour of offline refining so you can check the "While you were away" panel. To test the shop, call the `DevGrant` hook from the command bar: `game.ServerStorage.DevGrant:Invoke(game.Players:GetPlayers()[1], cash, ore, shards)`. Profiles are in memory in Studio, so every play session starts the tutorial from step 1. To test meteor sizing solo, set a `DevFakeTiers` string attribute on ServerStorage during play (e.g. `1,1,1,8`): each number adds a pretend active player with that pickaxe tier; the meteor model's `ServerPower` attribute shows what it is sized for.

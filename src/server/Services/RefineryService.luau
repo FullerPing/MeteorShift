@@ -17,7 +17,9 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Price = require(ReplicatedStorage.Shared.Price)
 local Refining = require(script.Parent.Parent.Lib.Refining)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local RefineryService = Knit.CreateService({
 	Name = "RefineryService",
@@ -28,6 +30,9 @@ local RefineryService = Knit.CreateService({
 		Notice = Knit.CreateSignal(), -- (text)
 	},
 })
+
+RefineryService.OreDeposited = Signal.new() -- (player, ore)
+RefineryService.BarsCollected = Signal.new() -- (player, bars)
 
 local DataService
 local PlotService
@@ -59,14 +64,6 @@ local function setDisplay(container: Instance?, text: string)
 	end
 end
 
-local function priceText(level: Config.Level): string
-	local text = Format.cash(level.Cost)
-	if level.Shards > 0 then
-		text ..= " + " .. level.Shards .. " ◆"
-	end
-	return text
-end
-
 local function setPrompt(container: Instance?, stationId: string, currentLevel: number)
 	local prompt = container and container:FindFirstChild("Upgrade", true)
 	if not prompt or not prompt:IsA("ProximityPrompt") then
@@ -76,7 +73,7 @@ local function setPrompt(container: Instance?, stationId: string, currentLevel: 
 	local nextLevel = levels[currentLevel + 1]
 	if nextLevel then
 		prompt.ActionText = "Upgrade to Lv " .. (currentLevel + 1)
-		prompt.ObjectText = priceText(nextLevel)
+		prompt.ObjectText = Price.text(nextLevel.Cost, nextLevel.Shards)
 		prompt:SetAttribute("Maxed", false)
 	else
 		prompt.ActionText = "Max level"
@@ -183,6 +180,7 @@ function RefineryService:Deposit(player: Player): number
 	end
 	if moved > 0 then
 		self:Refresh(player)
+		self.OreDeposited:Fire(player, moved)
 	end
 	return moved
 end
@@ -204,6 +202,7 @@ function RefineryService:Collect(player: Player): number
 		blockedBy[player] = nil
 		self.Client.Collected:Fire(player, collected)
 		self:Refresh(player)
+		self.BarsCollected:Fire(player, collected)
 	end
 	return collected
 end

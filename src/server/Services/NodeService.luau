@@ -16,6 +16,7 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 export type TargetKind = "Crust" | "Core" | "Debris"
 
@@ -44,6 +45,8 @@ local NodeService = Knit.CreateService({
 		OreGained = Knit.CreateSignal(),
 	},
 })
+
+NodeService.Hit = Signal.new() -- (player, kind: TargetKind) after every validated hit
 
 local PlayerStateService
 local ActivityService
@@ -181,6 +184,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	if def.OnHit then
 		def.OnHit(player, power, ore)
 	end
+	self.Hit:Fire(player, def.Kind)
 
 	if target.Hp == 0 then
 		target.Part:SetAttribute("Hp", 0)

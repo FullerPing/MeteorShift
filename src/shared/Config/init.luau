@@ -12,4 +12,5 @@ return {
 	Backpacks = require(script.Backpacks),
 	Debris = require(script.Debris),
 	Home = Home,
+	Tutorial = require(script.Tutorial),
 }

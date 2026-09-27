@@ -17,6 +17,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local MeteorConfig = Config.Meteor
 
@@ -30,6 +31,8 @@ local MeteorService = Knit.CreateService({
 		CoreCracked = Knit.CreateSignal(), -- (position: Vector3)
 	},
 })
+
+MeteorService.Landed = Signal.new() -- (position: Vector3) at impact
 
 local NodeService
 local ContributionService
@@ -366,6 +369,7 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 		unlocked = false,
 	})
 	self.Client.Impact:FireAll(meteor.Core.Position)
+	self.Landed:Fire(meteor.Core.Position)
 	task.wait(MeteorConfig.ImpactDuration)
 
 	-- Active: mine the crust, crack the core before it cools

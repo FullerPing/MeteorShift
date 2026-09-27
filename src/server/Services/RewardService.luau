@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local RewardService = Knit.CreateService({
 	Name = "RewardService",
@@ -19,6 +20,8 @@ local RewardService = Knit.CreateService({
 		Announcement = Knit.CreateSignal(),
 	},
 })
+
+RewardService.ShardsAwarded = Signal.new() -- (player, shards) when a cracked core pays out
 
 local ContributionService
 local PlayerStateService
@@ -92,6 +95,7 @@ function RewardService:Finish(cracked: boolean)
 		end
 		if reward then
 			PlayerStateService:AddShards(entry.Player, reward.Total)
+			self.ShardsAwarded:Fire(entry.Player, reward.Total)
 		end
 		self.Client.Results:Fire(entry.Player, {
 			cracked = cracked,
