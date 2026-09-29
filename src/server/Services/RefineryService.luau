@@ -135,9 +135,15 @@ function RefineryService:RefreshPlot(player: Player)
 	end
 end
 
-function RefineryService:Refresh(player: Player)
+-- immediate: bypasses the flush accumulator (deposit/collect/purchases). The
+-- online tick, which runs for every player far more often, leaves it deferred.
+function RefineryService:Refresh(player: Player, immediate: boolean?)
 	self:RefreshPlot(player)
-	PlayerStateService:Replicate(player)
+	if immediate then
+		PlayerStateService:ReplicateNow(player)
+	else
+		PlayerStateService:Replicate(player)
+	end
 end
 
 local function touchReady(player: Player, key: string): boolean
@@ -179,7 +185,7 @@ function RefineryService:Deposit(player: Player): number
 		self.Client.Deposited:Fire(player, moved, leftover > 0)
 	end
 	if moved > 0 then
-		self:Refresh(player)
+		self:Refresh(player, true)
 		self.OreDeposited:Fire(player, moved)
 	end
 	return moved
@@ -201,7 +207,7 @@ function RefineryService:Collect(player: Player): number
 	if collected > 0 then
 		blockedBy[player] = nil
 		self.Client.Collected:Fire(player, collected)
-		self:Refresh(player)
+		self:Refresh(player, true)
 		self.BarsCollected:Fire(player, collected)
 	end
 	return collected
@@ -262,7 +268,7 @@ end
 function RefineryService.Client:DevSimulateAway(player: Player, seconds: number)
 	if RunService:IsStudio() and typeof(seconds) == "number" then
 		self.Server:CatchUp(player, math.clamp(seconds, 0, 24 * 3600))
-		self.Server:Refresh(player)
+		self.Server:Refresh(player, true)
 	end
 end
 
@@ -287,7 +293,7 @@ function RefineryService:KnitStart()
 			self:CatchUp(player, os.time() - lastSeen)
 		end
 		profile.Data.lastSeen = os.time()
-		self:Refresh(player)
+		self:Refresh(player, true)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)

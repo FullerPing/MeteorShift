@@ -51,6 +51,7 @@ function EconomyService:SellAll(player: Player): number
 	table.clear(data.bars)
 	data.stats.barsSold = (data.stats.barsSold or 0) + bars
 	PlayerStateService:AddCash(player, cash)
+	PlayerStateService:ReplicateNow(player)
 	self.Client.Sold:Fire(player, bars, cash)
 	self.BarsSold:Fire(player, bars, cash)
 	return cash

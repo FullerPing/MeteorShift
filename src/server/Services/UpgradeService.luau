@@ -51,7 +51,7 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 		data.flags.firstRefinery = true -- first_refinery_bought (spec §13)
 	end
 	self.Client.Upgraded:Fire(player, stationId, current + 1)
-	RefineryService:Refresh(player)
+	RefineryService:Refresh(player, true)
 	self.StationUpgraded:Fire(player, stationId, current + 1)
 	return true
 end

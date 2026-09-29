@@ -5,6 +5,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -24,6 +25,15 @@ local DataService
 -- Fractional ore from debris, paid out once it reaches 1. Not saved.
 local oreRemainder: { [Player]: { [string]: number } } = {}
 local lastFullNotice: { [Player]: number } = {}
+
+-- State replication (spec §12.3). Replicate() only marks the player; a Heartbeat
+-- accumulator sends each marked player's snapshot once per
+-- Config.Net.StateFlushInterval, so a held pickaxe no longer rebuilds and sends
+-- the whole table on every hit. ReplicateNow() sends at once where the player is
+-- waiting on the result. Leaderstats are only written in the flush.
+local stateDirty: { [Player]: true } = {}
+local leaderstatsDirty: { [Player]: true } = {}
+local stateSends = 0 -- every State snapshot sent since the server started
 
 local function sum(t: { [string]: number }): number
 	local total = 0
@@ -67,11 +77,32 @@ function PlayerStateService:BarValue(bars: { [string]: number }): number
 	return value
 end
 
+-- Queues the player's State for the next flush. Call it after any change.
 function PlayerStateService:Replicate(player: Player)
+	stateDirty[player] = true
+end
+
+-- Sends the player's State right away, for purchases, rebirths, sells and
+-- deposits where the player waits on the result. Leaderstats follow in the
+-- next flush.
+function PlayerStateService:ReplicateNow(player: Player)
+	stateDirty[player] = nil
+	leaderstatsDirty[player] = true
+	self:_sendState(player)
+end
+
+-- How many State snapshots have been sent since the server started. The Studio
+-- DevBench hook reads it to measure the ore hot path.
+function PlayerStateService:StateSendCount(): number
+	return stateSends
+end
+
+function PlayerStateService:_sendState(player: Player)
 	local data = self:Get(player)
 	if not data then
 		return
 	end
+	stateSends += 1
 
 	local line = {
 		hopper = { level = data.stations.hopper, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data) },
@@ -96,11 +127,47 @@ function PlayerStateService:Replicate(player: Player)
 		line = line,
 		plotId = player:GetAttribute("PlotId"),
 	})
+end
 
+-- Writes leaderstats only when the shown value changed, so small cash gains
+-- that format the same don't replicate to every client.
+function PlayerStateService:_updateLeaderstats(player: Player)
+	local data = self:Get(player)
 	local leaderstats = player:FindFirstChild("leaderstats")
-	if leaderstats then
-		(leaderstats:FindFirstChild("Cash") :: StringValue).Value = Format.cash(data.cash);
-		(leaderstats:FindFirstChild("Shards") :: IntValue).Value = data.shards
+	if not data or not leaderstats then
+		return
+	end
+	local cash = leaderstats:FindFirstChild("Cash") :: StringValue
+	local shards = leaderstats:FindFirstChild("Shards") :: IntValue
+	local cashText = Format.cash(data.cash)
+	if cash.Value ~= cashText then
+		cash.Value = cashText
+	end
+	if shards.Value ~= data.shards then
+		shards.Value = data.shards
+	end
+end
+
+-- Sends State to every player marked since the last flush, then brings their
+-- leaderstats (and those of players sent through ReplicateNow) up to date.
+-- Each player runs in its own thread, so an error for one player can't drop
+-- the rest of the batch.
+function PlayerStateService:_flush()
+	local toSend = stateDirty
+	stateDirty = {}
+	for player in toSend do
+		if player.Parent then
+			leaderstatsDirty[player] = true
+			task.spawn(self._sendState, self, player)
+		end
+	end
+
+	local toUpdate = leaderstatsDirty
+	leaderstatsDirty = {}
+	for player in toUpdate do
+		if player.Parent then
+			task.spawn(self._updateLeaderstats, self, player)
+		end
 	end
 end
 
@@ -177,12 +244,23 @@ function PlayerStateService:KnitStart()
 
 	DataService.ProfileLoaded:Connect(function(player)
 		oreRemainder[player] = {}
-		self:Replicate(player)
+		self:ReplicateNow(player)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		oreRemainder[player] = nil
 		lastFullNotice[player] = nil
+		stateDirty[player] = nil
+		leaderstatsDirty[player] = nil
+	end)
+
+	local sinceFlush = 0
+	RunService.Heartbeat:Connect(function(dt)
+		sinceFlush += dt
+		if sinceFlush >= Config.Net.StateFlushInterval then
+			sinceFlush = 0
+			self:_flush()
+		end
 	end)
 end
 

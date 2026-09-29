@@ -91,7 +91,7 @@ function ShopService:Buy(player: Player, kind: Kind): boolean
 	if kind == "pickaxe" then
 		self:ApplyPickaxe(player)
 	end
-	PlayerStateService:Replicate(player)
+	PlayerStateService:ReplicateNow(player)
 	self.Client.Purchased:Fire(player, kind, current + 1)
 	self.ItemBought:Fire(player, kind, current + 1)
 	return true

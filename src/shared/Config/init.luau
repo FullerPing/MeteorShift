@@ -13,4 +13,5 @@ return {
 	Debris = require(script.Debris),
 	Home = Home,
 	Tutorial = require(script.Tutorial),
+	Net = require(script.Net),
 }
