@@ -100,17 +100,19 @@ Home.OfflineCapPass = 8 * 3600
 Home.TickInterval = 1 -- online production tick, seconds
 
 -- Order in which the conveyor pulls ore types from the hopper
-Home.OreOrder = { "iron", "frost" }
+Home.OreOrder = { "iron", "frost", "crystal" }
 
--- Bar sell prices (spec §6.5)
+-- Bar sell prices (spec §6.5, §8.1)
 Home.BarPrices = {
 	iron = 5,
 	frost = 120,
+	crystal = 3000,
 }
 
 Home.OreNames = {
 	iron = "Iron",
 	frost = "Frost",
+	crystal = "Crystal",
 }
 
 return Home

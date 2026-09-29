@@ -1,5 +1,6 @@
 --!strict
--- Meteor event tuning (spec §5). Every number here is a starting value for Week 5 balancing.
+-- Meteor event tuning (spec §5) and meteor types (spec §8.1). Every number here is a
+-- starting value for Week 5 balancing.
 
 local Meteor = {}
 
@@ -46,19 +47,41 @@ Meteor.Knockback = {
 	Lift = 55,
 }
 
+-- Meteor types (spec §8.1): every type is the same event with the ore, the required
+-- pickaxe tier, one twist and the multipliers swapped. Shared.MeteorTypes holds the
+-- rules (schedule, ore by pickaxe tier, twist math). Alien Boss and Seasonal
+-- meteors are not built yet.
+Meteor.EligibleShare = 0.25 -- a type can come up only if this share of active players meet its tier
+Meteor.ConsolationMult = 1.25 -- under-tier players get their best ore at this quantity instead
+Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest; an ineligible pick drops down this list
+
+Meteor.Twists = {
+	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second
+	Refreeze = { IdleSeconds = 5, RegenPerSecond = 0.02 },
+	-- Crystal: each extra player on the same node adds BonusPerExtra Mining Power to everyone
+	-- on it, up to MaxBonus. A hitter counts as "on" a node for Window seconds after a hit.
+	Resonance = { Window = 1.5, BonusPerExtra = 0.2, MaxBonus = 0.6 },
+}
+
+export type Twist = "None" | "Refreeze" | "Resonance"
+
 export type MeteorType = {
 	Id: string,
 	DisplayName: string,
 	Ore: string,
+	RequiredTier: number, -- pickaxe tier that mines this ore (spec §8.1)
 	YieldMult: number,
+	HpMult: number, -- type HP multiplier (spec §5.3)
+	ActiveDuration: number, -- cooling timer, seconds
+	ShardMult: number, -- shard bonus pool multiplier (spec §5.6)
+	Weight: number, -- schedule odds, before the eligibility check
+	Twist: Twist,
 	CrustColors: { Color3 },
 	CrustMaterial: Enum.Material,
 	OreColor: Color3, -- the ore chunks studding each cluster
 	OreMaterial: Enum.Material,
 	CoreColor: Color3,
 	GlowColor: Color3,
-	HpMult: number, -- type HP multiplier (spec §5.3)
-	Weight: number,
 }
 
 Meteor.Types = {
@@ -66,7 +89,13 @@ Meteor.Types = {
 		Id = "Iron",
 		DisplayName = "Iron Meteor",
 		Ore = "iron",
+		RequiredTier = 1,
 		YieldMult = 1,
+		HpMult = 1,
+		ActiveDuration = 150,
+		ShardMult = 1,
+		Weight = 60,
+		Twist = "None",
 		CrustColors = {
 			Color3.fromRGB(86, 78, 74),
 			Color3.fromRGB(104, 92, 84),
@@ -77,10 +106,52 @@ Meteor.Types = {
 		OreMaterial = Enum.Material.Metal,
 		CoreColor = Color3.fromRGB(215, 78, 24),
 		GlowColor = Color3.fromRGB(255, 150, 60),
-		HpMult = 1,
-		Weight = 1,
 	} :: MeteorType,
-}
+	Ice = {
+		Id = "Ice",
+		DisplayName = "Ice Meteor",
+		Ore = "frost",
+		RequiredTier = 3,
+		YieldMult = 1,
+		HpMult = 1.1,
+		ActiveDuration = 150,
+		ShardMult = 1.5,
+		Weight = 25,
+		Twist = "Refreeze",
+		CrustColors = {
+			Color3.fromRGB(176, 208, 232),
+			Color3.fromRGB(150, 188, 220),
+			Color3.fromRGB(200, 226, 244),
+		},
+		CrustMaterial = Enum.Material.Glacier,
+		OreColor = Color3.fromRGB(96, 226, 255),
+		OreMaterial = Enum.Material.Ice,
+		CoreColor = Color3.fromRGB(40, 160, 235),
+		GlowColor = Color3.fromRGB(120, 236, 255),
+	} :: MeteorType,
+	Crystal = {
+		Id = "Crystal",
+		DisplayName = "Crystal Meteor",
+		Ore = "crystal",
+		RequiredTier = 5,
+		YieldMult = 1,
+		HpMult = 1.2,
+		ActiveDuration = 150,
+		ShardMult = 2,
+		Weight = 15,
+		Twist = "Resonance",
+		CrustColors = {
+			Color3.fromRGB(116, 78, 138),
+			Color3.fromRGB(138, 88, 150),
+			Color3.fromRGB(98, 64, 118),
+		},
+		CrustMaterial = Enum.Material.Rock,
+		OreColor = Color3.fromRGB(255, 122, 214),
+		OreMaterial = Enum.Material.Glass,
+		CoreColor = Color3.fromRGB(205, 50, 190),
+		GlowColor = Color3.fromRGB(255, 86, 232),
+	} :: MeteorType,
+} :: { [string]: MeteorType }
 
 Meteor.InertColor = Color3.fromRGB(58, 56, 56)
 

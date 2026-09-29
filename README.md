@@ -49,7 +49,7 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower
+src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower, MeteorTypes
 src/server/            ServerScriptService.Server: Knit services
 src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD, shared UI styles (UI.luau)
 assets/                Studio exports of everything built in Studio (see below)
