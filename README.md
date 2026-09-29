@@ -44,6 +44,9 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Tutorial (spec §11): 10 steps from "Mine a debris rock" to "Buy an upgrade", each completed by the real action on the server, with a step card, a marker over the target and a beam from you to it. Doing a later step's action first also completes the steps before it, so joining mid-event never gets you stuck. Skippable, saved in the profile (`tutorialStep`), and each step is logged as an onboarding funnel step
 - Still to do this week: tutorial and shop polish from playtests, mobile layout pass
 
+**Meteor types (spec §8.1, in progress)**
+- Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors are defined in `Config.Meteor`, with their tier gates, ore by pickaxe tier and twists in `Shared.MeteorTypes`. They do not spawn yet: only Iron meteors fall until the types are wired into the event
+
 ## Layout
 
 ```

@@ -94,19 +94,13 @@ local function countdownLength(first: boolean): number
 	return if first then MeteorConfig.FirstCountdown else MeteorConfig.Countdown
 end
 
+-- Only the lowest type (Iron) comes up for now. Ice and Crystal (spec §8.1) are in
+-- Config.Meteor.Types, but they must not spawn until the pick checks the active tiers
+-- (MeteorTypes.pick) and each hit pays ore by the player's own pickaxe
+-- (MeteorTypes.oreFor). Until then every player, whatever their tier, would mine
+-- frost or crystal from the crust.
 local function pickType(): Config.MeteorType
-	local total = 0
-	for _, meteorType in MeteorConfig.Types do
-		total += meteorType.Weight
-	end
-	local roll = math.random() * total
-	for _, meteorType in MeteorConfig.Types do
-		roll -= meteorType.Weight
-		if roll <= 0 then
-			return meteorType
-		end
-	end
-	return MeteorConfig.Types.Iron
+	return MeteorConfig.Types[MeteorConfig.TypeOrder[1]]
 end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
