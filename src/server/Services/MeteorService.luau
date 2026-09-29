@@ -17,9 +17,15 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local MeteorConfig = Config.Meteor
+
+-- Seconds between meteors. Private servers will be able to change it (spec §5.1,
+-- §12.4); a faster schedule pays a smaller shard pool (MeteorTypes.shardPoolMult).
+-- The first meteor's shorter countdown and Studio's are not a faster schedule.
+local interval = MeteorConfig.Countdown
 
 local MeteorService = Knit.CreateService({
 	Name = "MeteorService",
@@ -91,7 +97,7 @@ local function countdownLength(first: boolean): number
 	if RunService:IsStudio() and MeteorConfig.StudioCountdown then
 		return MeteorConfig.StudioCountdown
 	end
-	return if first then MeteorConfig.FirstCountdown else MeteorConfig.Countdown
+	return if first then MeteorConfig.FirstCountdown else interval
 end
 
 -- Only the lowest type (Iron) comes up for now. Ice and Crystal (spec §8.1) are in
@@ -378,16 +384,17 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 	end)
 	ContributionService:Stop()
 
+	local poolMult = MeteorTypes.shardPoolMult(meteorType, interval, MeteorConfig.Countdown)
 	if meteor.Cracked then
 		self:_publish({ phase = Phase.CoreCracked, endsAt = now() + MeteorConfig.CrackedDuration })
 		self.Client.CoreCracked:FireAll(meteor.Core.Position)
 		self:_breakPart(meteor.Core)
-		RewardService:Finish(true)
+		RewardService:Finish(true, poolMult)
 		task.wait(MeteorConfig.CrackedDuration)
 	else
 		self:_publish({ phase = Phase.Cooled, endsAt = now() + MeteorConfig.CooledDuration })
 		self:_cool(meteor)
-		RewardService:Finish(false)
+		RewardService:Finish(false, poolMult)
 		task.wait(MeteorConfig.CooledDuration)
 	end
 

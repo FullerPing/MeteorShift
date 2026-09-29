@@ -1,15 +1,13 @@
 --!strict
--- Core Shard rewards and the top-three announcement (spec §5.6).
---
---   floor      = 5 shards for everyone who hit the core
---   bonusPool  = 8 × numberOfCoreHitters, split by contribution share
---   top three  = +10 / +6 / +3
+-- Core Shard rewards and the top-three announcement (spec §5.6). The payout math
+-- (floor, contribution share of the bonus pool, top three, the meteor type's pool
+-- multiplier) is the pure Server.Lib.Rewards.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
-local Config = require(ReplicatedStorage.Shared.Config)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
 local RewardService = Knit.CreateService({
 	Name = "RewardService",
@@ -26,53 +24,15 @@ RewardService.ShardsAwarded = Signal.new() -- (player, shards) when a cracked co
 local ContributionService
 local PlayerStateService
 
-export type Reward = { Floor: number, Bonus: number, Top: number, Total: number }
-
--- Pure reward math, kept separate so it can be unit tested.
-function RewardService.Compute(entries: { { Contribution: number, HitCore: boolean } }): { [number]: Reward }
-	local meteor = Config.Meteor
-	local hitters = {}
-	local total = 0
-	for index, entry in entries do
-		if entry.HitCore then
-			table.insert(hitters, index)
-			total += entry.Contribution
-		end
-	end
-
-	local rewards: { [number]: Reward } = {}
-	if #hitters == 0 then
-		return rewards
-	end
-
-	local pool = meteor.ShardBonusPerHitter * #hitters
-	for _, index in hitters do
-		local share = if total > 0 then entries[index].Contribution / total else 1 / #hitters
-		local bonus = math.floor(pool * share + 0.5)
-		rewards[index] = { Floor = meteor.ShardFloor, Bonus = bonus, Top = 0, Total = meteor.ShardFloor + bonus }
-	end
-
-	-- Top three by contribution among core hitters
-	table.sort(hitters, function(a, b)
-		return entries[a].Contribution > entries[b].Contribution
-	end)
-	for place = 1, math.min(#meteor.TopBonus, #hitters) do
-		local reward = rewards[hitters[place]]
-		reward.Top = meteor.TopBonus[place]
-		reward.Total += reward.Top
-	end
-
-	return rewards
-end
-
 function RewardService:Announce(kind: string, text: string)
 	self.Client.Announcement:FireAll({ kind = kind, text = text })
 end
 
--- Called when the event ends, cracked or cooled.
-function RewardService:Finish(cracked: boolean)
+-- Called when the event ends, cracked or cooled. `poolMult` scales the shard bonus
+-- pool (MeteorTypes.shardPoolMult for the meteor that ended).
+function RewardService:Finish(cracked: boolean, poolMult: number)
 	local ranked = ContributionService:GetRanked()
-	local rewards = if cracked then RewardService.Compute(ranked) else {}
+	local rewards = if cracked then Rewards.compute(ranked, poolMult) else {}
 
 	local leaders = {}
 	for index, entry in ranked do
