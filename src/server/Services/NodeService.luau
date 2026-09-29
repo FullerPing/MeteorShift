@@ -58,7 +58,9 @@ local NodeService = Knit.CreateService({
 	},
 })
 
-NodeService.Hit = Signal.new() -- (player, kind: TargetKind) after every validated hit
+-- (player, kind: TargetKind, part: BasePart) after every validated hit. The part lets
+-- listeners read its attributes, e.g. IndexService checks a crust node's Rich flag.
+NodeService.Hit = Signal.new()
 
 local PlayerStateService
 local ActivityService
@@ -243,7 +245,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	if def.OnHit then
 		def.OnHit(player, power, ore)
 	end
-	self.Hit:Fire(player, def.Kind)
+	self.Hit:Fire(player, def.Kind, target.Part)
 
 	if target.Hp == 0 then
 		target.Part:SetAttribute("Hp", 0)

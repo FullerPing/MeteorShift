@@ -6,6 +6,8 @@
 -- The meteor is assembled at impact from reusable pieces saved in the place:
 -- ServerStorage.Assets.Meteor.Core carries NodeSlot attachments, and each slot gets
 -- a clone of one of the ServerStorage.Assets.NodePieces rocks, recoloured per type.
+-- A few of those crust nodes are rich (spec §8.2): they sparkle, and only they can
+-- drop the mineral index's rarest minerals (IndexService).
 -- The map itself (crater, town, debris, plots) is saved in Workspace.Map.
 
 local Players = game:GetService("Players")
@@ -18,6 +20,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local MeteorConfig = Config.Meteor
@@ -90,6 +93,11 @@ function MeteorService:GetPhase(): Phase.Phase
 	return state.phase
 end
 
+-- The type of the meteor on the ground (impact to cleanup), nil between meteors.
+function MeteorService:GetActiveType(): Config.MeteorType?
+	return if current then current.Type else nil
+end
+
 -- Sets the remaining countdown (used by Call a Meteor and private servers later).
 function MeteorService:SetCountdownRemaining(seconds: number)
 	if state.phase == Phase.Countdown then
@@ -151,6 +159,33 @@ local function paintCluster(piece: BasePart, meteorType: Config.MeteorType)
 			end
 		end
 	end
+end
+
+-- Marks a crust node rich (spec §8.2): IndexService reads the Rich attribute on each
+-- hit. Its ore chunks take Config.Index.RichColor and it sparkles so players can
+-- spot it; breaking or cooling the meteor turns the sparkle off with its other effects.
+local function markRich(piece: BasePart)
+	piece:SetAttribute("Rich", true)
+	for _, child in piece:GetDescendants() do
+		if child:IsA("BasePart") and child.Name == "Ore" then
+			child.Color = Config.Index.RichColor
+			child.Material = Enum.Material.Neon
+		end
+	end
+	local sparkle = Instance.new("ParticleEmitter") -- the default texture is a sparkle
+	sparkle.Name = "RichSparkle"
+	sparkle.Color = ColorSequence.new(Config.Index.RichColor)
+	sparkle.LightEmission = 1
+	sparkle.Rate = 8
+	sparkle.Lifetime = NumberRange.new(0.8, 1.4)
+	sparkle.Speed = NumberRange.new(0.5, 1.5)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.3, 0.6),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	sparkle.Parent = piece
 end
 
 local function waitUntil(predicate: () -> boolean)
@@ -266,12 +301,16 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	crustFolder.Name = "Crust"
 	crustFolder.Parent = model
 
+	local richNodes = MineralIndex.pickRichNodes(#slots, math.random)
 	for index, slot in slots do
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index
 		piece.Anchored = true
 		place(piece, slot.WorldCFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
 		paintCluster(piece, meteorType)
+		if richNodes[index] then
+			markRich(piece)
+		end
 		piece.Parent = crustFolder
 
 		local id = NodeService:Register(piece, {

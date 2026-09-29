@@ -38,6 +38,28 @@ Knit.Start()
 			end
 			hook.Parent = ServerStorage
 
+			-- Studio only: adds one mineral to the player's mineral index (spec §8.2) through
+			-- the real award path (toast, page announcement, title), since the rarest ones
+			-- need rich nodes and long odds. A page id ("Iron") adds one of every mineral on
+			-- that page. Returns the player's index.
+			-- game.ServerStorage.DevMineral:Invoke(game.Players:GetPlayers()[1], "Iron")
+			local mineralHook = Instance.new("BindableFunction")
+			mineralHook.Name = "DevMineral"
+			mineralHook.OnInvoke = function(player: Player, id: string)
+				local IndexService = Knit.GetService("IndexService")
+				local page = Config.Index.Pages[id]
+				if page then
+					for _, mineral in page.Minerals do
+						IndexService:Award(player, mineral.Id)
+					end
+				else
+					IndexService:Award(player, id)
+				end
+				local data = PlayerStateService:Get(player)
+				return if data then data.index else nil
+			end
+			mineralHook.Parent = ServerStorage
+
 			-- Studio only: measures the ore hot path (spec §12.3). Calls AddOre `swings`
 			-- times, waits for the next State flush, and reports the elapsed ms of the
 			-- calls and how many State snapshots went out. The player borrows the

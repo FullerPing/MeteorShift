@@ -125,6 +125,7 @@ function PlayerStateService:_sendState(player: Player)
 		hopper = sum(data.hopper),
 		hopperCapacity = self:GetHopperCapacity(player),
 		line = line,
+		index = data.index, -- mineral index: mineral id -> count found (spec §8.2)
 		plotId = player:GetAttribute("PlotId"),
 	})
 end
