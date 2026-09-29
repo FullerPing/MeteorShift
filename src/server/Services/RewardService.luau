@@ -2,17 +2,24 @@
 -- Core Shard rewards and the top-three announcement (spec §5.6). The payout math
 -- (floor, contribution share of the bonus pool, top three, the meteor type's pool
 -- multiplier) is the pure Server.Lib.Rewards.
+--
+-- Each participant's results also say which ore their pickaxe mined from this
+-- meteor and, when it was under the meteor's tier, what they missed (spec §8.1).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Config = require(ReplicatedStorage.Shared.Config)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
 local RewardService = Knit.CreateService({
 	Name = "RewardService",
 	Client = {
-		-- To each participant: { cracked, ore, contribution, rank, floor, bonus, top, shards, leaders }
+		-- To each participant: { cracked, ore, oreType, contribution, rank, hitCore, floor,
+		-- bonus, top, shards, leaders, missed? }. oreType is the ore id their pickaxe mines
+		-- from this meteor; missed is MeteorTypes.missed, nil when their pickaxe met its tier.
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
@@ -30,7 +37,7 @@ end
 
 -- Called when the event ends, cracked or cooled. `poolMult` scales the shard bonus
 -- pool (MeteorTypes.shardPoolMult for the meteor that ended).
-function RewardService:Finish(cracked: boolean, poolMult: number)
+function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, poolMult: number)
 	local ranked = ContributionService:GetRanked()
 	local rewards = if cracked then Rewards.compute(ranked, poolMult) else {}
 
@@ -57,9 +64,12 @@ function RewardService:Finish(cracked: boolean, poolMult: number)
 			PlayerStateService:AddShards(entry.Player, reward.Total)
 			self.ShardsAwarded:Fire(entry.Player, reward.Total)
 		end
+		local pickaxeTier = PlayerStateService:GetPickaxe(entry.Player).Tier
 		self.Client.Results:Fire(entry.Player, {
 			cracked = cracked,
 			ore = entry.Ore,
+			oreType = (MeteorTypes.oreFor(pickaxeTier, meteorType)),
+			missed = MeteorTypes.missed(pickaxeTier, meteorType),
 			contribution = entry.Contribution,
 			rank = index,
 			hitCore = entry.HitCore,

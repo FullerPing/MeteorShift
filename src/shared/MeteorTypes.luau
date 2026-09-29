@@ -11,7 +11,7 @@
 --                  its tier, else the best ore you can extract at ×1.25. Nobody is locked
 --                  out, and being near veterans never gives a better ore than you could
 --                  mine alone
---   missed         what an under-tier player missed, for the results hint
+--   missed         what an under-tier player missed, and missedHint, the results line for it
 --   resonanceMult  Crystal twist: +20% Mining Power per extra hitter on a node, max +60%
 --   refreezeHp     Ice twist: a node nobody has hit for 5 s regains 2% of max HP per second
 --   shardPoolMult  the type's shard pool ×, scaled down when meteors come faster than the
@@ -22,6 +22,7 @@
 
 local Meteor = require(script.Parent.Config.Meteor)
 local Home = require(script.Parent.Config.Home)
+local Format = require(script.Parent.Format)
 
 type MeteorType = Meteor.MeteorType
 
@@ -103,6 +104,13 @@ function MeteorTypes.missed(pickaxeTier: number, meteorType: MeteorType): Missed
 		ore = meteorType.Ore,
 		barPrice = Home.BarPrices[meteorType.Ore] or 0,
 	}
+end
+
+-- The results panel's upgrade hint for what was missed: "Tier 5 pickaxe mines
+-- Crystal: $3K bars".
+function MeteorTypes.missedHint(missed: Missed): string
+	local oreName = Home.OreNames[missed.ore] or missed.ore
+	return string.format("Tier %d pickaxe mines %s: %s bars", missed.tier, oreName, Format.cash(missed.barPrice))
 end
 
 -- Resonance: Mining Power multiplier for each of the players currently on one node.

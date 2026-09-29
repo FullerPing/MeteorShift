@@ -1,6 +1,7 @@
 --!strict
 -- HUD built with Fusion (spec §10):
---   * countdown / cooling timer and the sky countdown over the crater
+--   * countdown / cooling timer and the sky countdown over the crater, titled with
+--     the meteor type in its glow colour (spec §8.1)
 --   * cash (counts up on every sale, "+$" floater), shards, pickaxe, backpack
 --     meter (red when full), bars, hopper and production line
 --   * "While you were away" panel (spec §6.4)
@@ -16,6 +17,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local UI = require(script.Parent.Parent.UI)
 
@@ -299,13 +301,19 @@ function HUDController:KnitStart()
 		elseif p == Phase.Impact then
 			return "IMPACT!"
 		elseif p == Phase.Active then
-			return "Cooling"
+			return s.typeName .. " cooling"
 		elseif p == Phase.CoreCracked then
 			return "Core cracked!"
 		elseif p == Phase.Cooled then
-			return "Meteor cooled"
+			return s.typeName .. " cooled"
 		end
 		return "Next meteor soon"
+	end)
+	-- The title glows in the meteor type's colour (Iron orange, Ice cyan, Crystal magenta)
+	local titleColor = scope:Computed(function(use)
+		local s = use(meteorState)
+		local meteorType = s and Config.Meteor.Types[s.type]
+		return if meteorType then meteorType.GlowColor else ORANGE
 	end)
 	local timerText = scope:Computed(function(use)
 		local p = use(phase)
@@ -331,7 +339,7 @@ function HUDController:KnitStart()
 		scope:Hydrate(board:WaitForChild("Title"))({
 			Text = timerTitle,
 			Font = FONT,
-			TextColor3 = ORANGE,
+			TextColor3 = titleColor,
 			TextStrokeColor3 = OUTLINE,
 			TextStrokeTransparency = 0,
 		})
@@ -388,7 +396,7 @@ function HUDController:KnitStart()
 						Size = UDim2.new(1, 0, 0, 21),
 						Text = timerTitle,
 						TextSize = 18,
-						TextColor3 = ORANGE,
+						TextColor3 = titleColor,
 					}),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 22),
@@ -777,7 +785,7 @@ function HUDController:KnitStart()
 				Name = "Results",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.55),
-				Size = UDim2.fromOffset(370, 245),
+				Size = UDim2.fromOffset(370, 270),
 				BackgroundColor3 = UI.PANEL_DARK,
 				Visible = scope:Computed(function(use)
 					return use(results) ~= nil
@@ -803,7 +811,12 @@ function HUDController:KnitStart()
 							if not r then
 								return ""
 							end
-							local lines = { "Ore mined: " .. Format.number(r.ore) }
+							local oreName = r.oreType and Config.Home.OreNames[r.oreType]
+							local lines = { (if oreName then oreName .. " ore" else "Ore") .. " mined: " .. Format.number(r.ore) }
+							-- Under-tier players see what a better pickaxe mines here (spec §8.1)
+							if r.missed then
+								table.insert(lines, MeteorTypes.missedHint(r.missed))
+							end
 							if r.cracked and r.shards > 0 then
 								local shardLine = string.format("Core Shards: +%d  (%d floor + %d share", r.shards, r.floor, r.bonus)
 								if r.top > 0 then

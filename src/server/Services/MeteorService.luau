@@ -436,12 +436,12 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 		self:_publish({ phase = Phase.CoreCracked, endsAt = now() + MeteorConfig.CrackedDuration })
 		self.Client.CoreCracked:FireAll(meteor.Core.Position)
 		self:_breakPart(meteor.Core)
-		RewardService:Finish(true, poolMult)
+		RewardService:Finish(true, meteorType, poolMult)
 		task.wait(MeteorConfig.CrackedDuration)
 	else
 		self:_publish({ phase = Phase.Cooled, endsAt = now() + MeteorConfig.CooledDuration })
 		self:_cool(meteor)
-		RewardService:Finish(false, poolMult)
+		RewardService:Finish(false, meteorType, poolMult)
 		task.wait(MeteorConfig.CooledDuration)
 	end
 

@@ -140,6 +140,24 @@ return function(t: any)
 		t.eq(MeteorTypes.missed(1, Types.Iron), nil, "tier 1 on Iron")
 	end)
 
+	t.test("missedHint reads 'Tier 5 pickaxe mines Crystal: $3K bars' for the results panel", function()
+		local Format = require(t.shared.Format)
+		local crystal = MeteorTypes.missed(2, Types.Crystal)
+		t.ok(crystal, "tier 2 on Crystal missed something")
+		if crystal then
+			t.eq(
+				MeteorTypes.missedHint(crystal),
+				"Tier 5 pickaxe mines Crystal: " .. Format.cash(Home.BarPrices.crystal) .. " bars",
+				"Crystal hint"
+			)
+		end
+		local ice = MeteorTypes.missed(1, Types.Ice)
+		t.ok(ice, "tier 1 on Ice missed something")
+		if ice then
+			t.eq(MeteorTypes.missedHint(ice), "Tier 3 pickaxe mines Frost: " .. Format.cash(Home.BarPrices.frost) .. " bars", "Ice hint")
+		end
+	end)
+
 	t.test("resonance adds BonusPerExtra per extra hitter up to MaxBonus", function()
 		local resonance = Meteor.Twists.Resonance
 		t.eq(MeteorTypes.resonanceMult(1), 1, "one hitter gets no bonus")
