@@ -8,7 +8,7 @@ local Meteor = {}
 Meteor.FirstCountdown = 120 -- first meteor after a server starts is ~2 minutes away (spec §4)
 Meteor.Countdown = 240
 Meteor.ImpactDuration = 3
-Meteor.ActiveDuration = 150 -- cooling timer
+-- The cooling timer (Active) is per type: Meteor.Types[id].ActiveDuration
 Meteor.CrackedDuration = 5
 Meteor.CooledDuration = 5
 Meteor.CleanupDuration = 5

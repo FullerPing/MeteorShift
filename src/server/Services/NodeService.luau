@@ -8,6 +8,9 @@
 -- Other services register a BasePart with a TargetDef. The part gets a TargetId
 -- attribute so clients can find it; HP is replicated through the Hp / MaxHp
 -- attributes, flushed at ~10 Hz for changed targets only.
+--
+-- Meteor types (spec §8.1) hook in through the TargetDef: OreFor picks each
+-- player's ore by their own pickaxe.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -25,6 +28,8 @@ export type TargetDef = {
 	MaxHp: number,
 	Ore: string?, -- ore type dropped per hit, nil for none
 	OreMult: number, -- multiplier on the pickaxe's ore per hit
+	-- Per-player ore type and multiplier; when set it replaces Ore and OreMult
+	OreFor: ((player: Player) -> (string?, number))?,
 	CanHit: ((player: Player) -> boolean)?,
 	OnHit: ((player: Player, power: number, ore: number) -> ())?, -- power is the hit's Mining Power
 	OnBroken: ((player: Player) -> ())?,
@@ -173,11 +178,15 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	end
 	target.Dirty = true
 
+	local oreType, oreMult = def.Ore, def.OreMult
+	if def.OreFor then
+		oreType, oreMult = def.OreFor(player)
+	end
 	local ore = 0
-	if def.Ore then
-		ore = PlayerStateService:AddOre(player, def.Ore, pickaxe.OrePerHit * def.OreMult)
+	if oreType then
+		ore = PlayerStateService:AddOre(player, oreType, pickaxe.OrePerHit * oreMult)
 		if ore > 0 then
-			self.Client.OreGained:Fire(player, id, def.Ore, ore)
+			self.Client.OreGained:Fire(player, id, oreType, ore)
 		end
 	end
 

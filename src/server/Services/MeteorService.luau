@@ -30,8 +30,9 @@ local interval = MeteorConfig.Countdown
 local MeteorService = Knit.CreateService({
 	Name = "MeteorService",
 	Client = {
-		-- { phase, endsAt, type, typeName, eventId, crustTotal, crustBroken, unlocked }
-		-- endsAt is in workspace:GetServerTimeNow() time.
+		-- { phase, endsAt, type, typeName, requiredTier, eventId, crustTotal, crustBroken, unlocked }
+		-- endsAt is in workspace:GetServerTimeNow() time. type is the Config.Meteor.Types
+		-- id, picked at the start of each countdown; requiredTier is its pickaxe tier.
 		State = Knit.CreateProperty(nil),
 		Impact = Knit.CreateSignal(), -- (position: Vector3)
 		CoreCracked = Knit.CreateSignal(), -- (position: Vector3)
@@ -43,6 +44,8 @@ MeteorService.Landed = Signal.new() -- (position: Vector3) at impact
 local NodeService
 local ContributionService
 local RewardService
+local ActivityService
+local PlayerStateService
 
 type Meteor = {
 	Model: Model,
@@ -64,6 +67,7 @@ local state = {
 	endsAt = 0,
 	type = "Iron",
 	typeName = "Iron Meteor",
+	requiredTier = 1,
 	eventId = 0,
 	crustTotal = 0,
 	crustBroken = 0,
@@ -100,18 +104,20 @@ local function countdownLength(first: boolean): number
 	return if first then MeteorConfig.FirstCountdown else interval
 end
 
--- Only the lowest type (Iron) comes up for now. Ice and Crystal (spec §8.1) are in
--- Config.Meteor.Types, but they must not spawn until the pick checks the active tiers
--- (MeteorTypes.pick) and each hit pays ore by the player's own pickaxe
--- (MeteorTypes.oreFor). Until then every player, whatever their tier, would mine
--- frost or crystal from the crust.
+-- The next meteor's type (spec §8.1): weighted odds, gated by the active players'
+-- pickaxe tiers (MeteorTypes.pick). In Studio, ServerStorage's DevMeteorType
+-- attribute ("Ice") forces a type for testing.
 local function pickType(): Config.MeteorType
-	return MeteorConfig.Types[MeteorConfig.TypeOrder[1]]
+	local forced = ServerStorage:GetAttribute("DevMeteorType")
+	if RunService:IsStudio() and typeof(forced) == "string" and MeteorConfig.Types[forced] then
+		return MeteorConfig.Types[forced]
+	end
+	return MeteorTypes.pick(ActivityService:GetActiveTiers(), math.random())
 end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
 local function serverPower(): number
-	return MiningPower.serverPower(Knit.GetService("ActivityService"):GetActiveTiers())
+	return MiningPower.serverPower(ActivityService:GetActiveTiers())
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -241,6 +247,13 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		return state.phase == Phase.Active and current == meteor
 	end
 
+	-- Your own pickaxe decides your ore (spec §8.1): the meteor's ore if you meet its
+	-- tier, else your best ore at the consolation multiplier.
+	local function oreFor(player: Player): (string?, number)
+		local ore, mult = MeteorTypes.oreFor(PlayerStateService:GetPickaxe(player).Tier, meteorType)
+		return ore, mult * meteorType.YieldMult
+	end
+
 	local crustFolder = Instance.new("Folder")
 	crustFolder.Name = "Crust"
 	crustFolder.Parent = model
@@ -256,8 +269,9 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		local id = NodeService:Register(piece, {
 			Kind = "Crust",
 			MaxHp = crustHp,
-			Ore = meteorType.Ore,
-			OreMult = meteorType.YieldMult,
+			Ore = nil,
+			OreMult = 0,
+			OreFor = oreFor,
 			CanHit = function()
 				return isActive()
 			end,
@@ -373,7 +387,7 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 	task.wait(MeteorConfig.ImpactDuration)
 
 	-- Active: mine the crust, crack the core before it cools
-	self:_publish({ phase = Phase.Active, endsAt = now() + MeteorConfig.ActiveDuration })
+	self:_publish({ phase = Phase.Active, endsAt = now() + meteorType.ActiveDuration })
 	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
 	waitUntil(function()
 		if os.clock() >= nextCheck then
@@ -414,6 +428,7 @@ function MeteorService:_loop()
 			endsAt = now() + countdownLength(first),
 			type = meteorType.Id,
 			typeName = meteorType.DisplayName,
+			requiredTier = meteorType.RequiredTier,
 			crustTotal = 0,
 			crustBroken = 0,
 			unlocked = false,
@@ -447,6 +462,8 @@ function MeteorService:KnitInit()
 	NodeService = Knit.GetService("NodeService")
 	ContributionService = Knit.GetService("ContributionService")
 	RewardService = Knit.GetService("RewardService")
+	ActivityService = Knit.GetService("ActivityService")
+	PlayerStateService = Knit.GetService("PlayerStateService")
 end
 
 function MeteorService:KnitStart()

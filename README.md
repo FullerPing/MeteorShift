@@ -45,7 +45,8 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Still to do this week: tutorial and shop polish from playtests, mobile layout pass
 
 **Meteor types (spec §8.1, in progress)**
-- Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors are defined in `Config.Meteor`, with their tier gates, ore by pickaxe tier and twists in `Shared.MeteorTypes`. They do not spawn yet: only Iron meteors fall until the types are wired into the event
+- Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors fall alongside Iron. Each countdown picks the next type from weighted odds (Iron 60, Ice 25, Crystal 15), but a type only comes up when at least 25% of active players' pickaxes meet its tier, otherwise it drops to the next type down. The sky board and HUD timer name it from the start of the countdown. Types, tier gates and twists are in `Config.Meteor`, the rules in `Shared.MeteorTypes`
+- Your own pickaxe decides your ore: the meteor's ore if it meets the meteor's tier, otherwise the best ore it can mine at ×1.25. Debris still drops iron
 
 ## Layout
 
