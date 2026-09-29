@@ -42,6 +42,16 @@ local OUTLINE = UI.OUTLINE
 
 type Scope = UI.Scope
 
+-- Shows a small toast; set once the HUD is built (see HUDController:Toast)
+local showToastHandler: ((text: string) -> ())? = nil
+
+-- Other controllers post their small toasts here (e.g. "New mineral: X!").
+function HUDController:Toast(text: string)
+	if showToastHandler then
+		showToastHandler(text)
+	end
+end
+
 local corner = UI.corner
 local stroke = UI.stroke
 local label = UI.label
@@ -226,6 +236,7 @@ function HUDController:KnitStart()
 			end
 		end)
 	end
+	showToastHandler = showToast
 	PlayerStateService.BackpackFull:Connect(function()
 		showToast("Backpack full! Take your ore home to your hopper.")
 	end)
