@@ -29,6 +29,11 @@ local ContributionService = Knit.CreateService({
 local entries: { [Player]: Entry } = {}
 local tracking = false
 
+-- What each player was last sent, so _publish can skip players whose standing
+-- hasn't changed since (spec §12.3: keep remote traffic per client low).
+type Sent = { rank: number, contribution: number, ore: number, players: number, top: string }
+local lastSent: { [Player]: Sent } = {}
+
 local function entryFor(player: Player): Entry
 	local entry = entries[player]
 	if not entry then
@@ -40,6 +45,7 @@ end
 
 function ContributionService:Reset()
 	table.clear(entries)
+	table.clear(lastSent)
 	tracking = true
 	self.Client.Standing:Set(nil)
 end
@@ -84,25 +90,51 @@ function ContributionService:GetRanked(): { Entry }
 	return list
 end
 
+-- Every StandingInterval: each player's rank and the top three, sent only to
+-- players whose rank, rounded contribution, ore, participant count or top three
+-- changed since their last send. The top three compare by name and rounded
+-- contribution, since the HUD shows both.
 function ContributionService:_publish()
 	local ranked = self:GetRanked()
 	local top = {}
+	local topKeyParts = {}
 	for i = 1, math.min(3, #ranked) do
-		table.insert(top, { name = ranked[i].Player.DisplayName, contribution = ranked[i].Contribution })
+		local entry = ranked[i]
+		table.insert(top, { name = entry.Player.DisplayName, contribution = entry.Contribution })
+		table.insert(topKeyParts, entry.Player.DisplayName .. "=" .. math.floor(entry.Contribution + 0.5))
 	end
-	for rank, entry in ranked do
-		self.Client.Standing:SetFor(entry.Player, {
+	local topKey = table.concat(topKeyParts, "\n")
+
+	local function send(player: Player, rank: number, contribution: number, ore: number)
+		local rounded = math.floor(contribution + 0.5)
+		local last = lastSent[player]
+		if
+			last
+			and last.rank == rank
+			and last.contribution == rounded
+			and last.ore == ore
+			and last.players == #ranked
+			and last.top == topKey
+		then
+			return
+		end
+		lastSent[player] = { rank = rank, contribution = rounded, ore = ore, players = #ranked, top = topKey }
+		self.Client.Standing:SetFor(player, {
 			rank = rank,
-			contribution = entry.Contribution,
-			ore = entry.Ore,
+			contribution = contribution,
+			ore = ore,
 			players = #ranked,
 			top = top,
 		})
 	end
+
+	for rank, entry in ranked do
+		send(entry.Player, rank, entry.Contribution, entry.Ore)
+	end
 	-- Players who haven't hit anything yet still see the leaders
 	for _, player in Players:GetPlayers() do
 		if not entries[player] then
-			self.Client.Standing:SetFor(player, { rank = 0, contribution = 0, ore = 0, players = #ranked, top = top })
+			send(player, 0, 0, 0)
 		end
 	end
 end
@@ -119,6 +151,7 @@ function ContributionService:KnitStart()
 
 	Players.PlayerRemoving:Connect(function(player)
 		entries[player] = nil
+		lastSent[player] = nil
 	end)
 end
 
