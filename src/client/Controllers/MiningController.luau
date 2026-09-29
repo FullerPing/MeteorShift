@@ -27,6 +27,16 @@ local holding = false
 local swinging = false
 local pickaxeTier = 1
 
+-- Hit effects stay bounded however long the button is held (spec §12.3): spark
+-- emitters come from a small pool reused round-robin, and live floaters and ore
+-- chunks are capped (Config.Net), the oldest removed first.
+type SparkSlot = { anchor: BasePart, emitter: ParticleEmitter, sound: Sound }
+local sparkPool: { SparkSlot } = {}
+local nextSparkSlot = 1
+
+local floaters: { BasePart } = {} -- oldest first
+local oreChunks: { BasePart } = {} -- oldest first
+
 local function distanceToPart(part: BasePart, point: Vector3): number
 	local localPoint = part.CFrame:PointToObjectSpace(point)
 	local half = part.Size / 2
@@ -119,37 +129,69 @@ local function playSlash(tool: Tool)
 	value.Parent = tool
 end
 
+-- Adds an effect part to a capped list, destroying the oldest past the cap.
+local function track(list: { BasePart }, part: BasePart, cap: number)
+	table.insert(list, part)
+	if #list > cap then
+		(table.remove(list, 1) :: BasePart):Destroy()
+	end
+end
+
+-- Destroys an effect part at the end of its life and drops it from its list.
+local function untrack(list: { BasePart }, part: BasePart)
+	part:Destroy()
+	local index = table.find(list, part)
+	if index then
+		table.remove(list, index)
+	end
+end
+
+-- The next spark anchor (part, emitter and sound) from the pool. A slot is
+-- built on first use, or rebuilt if its anchor is no longer under the current
+-- camera (the camera was replaced or destroyed).
+local function sparkSlot(): SparkSlot
+	local slot = sparkPool[nextSparkSlot]
+	if not slot or slot.anchor.Parent ~= workspace.CurrentCamera then
+		if slot then
+			slot.anchor:Destroy()
+		end
+		local anchor = Instance.new("Part")
+		anchor.Anchored = true
+		anchor.CanCollide = false
+		anchor.CanQuery = false
+		anchor.Transparency = 1
+		anchor.Size = Vector3.one * 0.2
+
+		local emitter = Instance.new("ParticleEmitter")
+		emitter.LightEmission = 1
+		emitter.Size = NumberSequence.new(0.35, 0)
+		emitter.Speed = NumberRange.new(12, 22)
+		emitter.SpreadAngle = Vector2.new(70, 70)
+		emitter.Lifetime = NumberRange.new(0.25, 0.45)
+		emitter.Acceleration = Vector3.new(0, -40, 0)
+		emitter.Enabled = false
+		emitter.Parent = anchor
+
+		local sound = Instance.new("Sound")
+		sound.SoundId = "rbxasset://sounds/collide.wav"
+		sound.Volume = 0.5
+		sound.Parent = anchor
+		anchor.Parent = workspace.CurrentCamera
+
+		slot = { anchor = anchor, emitter = emitter, sound = sound }
+		sparkPool[nextSparkSlot] = slot
+	end
+	nextSparkSlot = nextSparkSlot % Config.Net.SparkPoolSize + 1
+	return slot :: SparkSlot
+end
+
 local function sparks(position: Vector3, color: Color3)
-	local anchor = Instance.new("Part")
-	anchor.Anchored = true
-	anchor.CanCollide = false
-	anchor.CanQuery = false
-	anchor.Transparency = 1
-	anchor.Size = Vector3.one * 0.2
-	anchor.Position = position
-	local emitter = Instance.new("ParticleEmitter")
-	emitter.Color = ColorSequence.new(color, Color3.fromRGB(255, 220, 140))
-	emitter.LightEmission = 1
-	emitter.Size = NumberSequence.new(0.35, 0)
-	emitter.Speed = NumberRange.new(12, 22)
-	emitter.SpreadAngle = Vector2.new(70, 70)
-	emitter.Lifetime = NumberRange.new(0.25, 0.45)
-	emitter.Acceleration = Vector3.new(0, -40, 0)
-	emitter.Enabled = false
-	emitter.Parent = anchor
-	anchor.Parent = workspace.CurrentCamera
-	emitter:Emit(14)
-
-	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxasset://sounds/collide.wav"
-	sound.Volume = 0.5
-	sound.PlaybackSpeed = 0.9 + math.random() * 0.3
-	sound.Parent = anchor
-	sound:Play()
-
-	task.delay(1, function()
-		anchor:Destroy()
-	end)
+	local slot = sparkSlot()
+	slot.anchor.Position = position
+	slot.emitter.Color = ColorSequence.new(color, Color3.fromRGB(255, 220, 140))
+	slot.emitter:Emit(14)
+	slot.sound.PlaybackSpeed = 0.9 + math.random() * 0.3
+	slot.sound:Play()
 end
 
 local function floater(position: Vector3, text: string, color: Color3, size: number)
@@ -177,6 +219,7 @@ local function floater(position: Vector3, text: string, color: Color3, size: num
 	label.TextStrokeTransparency = 0
 	label.Parent = gui
 	anchor.Parent = workspace.CurrentCamera
+	track(floaters, anchor, Config.Net.MaxFloaters)
 
 	TweenService:Create(anchor, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
 		Position = anchor.Position + Vector3.new(0, 4, 0),
@@ -186,7 +229,7 @@ local function floater(position: Vector3, text: string, color: Color3, size: num
 		TextStrokeTransparency = 1,
 	}):Play()
 	task.delay(1, function()
-		anchor:Destroy()
+		untrack(floaters, anchor)
 	end)
 end
 
@@ -207,13 +250,15 @@ local function oreFlyIn(from: Vector3, amount: number)
 		chunk.Color = Color3.fromRGB(196, 176, 160)
 		chunk.Position = from + Vector3.new(math.random() * 3 - 1.5, math.random() * 2, math.random() * 3 - 1.5)
 		chunk.Parent = workspace.CurrentCamera
+		track(oreChunks, chunk, Config.Net.MaxOreChunks)
+
 		local tween = TweenService:Create(
 			chunk,
 			TweenInfo.new(0.35 + i * 0.06, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
 			{ Position = root.Position, Size = Vector3.one * 0.2 }
 		)
 		tween.Completed:Once(function()
-			chunk:Destroy()
+			untrack(oreChunks, chunk)
 		end)
 		tween:Play()
 	end
