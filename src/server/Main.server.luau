@@ -13,10 +13,12 @@ Knit.Start()
 		if RunService:IsStudio() then
 			local PlayerStateService = Knit.GetService("PlayerStateService")
 
-			-- Studio only: a hook the command bar can call to hand out cash, ore and shards for testing
+			-- Studio only: a hook the command bar can call to hand out cash, ore and shards for
+			-- testing. The optional pickaxeTier sets the player's pickaxe tier (clamped to
+			-- Config.Pickaxes) and restyles the tool, e.g. tier 5 to mine Crystal meteors.
 			local hook = Instance.new("BindableFunction")
 			hook.Name = "DevGrant"
-			hook.OnInvoke = function(player: Player, cash: number?, ore: number?, shards: number?)
+			hook.OnInvoke = function(player: Player, cash: number?, ore: number?, shards: number?, pickaxeTier: number?)
 				if cash then
 					PlayerStateService:AddCash(player, cash)
 				end
@@ -25,6 +27,11 @@ Knit.Start()
 				end
 				if shards then
 					PlayerStateService:AddShards(player, shards)
+				end
+				local data = PlayerStateService:Get(player)
+				if pickaxeTier and data then
+					data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
+					Knit.GetService("ShopService"):ApplyPickaxe(player)
 				end
 				PlayerStateService:ReplicateNow(player)
 				return PlayerStateService:Get(player)
