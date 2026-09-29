@@ -10,7 +10,9 @@
 -- attributes, flushed at ~10 Hz for changed targets only.
 --
 -- Meteor types (spec §8.1) hook in through the TargetDef: OreFor picks each
--- player's ore by their own pickaxe.
+-- player's ore by their own pickaxe, PowerMult scales a hit's Mining Power by
+-- how many players are on the target (Crystal resonance), and Heal plus the
+-- idle clock let MeteorService refreeze Ice nodes nobody is hitting.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,6 +32,9 @@ export type TargetDef = {
 	OreMult: number, -- multiplier on the pickaxe's ore per hit
 	-- Per-player ore type and multiplier; when set it replaces Ore and OreMult
 	OreFor: ((player: Player) -> (string?, number))?,
+	-- Multiplier on the hit's Mining Power (HP taken and contribution). `hitters` is
+	-- how many players hit this target within the Resonance window, this one included.
+	PowerMult: ((player: Player, hitters: number) -> number)?,
 	CanHit: ((player: Player) -> boolean)?,
 	OnHit: ((player: Player, power: number, ore: number) -> ())?, -- power is the hit's Mining Power
 	OnBroken: ((player: Player) -> ())?,
@@ -41,6 +46,8 @@ type Target = {
 	Def: TargetDef,
 	Hp: number,
 	Dirty: boolean,
+	LastHit: number, -- os.clock() of the last validated hit, or of registration
+	Hitters: { [Player]: number }, -- os.clock() of each player's last hit; kept only for PowerMult targets
 }
 
 local NodeService = Knit.CreateService({
@@ -68,6 +75,8 @@ function NodeService:Register(part: BasePart, def: TargetDef): number
 		Def = def,
 		Hp = def.MaxHp,
 		Dirty = false,
+		LastHit = os.clock(),
+		Hitters = {},
 	}
 	targets[nextId] = target
 	part:SetAttribute("TargetId", nextId)
@@ -113,12 +122,32 @@ function NodeService:Rescale(id: number, ratio: number)
 	target.Dirty = false
 end
 
+-- Gives a live target up to `hp` HP back, never past its max (Ice refreeze, spec
+-- §8.1). Broken targets stay broken. Clients see it with the next HP flush.
+function NodeService:Heal(id: number, hp: number)
+	local target = targets[id]
+	if not target or target.Hp <= 0 or hp <= 0 then
+		return
+	end
+	local healed = math.min(target.Hp + hp, target.Def.MaxHp)
+	if healed > target.Hp then
+		target.Hp = healed
+		target.Dirty = true
+	end
+end
+
 function NodeService:GetHp(id: number): (number, number)
 	local target = targets[id]
 	if not target then
 		return 0, 0
 	end
 	return target.Hp, target.Def.MaxHp
+end
+
+-- Seconds since anyone last hit the target (or since it was registered).
+function NodeService:GetIdleSeconds(id: number): number
+	local target = targets[id]
+	return if target then os.clock() - target.LastHit else 0
 end
 
 function NodeService:IsAlive(id: number): boolean
@@ -136,6 +165,23 @@ local function distanceToPart(part: BasePart, point: Vector3): number
 		math.clamp(localPoint.Z, -half.Z, half.Z)
 	)
 	return (localPoint - clamped).Magnitude
+end
+
+-- Records this hit and returns how many players hit the target within the
+-- Resonance window (spec §8.1), this one included. Older hitters are forgotten.
+local function countHitters(target: Target, player: Player, now: number): number
+	local hitters = target.Hitters
+	hitters[player] = now
+	local window = Config.Meteor.Twists.Resonance.Window
+	local count = 0
+	for other, at in hitters do
+		if now - at <= window then
+			count += 1
+		else
+			hitters[other] = nil
+		end
+	end
+	return count
 end
 
 -- Server-side validation of one swing. Invalid swings are rejected silently.
@@ -169,9 +215,13 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	end
 
 	lastSwing[player] = now
+	target.LastHit = now
 	ActivityService:Touch(player)
 
 	local power = MiningPower.power(pickaxe.Tier)
+	if def.PowerMult then
+		power *= def.PowerMult(player, countHitters(target, player, now))
+	end
 	target.Hp -= power
 	if target.Hp < 1e-6 then
 		target.Hp = 0

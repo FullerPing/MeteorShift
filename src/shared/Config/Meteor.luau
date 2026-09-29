@@ -56,8 +56,9 @@ Meteor.ConsolationMult = 1.25 -- under-tier players get their best ore at this q
 Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest; an ineligible pick drops down this list
 
 Meteor.Twists = {
-	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second
-	Refreeze = { IdleSeconds = 5, RegenPerSecond = 0.02 },
+	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second.
+	-- The server applies the regen every Tick seconds.
+	Refreeze = { IdleSeconds = 5, RegenPerSecond = 0.02, Tick = 0.5 },
 	-- Crystal: each extra player on the same node adds BonusPerExtra Mining Power to everyone
 	-- on it, up to MaxBonus. A hitter counts as "on" a node for Window seconds after a hit.
 	Resonance = { Window = 1.5, BonusPerExtra = 0.2, MaxBonus = 0.6 },

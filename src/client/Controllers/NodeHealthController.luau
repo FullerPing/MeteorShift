@@ -3,6 +3,8 @@
 -- rock only gets a bar on your screen after you have hit it yourself. The core's
 -- big bar is shared: everyone sees it once the core is exposed (or when close).
 -- HP comes from the Hp / MaxHp attributes NodeService replicates at ~10 Hz.
+-- A meteor bar whose HP climbs back while its max holds (an Ice node refreezing,
+-- spec §8.1) is tinted frost until the next hit.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,6 +29,9 @@ type Bar = {
 	Fill: Frame,
 	Label: TextLabel?,
 	IsCore: boolean,
+	CanRefreeze: boolean, -- meteor nodes and the core; debris HP only rises on respawn
+	LastFraction: number, -- HP fraction at the last Hp change
+	Frosted: boolean,
 	Connections: { RBXScriptConnection },
 }
 
@@ -35,6 +40,7 @@ local bars: { [BasePart]: Bar } = {}
 local GREEN = Color3.fromRGB(105, 240, 103)
 local YELLOW = Color3.fromRGB(255, 210, 72)
 local RED = Color3.fromRGB(235, 80, 70)
+local FROST = Color3.fromRGB(150, 225, 255)
 
 local function colorFor(fraction: number): Color3
 	if fraction > 0.5 then
@@ -43,15 +49,25 @@ local function colorFor(fraction: number): Color3
 	return RED:Lerp(YELLOW, fraction * 2)
 end
 
-local function update(bar: Bar)
-	local hp = bar.Part:GetAttribute("Hp")
-	local maxHp = bar.Part:GetAttribute("MaxHp")
+local function fractionOf(part: BasePart): number?
+	local hp = part:GetAttribute("Hp")
+	local maxHp = part:GetAttribute("MaxHp")
 	if typeof(hp) ~= "number" or typeof(maxHp) ~= "number" or maxHp <= 0 then
+		return nil
+	end
+	return math.clamp(hp / maxHp, 0, 1)
+end
+
+local function update(bar: Bar)
+	local fraction = fractionOf(bar.Part)
+	if not fraction then
 		return
 	end
-	local fraction = math.clamp(hp / maxHp, 0, 1)
 	bar.Fill.Size = UDim2.fromScale(fraction, 1)
-	bar.Fill.BackgroundColor3 = if bar.IsCore then Color3.fromRGB(255, 174, 52) else colorFor(fraction)
+	bar.Fill.BackgroundColor3 = if bar.Frosted
+		then FROST
+		elseif bar.IsCore then Color3.fromRGB(255, 174, 52)
+		else colorFor(fraction)
 	if bar.Label then
 		-- HP runs on hidden Mining Power (spec §5.3), so show how much is left
 		bar.Label.Text = string.format("%d%%", math.ceil(fraction * 100))
@@ -133,12 +149,21 @@ local function add(part: BasePart)
 		Fill = fill,
 		Label = label,
 		IsCore = isCore,
+		CanRefreeze = part:GetAttribute("TargetKind") ~= "Debris",
+		LastFraction = fractionOf(part) or 1,
+		Frosted = false,
 		Connections = {},
 	}
 	bars[part] = bar
 	update(bar)
 
 	table.insert(bar.Connections, part:GetAttributeChangedSignal("Hp"):Connect(function()
+		-- A rescale keeps the fraction, a hit lowers it; only a refreeze raises it
+		local fraction = fractionOf(part)
+		if fraction then
+			bar.Frosted = bar.CanRefreeze and fraction > bar.LastFraction + 1e-4
+			bar.LastFraction = fraction
+		end
 		update(bar)
 		-- A respawned debris rock comes back at full HP: forget the old hits
 		local hp, maxHp = part:GetAttribute("Hp"), part:GetAttribute("MaxHp")
@@ -147,6 +172,8 @@ local function add(part: BasePart)
 		end
 	end))
 	table.insert(bar.Connections, part:GetAttributeChangedSignal("MaxHp"):Connect(function()
+		-- A new max is a rescale or a respawn, never a refreeze
+		bar.Frosted = false
 		update(bar)
 	end))
 	table.insert(bar.Connections, part:GetAttributeChangedSignal("TargetId"):Connect(function()

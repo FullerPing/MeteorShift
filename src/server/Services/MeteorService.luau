@@ -254,6 +254,14 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		return ore, mult * meteorType.YieldMult
 	end
 
+	-- Crystal twist: every player on the same node or core mines harder
+	local powerMult: ((Player, number) -> number)? = nil
+	if meteorType.Twist == "Resonance" then
+		powerMult = function(_player: Player, hitters: number): number
+			return MeteorTypes.resonanceMult(hitters)
+		end
+	end
+
 	local crustFolder = Instance.new("Folder")
 	crustFolder.Name = "Crust"
 	crustFolder.Parent = model
@@ -272,6 +280,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 			Ore = nil,
 			OreMult = 0,
 			OreFor = oreFor,
+			PowerMult = powerMult,
 			CanHit = function()
 				return isActive()
 			end,
@@ -295,6 +304,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		MaxHp = coreHp,
 		Ore = nil,
 		OreMult = 0,
+		PowerMult = powerMult,
 		CanHit = function()
 			return isActive() and meteor.Unlocked
 		end,
@@ -349,6 +359,22 @@ function MeteorService:_clearImpactZone(position: Vector3)
 	end
 end
 
+-- Ice twist (spec §8.1): every live crust node and the core that nobody has hit for
+-- a while regains HP, `dt` seconds' worth (MeteorTypes.refreezeHp).
+function MeteorService:_refreeze(meteor: Meteor, dt: number)
+	local function refreeze(id: number)
+		local hp, maxHp = NodeService:GetHp(id)
+		local refrozen = MeteorTypes.refreezeHp(hp, maxHp, NodeService:GetIdleSeconds(id), dt)
+		if refrozen > hp then
+			NodeService:Heal(id, refrozen - hp)
+		end
+	end
+	for _, id in meteor.CrustIds do
+		refreeze(id)
+	end
+	refreeze(meteor.CoreId)
+end
+
 function MeteorService:_cool(meteor: Meteor)
 	for _, part in meteor.Model:GetDescendants() do
 		if part:IsA("BasePart") then
@@ -389,10 +415,17 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 	-- Active: mine the crust, crack the core before it cools
 	self:_publish({ phase = Phase.Active, endsAt = now() + meteorType.ActiveDuration })
 	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
+	local refreezing = meteorType.Twist == "Refreeze"
+	local lastRefreeze = os.clock()
 	waitUntil(function()
-		if os.clock() >= nextCheck then
-			nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
+		local clock = os.clock()
+		if clock >= nextCheck then
+			nextCheck = clock + MeteorConfig.RescaleCheckInterval
 			self:_checkRescale(meteor)
+		end
+		if refreezing and clock - lastRefreeze >= MeteorConfig.Twists.Refreeze.Tick then
+			self:_refreeze(meteor, clock - lastRefreeze)
+			lastRefreeze = clock
 		end
 		return meteor.Cracked or now() >= state.endsAt
 	end)

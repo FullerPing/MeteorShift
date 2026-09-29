@@ -47,6 +47,7 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 **Meteor types (spec §8.1, in progress)**
 - Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors fall alongside Iron. Each countdown picks the next type from weighted odds (Iron 60, Ice 25, Crystal 15), but a type only comes up when at least 25% of active players' pickaxes meet its tier, otherwise it drops to the next type down. The sky board and HUD timer name it from the start of the countdown. Types, tier gates and twists are in `Config.Meteor`, the rules in `Shared.MeteorTypes`
 - Your own pickaxe decides your ore: the meteor's ore if it meets the meteor's tier, otherwise the best ore it can mine at ×1.25. Debris still drops iron
+- Ice twist, Refreeze: a node or core nobody has hit for 5 s regains 2% of its HP per second (never past full); its health bar turns frost blue while it refreezes. Crystal twist, Resonance: each extra player who hit the same node in the last 1.5 s adds +20% Mining Power (HP and contribution) to everyone on it, up to +60%
 
 ## Layout
 
