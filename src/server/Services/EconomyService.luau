@@ -3,9 +3,9 @@
 --
 --   sale = base price × rebirth multiplier × index bonus × VIP bonus
 --
--- The index bonus is +2% per completed mineral index page, additive across pages
--- (spec §8.2, Shared.MineralIndex.cashBonus). Rebirth and VIP arrive later in Week 4;
--- VIP is 1 until then, rebirths already read from the profile.
+-- The index bonus adds each completed mineral index page's CashBonus, additive
+-- across pages (spec §8.2, Shared.MineralIndex.cashBonus). Rebirth and VIP arrive
+-- later in Week 4; VIP is 1 until then, rebirths already read from the profile.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
