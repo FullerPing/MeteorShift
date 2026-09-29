@@ -227,6 +227,18 @@ function TutorialController:KnitStart()
 	local meteorState = scope:Value(nil :: any)
 	local serverNow = scope:Value(workspace:GetServerTimeNow())
 	local finished = scope:Value(false)
+	local shown = scope:Computed(function(use)
+		return use(step) ~= nil or use(finished)
+	end)
+	-- On compact screens the card sits in the right-hand button column under SHOP, the
+	-- spot the INDEX button takes; IndexController hides INDEX while this attribute is
+	-- set, or it would draw over the card and take taps meant for Skip
+	local inColumn = scope:Computed(function(use)
+		return use(compact) and use(shown)
+	end)
+	scope:Observer(inColumn):onBind(function()
+		player:SetAttribute("TutorialCardInColumn", Fusion.peek(inColumn))
+	end)
 
 	local lastIndex = 0
 	TutorialService.Step:Observe(function(value)
@@ -287,9 +299,7 @@ function TutorialController:KnitStart()
 				Size = UDim2.fromOffset(380, 116),
 				BackgroundColor3 = UI.PANEL_DARK,
 				BackgroundTransparency = 0.04,
-				Visible = scope:Computed(function(use)
-					return use(step) ~= nil or use(finished)
-				end),
+				Visible = shown,
 				[Children] = {
 					scope:New("UIScale")({ Scale = hudScale }),
 					UI.cardFill(scope),

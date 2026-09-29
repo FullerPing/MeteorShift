@@ -1,10 +1,11 @@
 --!strict
--- Mineral index book (spec §8.2). The INDEX button, under SHOP in the same column,
--- opens a panel with one tab per meteor type page. Every mineral is a card (unknown
--- ones as "???" silhouettes) with its published odds; each page shows its progress,
--- its reward and which pickaxes can find it, and the header the total bar sale
--- bonus and the best title earned. A new find pops a toast and lights the button;
--- a repeat find floats a small "+1 X" off the button.
+-- Mineral index book (spec §8.2). The INDEX button, under SHOP in the same column
+-- (hidden while the shop is open, or while the tutorial card takes that spot on
+-- compact screens), opens a panel with one tab per meteor type page. Every mineral
+-- is a card (unknown ones as "???" silhouettes) with its published odds; each page
+-- shows its progress, its reward and which pickaxes can find it, and the header the
+-- total bar sale bonus and the best title earned. A new find pops a toast and lights
+-- the button; a repeat find floats a small "+1 X" off the button.
 --
 -- IndexService owns the index and rolls every drop; the panel reads the `index`
 -- in the player's State and is presentation only.
@@ -274,10 +275,21 @@ function IndexController:KnitStart()
 
 	local scope = Fusion.scoped(Fusion)
 	local open, tab, fresh = scope:Value(false), scope:Value(PageOrder[1]), scope:Value(false)
-	local shopOpen = scope:Value(player:GetAttribute("ShopOpen") == true)
-	table.insert(scope, player:GetAttributeChangedSignal("ShopOpen"):Connect(function()
-		shopOpen:set(player:GetAttribute("ShopOpen") == true)
-	end))
+	-- Flags other controllers set on the local player
+	local function playerFlag(name: string)
+		local flag = scope:Value(player:GetAttribute(name) == true)
+		table.insert(scope, player:GetAttributeChangedSignal(name):Connect(function()
+			flag:set(player:GetAttribute(name) == true)
+		end))
+		return flag
+	end
+	local shopOpen = playerFlag("ShopOpen")
+	local tutorialInColumn = playerFlag("TutorialCardInColumn")
+	-- INDEX hides while the panel or the shop is open, and while the tutorial card
+	-- sits under SHOP on compact screens (INDEX would cover the card's Skip button)
+	local buttonVisible = scope:Computed(function(use)
+		return not use(open) and not use(shopOpen) and not use(tutorialInColumn)
+	end)
 
 	-- Same sizing as the shop: the panel scales to fit the screen height
 	local viewport = scope:Value(Vector2.new(1280, 720))
@@ -380,9 +392,7 @@ function IndexController:KnitStart()
 				BackgroundColor3 = scope:Spring(scope:Computed(function(use)
 					return if use(fresh) then UI.GREEN else UI.SHARD
 				end), 12, 1),
-				Visible = scope:Computed(function(use)
-					return not use(open) and not use(shopOpen)
-				end),
+				Visible = buttonVisible,
 				[Children] = { scope:New("UIScale")({ Scale = hudScale }) },
 				[OnEvent("Activated")] = function()
 					open:set(true)
@@ -554,7 +564,8 @@ function IndexController:KnitStart()
 				fresh:set(true)
 				tab:set(page.Id) -- the panel opens on the page of the new find
 			end
-		else
+		elseif Fusion.peek(buttonVisible) then
+			-- Only while there is a button to rise from
 			floatUp("+1 " .. mineral.Name, mineral.Color:Lerp(UI.WHITE, 0.3))
 		end
 	end)

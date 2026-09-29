@@ -52,7 +52,7 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 
 **Mineral index (spec §8.2)**
 - Iron, Ice and Crystal pages, four minerals each. Every hit on a meteor's crust or core can drop one mineral of that meteor's page at fixed odds (1 in 25, 120, 600 and 2,500), only if your own pickaxe meets the meteor's tier; debris never drops minerals and nothing you can buy changes the odds. The rarest mineral of each page only drops from rich nodes: three crust nodes per meteor with gold ore that sparkle
-- The INDEX button (under SHOP) opens the book: a tab per page, every mineral as a card ("???" until found) with its odds, the page's progress, reward and which pickaxes can find it, and your total bonus and title. A new find pops "New mineral: X!" and lights the button; a repeat find floats "+1 X"
+- The INDEX button (under SHOP; hidden while the shop is open and, on narrow screens, while the tutorial card sits under SHOP) opens the book: a tab per page, every mineral as a card ("???" until found) with its odds, the page's progress, reward and which pickaxes can find it, and your total bonus and title. A new find pops "New mineral: X!" and lights the button; a repeat find floats "+1 X"
 - A completed page is announced to the server and adds +2% to bar sales (additive across pages) and a title (Iron Prospector, Frost Walker, Crystal Seer), kept in your `Title` attribute. Décor rewards wait for a décor system. Pages and odds are in `Config.Index`, the rules in `Shared.MineralIndex`
 
 ## Layout
