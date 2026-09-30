@@ -116,6 +116,9 @@ function TutorialService:KnitStart()
 	DataService.ProfileLoaded:Connect(function(player)
 		self:_publish(player)
 	end)
+	for _, player in Players:GetPlayers() do
+		self:_publish(player) -- profiles loaded before this service started (no-op without one)
+	end
 
 	local hitSteps = { Debris = "mine_debris", Crust = "mine_node", Core = "hit_core" }
 	NodeService.Hit:Connect(function(player, kind)
@@ -134,6 +137,14 @@ function TutorialService:KnitStart()
 	end)
 	RefineryService.OreDeposited:Connect(function(player)
 		self:Did(player, "deposit")
+	end)
+	-- Auto-Deposit (spec §9.1) skips the hopper prompt: it completes "deposit" only
+	-- while that is the step to do, so it never skips the steps before it.
+	PlayerStateService.OreAutoDeposited:Connect(function(player)
+		local data = PlayerStateService:Get(player)
+		if data and not data.flags.tutorialDone and data.tutorialStep == indexOf.deposit then
+			self:Did(player, "deposit")
+		end
 	end)
 	RefineryService.BarsCollected:Connect(function(player)
 		self:Did(player, "collect_bar")
