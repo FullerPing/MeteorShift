@@ -69,6 +69,9 @@ Knit.Start()
 			local bench = Instance.new("BindableFunction")
 			bench.Name = "DevBench"
 			bench.OnInvoke = function(player: Player, swings: number)
+				if typeof(swings) ~= "number" or swings < 1 then
+					return nil
+				end
 				local data = PlayerStateService:Get(player)
 				if not data then
 					return nil
@@ -77,22 +80,30 @@ Knit.Start()
 				data.backpackTier = #Config.Backpacks
 				table.clear(data.backpack)
 
-				local sendsBefore = PlayerStateService:StateSendCount()
-				local start = os.clock()
-				for _ = 1, swings do
-					PlayerStateService:AddOre(player, "iron", 1)
+				local result
+				local ok, err = pcall(function()
+					local sendsBefore = PlayerStateService:StateSendCount()
+					local start = os.clock()
+					for _ = 1, swings do
+						PlayerStateService:AddOre(player, "iron", 1)
+					end
+					local elapsedMs = (os.clock() - start) * 1000
+					task.wait(Config.Net.StateFlushInterval * 2)
+					local sends = PlayerStateService:StateSendCount() - sendsBefore
+					result = { swings = swings, elapsedMs = elapsedMs, sends = sends }
+				end)
+				if not ok then
+					warn("[DevBench] failed:", err)
 				end
-				local elapsedMs = (os.clock() - start) * 1000
-				task.wait(Config.Net.StateFlushInterval * 2)
-				local sends = PlayerStateService:StateSendCount() - sendsBefore
 
+				-- always give the player their own backpack back
 				data.backpackTier = ownTier
 				table.clear(data.backpack)
 				for oreType, n in ownBackpack do
 					data.backpack[oreType] = n
 				end
 				PlayerStateService:ReplicateNow(player)
-				return { swings = swings, elapsedMs = elapsedMs, sends = sends }
+				return result
 			end
 			bench.Parent = ServerStorage
 		end

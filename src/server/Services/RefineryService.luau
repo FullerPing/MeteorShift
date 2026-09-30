@@ -302,11 +302,14 @@ function RefineryService:KnitStart()
 
 	DataService.ProfileLoaded:Connect(function(player, profile)
 		local lastSeen = profile.Data.lastSeen
+		local joinedAt = os.time()
+		-- The online tick runs while we wait for the passes, so it already counts
+		-- that time: the away time ends at the join, and lastSeen moves up now.
+		profile.Data.lastSeen = joinedAt
 		MonetizationService:WaitForPasses(player) -- the Offline Hours+ cap
 		if lastSeen and lastSeen > 0 then
-			self:CatchUp(player, os.time() - lastSeen)
+			self:CatchUp(player, joinedAt - lastSeen)
 		end
-		profile.Data.lastSeen = os.time()
 		self:Refresh(player, true)
 	end)
 

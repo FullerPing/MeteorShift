@@ -106,6 +106,7 @@ local function claim(key: string): ({ [any]: any }?, string?)
 	end
 
 	local result, reason = nil, nil
+	local aborted = false
 	local ok, err = pcall(function()
 		(store :: DataStore):UpdateAsync(key, function(record)
 			record = record or { data = nil, lock = nil }
@@ -139,6 +140,7 @@ local function write(profile: Profile, release: boolean): boolean
 			local lock = record.lock
 			if lock and lock.session ~= sessionId then
 				-- Another server took the profile over; never overwrite its data
+				aborted = true
 				return nil
 			end
 			record.data = data
@@ -148,8 +150,10 @@ local function write(profile: Profile, release: boolean): boolean
 	end)
 	if not ok then
 		warn("[DataService] save failed for", profile.Player.Name, err)
+	elseif aborted then
+		warn("[DataService] save skipped for", profile.Player.Name, "(another server holds the profile)")
 	end
-	return ok
+	return ok and not aborted
 end
 
 function DataService:GetProfile(player: Player): Profile?
