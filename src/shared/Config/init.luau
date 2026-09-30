@@ -21,4 +21,5 @@ return {
 	Rebirth = require(script.Rebirth),
 	Telemetry = require(script.Telemetry),
 	Monetization = require(script.Monetization),
+	Hud = require(script.Hud),
 }
