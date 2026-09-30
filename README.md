@@ -74,12 +74,16 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - One layout decides where the SHOP, INDEX, REBIRTH and STORE buttons go (`Shared.HudLayout`): a column on the right for mouse users, one row along the top right on touch, every button at least 44 px, clear of the Roblox top bar, the clock, the thumbstick area, the jump button and MINE. The tutorial card stays centred under the clock on touch
 - The shop, index, rebirth and store panels scale to fit below the top bar (844x390 included) and their close buttons stay at least 44 px
 
+**Economy pacing (spec §7.4, Week 5)**
+- `Shared.Pacing` simulates a fresh free player (Iron meteors, no passes or rebirth) from Config and `tests/Pacing.spec.luau` asserts the §7.4 checkpoints; assumptions in `Config.Balance`, results and the inflation factor (1: Config prices are the spec's) in `docs/balance.md`
+- The level 1 line makes $75 a minute, so the shipped prices put the Drill Pick 106 minutes away instead of 30. Tuning, old to new: Drill Pick cost $8,000 to $1,500; Refinery level 2 cost $1,500 to $400; Conveyor level 2 cost $1,200 to $300
+
 ## Layout
 
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower, MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Aim
+src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower, Pacing, MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Aim
 src/server/            ServerScriptService.Server: Knit services
 src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD, shared UI styles (UI.luau)
 assets/                Studio exports of everything built in Studio (see below)

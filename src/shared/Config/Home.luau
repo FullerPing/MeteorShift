@@ -53,7 +53,7 @@ Home.Stations = {
 		Name = "Conveyor",
 		Levels = levels({
 			{ 0.3, 0 },
-			{ 1, 1.2e3 },
+			{ 1, 300 },
 			{ 3, 15e3 },
 			{ 10, 200e3 },
 			{ 30, 2.5e6, 20 },
@@ -67,7 +67,7 @@ Home.Stations = {
 		Name = "Refinery",
 		Levels = levels({
 			{ 0.25, 0 },
-			{ 0.75, 1.5e3 },
+			{ 0.75, 400 },
 			{ 2.5, 20e3 },
 			{ 8, 250e3 },
 			{ 25, 3e6, 25 },

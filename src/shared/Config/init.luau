@@ -22,4 +22,5 @@ return {
 	Telemetry = require(script.Telemetry),
 	Monetization = require(script.Monetization),
 	Hud = require(script.Hud),
+	Balance = require(script.Balance),
 }
