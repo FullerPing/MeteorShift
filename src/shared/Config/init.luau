@@ -19,4 +19,5 @@ return {
 	Tutorial = require(script.Tutorial),
 	Net = require(script.Net),
 	Rebirth = require(script.Rebirth),
+	Telemetry = require(script.Telemetry),
 }
