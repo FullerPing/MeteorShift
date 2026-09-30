@@ -296,7 +296,7 @@ local function oreFlyIn(from: Vector3, amount: number)
 	end
 end
 
-function MiningController:_swing(tool: Tool)
+function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 	if player:GetAttribute("ShopOpen") then
 		return
 	end
