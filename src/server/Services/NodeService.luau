@@ -13,6 +13,10 @@
 -- player's ore by their own pickaxe, PowerMult scales a hit's Mining Power by
 -- how many players are on the target (Crystal resonance), and Heal plus the
 -- idle clock let MeteorService refreeze Ice nodes nobody is hitting.
+--
+-- The 2x Ore pass (spec §9.1) multiplies the ore quantity per hit here and nothing
+-- else: mineral drops are rolled by IndexService on the Hit signal, whose odds no
+-- purchase can reach (spec §9.4).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -64,6 +68,7 @@ NodeService.Hit = Signal.new()
 
 local PlayerStateService
 local ActivityService
+local MonetizationService
 
 local targets: { [number]: Target } = {}
 local nextId = 0
@@ -236,7 +241,8 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	end
 	local ore = 0
 	if oreType then
-		ore = PlayerStateService:AddOre(player, oreType, pickaxe.OrePerHit * oreMult)
+		local quantity = pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player)
+		ore = PlayerStateService:AddOre(player, oreType, quantity)
 		if ore > 0 then
 			self.Client.OreGained:Fire(player, id, oreType, ore)
 		end
@@ -266,6 +272,7 @@ end
 function NodeService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	ActivityService = Knit.GetService("ActivityService")
+	MonetizationService = Knit.GetService("MonetizationService")
 end
 
 function NodeService:KnitStart()

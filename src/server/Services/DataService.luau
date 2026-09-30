@@ -156,6 +156,17 @@ function DataService:GetProfile(player: Player): Profile?
 	return profiles[player]
 end
 
+-- Saves the player's profile now and keeps the lock. Returns whether the save went
+-- through (always true on the in-memory store). MonetizationService saves after a
+-- developer product grant so a processed receipt is on disk before Roblox is told.
+function DataService:Save(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	return write(profile, false)
+end
+
 -- Waits until the player's profile is loaded (or they leave).
 function DataService:WaitForProfile(player: Player): Profile?
 	while player.Parent and not profiles[player] do

@@ -9,6 +9,10 @@
 --   Display   BillboardGui with a TextLabel "Text"
 --   Upgrade   ProximityPrompt (handled by UpgradeService)
 -- plus Hopper.Intake (touch to deposit) and CollectionPost.Bin (touch to collect).
+--
+-- Passes and products (spec §9, MonetizationService): Offline Hours+ raises the
+-- offline cap to Config.Home.OfflineCapPass, and Refinery Overclock speeds the
+-- refinery up in the online tick only, counting its time down while you play.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -39,6 +43,7 @@ local DataService
 local PlotService
 local PlayerStateService
 local EconomyService
+local MonetizationService
 
 local touchCooldown: { [Player]: { [string]: number } } = {}
 local blockedBy: { [Player]: Refining.Blocked } = {}
@@ -105,7 +110,12 @@ function RefineryService:RefreshPlot(player: Player)
 		Format.number(Refining.hopperCapacity(data))
 	))
 	setDisplay(conveyor, string.format("Conveyor · Lv %d\n%s ore/s", s.conveyor, formatRate(Refining.conveyorRate(data))))
-	setDisplay(refinery, string.format("Refinery · Lv %d\n%s bars/s", s.refinery, formatRate(Refining.refineryRate(data))))
+	local speedMult = MonetizationService:RefinerySpeedMult(data)
+	local refineryText = string.format("Refinery · Lv %d\n%s bars/s", s.refinery, formatRate(Refining.refineryRate(data, speedMult)))
+	if speedMult > 1 then
+		refineryText ..= "\nOVERCLOCK ×" .. formatRate(speedMult)
+	end
+	setDisplay(refinery, refineryText)
 	local binText = string.format(
 		"Collection Post · Lv %d\n%s / %s bars",
 		s.collector,
@@ -125,7 +135,7 @@ function RefineryService:RefreshPlot(player: Player)
 	-- Clients animate ore on the belt while the line is running
 	local running = sum(data.hopper) > 0 and blockedBy[player] ~= "collector"
 	stations:SetAttribute("Running", running)
-	stations:SetAttribute("LineRate", Refining.lineRate(data))
+	stations:SetAttribute("LineRate", Refining.lineRate(data, speedMult))
 	for _, model in { refinery, conveyor } do
 		if model then
 			for _, fx in model:GetDescendants() do
@@ -222,7 +232,7 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	if not data or awaySeconds <= 0 then
 		return
 	end
-	local cap = Config.Home.OfflineCap -- Offline Hours+ pass raises this in Week 4
+	local cap = MonetizationService:OfflineCap(player) -- Offline Hours+ raises it
 	local seconds = math.min(awaySeconds, cap)
 	local made, bars, blocked = Refining.run(data, seconds)
 	blockedBy[player] = blocked
@@ -278,6 +288,7 @@ function RefineryService:KnitInit()
 	PlotService = Knit.GetService("PlotService")
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	EconomyService = Knit.GetService("EconomyService")
+	MonetizationService = Knit.GetService("MonetizationService")
 end
 
 function RefineryService:KnitStart()
@@ -291,11 +302,16 @@ function RefineryService:KnitStart()
 
 	DataService.ProfileLoaded:Connect(function(player, profile)
 		local lastSeen = profile.Data.lastSeen
+		MonetizationService:WaitForPasses(player) -- the Offline Hours+ cap
 		if lastSeen and lastSeen > 0 then
 			self:CatchUp(player, os.time() - lastSeen)
 		end
 		profile.Data.lastSeen = os.time()
 		self:Refresh(player, true)
+	end)
+
+	PlayerStateService.OreAutoDeposited:Connect(function(player)
+		self:RefreshPlot(player)
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
@@ -315,9 +331,16 @@ function RefineryService:KnitStart()
 				local data = PlayerStateService:Get(player)
 				if data then
 					local before = blockedBy[player]
-					local _, made, blocked = Refining.run(data, dt)
+					local speedMult = MonetizationService:RefinerySpeedMult(data)
+					local _, made, blocked = Refining.run(data, dt, speedMult)
 					blockedBy[player] = blocked
-					if made > 0 or blocked ~= before then
+					-- Refinery Overclock only counts down while the player is online
+					local overclockEnded = false
+					if speedMult > 1 then
+						data.overclockLeft = math.max((data.overclockLeft or 0) - dt, 0)
+						overclockEnded = data.overclockLeft <= 0
+					end
+					if made > 0 or blocked ~= before or overclockEnded then
 						self:Refresh(player)
 					end
 				end

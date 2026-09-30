@@ -2,6 +2,10 @@
 -- Gameplay-facing view of a player's saved profile: pickaxe, backpack, currencies,
 -- hopper and refineries. Storage is DataService; this service owns the rules and
 -- replicates a compact snapshot to the owning client.
+--
+-- Game passes (spec §9.1, MonetizationService) reach in here twice: Bigger Backpack
+-- multiplies the backpack capacity, and Auto-Deposit sends mined ore straight into
+-- the hopper (up to its capacity, the rest into the backpack).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +15,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Refining = require(script.Parent.Parent.Lib.Refining)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local PlayerStateService = Knit.CreateService({
 	Name = "PlayerStateService",
@@ -20,7 +25,12 @@ local PlayerStateService = Knit.CreateService({
 	},
 })
 
+-- (player, amount) when Auto-Deposit put mined ore into the hopper, so
+-- RefineryService can refresh the plot displays
+PlayerStateService.OreAutoDeposited = Signal.new()
+
 local DataService
+local MonetizationService
 
 -- Fractional ore from debris, paid out once it reaches 1. Not saved.
 local oreRemainder: { [Player]: { [string]: number } } = {}
@@ -55,7 +65,8 @@ end
 
 function PlayerStateService:GetCapacity(player: Player): number
 	local data = self:Get(player)
-	return (Config.Backpacks[if data then data.backpackTier else 1] or Config.Backpacks[1]).Capacity
+	local base = (Config.Backpacks[if data then data.backpackTier else 1] or Config.Backpacks[1]).Capacity
+	return base * MonetizationService:BackpackMult(player)
 end
 
 function PlayerStateService:GetHopperCapacity(player: Player): number
@@ -104,12 +115,13 @@ function PlayerStateService:_sendState(player: Player)
 	end
 	stateSends += 1
 
+	local speedMult = MonetizationService:RefinerySpeedMult(data) -- Refinery Overclock
 	local line = {
 		hopper = { level = data.stations.hopper, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data) },
 		conveyor = { level = data.stations.conveyor, rate = Refining.conveyorRate(data) },
-		refinery = { level = data.stations.refinery, rate = Refining.refineryRate(data) },
+		refinery = { level = data.stations.refinery, rate = Refining.refineryRate(data, speedMult) },
 		collector = { level = data.stations.collector, amount = sum(data.bin), capacity = Refining.collectorCapacity(data) },
-		rate = Refining.lineRate(data),
+		rate = Refining.lineRate(data, speedMult),
 	}
 
 	self.Client.State:SetFor(player, {
@@ -127,6 +139,8 @@ function PlayerStateService:_sendState(player: Player)
 		line = line,
 		rebirths = data.rebirths, -- sets the cash multiplier (spec §8.3)
 		index = data.index, -- mineral index: mineral id -> count found (spec §8.2)
+		credits = data.credits, -- unused Call a Meteor credits (spec §9.2)
+		overclockLeft = data.overclockLeft, -- seconds of Refinery Overclock left
 		plotId = player:GetAttribute("PlotId"),
 	})
 end
@@ -174,7 +188,9 @@ function PlayerStateService:_flush()
 end
 
 -- Adds ore to the backpack up to its capacity. Fractional amounts (debris) are
--- banked until they add up to a whole ore. Returns the whole ore actually added.
+-- banked until they add up to a whole ore. With Auto-Deposit the ore goes into the
+-- hopper first and only what doesn't fit goes to the backpack. Returns the whole
+-- ore actually added, hopper and backpack together.
 function PlayerStateService:AddOre(player: Player, oreType: string, amount: number): number
 	local data = self:Get(player)
 	local remainders = oreRemainder[player]
@@ -183,7 +199,10 @@ function PlayerStateService:AddOre(player: Player, oreType: string, amount: numb
 	end
 
 	local space = self:GetCapacity(player) - sum(data.backpack)
-	if space <= 0 then
+	local hopperSpace = if MonetizationService:HasAutoDeposit(player)
+		then math.max(Refining.hopperCapacity(data) - sum(data.hopper), 0)
+		else 0
+	if space <= 0 and hopperSpace <= 0 then
 		remainders[oreType] = 0
 		local now = os.clock()
 		if now - (lastFullNotice[player] or 0) > 3 then
@@ -195,13 +214,20 @@ function PlayerStateService:AddOre(player: Player, oreType: string, amount: numb
 
 	local pending = (remainders[oreType] or 0) + amount
 	local whole = math.floor(pending)
-	local added = math.min(whole, space)
 	remainders[oreType] = pending - whole
+	local deposited = math.min(whole, hopperSpace)
+	local added = math.min(whole - deposited, math.max(space, 0))
+	if deposited > 0 then
+		data.hopper[oreType] = (data.hopper[oreType] or 0) + deposited
+		self.OreAutoDeposited:Fire(player, deposited)
+	end
 	if added > 0 then
 		data.backpack[oreType] = (data.backpack[oreType] or 0) + added
+	end
+	if deposited + added > 0 then
 		self:Replicate(player)
 	end
-	return added
+	return deposited + added
 end
 
 function PlayerStateService:AddShards(player: Player, amount: number)
@@ -224,6 +250,7 @@ end
 
 function PlayerStateService:KnitInit()
 	DataService = Knit.GetService("DataService")
+	MonetizationService = Knit.GetService("MonetizationService")
 end
 
 function PlayerStateService:KnitStart()

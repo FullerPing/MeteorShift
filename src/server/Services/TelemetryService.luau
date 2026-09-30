@@ -21,6 +21,9 @@
 -- * active_actions_per_minute every Config.Telemetry.ActionsInterval seconds per player:
 --   swings, deposits, collects, sells and purchases. Players with none log nothing.
 -- * Tutorial funnel steps, which TutorialService sends through :funnel.
+-- * Monetization (spec §9): "pass_bought" when a game pass is bought in game
+--   (field = pass key) and "product_bought" per granted developer product receipt
+--   (fields = product key, outcome: "called", "credited" or "granted").
 
 local AnalyticsService = game:GetService("AnalyticsService")
 local Players = game:GetService("Players")
@@ -183,6 +186,7 @@ function TelemetryService:KnitStart()
 	local ShopService = Knit.GetService("ShopService")
 	local UpgradeService = Knit.GetService("UpgradeService")
 	local RebirthService = Knit.GetService("RebirthService")
+	local MonetizationService = Knit.GetService("MonetizationService")
 
 	NodeService.Hit:Connect(function(player: Player, kind: string)
 		act(player)
@@ -249,6 +253,15 @@ function TelemetryService:KnitStart()
 	RebirthService.Reborn:Connect(function(player: Player, rebirths: number, cashSpent: number)
 		self:custom(player, "rebirth", rebirths)
 		self:economy(player, SINK, CASH, cashSpent, 0, GAMEPLAY, "rebirth")
+	end)
+
+	MonetizationService.PassBought:Connect(function(player: Player, passKey: string)
+		act(player)
+		self:custom(player, "pass_bought", 1, { passKey })
+	end)
+	MonetizationService.ProductBought:Connect(function(player: Player, productKey: string, outcome: string)
+		act(player)
+		self:custom(player, "product_bought", 1, { productKey, outcome })
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
