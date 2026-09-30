@@ -160,8 +160,8 @@ function MonetizationService:_resolve(player: Player)
 	if not player.Parent then
 		return
 	end
-	self:_grantPasses(player, found)
 	resolved[player] = true
+	self:_grantPasses(player, found)
 end
 
 function MonetizationService:_grantProduct(player: Player, data: any, key: string)
