@@ -33,6 +33,7 @@ local RefineryService = Knit.CreateService({
 
 RefineryService.OreDeposited = Signal.new() -- (player, ore)
 RefineryService.BarsCollected = Signal.new() -- (player, bars)
+RefineryService.CaughtUp = Signal.new() -- (player, awaySeconds, bars) after offline catch-up
 
 local DataService
 local PlotService
@@ -235,6 +236,7 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 		value = value,
 		blocked = blocked,
 	})
+	self.CaughtUp:Fire(player, awaySeconds, bars)
 end
 
 function RefineryService:_connectStations(player: Player, stations: Model)

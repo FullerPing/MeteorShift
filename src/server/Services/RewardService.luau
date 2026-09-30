@@ -53,11 +53,11 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 		local reward = rewards[index]
 		local data = PlayerStateService:Get(entry.Player)
 		if data then
+			-- flags.firstMeteor and flags.firstCoreReward are TelemetryService's
+			-- (first validated hit, first shards received; spec §13)
 			data.stats.meteorsJoined += 1
-			data.flags.firstMeteor = true
 			if reward then
 				data.stats.coresCracked += 1
-				data.flags.firstCoreReward = true
 			end
 		end
 		if reward then

@@ -24,7 +24,7 @@ local RebirthService = Knit.CreateService({
 	},
 })
 
-RebirthService.Reborn = Signal.new() -- (player, rebirths) for analytics
+RebirthService.Reborn = Signal.new() -- (player, rebirths, cashSpent) for analytics
 
 local PlayerStateService
 local ShopService
@@ -43,6 +43,7 @@ function RebirthService:Rebirth(player: Player): boolean
 		return false
 	end
 
+	local cashSpent = data.cash
 	data.cash = 0
 	data.pickaxeTier = 1
 	data.backpackTier = 1
@@ -61,7 +62,7 @@ function RebirthService:Rebirth(player: Player): boolean
 			Format.number(Rebirth.multiplier(rebirths))
 		)
 	)
-	self.Reborn:Fire(player, rebirths)
+	self.Reborn:Fire(player, rebirths, cashSpent)
 	return true
 end
 

@@ -28,9 +28,11 @@ return {
 	tutorialStep = 1, -- next tutorial step (spec §11); flags.tutorialDone ends it
 	flags = {
 		tutorialDone = false,
+		-- Lifetime analytics milestones (spec §13), set by TelemetryService when logged
 		firstMeteor = false,
 		firstCoreReward = false,
 		firstRefinery = false,
+		returnedOfflineIncome = false,
 	},
 	stats = {
 		meteorsJoined = 0,

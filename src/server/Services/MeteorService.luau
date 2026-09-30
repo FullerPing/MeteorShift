@@ -43,6 +43,9 @@ local MeteorService = Knit.CreateService({
 })
 
 MeteorService.Landed = Signal.new() -- (position: Vector3) at impact
+-- (meteorType: string, cracked: boolean, secondsToCrack: number?) when the Active
+-- phase ends; secondsToCrack runs from the start of Active, nil when it cooled
+MeteorService.Ended = Signal.new()
 
 local NodeService
 local ContributionService
@@ -60,6 +63,7 @@ type Meteor = {
 	UnlockAt: number,
 	Unlocked: boolean,
 	Cracked: boolean,
+	CrackedAt: number, -- os.clock() when the core broke, 0 until then
 	Type: Config.MeteorType,
 	SizedPower: number, -- server power the current HP is sized for
 	LastRescale: number,
@@ -270,6 +274,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		UnlockAt = math.ceil(#slots * MeteorConfig.CoreUnlockFraction),
 		Unlocked = false,
 		Cracked = false,
+		CrackedAt = 0,
 		Type = meteorType,
 		SizedPower = power,
 		LastRescale = os.clock(),
@@ -352,6 +357,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		end,
 		OnBroken = function()
 			meteor.Cracked = true
+			meteor.CrackedAt = os.clock()
 		end,
 	})
 
@@ -453,6 +459,7 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 
 	-- Active: mine the crust, crack the core before it cools
 	self:_publish({ phase = Phase.Active, endsAt = now() + meteorType.ActiveDuration })
+	local activeStart = os.clock()
 	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
 	local refreezing = meteorType.Twist == "Refreeze"
 	local lastRefreeze = os.clock()
@@ -469,6 +476,7 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 		return meteor.Cracked or now() >= state.endsAt
 	end)
 	ContributionService:Stop()
+	self.Ended:Fire(meteorType.Id, meteor.Cracked, if meteor.Cracked then meteor.CrackedAt - activeStart else nil)
 
 	local poolMult = MeteorTypes.shardPoolMult(meteorType, interval, MeteorConfig.Countdown)
 	if meteor.Cracked then
