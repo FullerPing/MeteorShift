@@ -59,6 +59,10 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - The REBIRTH button (under INDEX; green once you can afford it, hidden while the shop or index is open and, on narrow screens, while the tutorial card sits in the column) opens a panel with your cash multiplier now and after the rebirth, the cost with your progress toward it, and what resets and what you keep. The confirm button needs a second press ("ARE YOU SURE?") within 3 s, and says how much cash is missing while you can't afford it
 - The first rebirth costs $10M, each one after ×10 ($100M, $1B, ...). It resets cash to $0, the pickaxe and backpack to tier 1 and empties the backpack; the production line with its ore and bars, carried bars, Core Shards, the mineral index, décor and flags are kept. Every rebirth doubles bar sales for good (×2, ×4, ×8, ..., multiplicative), is announced to the server and the HUD shows the multiplier under your cash. The "While you were away" value now includes your sale multipliers. Tuning is in `Config.Rebirth`, the rules in `Shared.Rebirth`
 
+**Analytics (spec §13)**
+- `TelemetryService` logs to Roblox AnalyticsService (every call pcall'd; in Studio each event also prints a `[Telemetry] ...` line). Once per player, guarded by profile flags: `first_meteor_joined` (first hit on a crust node or the core), `first_core_reward` (first shards), `first_refinery_bought` (first refinery upgrade) and `returned_offline_income` (offline catch-up that made bars; value = bars, field = hours away)
+- Per meteor event: players in the server, node hitters, core hitters, cracked vs cooled and seconds to crack, by meteor type. Economy sources and sinks for cash (selling; shop, station upgrades, rebirth) and shards (core rewards; purchases). Rebirths. `active_actions_per_minute` per player every 60 s (swings, deposits, collects, sells, purchases; players with none log nothing). Tutorial funnel steps. Tuning is in `Config.Telemetry`, the pure helpers in `Server.Lib.Telemetry`
+
 ## Layout
 
 ```
@@ -70,11 +74,11 @@ src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths). `src/server/Lib` holds the profile template and the pure refinery simulation.
+Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths), `TelemetryService` (analytics). `src/server/Lib` holds the profile template, the pure refinery simulation, the shard reward math and the analytics helpers.
 
 Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`, `IndexController`, `RebirthController`.
 
-Services announce what players do through server-side signals (`NodeService.Hit`, `MeteorService.Landed`, `RewardService.ShardsAwarded`, `RefineryService.OreDeposited` / `BarsCollected`, `EconomyService.BarsSold`, `ShopService.ItemBought`, `UpgradeService.StationUpgraded`). The tutorial listens to them, and Week 4 analytics can too.
+Services announce what players do through server-side signals (`NodeService.Hit`, `MeteorService.Landed`, `RewardService.ShardsAwarded`, `RefineryService.OreDeposited` / `BarsCollected`, `EconomyService.BarsSold`, `ShopService.ItemBought`, `UpgradeService.StationUpgraded`, `MeteorService.Ended`, `RefineryService.CaughtUp`, `RebirthService.Reborn`). The tutorial and `TelemetryService` listen to them.
 
 All tuning numbers live in `src/shared/Config`.
 

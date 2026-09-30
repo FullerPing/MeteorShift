@@ -3,9 +3,9 @@
 -- (tutorialStep); every step completes on the real action, reported by the
 -- services' server signals. An action for a later step completes the steps
 -- before it too, so a player who joins mid-event or skips ahead never gets stuck.
--- Each completed step is logged as an onboarding funnel step.
+-- Each completed step is logged as an onboarding funnel step through
+-- TelemetryService (spec §13).
 
-local AnalyticsService = game:GetService("AnalyticsService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -25,19 +25,11 @@ local TutorialService = Knit.CreateService({
 
 local PlayerStateService
 local MeteorService
+local TelemetryService
 
 local indexOf: { [string]: number } = {}
 for index, step in Steps do
 	indexOf[step.Id] = index
-end
-
-local function logStep(player: Player, index: number)
-	local ok, err = pcall(function()
-		AnalyticsService:LogOnboardingFunnelStepEvent(player, index, Steps[index].Id)
-	end)
-	if not ok then
-		warn("[TutorialService] funnel log failed:", err)
-	end
 end
 
 function TutorialService:_publish(player: Player)
@@ -66,7 +58,7 @@ function TutorialService:Did(player: Player, stepId: string)
 	end
 	local data = PlayerStateService:Get(player)
 	for index = data.tutorialStep, target do
-		logStep(player, index)
+		TelemetryService:funnel(player, index, Steps[index].Id)
 	end
 	data.tutorialStep = target + 1
 	if data.tutorialStep > #Steps then
@@ -109,6 +101,7 @@ end
 function TutorialService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	MeteorService = Knit.GetService("MeteorService")
+	TelemetryService = Knit.GetService("TelemetryService")
 end
 
 function TutorialService:KnitStart()
