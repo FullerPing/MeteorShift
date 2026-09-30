@@ -96,7 +96,7 @@ Monetization.VIPTagColor = "#FFCF37"
 Monetization.CallMeteor = {
 	MinSecondsLeft = 60, -- only buyable during Countdown with more than this left
 	SetCountdownTo = 30, -- the countdown jumps to this many seconds
-	Cooldown = 180, -- seconds after the previous meteor event ends (its Active phase)
+	Cooldown = 180, -- seconds after the previous CALLED meteor's event ends (its Active phase)
 	HourlyCap = 3, -- calls per server per rolling window
 	CapWindow = 3600, -- the rolling window, seconds
 }

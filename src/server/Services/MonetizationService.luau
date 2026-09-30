@@ -190,8 +190,15 @@ function MonetizationService:_grantProduct(player: Player, data: any, key: strin
 				.. " min."
 		)
 	end
-	PlayerStateService:ReplicateNow(player)
-	self.ProductBought:Fire(player, key, outcome)
+	-- The state change is done; a throw in the trailing effects must not make the
+	-- receipt retry (and call the meteor again)
+	local sideOk, sideErr = pcall(function()
+		PlayerStateService:ReplicateNow(player)
+		self.ProductBought:Fire(player, key, outcome)
+	end)
+	if not sideOk then
+		warn("[MonetizationService] side effects failed after granting", key, sideErr)
+	end
 end
 
 function MonetizationService:_processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseDecision
@@ -231,6 +238,10 @@ function MonetizationService:UseCallMeteorCredit(player: Player): (boolean, stri
 	if ok then
 		data.credits.callMeteor -= 1
 		PlayerStateService:ReplicateNow(player)
+		-- Save now so a crash can't hand the spent credit back (off-thread: Save yields)
+		task.spawn(function()
+			DataService:Save(player)
+		end)
 	end
 	return ok, reason
 end

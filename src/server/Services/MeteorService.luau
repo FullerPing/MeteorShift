@@ -86,9 +86,11 @@ local state = {
 	unlocked = false,
 }
 local current: Meteor? = nil
--- Call a Meteor bookkeeping, in os.clock() time: when the last event's Active phase
--- ended (nil until one has), and when each call was made (pruned to the cap window)
-local lastEventEnd: number? = nil
+-- Call a Meteor bookkeeping, in os.clock() time: when the last CALLED meteor's Active
+-- phase ended (nil until one has; ordinary meteors don't start the cooldown), whether
+-- the coming/current event was called, and when each call was made (pruned to the cap window)
+local lastCalledEnd: number? = nil
+local eventCalled = false
 local callTimes: { number } = {}
 
 local function now(): number
@@ -121,7 +123,7 @@ end
 -- Whether Call a Meteor can be bought right now, and why not (Shared.CallMeteor).
 function MeteorService:CanCallMeteor(): (boolean, string?)
 	local clock = os.clock()
-	local sinceLastEnd = if lastEventEnd then clock - lastEventEnd else nil
+	local sinceLastEnd = if lastCalledEnd then clock - lastCalledEnd else nil
 	return CallMeteor.available(
 		state.phase,
 		state.endsAt - now(),
@@ -147,6 +149,7 @@ function MeteorService:CallMeteor(player: Player): (boolean, string?)
 		end
 	end
 	table.insert(callTimes, clock)
+	eventCalled = true
 	self:SetCountdownRemaining(Config.Monetization.CallMeteor.SetCountdownTo)
 	RewardService:Announce("CallMeteor", player.DisplayName .. " called a meteor!")
 	return true, nil
@@ -519,7 +522,11 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 		return meteor.Cracked or now() >= state.endsAt
 	end)
 	ContributionService:Stop()
-	lastEventEnd = os.clock()
+	-- The Call a Meteor cooldown runs from the end of a called meteor's event only
+	if eventCalled then
+		lastCalledEnd = os.clock()
+		eventCalled = false
+	end
 	self.Ended:Fire(meteorType.Id, meteor.Cracked, if meteor.Cracked then meteor.CrackedAt - activeStart else nil)
 
 	local poolMult = MeteorTypes.shardPoolMult(meteorType, interval, MeteorConfig.Countdown)

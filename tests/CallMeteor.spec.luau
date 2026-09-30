@@ -17,7 +17,7 @@ return function(t: any)
 		t.eq(reason, nil)
 	end)
 
-	t.test("available before any meteor has ended (no cooldown yet)", function()
+	t.test("available before any called meteor has ended (no cooldown yet)", function()
 		t.eq(CallMeteor.available("Countdown", enough, nil, 0), true)
 	end)
 

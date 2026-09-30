@@ -3,8 +3,8 @@
 -- early for the whole server, so it may only be bought when that actually helps:
 --
 --   available      during Countdown with more than MinSecondsLeft to go, at least
---                  Cooldown seconds after the previous meteor event ended (nil when
---                  none has ended yet), and while the server has called fewer than
+--                  Cooldown seconds after the previous CALLED meteor's event ended
+--                  (nil when no called meteor has ended yet: no cooldown), and while the server has called fewer than
 --                  HourlyCap meteors in the rolling CapWindow. When it isn't, the
 --                  second result says why, for the store's disabled button.
 --   callsInWindow  how many call times fall inside the rolling window ending now
