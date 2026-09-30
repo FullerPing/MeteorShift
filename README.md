@@ -42,7 +42,7 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Your pickaxe tool is renamed after the tier you own; parts in it with a `Tint` attribute take the tier's colour
 - HUD shows your pickaxe, the cash counter counts up to the new total, and a "+$" floater rises off it on every sale
 - Tutorial (spec §11): 10 steps from "Mine a debris rock" to "Buy an upgrade", each completed by the real action on the server, with a step card, a marker over the target and a beam from you to it. Doing a later step's action first also completes the steps before it, so joining mid-event never gets you stuck. Skippable, saved in the profile (`tutorialStep`), and each step is logged as an onboarding funnel step
-- Still to do this week: tutorial and shop polish from playtests, mobile layout pass
+- Still to do this week: tutorial and shop polish from playtests
 
 **Meteor types (spec §8.1, in progress)**
 - Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors fall alongside Iron. Each countdown picks the next type from weighted odds (Iron 60, Ice 25, Crystal 15), but a type only comes up when at least 25% of active players' pickaxes meet its tier, otherwise it drops to the next type down. The sky board and HUD timer name it from the start of the countdown, with the title in the type's glow colour (Iron orange, Ice cyan, Crystal magenta). Types, tier gates and twists are in `Config.Meteor`, the rules in `Shared.MeteorTypes`
@@ -69,12 +69,17 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 - Call a Meteor brings the next meteor down in 30 s for everyone and names the buyer. It is only on sale during the countdown with more than 60 s left, at least 3 minutes after the previous called meteor's event ended (ordinary meteors don't start the cooldown), and 3 times per server per rolling hour; otherwise the button is disabled with the reason. If a race still makes it fail, the buyer gets a Call a Meteor credit to spend from the store later. Refinery Overclock doubles refinery speed for 30 minutes of play time (not offline). Receipts are granted once (the last 50 purchase ids are kept in the profile) and only confirmed once the profile is saved. Purchases are logged as `pass_bought` / `product_bought`
 - Rules are in `Shared.CallMeteor`, tuning in `Config.Monetization`, the effects in `MonetizationService`
 
+**Mobile controls and HUD layout (spec §10)**
+- On touch-only devices a big round MINE button sits above Roblox's jump button while a pickaxe is in your hands. Hold it to swing continuously at the pickaxe's speed at the nearest mineable target in reach and in front of you; the server still checks range and swing speed on every swing (`Shared.Aim`, `MobileControlsController`, tuning in `Config.Hud`)
+- One layout decides where the SHOP, INDEX, REBIRTH and STORE buttons go (`Shared.HudLayout`): a column on the right for mouse users, one row along the top right on touch, every button at least 44 px, clear of the Roblox top bar, the clock, the thumbstick area, the jump button and MINE. The tutorial card stays centred under the clock on touch
+- The shop, index, rebirth and store panels scale to fit below the top bar (844x390 included) and their close buttons stay at least 44 px
+
 ## Layout
 
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower, MeteorTypes, MineralIndex, Rebirth, CallMeteor
+src/shared/            ReplicatedStorage.Shared: Config, Format, Phase, Price, MiningPower, MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Aim
 src/server/            ServerScriptService.Server: Knit services
 src/client/            StarterPlayerScripts.Client: Knit controllers, Fusion HUD, shared UI styles (UI.luau)
 assets/                Studio exports of everything built in Studio (see below)
@@ -82,7 +87,7 @@ assets/                Studio exports of everything built in Studio (see below)
 
 Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths), `TelemetryService` (analytics), `MonetizationService` (game passes and developer products). `src/server/Lib` holds the profile template, the pure refinery simulation, the shard reward math and the analytics helpers.
 
-Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`, `IndexController`, `RebirthController`, `StoreController`.
+Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`, `IndexController`, `RebirthController`, `StoreController`, `MobileControlsController`.
 
 Services announce what players do through server-side signals (`NodeService.Hit`, `MeteorService.Landed`, `RewardService.ShardsAwarded`, `RefineryService.OreDeposited` / `BarsCollected`, `EconomyService.BarsSold`, `ShopService.ItemBought`, `UpgradeService.StationUpgraded`, `MeteorService.Ended`, `RefineryService.CaughtUp`, `RebirthService.Reborn`). The tutorial and `TelemetryService` listen to them.
 

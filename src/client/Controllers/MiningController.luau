@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Aim = require(ReplicatedStorage.Shared.Aim)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local player = Players.LocalPlayer
@@ -23,7 +24,10 @@ local NodeService
 local PlayerStateService
 
 local recentTargets: { [number]: BasePart } = {}
-local holding = false
+-- Two ways to hold a swing: the pickaxe's own button (tool.Activated, aims at the pointer)
+-- and the touch MINE button (aims at the nearest target in front). One loop serves both.
+local pointerHolding = false
+local touchHolding = false
 local swinging = false
 local pickaxeTier = 1
 
@@ -87,9 +91,37 @@ local function candidates(): { BasePart }
 	return list
 end
 
+-- The nearest mineable target in reach and in front of the character (Shared.Aim). Used
+-- when there is no pointer to aim with (the touch MINE button). The server still checks
+-- range on every swing.
+local function nearestTarget(root: BasePart): BasePart?
+	local parts = candidates()
+	local entries: { Aim.Candidate } = {}
+	local look = root.CFrame.LookVector
+	look = Vector3.new(look.X, 0, look.Z)
+	for i, part in parts do
+		local toPart = part.Position - root.Position
+		toPart = Vector3.new(toPart.X, 0, toPart.Z)
+		local dot = 1
+		if toPart.Magnitude > 0.01 and look.Magnitude > 0.01 then
+			dot = look.Unit:Dot(toPart.Unit)
+		end
+		entries[i] = {
+			distance = distanceToPart(part, root.Position),
+			dot = dot,
+			core = part:GetAttribute("TargetKind") == "Core",
+		}
+	end
+	local index = Aim.nearest(entries, Config.Meteor.MineRange, Config.Hud.Mine.FrontDot, Config.Hud.Mine.CoreBonus)
+	return if index then parts[index] else nil
+end
+
 -- What the player is pointing at, or failing that the nearest target in reach
--- (so tapping on mobile just works).
-local function findTarget(root: BasePart): (BasePart?, Vector3?)
+-- (so tapping on mobile just works). "nearest" mode skips the pointer.
+local function findTarget(root: BasePart, mode: "pointer" | "nearest"): (BasePart?, Vector3?)
+	if mode == "nearest" then
+		return nearestTarget(root), nil
+	end
 	local camera = workspace.CurrentCamera
 	local mouse = UserInputService:GetMouseLocation()
 	local ray = camera:ViewportPointToRay(mouse.X, mouse.Y)
@@ -275,7 +307,7 @@ function MiningController:_swing(tool: Tool)
 	end
 	playSlash(tool)
 
-	local target, hitPoint = findTarget(root)
+	local target, hitPoint = findTarget(root, mode)
 	if not target then
 		return
 	end
@@ -299,26 +331,59 @@ function MiningController:_swing(tool: Tool)
 	end)
 end
 
+function MiningController:_holdLoop(tool: Tool)
+	if swinging then
+		return
+	end
+	swinging = true
+	-- Holding the button keeps swinging at the pickaxe's speed
+	while (pointerHolding or touchHolding) and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") do
+		self:_swing(tool, if touchHolding then "nearest" else "pointer")
+		task.wait(Config.Pickaxes[pickaxeTier].Swing)
+	end
+	swinging = false
+end
+
+-- The pickaxe in the character's hands, if any
+function MiningController:GetEquippedPickaxe(): Tool?
+	local character = player.Character
+	if not character then
+		return nil
+	end
+	for _, child in character:GetChildren() do
+		if child:IsA("Tool") and child:GetAttribute("Pickaxe") then
+			return child
+		end
+	end
+	return nil
+end
+
+-- The touch MINE button (MobileControlsController): while held, swings at the pickaxe's
+-- speed at the nearest target in front. Releasing, or the pickaxe leaving your hands, stops it.
+function MiningController:SetTouchHold(on: boolean)
+	touchHolding = on
+	if on then
+		local tool = self:GetEquippedPickaxe()
+		if tool and not player:GetAttribute("ShopOpen") then
+			self:_holdLoop(tool)
+		else
+			touchHolding = false
+		end
+	end
+end
+
 function MiningController:_bindTool(tool: Tool)
 	tool.Activated:Connect(function()
 		if player:GetAttribute("ShopOpen") then return end
-		holding = true
-		if swinging then
-			return
-		end
-		swinging = true
-		-- Holding the button keeps swinging at the pickaxe's speed
-		while holding and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") do
-			self:_swing(tool)
-			task.wait(Config.Pickaxes[pickaxeTier].Swing)
-		end
-		swinging = false
+		pointerHolding = true
+		self:_holdLoop(tool)
 	end)
 	tool.Deactivated:Connect(function()
-		holding = false
+		pointerHolding = false
 	end)
 	tool.Unequipped:Connect(function()
-		holding = false
+		pointerHolding = false
+		touchHolding = false
 	end)
 end
 
