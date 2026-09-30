@@ -18,4 +18,5 @@ return {
 	Home = Home,
 	Tutorial = require(script.Tutorial),
 	Net = require(script.Net),
+	Rebirth = require(script.Rebirth),
 }
