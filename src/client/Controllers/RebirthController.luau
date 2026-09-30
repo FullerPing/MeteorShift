@@ -20,6 +20,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local Sfx = require(script.Parent.Parent.Sfx)
 local UI = require(script.Parent.Parent.UI)
 
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
@@ -170,6 +171,7 @@ function RebirthController:KnitStart()
 			if not ok then
 				notice:set("Couldn't relocate the colony. Please try again.")
 			elseif reborn then
+				Sfx.play("Purchase")
 				open:set(false) -- the server announces the rebirth to everyone
 			end
 		end)

@@ -8,6 +8,8 @@ Every few minutes a meteor slams into the crater in the middle of town and the w
 
 Weeks 1 to 3 of the MVP plan are in, plus a round of polish on the plots and the meteor, and the improvement pass on top: Week 4 (meteor types, mineral index, rebirth, analytics, passes and products) and Week 5 (performance, mobile controls, economy pacing). Every game pass and developer product id is still 0, so nothing is on sale yet. The spec is copied to `docs/plans/meteor-shift-spec.md`; the pass is planned in `docs/plans/2026-09-27-improvement-pass.md`.
 
+Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played through `client/Sfx.luau` (pooled, per-name cooldown and cap): pickaxe hits, node break, core crack, meteor impact, sell, purchase and UI clicks.
+
 **Week 1, the meteor event**
 - Sky countdown and HUD timer, streak in the sky for the last 10 s, rumble and camera shake
 - Impact with shockwave: knockback only, no damage

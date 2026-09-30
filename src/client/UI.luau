@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
+local Sfx = require(script.Parent.Sfx)
 
 local Children = Fusion.Children
 
@@ -228,7 +229,11 @@ function UI.button(scope: Scope, props: { [any]: any })
 		}),
 		children,
 	}
-	return scope:New("TextButton")(base)
+	local button = scope:New("TextButton")(base)
+	table.insert(scope, button.Activated:Connect(function()
+		Sfx.play("Click")
+	end))
+	return button
 end
 
 

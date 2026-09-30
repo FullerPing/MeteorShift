@@ -12,6 +12,7 @@ local TweenService = game:GetService("TweenService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local player = Players.LocalPlayer
 
@@ -45,20 +46,6 @@ local function distanceScale(position: Vector3, radius: number): number
 		return 0
 	end
 	return math.clamp(1 - (root.Position - position).Magnitude / radius, 0, 1)
-end
-
-local function playSound(id: string, volume: number, parent: Instance, speed: number?): Sound
-	local sound = Instance.new("Sound")
-	sound.SoundId = id
-	sound.Volume = volume
-	sound.PlaybackSpeed = speed or 1
-	sound.RollOffMaxDistance = 1000
-	sound.Parent = parent
-	sound:Play()
-	sound.Ended:Once(function()
-		sound:Destroy()
-	end)
-	return sound
 end
 
 function MeteorFXController:_clearStreak()
@@ -142,11 +129,12 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	})
 	streakTween:Play()
 
+	local rumbleEntry = Config.Sounds.MeteorRumble
 	local sound = Instance.new("Sound")
-	sound.SoundId = "rbxasset://sounds/Rocket whoosh 01.wav"
+	sound.SoundId = rumbleEntry.Id
 	sound.Looped = true
-	sound.Volume = 0.2
-	sound.PlaybackSpeed = 0.5
+	sound.Volume = rumbleEntry.Volume
+	sound.PlaybackSpeed = Sfx.pitch(rumbleEntry)
 	sound.Parent = workspace.CurrentCamera
 	sound:Play()
 	rumble = sound
@@ -223,7 +211,7 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	explosion.Position = position
 	explosion.Parent = folder
 
-	playSound("rbxasset://sounds/Rocket shot.wav", 1, dustAnchor, 0.5)
+	Sfx.play("MeteorImpact", dustAnchor)
 
 	task.delay(6, function()
 		ring:Destroy()
@@ -312,7 +300,9 @@ function MeteorFXController:_onCoreCracked(position: Vector3)
 	shards.Parent = burst
 	shards:Emit(80)
 
-	playSound("rbxasset://sounds/electronicpingshort.wav", 1, burst, 0.6)
+	Sfx.play("CoreCrack", burst)
+	Sfx.play("CoreWhoosh", burst)
+	Sfx.play("CoreChime", burst)
 	task.delay(3, function()
 		burst:Destroy()
 	end)

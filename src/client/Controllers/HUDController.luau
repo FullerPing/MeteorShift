@@ -23,6 +23,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -257,11 +258,13 @@ function HUDController:KnitStart()
 	UpgradeService.Notice:Connect(showToast)
 	UpgradeService.Upgraded:Connect(function(stationId: string, level: number)
 		local names = { hopper = "Hopper", conveyor = "Conveyor", refinery = "Refinery", collector = "Collection Post" }
+		Sfx.play("Purchase")
 		showToast((names[stationId] or stationId) .. " upgraded to Lv " .. level .. "!")
 	end)
 	ShopService.Notice:Connect(showToast)
 	ShopService.Purchased:Connect(function(kind: string, tier: number)
 		local item = if kind == "pickaxe" then Config.Pickaxes[tier] else Config.Backpacks[tier]
+		Sfx.play("Purchase")
 		if item then
 			showToast("You got the " .. item.Name .. "!")
 		end
@@ -946,6 +949,7 @@ function HUDController:KnitStart()
 
 	-- "+$4.8M" rises off the cash counter on every sale
 	EconomyService.Sold:Connect(function(bars: number, cash: number)
+		Sfx.play("Sell")
 		showToast("Sold " .. Format.number(bars) .. " bars")
 		local layout = Fusion.peek(hud)
 		local currentScale = layout.leftScale

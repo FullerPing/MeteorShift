@@ -12,6 +12,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Aim = require(ReplicatedStorage.Shared.Aim)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local player = Players.LocalPlayer
 
@@ -37,6 +38,8 @@ local pickaxeTier = 1
 type SparkSlot = { anchor: BasePart, emitter: ParticleEmitter, sound: Sound }
 local sparkPool: { SparkSlot } = {}
 local nextSparkSlot = 1
+local hitVariant = false -- alternates the two hit sounds
+local watchedNodes: { [BasePart]: boolean } = {} -- nodes already listening for their Hp to reach 0
 
 local floaters: { BasePart } = {} -- oldest first
 local oreChunks: { BasePart } = {} -- oldest first
@@ -205,8 +208,8 @@ local function sparkSlot(): SparkSlot
 		emitter.Parent = anchor
 
 		local sound = Instance.new("Sound")
-		sound.SoundId = "rbxasset://sounds/collide.wav"
-		sound.Volume = 0.5
+		sound.SoundId = Config.Sounds.HitA.Id
+		sound.Volume = Config.Sounds.HitA.Volume
 		sound.Parent = anchor
 		anchor.Parent = workspace.CurrentCamera
 
@@ -222,7 +225,11 @@ local function sparks(position: Vector3, color: Color3)
 	slot.anchor.Position = position
 	slot.emitter.Color = ColorSequence.new(color, Color3.fromRGB(255, 220, 140))
 	slot.emitter:Emit(14)
-	slot.sound.PlaybackSpeed = 0.9 + math.random() * 0.3
+	hitVariant = not hitVariant
+	local entry = if hitVariant then Config.Sounds.HitA else Config.Sounds.HitB
+	slot.sound.SoundId = entry.Id
+	slot.sound.Volume = entry.Volume
+	slot.sound.PlaybackSpeed = Sfx.pitch(entry)
 	slot.sound:Play()
 end
 
@@ -328,6 +335,22 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 	recentTargets[id] = target
 	local position = hitPoint or target.Position
 	local isCore = target:GetAttribute("TargetKind") == "Core"
+	if not isCore and not watchedNodes[target] then
+		-- Node break: the replicated Hp reaching 0 (the core has its own crack sound)
+		watchedNodes[target] = true
+		local connection: RBXScriptConnection
+		connection = target:GetAttributeChangedSignal("Hp"):Connect(function()
+			local hp = target:GetAttribute("Hp")
+			if typeof(hp) == "number" and hp <= 0 then
+				connection:Disconnect()
+				watchedNodes[target] = nil
+				Sfx.play("NodeBreak", target)
+			end
+		end)
+		target.Destroying:Once(function()
+			watchedNodes[target] = nil
+		end)
+	end
 	sparks(position, if isCore then Color3.fromRGB(255, 140, 50) else Color3.fromRGB(255, 230, 190))
 
 	task.spawn(function()

@@ -2,8 +2,10 @@
 local Meteor = require(script.Meteor)
 local Home = require(script.Home)
 local Index = require(script.Index)
+local Sounds = require(script.Sounds)
 
 export type MeteorType = Meteor.MeteorType
+export type SoundEntry = Sounds.Entry
 export type Level = Home.Level
 export type Station = Home.Station
 export type Mineral = Index.Mineral
@@ -23,4 +25,5 @@ return {
 	Monetization = require(script.Monetization),
 	Hud = require(script.Hud),
 	Balance = require(script.Balance),
+	Sounds = Sounds,
 }
