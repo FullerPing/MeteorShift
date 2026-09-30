@@ -293,10 +293,16 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	place(core, spawnPoint.CFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
 	core.Anchored = true
 	core.Material = Enum.Material.Basalt
+	-- the template's lights and embers are Iron orange; other types recolour them
+	local recolorLights = meteorType.Id ~= "Iron"
 	core.Color = meteorType.CoreColor:Lerp(Color3.new(0, 0, 0), 0.7)
 	for _, vein in core:GetDescendants() do
 		if vein:IsA("BasePart") and vein.Name == "Vein" then
 			vein.Color = meteorType.GlowColor
+		elseif recolorLights and (vein:IsA("PointLight") or vein:IsA("SpotLight") or vein:IsA("SurfaceLight")) then
+			vein.Color = meteorType.GlowColor -- the template's lights are orange (Iron)
+		elseif recolorLights and vein:IsA("ParticleEmitter") then
+			vein.Color = ColorSequence.new(meteorType.GlowColor)
 		end
 	end
 	core.Parent = model
@@ -578,6 +584,10 @@ function MeteorService:_loop()
 				current = nil
 			end
 			ContributionService:Stop()
+			if eventCalled then -- a failed Call a Meteor event still starts its cooldown
+				lastCalledEnd = os.clock()
+				eventCalled = false
+			end
 		end
 	end
 end

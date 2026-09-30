@@ -266,12 +266,25 @@ local function floater(position: Vector3, text: string, color: Color3, size: num
 end
 
 -- Ore chunks fly from the node to the player. Only this client sees them (spec §5.4).
-local function oreFlyIn(from: Vector3, amount: number)
+local DEFAULT_CHUNK_COLOR = Color3.fromRGB(196, 176, 160)
+
+-- The chunk colour for an ore: the OreColor of the meteor type that drops it.
+local function chunkColor(oreType: string): Color3
+	for _, meteorType in Config.Meteor.Types do
+		if meteorType.Ore == oreType then
+			return meteorType.OreColor
+		end
+	end
+	return DEFAULT_CHUNK_COLOR
+end
+
+local function oreFlyIn(from: Vector3, amount: number, oreType: string)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
 	if not root then
 		return
 	end
+	local color = chunkColor(oreType)
 	for i = 1, math.clamp(amount, 1, 5) do
 		local chunk = Instance.new("Part")
 		chunk.Anchored = true
@@ -279,7 +292,7 @@ local function oreFlyIn(from: Vector3, amount: number)
 		chunk.CanQuery = false
 		chunk.Size = Vector3.one * 0.6
 		chunk.Material = Enum.Material.Metal
-		chunk.Color = Color3.fromRGB(196, 176, 160)
+		chunk.Color = color
 		chunk.Position = from + Vector3.new(math.random() * 3 - 1.5, math.random() * 2, math.random() * 3 - 1.5)
 		chunk.Parent = workspace.CurrentCamera
 		track(oreChunks, chunk, Config.Net.MaxOreChunks)
@@ -397,11 +410,11 @@ function MiningController:KnitStart()
 		end
 	end)
 
-	NodeService.OreGained:Connect(function(id: number, _ore: string, amount: number)
+	NodeService.OreGained:Connect(function(id: number, oreType: string, amount: number)
 		local part = recentTargets[id]
 		recentTargets[id] = nil
 		if part then
-			oreFlyIn(part.Position, amount)
+			oreFlyIn(part.Position, amount, oreType)
 			floater(part.Position + Vector3.new(0, 2, 0), "+" .. Format.number(amount) .. " ore", Color3.fromRGB(150, 230, 255), 22)
 		end
 	end)

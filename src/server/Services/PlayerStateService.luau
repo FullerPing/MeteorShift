@@ -31,6 +31,7 @@ PlayerStateService.OreAutoDeposited = Signal.new()
 
 local DataService
 local MonetizationService
+local EconomyService
 
 -- Fractional ore from debris, paid out once it reaches 1. Not saved.
 local oreRemainder: { [Player]: { [string]: number } } = {}
@@ -44,6 +45,7 @@ local lastFullNotice: { [Player]: number } = {}
 local stateDirty: { [Player]: true } = {}
 local leaderstatsDirty: { [Player]: true } = {}
 local stateSends = 0 -- every State snapshot sent since the server started
+local warnedNoStations = false
 
 local function sum(t: { [string]: number }): number
 	local total = 0
@@ -108,6 +110,13 @@ function PlayerStateService:_sendState(player: Player)
 	if not data then
 		return
 	end
+	if data.stations == nil then
+		if not warnedNoStations then
+			warnedNoStations = true
+			warn("[PlayerStateService] profile has no stations table; State not sent")
+		end
+		return
+	end
 	stateSends += 1
 
 	local speedMult = MonetizationService:RefinerySpeedMult(data) -- Refinery Overclock
@@ -128,7 +137,8 @@ function PlayerStateService:_sendState(player: Player)
 		cash = data.cash,
 		shards = data.shards,
 		bars = sum(data.bars),
-		barValue = self:BarValue(data.bars),
+		-- what a sale would pay: the bars' base value times rebirth, index and VIP
+		barValue = math.floor(self:BarValue(data.bars) * EconomyService:SaleMultiplier(player)),
 		hopper = sum(data.hopper),
 		hopperCapacity = self:GetHopperCapacity(player),
 		line = line,
@@ -246,6 +256,7 @@ end
 function PlayerStateService:KnitInit()
 	DataService = Knit.GetService("DataService")
 	MonetizationService = Knit.GetService("MonetizationService")
+	EconomyService = Knit.GetService("EconomyService")
 end
 
 function PlayerStateService:KnitStart()
