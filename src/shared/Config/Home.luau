@@ -53,7 +53,7 @@ Home.Stations = {
 		Name = "Conveyor",
 		Levels = levels({
 			{ 0.3, 0 },
-			{ 1, 1.2e3 },
+			{ 1, 300 },
 			{ 3, 15e3 },
 			{ 10, 200e3 },
 			{ 30, 2.5e6, 20 },
@@ -67,7 +67,7 @@ Home.Stations = {
 		Name = "Refinery",
 		Levels = levels({
 			{ 0.25, 0 },
-			{ 0.75, 1.5e3 },
+			{ 0.75, 400 },
 			{ 2.5, 20e3 },
 			{ 8, 250e3 },
 			{ 25, 3e6, 25 },
@@ -100,17 +100,19 @@ Home.OfflineCapPass = 8 * 3600
 Home.TickInterval = 1 -- online production tick, seconds
 
 -- Order in which the conveyor pulls ore types from the hopper
-Home.OreOrder = { "iron", "frost" }
+Home.OreOrder = { "iron", "frost", "crystal" }
 
--- Bar sell prices (spec §6.5)
+-- Bar sell prices (spec §6.5, §8.1)
 Home.BarPrices = {
 	iron = 5,
 	frost = 120,
+	crystal = 3000,
 }
 
 Home.OreNames = {
 	iron = "Iron",
 	frost = "Frost",
+	crystal = "Crystal",
 }
 
 return Home

@@ -1,20 +1,25 @@
 --!strict
--- Core Shard rewards and the top-three announcement (spec §5.6).
+-- Core Shard rewards and the top-three announcement (spec §5.6). The payout math
+-- (floor, contribution share of the bonus pool, top three, the meteor type's pool
+-- multiplier) is the pure Server.Lib.Rewards.
 --
---   floor      = 5 shards for everyone who hit the core
---   bonusPool  = 8 × numberOfCoreHitters, split by contribution share
---   top three  = +10 / +6 / +3
+-- Each participant's results also say which ore their pickaxe mined from this
+-- meteor and, when it was under the meteor's tier, what they missed (spec §8.1).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
-local Config = require(ReplicatedStorage.Shared.Config)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Config = require(ReplicatedStorage.Shared.Config)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
 local RewardService = Knit.CreateService({
 	Name = "RewardService",
 	Client = {
-		-- To each participant: { cracked, ore, contribution, rank, floor, bonus, top, shards, leaders }
+		-- To each participant: { cracked, ore, oreType, contribution, rank, hitCore, floor,
+		-- bonus, top, shards, leaders, missed? }. oreType is the ore id their pickaxe mines
+		-- from this meteor; missed is MeteorTypes.missed, nil when their pickaxe met its tier.
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
@@ -26,53 +31,15 @@ RewardService.ShardsAwarded = Signal.new() -- (player, shards) when a cracked co
 local ContributionService
 local PlayerStateService
 
-export type Reward = { Floor: number, Bonus: number, Top: number, Total: number }
-
--- Pure reward math, kept separate so it can be unit tested.
-function RewardService.Compute(entries: { { Contribution: number, HitCore: boolean } }): { [number]: Reward }
-	local meteor = Config.Meteor
-	local hitters = {}
-	local total = 0
-	for index, entry in entries do
-		if entry.HitCore then
-			table.insert(hitters, index)
-			total += entry.Contribution
-		end
-	end
-
-	local rewards: { [number]: Reward } = {}
-	if #hitters == 0 then
-		return rewards
-	end
-
-	local pool = meteor.ShardBonusPerHitter * #hitters
-	for _, index in hitters do
-		local share = if total > 0 then entries[index].Contribution / total else 1 / #hitters
-		local bonus = math.floor(pool * share + 0.5)
-		rewards[index] = { Floor = meteor.ShardFloor, Bonus = bonus, Top = 0, Total = meteor.ShardFloor + bonus }
-	end
-
-	-- Top three by contribution among core hitters
-	table.sort(hitters, function(a, b)
-		return entries[a].Contribution > entries[b].Contribution
-	end)
-	for place = 1, math.min(#meteor.TopBonus, #hitters) do
-		local reward = rewards[hitters[place]]
-		reward.Top = meteor.TopBonus[place]
-		reward.Total += reward.Top
-	end
-
-	return rewards
-end
-
 function RewardService:Announce(kind: string, text: string)
 	self.Client.Announcement:FireAll({ kind = kind, text = text })
 end
 
--- Called when the event ends, cracked or cooled.
-function RewardService:Finish(cracked: boolean)
+-- Called when the event ends, cracked or cooled. `poolMult` scales the shard bonus
+-- pool (MeteorTypes.shardPoolMult for the meteor that ended).
+function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, poolMult: number)
 	local ranked = ContributionService:GetRanked()
-	local rewards = if cracked then RewardService.Compute(ranked) else {}
+	local rewards = if cracked then Rewards.compute(ranked, poolMult) else {}
 
 	local leaders = {}
 	for index, entry in ranked do
@@ -86,20 +53,23 @@ function RewardService:Finish(cracked: boolean)
 		local reward = rewards[index]
 		local data = PlayerStateService:Get(entry.Player)
 		if data then
+			-- flags.firstMeteor and flags.firstCoreReward are TelemetryService's
+			-- (first validated hit, first shards received; spec §13)
 			data.stats.meteorsJoined += 1
-			data.flags.firstMeteor = true
 			if reward then
 				data.stats.coresCracked += 1
-				data.flags.firstCoreReward = true
 			end
 		end
 		if reward then
 			PlayerStateService:AddShards(entry.Player, reward.Total)
 			self.ShardsAwarded:Fire(entry.Player, reward.Total)
 		end
+		local pickaxeTier = PlayerStateService:GetPickaxe(entry.Player).Tier
 		self.Client.Results:Fire(entry.Player, {
 			cracked = cracked,
 			ore = entry.Ore,
+			oreType = (MeteorTypes.oreFor(pickaxeTier, meteorType)),
+			missed = MeteorTypes.missed(pickaxeTier, meteorType),
 			contribution = entry.Contribution,
 			rank = index,
 			hitCore = entry.HitCore,

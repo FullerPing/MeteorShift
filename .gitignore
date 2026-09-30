@@ -6,3 +6,6 @@ sourcemap.json
 # OS
 .DS_Store
 Thumbs.db
+
+# Checkpoint of the game before the improvement pass
+oldmain/

@@ -1,7 +1,9 @@
 --!strict
 -- HUD built with Fusion (spec §10):
---   * countdown / cooling timer and the sky countdown over the crater
---   * cash (counts up on every sale, "+$" floater), shards, pickaxe, backpack
+--   * countdown / cooling timer and the sky countdown over the crater, titled with
+--     the meteor type in its glow colour (spec §8.1)
+--   * cash (counts up on every sale, "+$" floater, rebirth multiplier once above
+--     ×1, spec §8.3), shards, pickaxe, backpack
 --     meter (red when full), bars, hopper and production line
 --   * "While you were away" panel (spec §6.4)
 --   * event panel: core HP bar, core lock, your rank, top three
@@ -16,8 +18,12 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -40,6 +46,16 @@ local OUTLINE = UI.OUTLINE
 
 type Scope = UI.Scope
 
+-- Shows a small toast; set once the HUD is built (see HUDController:Toast)
+local showToastHandler: ((text: string) -> ())? = nil
+
+-- Other controllers post their small toasts here (e.g. "New mineral: X!").
+function HUDController:Toast(text: string)
+	if showToastHandler then
+		showToastHandler(text)
+	end
+end
+
 local corner = UI.corner
 local stroke = UI.stroke
 local label = UI.label
@@ -47,37 +63,35 @@ local label = UI.label
 local function stat(
 	scope: Scope,
 	order: number,
-	symbol: string,
+	kind: string,
 	color: Color3,
 	value: Fusion.UsedAs<string>,
 	caption: Fusion.UsedAs<string>
 )
 	return scope:New("Frame")({
 		LayoutOrder = order,
-		Size = UDim2.new(1, 0, 0, 60),
+		Size = UDim2.new(1, 0, 0, 51),
 		BackgroundTransparency = 1,
 		[Children] = {
-			label(scope, {
+			UI.icon(scope, kind, {
 				Name = "Icon",
-				Position = UDim2.fromOffset(1, 2),
-				Size = UDim2.fromOffset(43, 43),
-				Rotation = -8,
-				Text = symbol,
-				TextSize = 37,
-				TextColor3 = color,
+				Position = UDim2.fromOffset(0, 6),
+				Size = UDim2.fromOffset(38, 38),
 			}),
 			label(scope, {
-				Position = UDim2.fromOffset(55, 0),
-				Size = UDim2.new(1, -55, 0, 39),
+				Position = UDim2.fromOffset(49, 1),
+				Size = UDim2.new(1, -49, 0, 29),
 				Text = value,
-				TextSize = 33,
+				TextSize = 28,
+				TextColor3 = color,
 				TextXAlignment = Enum.TextXAlignment.Left,
 			}),
-			label(scope, {
-				Position = UDim2.fromOffset(56, 34),
-				Size = UDim2.new(1, -56, 0, 18),
+			UI.body(scope, {
+				Position = UDim2.fromOffset(50, 30),
+				Size = UDim2.new(1, -50, 0, 17),
 				Text = caption,
-				TextSize = 14,
+				TextSize = 12,
+				TextColor3 = UI.SUBTEXT,
 				TextXAlignment = Enum.TextXAlignment.Left,
 			}),
 		},
@@ -102,25 +116,26 @@ local function bar(scope: Scope, props: {
 		BackgroundTransparency = 1,
 		[Children] = {
 			scope:New("Frame")({
-				Position = UDim2.new(0, 0, 1, -4),
-				Size = UDim2.new(1, 0, 0, 4),
+				Position = UDim2.new(0, 0, 1, -10),
+				Size = UDim2.new(1, 0, 0, 10),
 				BackgroundColor3 = OUTLINE,
-				BackgroundTransparency = 0.3,
+				BorderSizePixel = 0,
 				[Children] = {
-					corner(scope, 2),
+					corner(scope, 5),
 					scope:New("Frame")({
 						Size = scope:Computed(function(use)
 							return UDim2.fromScale(math.clamp(use(animated), 0, 1), 1)
 						end),
 						BackgroundColor3 = props.Color,
-						[Children] = { corner(scope, 2) },
+						BorderSizePixel = 0,
+						[Children] = { corner(scope, 5) },
 					}),
 				},
 			}),
-			label(scope, {
-				Size = UDim2.new(1, 0, 1, -4),
+			UI.body(scope, {
+				Size = UDim2.new(1, 0, 1, -13),
 				Text = props.Text,
-				TextSize = 13,
+				TextSize = 14,
 				TextXAlignment = Enum.TextXAlignment.Left,
 				ZIndex = 2,
 			}),
@@ -139,6 +154,29 @@ function HUDController:KnitStart()
 	local ShopService = Knit.GetService("ShopService")
 
 	local scope = Fusion.scoped(Fusion)
+	local hud = UI.hud(scope)
+	local hudScale = scope:Computed(function(use)
+		return use(hud).scale
+	end)
+	local function scale()
+		return scope:New("UIScale")({ Scale = hudScale })
+	end
+	-- The Resources, Equipment and Production cards: where and how big comes from the layout
+	-- (a stack on the left, or two columns above the thumbstick area on touch)
+	local function leftPosition(name: string)
+		return scope:Computed(function(use)
+			local l = use(hud)
+			local rect = l.leftCards[name]
+			return UDim2.fromOffset(rect.x, rect.y - l.inset)
+		end)
+	end
+	local function leftScale()
+		return scope:New("UIScale")({
+			Scale = scope:Computed(function(use)
+				return use(hud).leftScale
+			end),
+		})
+	end
 
 	local meteorState = scope:Value(nil :: any)
 	local playerState = scope:Value(nil :: any)
@@ -196,6 +234,7 @@ function HUDController:KnitStart()
 			end
 		end)
 	end
+	showToastHandler = showToast
 	PlayerStateService.BackpackFull:Connect(function()
 		showToast("Backpack full! Take your ore home to your hopper.")
 	end)
@@ -219,11 +258,13 @@ function HUDController:KnitStart()
 	UpgradeService.Notice:Connect(showToast)
 	UpgradeService.Upgraded:Connect(function(stationId: string, level: number)
 		local names = { hopper = "Hopper", conveyor = "Conveyor", refinery = "Refinery", collector = "Collection Post" }
+		Sfx.play("Purchase")
 		showToast((names[stationId] or stationId) .. " upgraded to Lv " .. level .. "!")
 	end)
 	ShopService.Notice:Connect(showToast)
 	ShopService.Purchased:Connect(function(kind: string, tier: number)
 		local item = if kind == "pickaxe" then Config.Pickaxes[tier] else Config.Backpacks[tier]
+		Sfx.play("Purchase")
 		if item then
 			showToast("You got the " .. item.Name .. "!")
 		end
@@ -271,13 +312,19 @@ function HUDController:KnitStart()
 		elseif p == Phase.Impact then
 			return "IMPACT!"
 		elseif p == Phase.Active then
-			return "Cooling"
+			return s.typeName .. " cooling"
 		elseif p == Phase.CoreCracked then
 			return "Core cracked!"
 		elseif p == Phase.Cooled then
-			return "Meteor cooled"
+			return s.typeName .. " cooled"
 		end
 		return "Next meteor soon"
+	end)
+	-- The title glows in the meteor type's colour (Iron orange, Ice cyan, Crystal magenta)
+	local titleColor = scope:Computed(function(use)
+		local s = use(meteorState)
+		local meteorType = s and Config.Meteor.Types[s.type]
+		return if meteorType then meteorType.GlowColor else ORANGE
 	end)
 	local timerText = scope:Computed(function(use)
 		local p = use(phase)
@@ -303,7 +350,7 @@ function HUDController:KnitStart()
 		scope:Hydrate(board:WaitForChild("Title"))({
 			Text = timerTitle,
 			Font = FONT,
-			TextColor3 = ORANGE,
+			TextColor3 = titleColor,
 			TextStrokeColor3 = OUTLINE,
 			TextStrokeTransparency = 0,
 		})
@@ -350,14 +397,17 @@ function HUDController:KnitStart()
 				AnchorPoint = Vector2.new(0.5, 0),
 				Position = UDim2.new(0.5, 0, 0, 10),
 				Size = UDim2.fromOffset(250, 66),
-				BackgroundTransparency = 1,
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.12,
 				[Children] = {
+					scale(),
+					UI.cardFill(scope),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 4),
 						Size = UDim2.new(1, 0, 0, 21),
 						Text = timerTitle,
 						TextSize = 18,
-						TextColor3 = ORANGE,
+						TextColor3 = titleColor,
 					}),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 22),
@@ -369,139 +419,200 @@ function HUDController:KnitStart()
 				},
 			}),
 
-			-- Open stat stack, like the reference HUD's left rail
+			-- Resources share one quiet backing; equipment and the factory get their own cards.
 			scope:New("Frame")({
-				Name = "Stats",
-				Position = UDim2.fromOffset(14, 70),
-				Size = UDim2.fromOffset(232, 372),
-				BackgroundTransparency = 1,
+				Name = "Resources",
+				Position = leftPosition("Resources"),
+				Size = UDim2.fromOffset(236, 266),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.08,
 				[Children] = {
-					scope:New("UIListLayout")({ Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder }),
-					stat(
-						scope,
-						1,
-						"$",
-						CASH,
-						scope:Computed(function(use)
-							return Format.number(use(cashShown))
-						end),
-						"CASH"
-					),
-					stat(
-						scope,
-						2,
-						"◆",
-						SHARD,
-						scope:Computed(function(use)
-							local s = use(playerState)
-							return Format.number(if s then s.shards else 0)
-						end),
-						"CORE SHARDS"
-					),
-					stat(
-						scope,
-						3,
-						"▲",
-						Color3.fromRGB(177, 125, 81),
-						scope:Computed(function(use)
-							return Format.number(use(carried))
-						end),
-						scope:Computed(function(use)
-							return "ORE  "
-								.. Format.number(use(carried))
-								.. "/"
-								.. Format.number(use(capacity))
-								.. (if use(full) then "  FULL" else "")
-						end)
-					),
-					stat(
-						scope,
-						4,
-						"⚒",
-						Color3.fromRGB(200, 208, 220),
-						scope:Computed(function(use)
-							local s = use(playerState)
-							return "Tier " .. (if s then s.pickaxeTier else 1)
-						end),
-						scope:Computed(function(use)
-							local s = use(playerState)
-							local pickaxe = Config.Pickaxes[if s then s.pickaxeTier else 1] or Config.Pickaxes[1]
-							return string.upper(pickaxe.Name)
-						end)
-					),
-					stat(
-						scope,
-						5,
-						"≡",
-						BAR,
-						scope:Computed(function(use)
-							local s = use(playerState)
-							return Format.number(if s then s.bars else 0)
-						end),
-						scope:Computed(function(use)
-							local s = use(playerState)
-							return "BARS  ·  " .. Format.cash(if s then s.barValue else 0)
-						end)
-					),
-					bar(scope, {
-						LayoutOrder = 6,
-						Position = UDim2.new(),
-						Size = UDim2.new(1, -8, 0, 18),
-						Fill = scope:Computed(function(use)
-							local s = use(playerState)
-							return if s then s.line.hopper.amount / math.max(s.line.hopper.capacity, 1) else 0
-						end),
-						Color = Color3.fromRGB(196, 120, 52),
+					leftScale(),
+					UI.cardFill(scope),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 11),
+						Size = UDim2.new(1, -28, 0, 16),
+						Text = "RESOURCES",
+						TextSize = 12,
+						TextColor3 = UI.SUBTEXT,
+						TextXAlignment = Enum.TextXAlignment.Left,
+					}),
+					scope:New("Frame")({
+						Position = UDim2.fromOffset(14, 31),
+						Size = UDim2.new(1, -28, 0, 216),
+						BackgroundTransparency = 1,
+						[Children] = {
+							scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+							stat(scope, 1, "cash", CASH, scope:Computed(function(use)
+								return Format.number(use(cashShown))
+							end), scope:Computed(function(use)
+								-- The rebirth cash multiplier, once there is one (spec §8.3)
+								local s = use(playerState)
+								local multiplier = Rebirth.multiplier(if s then s.rebirths else 0)
+								return if multiplier > 1 then "CASH  ·  REBIRTH ×" .. Format.number(multiplier) else "CASH"
+							end)),
+							stat(scope, 2, "shard", SHARD, scope:Computed(function(use)
+								local s = use(playerState)
+								return Format.number(if s then s.shards else 0)
+							end), "CORE SHARDS"),
+							stat(scope, 3, "ore", WHITE, scope:Computed(function(use)
+								return Format.number(use(carried))
+							end), scope:Computed(function(use)
+								return "ORE  /  " .. Format.number(use(capacity)) .. (if use(full) then "  FULL!" else " CAPACITY")
+							end)),
+							stat(scope, 4, "bar", BAR, scope:Computed(function(use)
+								local s = use(playerState)
+								return Format.number(if s then s.bars else 0)
+							end), scope:Computed(function(use)
+								local s = use(playerState)
+								return "BARS  ·  " .. Format.cash(if s then s.barValue else 0)
+							end)),
+						},
+					}),
+					scope:New("Frame")({
+						Position = UDim2.fromOffset(64, 196),
+						Size = UDim2.new(1, -78, 0, 4),
+						BackgroundColor3 = OUTLINE,
+						BorderSizePixel = 0,
+						[Children] = {
+							corner(scope, 3),
+							scope:New("Frame")({
+								Size = scope:Computed(function(use)
+									return UDim2.fromScale(math.clamp(use(carried) / math.max(use(capacity), 1), 0, 1), 1)
+								end),
+								BackgroundColor3 = scope:Computed(function(use)
+									return if use(full) then RED else GREEN
+								end),
+								BorderSizePixel = 0,
+								[Children] = { corner(scope, 3) },
+							}),
+						},
+					}),
+				},
+			}),
+			scope:New("Frame")({
+				Name = "Equipment",
+				Position = leftPosition("Equipment"),
+				Size = UDim2.fromOffset(236, 70),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.08,
+				[Children] = {
+					leftScale(),
+					UI.cardFill(scope),
+					label(scope, {
+						Position = UDim2.fromOffset(8, 10),
+						Size = UDim2.fromOffset(44, 46),
+						Text = "⚒",
+						TextSize = 33,
+						TextColor3 = Color3.fromRGB(205, 216, 228),
+					}),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(62, 10),
+						Size = UDim2.new(1, -74, 0, 16),
 						Text = scope:Computed(function(use)
 							local s = use(playerState)
-							if not s then
-								return "Hopper"
-							end
-							return "Hopper " .. Format.number(s.line.hopper.amount) .. " / " .. Format.number(s.line.hopper.capacity)
+							return "EQUIPPED  ·  TIER " .. (if s then s.pickaxeTier else 1)
 						end),
+						TextSize = 11,
+						TextColor3 = UI.SUBTEXT,
+						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					label(scope, {
-						LayoutOrder = 7,
-						Size = UDim2.new(1, 0, 0, 34),
+						Position = UDim2.fromOffset(62, 27),
+						Size = UDim2.new(1, -74, 0, 33),
 						Text = scope:Computed(function(use)
 							local s = use(playerState)
-							if not s then
-								return ""
-							end
-							local line = s.line
-							local plot = if s.plotId then "Plot " .. s.plotId else "No plot"
-							return string.format(
-								"%s · line %g bars/s\nCollection post: %s / %s bars",
-								plot,
-								line.rate,
-								Format.number(line.collector.amount),
-								Format.number(line.collector.capacity)
-							)
+							return (Config.Pickaxes[if s then s.pickaxeTier else 1] or Config.Pickaxes[1]).Name
 						end),
-						TextSize = 13,
+						TextSize = 18,
 						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 				},
 			}),
-
+			scope:New("Frame")({
+				Name = "Production",
+				Position = leftPosition("Production"),
+				Size = UDim2.fromOffset(236, 142),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.08,
+				[Children] = {
+					leftScale(),
+					UI.cardFill(scope),
+					label(scope, {
+						Position = UDim2.fromOffset(14, 9),
+						Size = UDim2.fromOffset(118, 23),
+						Text = "PRODUCTION",
+						TextSize = 17,
+						TextXAlignment = Enum.TextXAlignment.Left,
+					}),
+					UI.body(scope, {
+						AnchorPoint = Vector2.new(1, 0),
+						Position = UDim2.new(1, -14, 0, 12),
+						Size = UDim2.fromOffset(78, 18),
+						Text = scope:Computed(function(use)
+							local s = use(playerState)
+							return if s then string.format("%g bars/s", s.line.rate) else "0 bars/s"
+						end),
+						TextSize = 13,
+						TextColor3 = GREEN,
+						TextXAlignment = Enum.TextXAlignment.Right,
+					}),
+					bar(scope, {
+						Position = UDim2.fromOffset(14, 39),
+						Size = UDim2.new(1, -28, 0, 34),
+						Fill = scope:Computed(function(use)
+							local s = use(playerState)
+							return if s then s.line.hopper.amount / math.max(s.line.hopper.capacity, 1) else 0
+						end),
+						Color = ORANGE,
+						Text = scope:Computed(function(use)
+							local s = use(playerState)
+							return if s then "Hopper  " .. Format.number(s.line.hopper.amount) .. " / " .. Format.number(s.line.hopper.capacity) else "Hopper  0 / 0"
+						end),
+					}),
+					bar(scope, {
+						Position = UDim2.fromOffset(14, 83),
+						Size = UDim2.new(1, -28, 0, 34),
+						Fill = scope:Computed(function(use)
+							local s = use(playerState)
+							return if s then s.line.collector.amount / math.max(s.line.collector.capacity, 1) else 0
+						end),
+						Color = BAR,
+						Text = scope:Computed(function(use)
+							local s = use(playerState)
+							return if s then "Storage  " .. Format.number(s.line.collector.amount) .. " / " .. Format.number(s.line.collector.capacity) else "Storage  0 / 0"
+						end),
+					}),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 121),
+						Size = UDim2.new(1, -28, 0, 14),
+						Text = scope:Computed(function(use)
+							local s = use(playerState)
+							if not s or not s.plotId then return "Claim a plot to start refining" end
+							if s.line.collector.amount >= s.line.collector.capacity then return "Storage full · collect your bars!" end
+							if s.line.hopper.amount <= 0 then return "Add ore to keep your line running" end
+							return "Plot " .. s.plotId .. " · refining ore into bars"
+						end),
+						TextSize = 11,
+						TextColor3 = UI.SUBTEXT,
+						TextXAlignment = Enum.TextXAlignment.Left,
+					}),
+				},
+			}),
 			-- While you were away (spec §6.4)
 			scope:New("Frame")({
 				Name = "WhileAway",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
 				Size = UDim2.fromOffset(390, 260),
-				BackgroundColor3 = Color3.fromRGB(187, 137, 91),
+				BackgroundColor3 = UI.PANEL_DARK,
 				Visible = scope:Computed(function(use)
 					return use(whileAway) ~= nil
 				end),
 				[Children] = {
-					corner(scope, 16),
-					stroke(scope),
-					scope:New("UIGradient")({
-						Rotation = 90,
-						Color = ColorSequence.new(Color3.fromRGB(221, 177, 118), Color3.fromRGB(133, 94, 64)),
-					}),
+					scale(),
+					UI.cardFill(scope),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 12),
 						Size = UDim2.new(1, 0, 0, 34),
@@ -509,7 +620,7 @@ function HUDController:KnitStart()
 						TextSize = 28,
 						TextColor3 = CASH,
 					}),
-					label(scope, {
+					UI.body(scope, {
 						Position = UDim2.fromOffset(18, 56),
 						Size = UDim2.new(1, -36, 1, -110),
 						Text = scope:Computed(function(use)
@@ -558,95 +669,117 @@ function HUDController:KnitStart()
 				},
 			}),
 
-			-- Event information stays at the edge of the play view
+			-- One objective card keeps the action, core progress and standings together.
 			scope:New("Frame")({
 				Name = "EventPanel",
 				AnchorPoint = Vector2.new(1, 0),
-				Position = UDim2.new(1, -18, 0, 82),
-				Size = UDim2.fromOffset(238, 184),
-				BackgroundTransparency = 1,
+				Position = scope:Computed(function(use)
+					local rect = HudLayout.toGui(use(hud).eventPanel, use(hud).inset)
+					return UDim2.new(1, -Config.Hud.EdgeMargin, 0, rect.y)
+				end),
+				Size = UDim2.fromOffset(278, 204),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.06,
 				Visible = inEvent,
 				[Children] = {
-					scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+					scale(),
+					UI.cardFill(scope),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 11),
+						Size = UDim2.new(1, -28, 0, 15),
+						Text = "METEOR OBJECTIVE",
+						TextSize = 12,
+						TextColor3 = ORANGE,
+						TextXAlignment = Enum.TextXAlignment.Left,
+					}),
 					label(scope, {
-						LayoutOrder = 1,
-						Size = UDim2.new(1, 0, 0, 22),
+						Position = UDim2.fromOffset(14, 29),
+						Size = UDim2.new(1, -28, 0, 43),
+						Text = scope:Computed(function(use)
+							local meteor = use(meteorState)
+							local rank = use(standing)
+							if meteor and meteor.unlocked then return "Strike the exposed core!" end
+							if not rank or rank.rank == 0 then return "Mine a node to join in!" end
+							return "Break crust to reach the core!"
+						end),
+						TextSize = 21,
+						TextWrapped = true,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						TextYAlignment = Enum.TextYAlignment.Center,
+					}),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 78),
+						Size = UDim2.new(1, -28, 0, 16),
 						Text = scope:Computed(function(use)
 							local s = use(meteorState)
-							if not s then
-								return ""
-							end
-							if s.unlocked then
-								return "CORE EXPOSED - hit it!"
-							end
-							local needed = math.ceil(s.crustTotal * 0.6)
-							return string.format("Core locked: crust %d/%d", s.crustBroken, needed)
+							return if s and s.unlocked then "CORE EXPOSED · earn Core Shards" else "CORE LOCKED · break the outer nodes"
 						end),
-						TextSize = 16,
-						TextXAlignment = Enum.TextXAlignment.Right,
-						TextColor3 = scope:Computed(function(use)
-							local s = use(meteorState)
-							return if s and s.unlocked then ORANGE else WHITE
-						end),
+						TextSize = 12,
+						TextColor3 = UI.SUBTEXT,
+						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					bar(scope, {
-						LayoutOrder = 2,
-						Position = UDim2.new(),
-						Size = UDim2.new(1, 0, 0, 22),
+						Position = UDim2.fromOffset(14, 99),
+						Size = UDim2.new(1, -28, 0, 30),
 						Fill = scope:Computed(function(use)
+							local s = use(meteorState)
+							if s and not s.unlocked then
+								return s.crustBroken / math.max(math.ceil(s.crustTotal * 0.6), 1)
+							end
 							return use(coreHp) / math.max(use(coreMaxHp), 1e-6)
 						end),
-						Color = scope:Computed(function(use)
-							local s = use(meteorState)
-							return if s and s.unlocked then ORANGE else Color3.fromRGB(120, 110, 110)
-						end),
+						Color = ORANGE,
 						Text = scope:Computed(function(use)
-							-- HP runs on hidden Mining Power (spec §5.3), so show how much is left
+							local s = use(meteorState)
+							if s and not s.unlocked then
+								return string.format("Nodes broken  %d / %d", s.crustBroken, math.ceil(s.crustTotal * 0.6))
+							end
 							local fraction = use(coreHp) / math.max(use(coreMaxHp), 1e-6)
-							return string.format("Core %d%%", math.ceil(math.clamp(fraction, 0, 1) * 100))
+							return string.format("Core strength  %d%%", math.ceil(math.clamp(fraction, 0, 1) * 100))
 						end),
 					}),
-					label(scope, {
-						LayoutOrder = 3,
-						Size = UDim2.new(1, 0, 0, 22),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 135),
+						Size = UDim2.new(1, -28, 0, 18),
 						Text = scope:Computed(function(use)
 							local s = use(standing)
-							if not s or s.rank == 0 then
-								return "Mine a node to join in!"
-							end
+							if not s or s.rank == 0 then return "Your first hit starts your contribution" end
 							return string.format("You: #%d of %d  ·  %s ore", s.rank, s.players, Format.number(s.ore))
 						end),
-						TextSize = 16,
+						TextSize = 13,
 						TextColor3 = GREEN,
-						TextXAlignment = Enum.TextXAlignment.Right,
+						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
-					label(scope, {
-						LayoutOrder = 4,
-						Size = UDim2.new(1, 0, 0, 70),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 159),
+						Size = UDim2.new(1, -28, 0, 39),
 						Text = scope:Computed(function(use)
 							local s = use(standing)
-							if not s or #s.top == 0 then
-								return ""
-							end
+							if not s or #s.top == 0 then return "Mine together. Everyone contributes!" end
 							local lines = {}
 							for i, entry in s.top do
-								table.insert(lines, string.format("%d. %s  %s", i, entry.name, Format.number(entry.contribution)))
+								table.insert(lines, string.format("#%d  %s   %s", i, entry.name, Format.number(entry.contribution)))
 							end
 							return table.concat(lines, "\n")
 						end),
-						TextSize = 14,
-						TextXAlignment = Enum.TextXAlignment.Right,
+						TextSize = 12,
+						TextColor3 = UI.SUBTEXT,
+						TextXAlignment = Enum.TextXAlignment.Left,
 						TextYAlignment = Enum.TextYAlignment.Top,
+						TextTruncate = Enum.TextTruncate.AtEnd,
 					}),
 				},
 			}),
-
 			-- Announcement banner
 			label(scope, {
 				Name = "Banner",
 				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 92),
-				Size = UDim2.new(0.8, 0, 0, 40),
+				Position = scope:Computed(function(use)
+					local l = use(hud)
+					-- Under the touch button row, which reaches into the usual spot
+					return UDim2.new(0.5, 0, 0, if l.touch then l.eventPanel.y - l.inset else 92 * l.scale)
+				end),
+				Size = UDim2.fromOffset(480, 38),
 				Text = scope:Computed(function(use)
 					local a = use(announcement)
 					return if a then a.text else ""
@@ -663,6 +796,7 @@ function HUDController:KnitStart()
 				Visible = scope:Computed(function(use)
 					return use(announcement) ~= nil
 				end),
+				[Children] = { scale() },
 			}),
 
 			-- Results panel
@@ -670,18 +804,14 @@ function HUDController:KnitStart()
 				Name = "Results",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.55),
-				Size = UDim2.fromOffset(370, 245),
-				BackgroundColor3 = Color3.fromRGB(187, 137, 91),
+				Size = UDim2.fromOffset(370, 270),
+				BackgroundColor3 = UI.PANEL_DARK,
 				Visible = scope:Computed(function(use)
 					return use(results) ~= nil
 				end),
 				[Children] = {
-					corner(scope, 16),
-					stroke(scope),
-					scope:New("UIGradient")({
-						Rotation = 90,
-						Color = ColorSequence.new(Color3.fromRGB(221, 177, 118), Color3.fromRGB(133, 94, 64)),
-					}),
+					scale(),
+					UI.cardFill(scope),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 10),
 						Size = UDim2.new(1, 0, 0, 34),
@@ -692,7 +822,7 @@ function HUDController:KnitStart()
 						TextSize = 30,
 						TextColor3 = ORANGE,
 					}),
-					label(scope, {
+					UI.body(scope, {
 						Position = UDim2.fromOffset(16, 52),
 						Size = UDim2.new(1, -32, 1, -100),
 						Text = scope:Computed(function(use)
@@ -700,7 +830,12 @@ function HUDController:KnitStart()
 							if not r then
 								return ""
 							end
-							local lines = { "Ore mined: " .. Format.number(r.ore) }
+							local oreName = r.oreType and Config.Home.OreNames[r.oreType]
+							local lines = { (if oreName then oreName .. " ore" else "Ore") .. " mined: " .. Format.number(r.ore) }
+							-- Under-tier players see what a better pickaxe mines here (spec §8.1)
+							if r.missed then
+								table.insert(lines, MeteorTypes.missedHint(r.missed))
+							end
 							if r.cracked and r.shards > 0 then
 								local shardLine = string.format("Core Shards: +%d  (%d floor + %d share", r.shards, r.floor, r.bonus)
 								if r.top > 0 then
@@ -740,19 +875,25 @@ function HUDController:KnitStart()
 			}),
 
 			-- Toast
-			label(scope, {
+			UI.body(scope, {
 				Name = "Toast",
 				AnchorPoint = Vector2.new(0.5, 1),
-				Position = UDim2.new(0.5, 0, 1, -110),
-				Size = UDim2.new(0.8, 0, 0, 30),
+				Position = UDim2.new(0.5, 0, 1, -86),
+				Size = UDim2.new(0.66, 0, 0, 52),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.05,
+				TextWrapped = true,
 				Text = scope:Computed(function(use)
 					return use(toast) or ""
 				end),
-				TextSize = 22,
-				TextStrokeTransparency = 0,
+				TextSize = 17,
 				Visible = scope:Computed(function(use)
 					return use(toast) ~= nil
 				end),
+				[Children] = {
+					UI.cardFill(scope),
+					scope:New("UIPadding")({ PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14) }),
+				},
 			}),
 
 			-- Studio-only playtest helpers
@@ -808,14 +949,19 @@ function HUDController:KnitStart()
 
 	-- "+$4.8M" rises off the cash counter on every sale
 	EconomyService.Sold:Connect(function(bars: number, cash: number)
+		Sfx.play("Sell")
 		showToast("Sold " .. Format.number(bars) .. " bars")
+		local layout = Fusion.peek(hud)
+		local currentScale = layout.leftScale
+		local card = layout.leftCards.Resources
+		local cardY = card.y - layout.inset
 		local floater = Instance.new("TextLabel")
 		floater.BackgroundTransparency = 1
-		floater.Position = UDim2.fromOffset(69, 64)
+		floater.Position = UDim2.fromOffset(card.x + 63 * currentScale, cardY + 24 * currentScale)
 		floater.Size = UDim2.fromOffset(200, 36)
 		floater.Font = FONT
 		floater.Text = "+" .. Format.cash(cash)
-		floater.TextSize = 30
+		floater.TextSize = 30 * currentScale
 		floater.TextColor3 = CASH
 		floater.TextStrokeColor3 = OUTLINE
 		floater.TextStrokeTransparency = 0
@@ -823,7 +969,7 @@ function HUDController:KnitStart()
 		floater.Parent = ui
 		local info = TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		TweenService:Create(floater, info, {
-			Position = UDim2.fromOffset(69, 22),
+			Position = UDim2.fromOffset(card.x + 63 * currentScale, cardY - 18 * currentScale),
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,
 		}):Play()

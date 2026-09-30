@@ -12,6 +12,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 
 local Children = Fusion.Children
@@ -201,10 +202,38 @@ function TutorialController:KnitStart()
 	local ShopController = Knit.GetController("ShopController")
 
 	local scope = Fusion.scoped(Fusion)
+	local hud = UI.hud(scope)
+	local hudScale = scope:Computed(function(use)
+		return use(hud).scale
+	end)
+	-- Touch devices have the whole right edge to Roblox and the MINE button, and the buttons
+	-- in a row on top: the card stays centred under the clock there
+	-- The card is never smaller than TouchCardScale on touch, so its Skip button can reach 44 px
+	local cardScale = scope:Computed(function(use)
+		local l = use(hud)
+		return if l.touch then math.max(l.scale, Config.Hud.TouchCardScale) else l.scale
+	end)
+	local compact = scope:Computed(function(use)
+		local l = use(hud)
+		return l.viewport.X < 1000 and not l.touch
+	end)
 	local step = scope:Value(nil :: any)
 	local meteorState = scope:Value(nil :: any)
 	local serverNow = scope:Value(workspace:GetServerTimeNow())
 	local finished = scope:Value(false)
+	local shown = scope:Computed(function(use)
+		return use(step) ~= nil or use(finished)
+	end)
+	-- On compact screens the card sits in the right-hand button column under SHOP, the
+	-- spots the INDEX, REBIRTH and STORE buttons take; IndexController, RebirthController
+	-- and StoreController hide them while this attribute is set, or they would draw
+	-- over the card and take taps meant for Skip
+	local inColumn = scope:Computed(function(use)
+		return use(compact) and use(shown)
+	end)
+	scope:Observer(inColumn):onBind(function()
+		player:SetAttribute("TutorialCardInColumn", Fusion.peek(inColumn))
+	end)
 
 	local lastIndex = 0
 	TutorialService.Step:Observe(function(value)
@@ -254,52 +283,62 @@ function TutorialController:KnitStart()
 		[Children] = {
 			scope:New("Frame")({
 				Name = "Card",
-				AnchorPoint = Vector2.new(0.5, 0),
-				Position = UDim2.new(0.5, 0, 0, 138),
-				Size = UDim2.fromOffset(380, 100),
-				BackgroundColor3 = UI.PANEL,
-				Visible = scope:Computed(function(use)
-					return use(step) ~= nil or use(finished)
+				AnchorPoint = scope:Computed(function(use)
+					return if use(compact) then Vector2.new(1, 0) else Vector2.new(0.5, 0)
 				end),
+				Position = scope:Computed(function(use)
+					return if use(compact)
+						then UDim2.new(1, -Config.Hud.EdgeMargin, 0, use(hud).tutorialY)
+						else UDim2.new(0.5, 0, 0, 138 * use(hudScale))
+				end),
+				Size = UDim2.fromOffset(380, 116),
+				BackgroundColor3 = UI.PANEL_DARK,
+				BackgroundTransparency = 0.04,
+				Visible = shown,
 				[Children] = {
-					UI.panelFill(scope),
-					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 6),
+					scope:New("UIScale")({ Scale = cardScale }),
+					UI.cardFill(scope),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 10),
 						Size = UDim2.new(1, -90, 0, 18),
 						Text = scope:Computed(function(use)
 							local s = use(step)
-							return if s then string.format("STEP %d / %d", s.index, s.total) else "TUTORIAL"
+							return if s then string.format("MINER TRAINING  ·  %d / %d", s.index, s.total) else "TRAINING COMPLETE"
 						end),
-						TextSize = 15,
+						TextSize = 12,
 						TextColor3 = UI.ORANGE,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 24),
+						Position = UDim2.fromOffset(14, 31),
 						Size = UDim2.new(1, -28, 0, 30),
 						Text = scope:Computed(function(use)
 							local info = use(current)
 							return if info then info.Text else "You're all set. Have fun, miner!"
 						end),
-						TextSize = 26,
+						TextSize = 23,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
-					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 56),
-						Size = UDim2.new(1, -28, 0, 38),
+					UI.body(scope, {
+						Position = UDim2.fromOffset(14, 65),
+						Size = UDim2.new(1, -28, 0, 35),
 						Text = hint,
-						TextSize = 15,
+						TextSize = 14,
+						TextColor3 = UI.SUBTEXT,
 						TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left,
 						TextYAlignment = Enum.TextYAlignment.Top,
 					}),
 					UI.button(scope, {
 						AnchorPoint = Vector2.new(1, 0),
-						Position = UDim2.new(1, -10, 0, 8),
-						Size = UDim2.fromOffset(64, 26),
+						Position = UDim2.new(1, -10, 0, 7),
+						Size = scope:Computed(function(use)
+							local s = use(cardScale)
+							return UDim2.fromOffset(math.max(58, Config.Hud.MinTouch / s), HudLayout.closeSize(25, s))
+						end),
 						Text = "Skip",
 						TextSize = 15,
-						BackgroundColor3 = UI.MUTED,
+						BackgroundColor3 = UI.CARD,
 						TextColor3 = UI.WHITE,
 						Visible = scope:Computed(function(use)
 							return use(step) ~= nil
@@ -309,6 +348,24 @@ function TutorialController:KnitStart()
 								TutorialService:Skip()
 							end)
 						end,
+					}),
+					scope:New("Frame")({
+						Position = UDim2.new(0, 14, 1, -9),
+						Size = UDim2.new(1, -28, 0, 4),
+						BorderSizePixel = 0,
+						BackgroundColor3 = UI.OUTLINE,
+						[Children] = {
+							UI.corner(scope, 2),
+							scope:New("Frame")({
+								Size = scope:Computed(function(use)
+									local s = use(step)
+									return UDim2.fromScale(if s then (s.index - 1) / math.max(s.total, 1) else 1, 1)
+								end),
+								BorderSizePixel = 0,
+								BackgroundColor3 = GUIDE_COLOR,
+								[Children] = { UI.corner(scope, 2) },
+							}),
+						},
 					}),
 				},
 			}),

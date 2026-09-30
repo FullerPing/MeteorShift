@@ -10,6 +10,12 @@
         "$path": "src/shared"
       }
     },
+    "ServerStorage": {
+      "$ignoreUnknownInstances": true,
+      "Tests": {
+        "$path": "tests"
+      }
+    },
     "ServerScriptService": {
       "Server": {
         "$path": "src/server"

@@ -6,7 +6,13 @@
 -- The meteor is assembled at impact from reusable pieces saved in the place:
 -- ServerStorage.Assets.Meteor.Core carries NodeSlot attachments, and each slot gets
 -- a clone of one of the ServerStorage.Assets.NodePieces rocks, recoloured per type.
+-- A few of those crust nodes are rich (spec §8.2): they sparkle, and only they can
+-- drop the mineral index's rarest minerals (IndexService).
 -- The map itself (crater, town, debris, plots) is saved in Workspace.Map.
+--
+-- Call a Meteor (spec §9.2): CanCallMeteor applies Shared.CallMeteor's rules to the
+-- live schedule and CallMeteor(player) jumps the countdown and announces the buyer.
+-- MonetizationService calls them from ProcessReceipt.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -17,15 +23,24 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
+local CallMeteor = require(ReplicatedStorage.Shared.CallMeteor)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local MeteorConfig = Config.Meteor
 
+-- Seconds between meteors. Private servers will be able to change it (spec §5.1,
+-- §12.4); a faster schedule pays a smaller shard pool (MeteorTypes.shardPoolMult).
+-- The first meteor's shorter countdown and Studio's are not a faster schedule.
+local interval = MeteorConfig.Countdown
+
 local MeteorService = Knit.CreateService({
 	Name = "MeteorService",
 	Client = {
-		-- { phase, endsAt, type, typeName, eventId, crustTotal, crustBroken, unlocked }
-		-- endsAt is in workspace:GetServerTimeNow() time.
+		-- { phase, endsAt, type, typeName, requiredTier, eventId, crustTotal, crustBroken, unlocked }
+		-- endsAt is in workspace:GetServerTimeNow() time. type is the Config.Meteor.Types
+		-- id, picked at the start of each countdown; requiredTier is its pickaxe tier.
 		State = Knit.CreateProperty(nil),
 		Impact = Knit.CreateSignal(), -- (position: Vector3)
 		CoreCracked = Knit.CreateSignal(), -- (position: Vector3)
@@ -33,10 +48,15 @@ local MeteorService = Knit.CreateService({
 })
 
 MeteorService.Landed = Signal.new() -- (position: Vector3) at impact
+-- (meteorType: string, cracked: boolean, secondsToCrack: number?) when the Active
+-- phase ends; secondsToCrack runs from the start of Active, nil when it cooled
+MeteorService.Ended = Signal.new()
 
 local NodeService
 local ContributionService
 local RewardService
+local ActivityService
+local PlayerStateService
 
 type Meteor = {
 	Model: Model,
@@ -48,6 +68,7 @@ type Meteor = {
 	UnlockAt: number,
 	Unlocked: boolean,
 	Cracked: boolean,
+	CrackedAt: number, -- os.clock() when the core broke, 0 until then
 	Type: Config.MeteorType,
 	SizedPower: number, -- server power the current HP is sized for
 	LastRescale: number,
@@ -58,12 +79,19 @@ local state = {
 	endsAt = 0,
 	type = "Iron",
 	typeName = "Iron Meteor",
+	requiredTier = 1,
 	eventId = 0,
 	crustTotal = 0,
 	crustBroken = 0,
 	unlocked = false,
 }
 local current: Meteor? = nil
+-- Call a Meteor bookkeeping, in os.clock() time: when the last CALLED meteor's Active
+-- phase ended (nil until one has; ordinary meteors don't start the cooldown), whether
+-- the coming/current event was called, and when each call was made (pruned to the cap window)
+local lastCalledEnd: number? = nil
+local eventCalled = false
+local callTimes: { number } = {}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -80,6 +108,11 @@ function MeteorService:GetPhase(): Phase.Phase
 	return state.phase
 end
 
+-- The type of the meteor on the ground (impact to cleanup), nil between meteors.
+function MeteorService:GetActiveType(): Config.MeteorType?
+	return if current then current.Type else nil
+end
+
 -- Sets the remaining countdown (used by Call a Meteor and private servers later).
 function MeteorService:SetCountdownRemaining(seconds: number)
 	if state.phase == Phase.Countdown then
@@ -87,31 +120,62 @@ function MeteorService:SetCountdownRemaining(seconds: number)
 	end
 end
 
+-- Whether Call a Meteor can be bought right now, and why not (Shared.CallMeteor).
+function MeteorService:CanCallMeteor(): (boolean, string?)
+	local clock = os.clock()
+	local sinceLastEnd = if lastCalledEnd then clock - lastCalledEnd else nil
+	return CallMeteor.available(
+		state.phase,
+		state.endsAt - now(),
+		sinceLastEnd,
+		CallMeteor.callsInWindow(callTimes, clock)
+	)
+end
+
+-- Brings the next meteor in early for the whole server (spec §9.2) if the rules
+-- allow it: the countdown jumps to Config.Monetization.CallMeteor.SetCountdownTo and
+-- the server hears who called it. The meteor type was already picked; a call can't
+-- change it or the loot. Returns whether it went through and, if not, why.
+function MeteorService:CallMeteor(player: Player): (boolean, string?)
+	local ok, reason = self:CanCallMeteor()
+	if not ok then
+		return false, reason
+	end
+	local clock = os.clock()
+	local window = Config.Monetization.CallMeteor.CapWindow
+	for index = #callTimes, 1, -1 do
+		if clock - callTimes[index] >= window then
+			table.remove(callTimes, index)
+		end
+	end
+	table.insert(callTimes, clock)
+	eventCalled = true
+	self:SetCountdownRemaining(Config.Monetization.CallMeteor.SetCountdownTo)
+	RewardService:Announce("CallMeteor", player.DisplayName .. " called a meteor!")
+	return true, nil
+end
+
 local function countdownLength(first: boolean): number
 	if RunService:IsStudio() and MeteorConfig.StudioCountdown then
 		return MeteorConfig.StudioCountdown
 	end
-	return if first then MeteorConfig.FirstCountdown else MeteorConfig.Countdown
+	return if first then MeteorConfig.FirstCountdown else interval
 end
 
+-- The next meteor's type (spec §8.1): weighted odds, gated by the active players'
+-- pickaxe tiers (MeteorTypes.pick). In Studio, ServerStorage's DevMeteorType
+-- attribute ("Ice") forces a type for testing.
 local function pickType(): Config.MeteorType
-	local total = 0
-	for _, meteorType in MeteorConfig.Types do
-		total += meteorType.Weight
+	local forced = ServerStorage:GetAttribute("DevMeteorType")
+	if RunService:IsStudio() and typeof(forced) == "string" and MeteorConfig.Types[forced] then
+		return MeteorConfig.Types[forced]
 	end
-	local roll = math.random() * total
-	for _, meteorType in MeteorConfig.Types do
-		roll -= meteorType.Weight
-		if roll <= 0 then
-			return meteorType
-		end
-	end
-	return MeteorConfig.Types.Iron
+	return MeteorTypes.pick(ActivityService:GetActiveTiers(), math.random())
 end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
 local function serverPower(): number
-	return MiningPower.serverPower(Knit.GetService("ActivityService"):GetActiveTiers())
+	return MiningPower.serverPower(ActivityService:GetActiveTiers())
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -145,6 +209,33 @@ local function paintCluster(piece: BasePart, meteorType: Config.MeteorType)
 			end
 		end
 	end
+end
+
+-- Marks a crust node rich (spec §8.2): IndexService reads the Rich attribute on each
+-- hit. Its ore chunks take Config.Index.RichColor and it sparkles so players can
+-- spot it; breaking or cooling the meteor turns the sparkle off with its other effects.
+local function markRich(piece: BasePart)
+	piece:SetAttribute("Rich", true)
+	for _, child in piece:GetDescendants() do
+		if child:IsA("BasePart") and child.Name == "Ore" then
+			child.Color = Config.Index.RichColor
+			child.Material = Enum.Material.Neon
+		end
+	end
+	local sparkle = Instance.new("ParticleEmitter") -- the default texture is a sparkle
+	sparkle.Name = "RichSparkle"
+	sparkle.Color = ColorSequence.new(Config.Index.RichColor)
+	sparkle.LightEmission = 1
+	sparkle.Rate = 8
+	sparkle.Lifetime = NumberRange.new(0.8, 1.4)
+	sparkle.Speed = NumberRange.new(0.5, 1.5)
+	sparkle.SpreadAngle = Vector2.new(180, 180)
+	sparkle.Size = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.3, 0.6),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	sparkle.Parent = piece
 end
 
 local function waitUntil(predicate: () -> boolean)
@@ -202,10 +293,16 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	place(core, spawnPoint.CFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
 	core.Anchored = true
 	core.Material = Enum.Material.Basalt
+	-- the template's lights and embers are Iron orange; other types recolour them
+	local recolorLights = meteorType.Id ~= "Iron"
 	core.Color = meteorType.CoreColor:Lerp(Color3.new(0, 0, 0), 0.7)
 	for _, vein in core:GetDescendants() do
 		if vein:IsA("BasePart") and vein.Name == "Vein" then
 			vein.Color = meteorType.GlowColor
+		elseif recolorLights and (vein:IsA("PointLight") or vein:IsA("SpotLight") or vein:IsA("SurfaceLight")) then
+			vein.Color = meteorType.GlowColor -- the template's lights are orange (Iron)
+		elseif recolorLights and vein:IsA("ParticleEmitter") then
+			vein.Color = ColorSequence.new(meteorType.GlowColor)
 		end
 	end
 	core.Parent = model
@@ -229,6 +326,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		UnlockAt = math.ceil(#slots * MeteorConfig.CoreUnlockFraction),
 		Unlocked = false,
 		Cracked = false,
+		CrackedAt = 0,
 		Type = meteorType,
 		SizedPower = power,
 		LastRescale = os.clock(),
@@ -241,23 +339,44 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		return state.phase == Phase.Active and current == meteor
 	end
 
+	-- Your own pickaxe decides your ore (spec §8.1): the meteor's ore if you meet its
+	-- tier, else your best ore at the consolation multiplier.
+	local function oreFor(player: Player): (string?, number)
+		local ore, mult = MeteorTypes.oreFor(PlayerStateService:GetPickaxe(player).Tier, meteorType)
+		return ore, mult * meteorType.YieldMult
+	end
+
+	-- Crystal twist: every player on the same node or core mines harder
+	local powerMult: ((Player, number) -> number)? = nil
+	if meteorType.Twist == "Resonance" then
+		powerMult = function(_player: Player, hitters: number): number
+			return MeteorTypes.resonanceMult(hitters)
+		end
+	end
+
 	local crustFolder = Instance.new("Folder")
 	crustFolder.Name = "Crust"
 	crustFolder.Parent = model
 
+	local richNodes = MineralIndex.pickRichNodes(#slots, math.random)
 	for index, slot in slots do
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index
 		piece.Anchored = true
 		place(piece, slot.WorldCFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
 		paintCluster(piece, meteorType)
+		if richNodes[index] then
+			markRich(piece)
+		end
 		piece.Parent = crustFolder
 
 		local id = NodeService:Register(piece, {
 			Kind = "Crust",
 			MaxHp = crustHp,
-			Ore = meteorType.Ore,
-			OreMult = meteorType.YieldMult,
+			Ore = nil,
+			OreMult = 0,
+			OreFor = oreFor,
+			PowerMult = powerMult,
 			CanHit = function()
 				return isActive()
 			end,
@@ -281,6 +400,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		MaxHp = coreHp,
 		Ore = nil,
 		OreMult = 0,
+		PowerMult = powerMult,
 		CanHit = function()
 			return isActive() and meteor.Unlocked
 		end,
@@ -289,6 +409,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		end,
 		OnBroken = function()
 			meteor.Cracked = true
+			meteor.CrackedAt = os.clock()
 		end,
 	})
 
@@ -335,6 +456,22 @@ function MeteorService:_clearImpactZone(position: Vector3)
 	end
 end
 
+-- Ice twist (spec §8.1): every live crust node and the core that nobody has hit for
+-- a while regains HP, `dt` seconds' worth (MeteorTypes.refreezeHp).
+function MeteorService:_refreeze(meteor: Meteor, dt: number)
+	local function refreeze(id: number)
+		local hp, maxHp = NodeService:GetHp(id)
+		local refrozen = MeteorTypes.refreezeHp(hp, maxHp, NodeService:GetIdleSeconds(id), dt)
+		if refrozen > hp then
+			NodeService:Heal(id, refrozen - hp)
+		end
+	end
+	for _, id in meteor.CrustIds do
+		refreeze(id)
+	end
+	refreeze(meteor.CoreId)
+end
+
 function MeteorService:_cool(meteor: Meteor)
 	for _, part in meteor.Model:GetDescendants() do
 		if part:IsA("BasePart") then
@@ -373,27 +510,42 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 	task.wait(MeteorConfig.ImpactDuration)
 
 	-- Active: mine the crust, crack the core before it cools
-	self:_publish({ phase = Phase.Active, endsAt = now() + MeteorConfig.ActiveDuration })
+	self:_publish({ phase = Phase.Active, endsAt = now() + meteorType.ActiveDuration })
+	local activeStart = os.clock()
 	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
+	local refreezing = meteorType.Twist == "Refreeze"
+	local lastRefreeze = os.clock()
 	waitUntil(function()
-		if os.clock() >= nextCheck then
-			nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
+		local clock = os.clock()
+		if clock >= nextCheck then
+			nextCheck = clock + MeteorConfig.RescaleCheckInterval
 			self:_checkRescale(meteor)
+		end
+		if refreezing and clock - lastRefreeze >= MeteorConfig.Twists.Refreeze.Tick then
+			self:_refreeze(meteor, clock - lastRefreeze)
+			lastRefreeze = clock
 		end
 		return meteor.Cracked or now() >= state.endsAt
 	end)
 	ContributionService:Stop()
+	-- The Call a Meteor cooldown runs from the end of a called meteor's event only
+	if eventCalled then
+		lastCalledEnd = os.clock()
+		eventCalled = false
+	end
+	self.Ended:Fire(meteorType.Id, meteor.Cracked, if meteor.Cracked then meteor.CrackedAt - activeStart else nil)
 
+	local poolMult = MeteorTypes.shardPoolMult(meteorType, interval, MeteorConfig.Countdown)
 	if meteor.Cracked then
 		self:_publish({ phase = Phase.CoreCracked, endsAt = now() + MeteorConfig.CrackedDuration })
 		self.Client.CoreCracked:FireAll(meteor.Core.Position)
 		self:_breakPart(meteor.Core)
-		RewardService:Finish(true)
+		RewardService:Finish(true, meteorType, poolMult)
 		task.wait(MeteorConfig.CrackedDuration)
 	else
 		self:_publish({ phase = Phase.Cooled, endsAt = now() + MeteorConfig.CooledDuration })
 		self:_cool(meteor)
-		RewardService:Finish(false)
+		RewardService:Finish(false, meteorType, poolMult)
 		task.wait(MeteorConfig.CooledDuration)
 	end
 
@@ -413,6 +565,7 @@ function MeteorService:_loop()
 			endsAt = now() + countdownLength(first),
 			type = meteorType.Id,
 			typeName = meteorType.DisplayName,
+			requiredTier = meteorType.RequiredTier,
 			crustTotal = 0,
 			crustBroken = 0,
 			unlocked = false,
@@ -431,6 +584,10 @@ function MeteorService:_loop()
 				current = nil
 			end
 			ContributionService:Stop()
+			if eventCalled then -- a failed Call a Meteor event still starts its cooldown
+				lastCalledEnd = os.clock()
+				eventCalled = false
+			end
 		end
 	end
 end
@@ -446,6 +603,8 @@ function MeteorService:KnitInit()
 	NodeService = Knit.GetService("NodeService")
 	ContributionService = Knit.GetService("ContributionService")
 	RewardService = Knit.GetService("RewardService")
+	ActivityService = Knit.GetService("ActivityService")
+	PlayerStateService = Knit.GetService("PlayerStateService")
 end
 
 function MeteorService:KnitStart()

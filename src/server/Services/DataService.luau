@@ -106,6 +106,7 @@ local function claim(key: string): ({ [any]: any }?, string?)
 	end
 
 	local result, reason = nil, nil
+	local aborted = false
 	local ok, err = pcall(function()
 		(store :: DataStore):UpdateAsync(key, function(record)
 			record = record or { data = nil, lock = nil }
@@ -139,6 +140,7 @@ local function write(profile: Profile, release: boolean): boolean
 			local lock = record.lock
 			if lock and lock.session ~= sessionId then
 				-- Another server took the profile over; never overwrite its data
+				aborted = true
 				return nil
 			end
 			record.data = data
@@ -148,24 +150,25 @@ local function write(profile: Profile, release: boolean): boolean
 	end)
 	if not ok then
 		warn("[DataService] save failed for", profile.Player.Name, err)
+	elseif aborted then
+		warn("[DataService] save skipped for", profile.Player.Name, "(another server holds the profile)")
 	end
-	return ok
+	return ok and not aborted
 end
 
 function DataService:GetProfile(player: Player): Profile?
 	return profiles[player]
 end
 
--- Waits until the player's profile is loaded (or they leave).
-function DataService:WaitForProfile(player: Player): Profile?
-	while player.Parent and not profiles[player] do
-		task.wait(0.1)
+-- Saves the player's profile now and keeps the lock. Returns whether the save went
+-- through (always true on the in-memory store). MonetizationService saves after a
+-- developer product grant so a processed receipt is on disk before Roblox is told.
+function DataService:Save(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
 	end
-	return profiles[player]
-end
-
-function DataService:IsMemoryOnly(): boolean
-	return store == nil
+	return write(profile, false)
 end
 
 function DataService:_load(player: Player)

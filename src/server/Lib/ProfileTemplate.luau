@@ -28,10 +28,18 @@ return {
 	tutorialStep = 1, -- next tutorial step (spec §11); flags.tutorialDone ends it
 	flags = {
 		tutorialDone = false,
+		-- Lifetime analytics milestones (spec §13), set by TelemetryService when logged
 		firstMeteor = false,
 		firstCoreReward = false,
 		firstRefinery = false,
 	},
+	-- Monetization (spec §9). Pass ownership comes from Roblox on every join and is
+	-- not saved here.
+	credits = {
+		callMeteor = 0, -- Call a Meteor purchases that couldn't run yet, usable later
+	},
+	receipts = {}, -- the last Config.Monetization.ReceiptHistory processed PurchaseIds
+	overclockLeft = 0, -- seconds of Refinery Overclock left, counted down while online
 	stats = {
 		meteorsJoined = 0,
 		coresCracked = 0,
