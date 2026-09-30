@@ -3,15 +3,17 @@
 --
 --   sale = base price × rebirth multiplier × index bonus × VIP bonus
 --
--- The index bonus adds each completed mineral index page's CashBonus, additive
--- across pages (spec §8.2, Shared.MineralIndex.cashBonus). Rebirth and VIP arrive
--- later in Week 4; VIP is 1 until then, rebirths already read from the profile.
+-- The rebirth multiplier is Shared.Rebirth.multiplier of the profile's rebirths
+-- (×2 per rebirth, multiplicative, spec §8.3). The index bonus adds each completed
+-- mineral index page's CashBonus, additive across pages (spec §8.2,
+-- Shared.MineralIndex.cashBonus). VIP arrives later in Week 4 and is 1 until then.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 
 local EconomyService = Knit.CreateService({
 	Name = "EconomyService",
@@ -30,7 +32,7 @@ function EconomyService:SaleMultiplier(player: Player): number
 	if not data then
 		return 1
 	end
-	local rebirth = 2 ^ (data.rebirths or 0)
+	local rebirth = Rebirth.multiplier(data.rebirths)
 	local index = MineralIndex.cashBonus(data.index)
 	local vip = 1
 	return rebirth * index * vip

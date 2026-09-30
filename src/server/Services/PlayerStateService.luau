@@ -125,6 +125,7 @@ function PlayerStateService:_sendState(player: Player)
 		hopper = sum(data.hopper),
 		hopperCapacity = self:GetHopperCapacity(player),
 		line = line,
+		rebirths = data.rebirths, -- sets the cash multiplier (spec §8.3)
 		index = data.index, -- mineral index: mineral id -> count found (spec §8.2)
 		plotId = player:GetAttribute("PlotId"),
 	})

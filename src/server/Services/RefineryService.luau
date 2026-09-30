@@ -37,6 +37,7 @@ RefineryService.BarsCollected = Signal.new() -- (player, bars)
 local DataService
 local PlotService
 local PlayerStateService
+local EconomyService
 
 local touchCooldown: { [Player]: { [string]: number } } = {}
 local blockedBy: { [Player]: Refining.Blocked } = {}
@@ -224,10 +225,8 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	local seconds = math.min(awaySeconds, cap)
 	local made, bars, blocked = Refining.run(data, seconds)
 	blockedBy[player] = blocked
-	local value = 0
-	for oreType, n in made do
-		value += n * (Config.Home.BarPrices[oreType] or 0)
-	end
+	-- What the bars sell for at the Trading Post, sale multipliers included
+	local value = math.floor(PlayerStateService:BarValue(made) * EconomyService:SaleMultiplier(player))
 	self.Client.WhileAway:Fire(player, {
 		seconds = seconds,
 		away = awaySeconds,
@@ -276,6 +275,7 @@ function RefineryService:KnitInit()
 	DataService = Knit.GetService("DataService")
 	PlotService = Knit.GetService("PlotService")
 	PlayerStateService = Knit.GetService("PlayerStateService")
+	EconomyService = Knit.GetService("EconomyService")
 end
 
 function RefineryService:KnitStart()
