@@ -1,22 +1,31 @@
 --!strict
 -- Economy pacing model (spec §7.4, Week 5 balancing; docs/balance.md).
 --
--- Simulates a fresh free player's first sessions from Config alone: Iron meteors only
--- (the first meteor comes after Meteor.FirstCountdown, the next ones every full event
--- cycle), no passes, no rebirth, no mineral index. The player mines the meteor while
+-- Simulates a fresh free player's first sessions from Config alone: no passes, no
+-- rebirth, no mineral index. The first meteor comes after Meteor.FirstCountdown, the
+-- next ones every full event cycle. Iron meteors only until the player's pickaxe meets
+-- Ice's tier; from then on each meteor is worth its expected value (see meteorBarPrice).
+-- The player mines the meteor while
 -- it is active and debris between meteors, walks home with a full backpack, and
 -- sells every Balance.SellInterval seconds.
 --
 --   ore rate     = backpack / (backpack / ore-per-hit x swing / HitsPerMinuteShare + TripSeconds)
 --   ore supply   = time-weighted meteor rate and debris rate (debris pays YieldFraction of a hit)
 --   line rate    = min(conveyor, refinery)    (same as Server.Lib.Refining)
---   income       = min(ore supply, line rate) x bar price
+--   income       = min(ore supply, line rate) x blended bar price (meteor ore and debris iron)
 --
 -- Purchases are greedy: whenever the player sells, of the next pickaxe, backpack, conveyor
 -- and refinery levels that they hold the shards for and that raise income, the one with
 -- the shortest payback (cost / income gained) is chosen, and the player saves up for it
 -- if it is out of reach. Hopper and collection post levels are never bought: they only
 -- matter for offline income (spec §6.4), which `offlineCap` covers.
+--
+-- Ice and Crystal (expected value, no dice): the schedule picks a type by Weight and a
+-- type the crowd can't mine drops to the next one down (Meteor.TypeOrder). The lobby is
+-- assumed to be all at the player's own pickaxe tier, so a type is eligible exactly when
+-- the player's pickaxe meets its tier. Every meteor then pays the probability-weighted
+-- bar price of its ore. Ice's Refreeze twist and HP multiplier are ignored (they cost the
+-- crowd time, not the player's ore); Crystal's Resonance likewise.
 --
 -- Core Shards come only from the shard floor of every meteor (a lone weak contributor).
 -- Pure functions, cheap enough to call from a spec (about 3,600 steps for two hours).
@@ -66,6 +75,22 @@ local Balance = Config.Balance
 local Iron = Config.Meteor.Types.Iron
 local BarPrice = Config.Home.BarPrices[Iron.Ore]
 
+-- Expected bar price of one ore mined from a meteor, for a lobby of `tier` pickaxes.
+local function meteorBarPrice(tier: number): number
+	local order = Config.Meteor.TypeOrder
+	local total, value = 0, 0
+	for index, id in order do
+		local weight = Config.Meteor.Types[id].Weight
+		local target = index
+		while target > 1 and Config.Meteor.Types[order[target]].RequiredTier > tier do
+			target -= 1
+		end
+		total += weight
+		value += weight * Config.Home.BarPrices[Config.Meteor.Types[order[target]].Ore]
+	end
+	return value / total
+end
+
 -- Seconds from one impact to the next: the event, its end phase, cleanup, then the countdown.
 function Pacing.cycleSeconds(): number
 	return Config.Meteor.ImpactDuration
@@ -93,11 +118,15 @@ local function meteorActive(time: number, cycle: number): boolean
 	return sinceFirst % cycle < Iron.ActiveDuration
 end
 
--- Average ore per second over a whole cycle (meteor and debris time weighted).
-local function averageSupply(owned: Owned, cycle: number): number
-	local meteor = Pacing.oreRate(owned.pickaxe, owned.backpack, 1)
-	local debris = Pacing.oreRate(owned.pickaxe, owned.backpack, Config.Debris.YieldFraction) * Balance.DebrisActivityShare
-	return (meteor * Iron.ActiveDuration + debris * (cycle - Iron.ActiveDuration)) / cycle
+-- Ore per second averaged over a whole cycle, and the blended bar price of that ore
+-- (meteor and debris time weighted).
+local function averageSupply(owned: Owned, cycle: number): (number, number)
+	local meteor = Pacing.oreRate(owned.pickaxe, owned.backpack, 1) * Iron.ActiveDuration
+	local debris = Pacing.oreRate(owned.pickaxe, owned.backpack, Config.Debris.YieldFraction)
+		* Balance.DebrisActivityShare
+		* (cycle - Iron.ActiveDuration)
+	local price = (meteor * meteorBarPrice(owned.pickaxe) + debris * BarPrice) / (meteor + debris)
+	return (meteor + debris) / cycle, price
 end
 
 local function lineRate(owned: Owned): number
@@ -108,9 +137,10 @@ local function lineRate(owned: Owned): number
 	)
 end
 
--- Bars per second in the long run
+-- Cash per second in the long run
 local function income(owned: Owned, cycle: number): number
-	return math.min(averageSupply(owned, cycle), lineRate(owned))
+	local supply, price = averageSupply(owned, cycle)
+	return math.min(supply, lineRate(owned)) * price
 end
 
 type Candidate = { id: string, name: string, cost: number, shards: number, apply: (Owned) -> () }
@@ -168,7 +198,7 @@ function Pacing.simulate(horizon: number?): Result
 	local cycle = Pacing.cycleSeconds()
 	local owned: Owned = { pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 }
 	local cash, shards, earned = 0, 0, 0
-	local hopperOre, bars = 0, 0
+	local hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
 	local result: Result = {
 		purchases = {},
 		affordableAt = {},
@@ -188,7 +218,7 @@ function Pacing.simulate(horizon: number?): Result
 			earned = earned,
 			owned = table.clone(owned),
 			lineRate = lineRate(owned),
-			incomePerMinute = income(owned, cycle) * 60 * BarPrice,
+			incomePerMinute = income(owned, cycle) * 60,
 		})
 	end
 
@@ -200,15 +230,22 @@ function Pacing.simulate(horizon: number?): Result
 		end
 
 		-- Mining: ore into the hopper, capped by its capacity
-		local yield = if meteorActive(time, cycle) then 1 else Config.Debris.YieldFraction * Balance.DebrisActivityShare
-		local mined = Pacing.oreRate(owned.pickaxe, owned.backpack, yield) * step
-		hopperOre = math.min(hopperOre + mined, Config.Home.Stations.hopper.Levels[owned.hopper].Capacity :: number)
+		local onMeteor = meteorActive(time, cycle)
+		local yield = if onMeteor then 1 else Config.Debris.YieldFraction * Balance.DebrisActivityShare
+		local orePrice = if onMeteor then meteorBarPrice(owned.pickaxe) else BarPrice
+		local hopperRoom = (Config.Home.Stations.hopper.Levels[owned.hopper].Capacity :: number) - hopperOre
+		local mined = math.min(Pacing.oreRate(owned.pickaxe, owned.backpack, yield) * step, hopperRoom)
+		hopperOre += mined
+		hopperValue += mined * orePrice
 
 		-- The line: limited by time, hopper stock and room at the collection post
 		local room = (Config.Home.Stations.collector.Levels[owned.collector].Capacity :: number) - bars
 		local made = math.max(math.min(lineRate(owned) * step, hopperOre, room), 0)
+		local madeValue = if hopperOre > 0 then hopperValue * made / hopperOre else 0
 		hopperOre -= made
+		hopperValue -= madeValue
 		bars += made
+		barsValue += madeValue
 
 		-- A finished meteor pays its shard floor
 		local sinceFirst = time - (Config.Meteor.FirstCountdown + Config.Meteor.ImpactDuration + Iron.ActiveDuration)
@@ -223,9 +260,9 @@ function Pacing.simulate(horizon: number?): Result
 		-- Home: sell, then shop
 		if time >= nextSell then
 			nextSell += Balance.SellInterval
-			cash += bars * BarPrice
-			earned += bars * BarPrice
-			bars = 0
+			cash += barsValue
+			earned += barsValue
+			bars, barsValue = 0, 0
 			for _, tier in Config.Pickaxes do
 				if tier.Cost > 0 and earned >= tier.Cost and result.earnedAt["pickaxe" .. tier.Tier] == nil then
 					result.earnedAt["pickaxe" .. tier.Tier] = time
@@ -295,7 +332,7 @@ end
 -- the hopper's stock and the collection post's room (spec §6.4). Iron bars, no multipliers.
 function Pacing.offlineCap(hours: number?): number
 	local stations = Config.Home.Stations
-	local rate = math.min(stations.conveyor.Levels[1].Rate :: number, stations.refinery.Levels[1].Rate :: number)
+	local rate = lineRate({ pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 })
 	local seconds = if hours then hours * 3600 else Config.Home.OfflineCap
 	local bars = math.min(rate * seconds, stations.hopper.Levels[1].Capacity :: number, stations.collector.Levels[1].Capacity :: number)
 	return bars * BarPrice

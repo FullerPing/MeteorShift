@@ -76,7 +76,7 @@ Weeks 1 and 2 of the MVP plan are in, plus a round of polish on the plots and th
 
 **Economy pacing (spec §7.4, Week 5)**
 - `Shared.Pacing` simulates a fresh free player (Iron meteors, no passes or rebirth) from Config and `tests/Pacing.spec.luau` asserts the §7.4 checkpoints; assumptions in `Config.Balance`, results and the inflation factor (1: Config prices are the spec's) in `docs/balance.md`
-- The level 1 line makes $75 a minute, so the shipped prices put the Drill Pick 106 minutes away instead of 30. Tuning, old to new: Drill Pick cost $8,000 to $1,500; Refinery level 2 cost $1,500 to $400; Conveyor level 2 cost $1,200 to $300
+- The level 1 line makes $75 a minute, so the shipped prices put the Drill Pick at 79 minutes in the model (reproduction in `docs/balance.md`) instead of 30. From the Drill on the model adds Ice (and, at tier 5, Crystal) meteors as expected value; Plasma lands at 1:53 (in reach at 0:57). Tuning, old to new: Drill Pick cost $8,000 to $1,500; Refinery level 2 cost $1,500 to $400; Conveyor level 2 cost $1,200 to $300
 
 ## Layout
 
