@@ -9,6 +9,10 @@
 -- A few of those crust nodes are rich (spec §8.2): they sparkle, and only they can
 -- drop the mineral index's rarest minerals (IndexService).
 -- The map itself (crater, town, debris, plots) is saved in Workspace.Map.
+--
+-- Call a Meteor (spec §9.2): CanCallMeteor applies Shared.CallMeteor's rules to the
+-- live schedule and CallMeteor(player) jumps the countdown and announces the buyer.
+-- MonetizationService calls them from ProcessReceipt.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -21,6 +25,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
+local CallMeteor = require(ReplicatedStorage.Shared.CallMeteor)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 local MeteorConfig = Config.Meteor
@@ -81,6 +86,10 @@ local state = {
 	unlocked = false,
 }
 local current: Meteor? = nil
+-- Call a Meteor bookkeeping, in os.clock() time: when the last event's Active phase
+-- ended (nil until one has), and when each call was made (pruned to the cap window)
+local lastEventEnd: number? = nil
+local callTimes: { number } = {}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -107,6 +116,40 @@ function MeteorService:SetCountdownRemaining(seconds: number)
 	if state.phase == Phase.Countdown then
 		self:_publish({ endsAt = now() + seconds })
 	end
+end
+
+-- Whether Call a Meteor can be bought right now, and why not (Shared.CallMeteor).
+function MeteorService:CanCallMeteor(): (boolean, string?)
+	local clock = os.clock()
+	local sinceLastEnd = if lastEventEnd then clock - lastEventEnd else nil
+	return CallMeteor.available(
+		state.phase,
+		state.endsAt - now(),
+		sinceLastEnd,
+		CallMeteor.callsInWindow(callTimes, clock)
+	)
+end
+
+-- Brings the next meteor in early for the whole server (spec §9.2) if the rules
+-- allow it: the countdown jumps to Config.Monetization.CallMeteor.SetCountdownTo and
+-- the server hears who called it. The meteor type was already picked; a call can't
+-- change it or the loot. Returns whether it went through and, if not, why.
+function MeteorService:CallMeteor(player: Player): (boolean, string?)
+	local ok, reason = self:CanCallMeteor()
+	if not ok then
+		return false, reason
+	end
+	local clock = os.clock()
+	local window = Config.Monetization.CallMeteor.CapWindow
+	for index = #callTimes, 1, -1 do
+		if clock - callTimes[index] >= window then
+			table.remove(callTimes, index)
+		end
+	end
+	table.insert(callTimes, clock)
+	self:SetCountdownRemaining(Config.Monetization.CallMeteor.SetCountdownTo)
+	RewardService:Announce("CallMeteor", player.DisplayName .. " called a meteor!")
+	return true, nil
 end
 
 local function countdownLength(first: boolean): number
@@ -476,6 +519,7 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 		return meteor.Cracked or now() >= state.endsAt
 	end)
 	ContributionService:Stop()
+	lastEventEnd = os.clock()
 	self.Ended:Fire(meteorType.Id, meteor.Cracked, if meteor.Cracked then meteor.CrackedAt - activeStart else nil)
 
 	local poolMult = MeteorTypes.shardPoolMult(meteorType, interval, MeteorConfig.Countdown)
