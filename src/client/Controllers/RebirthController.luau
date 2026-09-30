@@ -147,6 +147,10 @@ function RebirthController:KnitStart()
 		disarm()
 		notice:set("")
 	end)
+	-- StoreController hides STORE while this panel is open
+	scope:Observer(open):onBind(function()
+		player:SetAttribute("RebirthOpen", Fusion.peek(open))
+	end)
 	scope:Observer(affordable):onChange(function()
 		if not Fusion.peek(affordable) then
 			disarm()
