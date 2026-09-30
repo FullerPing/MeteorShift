@@ -5,7 +5,8 @@
 -- is a card (unknown ones as "???" silhouettes) with its published odds; each page
 -- shows its progress, its reward and which pickaxes can find it, and the header the
 -- total bar sale bonus and the best title earned. A new find pops a toast and lights
--- the button; a repeat find floats a small "+1 X" off the button.
+-- the button; a repeat find floats a small "+1 X" off the button. The IndexOpen
+-- attribute on the local player tells RebirthController when the panel is open.
 --
 -- IndexService owns the index and rolls every drop; the panel reads the `index`
 -- in the player's State and is presentation only.
@@ -331,7 +332,9 @@ function IndexController:KnitStart()
 		return if s and s.index then s.index else {}
 	end)
 
-	scope:Observer(open):onChange(function()
+	-- RebirthController hides REBIRTH while this is set; its button would sit over our dimmer
+	scope:Observer(open):onBind(function()
+		player:SetAttribute("IndexOpen", Fusion.peek(open))
 		if Fusion.peek(open) then
 			fresh:set(false)
 		end

@@ -231,8 +231,9 @@ function TutorialController:KnitStart()
 		return use(step) ~= nil or use(finished)
 	end)
 	-- On compact screens the card sits in the right-hand button column under SHOP, the
-	-- spot the INDEX button takes; IndexController hides INDEX while this attribute is
-	-- set, or it would draw over the card and take taps meant for Skip
+	-- spots the INDEX and REBIRTH buttons take; IndexController and RebirthController
+	-- hide them while this attribute is set, or they would draw over the card and take
+	-- taps meant for Skip
 	local inColumn = scope:Computed(function(use)
 		return use(compact) and use(shown)
 	end)

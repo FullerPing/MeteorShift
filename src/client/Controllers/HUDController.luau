@@ -2,7 +2,8 @@
 -- HUD built with Fusion (spec §10):
 --   * countdown / cooling timer and the sky countdown over the crater, titled with
 --     the meteor type in its glow colour (spec §8.1)
---   * cash (counts up on every sale, "+$" floater), shards, pickaxe, backpack
+--   * cash (counts up on every sale, "+$" floater, rebirth multiplier once above
+--     ×1, spec §8.3), shards, pickaxe, backpack
 --     meter (red when full), bars, hopper and production line
 --   * "While you were away" panel (spec §6.4)
 --   * event panel: core HP bar, core lock, your rank, top three
@@ -19,6 +20,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local UI = require(script.Parent.Parent.UI)
 
 local Children = Fusion.Children
@@ -445,7 +447,12 @@ function HUDController:KnitStart()
 							scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
 							stat(scope, 1, "cash", CASH, scope:Computed(function(use)
 								return Format.number(use(cashShown))
-							end), "CASH"),
+							end), scope:Computed(function(use)
+								-- The rebirth cash multiplier, once there is one (spec §8.3)
+								local s = use(playerState)
+								local multiplier = Rebirth.multiplier(if s then s.rebirths else 0)
+								return if multiplier > 1 then "CASH  ·  REBIRTH ×" .. Format.number(multiplier) else "CASH"
+							end)),
 							stat(scope, 2, "shard", SHARD, scope:Computed(function(use)
 								local s = use(playerState)
 								return Format.number(if s then s.shards else 0)
