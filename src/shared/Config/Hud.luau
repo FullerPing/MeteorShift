@@ -46,13 +46,25 @@ Hud.TouchRow = {
 	TextSize = 15,
 }
 
--- The event card sits under the buttons (touch) or at this base offset (mouse)
--- Smallest scale of the tutorial card on touch
+-- Smallest scale of the tutorial card on touch (so its Skip button can reach MinTouch)
 Hud.TouchCardScale = 0.75
 
+-- The event card sits under the buttons (touch) or at this base offset (mouse)
 Hud.EventPanel = { Width = 278, Height = 204, Top = 82, Gap = 6 }
 -- The event clock at the top centre (base units; its top edge is 10 px under the bar)
 Hud.Timer = { Width = 250, Height = 66, Top = 10 }
+
+-- The left cards (base units). Mouse: stacked down the left at the Top offsets (below the
+-- top bar). Touch: the stack when it clears the thumbstick area, otherwise two columns
+-- in the band between the top bar and the thumbstick (Resources, then Equipment over
+-- Production), scaled down to fit that band and to stay left of the clock.
+Hud.LeftCards = {
+	X = 14,
+	Gap = 6,
+	Resources = { Width = 236, Height = 266, Top = 80 },
+	Equipment = { Width = 236, Height = 70, Top = 356 },
+	Production = { Width = 236, Height = 142, Top = 436 },
+}
 
 -- Roblox's own touch controls, which the HUD has to keep clear of. Mirrors TouchGui: the
 -- jump button is 70 px on small screens (shorter side <= SmallMaxSide) and 120 px on
@@ -71,6 +83,10 @@ Hud.Thumbstick = { Width = 220, Height = 220 }
 Hud.Mine = {
 	SmallSize = 84,
 	LargeSize = 104,
+	-- On short screens the button shrinks (not below MinSize) to stay clear of the event
+	-- card above it
+	MinSize = 60,
+	EventGap = 4,
 	Gap = 10, -- above the jump button
 	-- "In front of the character": only targets whose direction has at least this dot
 	-- product with where the character faces count (0 = the front half, 90 degrees each side)

@@ -32,6 +32,8 @@ export type Layout = {
 	buttonScale: number,
 	buttonTextSize: number?, -- fixed text size for the touch row (nil: keep each button's own)
 	timer: Rect,
+	leftCards: { [string]: Rect }, -- Resources, Equipment, Production
+	leftScale: number, -- the scale to draw the left cards at
 	eventPanel: Rect,
 	tutorialY: number, -- gui y (below the top bar) of the tutorial card when it sits at the right
 	mine: Rect?, -- touch only
@@ -80,6 +82,13 @@ function HudLayout.compute(viewport: Vector2, touch: boolean, inset: number?): L
 	local order = Hud.ButtonOrder
 	local count = #order
 
+	local timer: Rect = {
+		x = width / 2 - Hud.Timer.Width * scale / 2,
+		y = topInset + Hud.Timer.Top,
+		w = Hud.Timer.Width * scale,
+		h = Hud.Timer.Height * scale,
+	}
+
 	local buttons: { [string]: Rect } = {}
 	local buttonBase: Vector2
 	local buttonScale: number
@@ -89,13 +98,17 @@ function HudLayout.compute(viewport: Vector2, touch: boolean, inset: number?): L
 
 	if touch then
 		local row = Hud.TouchRow
-		buttonBase = Vector2.new(row.Width, row.Height)
+		-- Narrow screens: the buttons get narrower (never under MinTouch) rather than run
+		-- into the clock
+		local room = width - row.Right - (timer.x + timer.w + row.Gap) - (count - 1) * row.Gap
+		local buttonWidth = math.clamp(math.floor(room / count), Hud.MinTouch, row.Width)
+		buttonBase = Vector2.new(buttonWidth, row.Height)
 		buttonScale = 1
 		buttonTextSize = row.TextSize
-		local left = width - row.Right - (count * row.Width + (count - 1) * row.Gap)
+		local left = width - row.Right - (count * buttonWidth + (count - 1) * row.Gap)
 		local top = topInset + row.Top
 		for i, name in order do
-			buttons[name] = { x = left + (i - 1) * (row.Width + row.Gap), y = top, w = row.Width, h = row.Height }
+			buttons[name] = { x = left + (i - 1) * (buttonWidth + row.Gap), y = top, w = buttonWidth, h = row.Height }
 		end
 		eventTop = top + row.Height + Hud.EventPanel.Gap
 		-- The card has the row's place to itself: centred under the clock
@@ -121,13 +134,6 @@ function HudLayout.compute(viewport: Vector2, touch: boolean, inset: number?): L
 		w = panel.Width * scale,
 		h = panel.Height * scale,
 	}
-	local timer: Rect = {
-		x = width / 2 - Hud.Timer.Width * scale / 2,
-		y = topInset + Hud.Timer.Top,
-		w = Hud.Timer.Width * scale,
-		h = Hud.Timer.Height * scale,
-	}
-
 	local mine: Rect? = nil
 	local jump: Rect? = nil
 	local thumbstick: Rect? = nil
@@ -141,11 +147,47 @@ function HudLayout.compute(viewport: Vector2, touch: boolean, inset: number?): L
 			h = Hud.Thumbstick.Height,
 		}
 		local size = if math.min(width, height) <= Hud.Jump.SmallMaxSide then Hud.Mine.SmallSize else Hud.Mine.LargeSize
+		-- Shrink on short screens so it stays under the event card
+		local room = jumpRect.y - Hud.Mine.Gap - (eventPanel.y + eventPanel.h + Hud.Mine.EventGap)
+		size = math.clamp(math.floor(room), Hud.Mine.MinSize, size)
 		mine = {
 			x = jumpRect.x + jumpRect.w - size, -- right edges aligned
 			y = jumpRect.y - Hud.Mine.Gap - size,
 			w = size,
 			h = size,
+		}
+	end
+
+	-- The left cards (Resources, Equipment, Production)
+	local cards = Hud.LeftCards
+	local leftCards: { [string]: Rect } = {}
+	local leftScale = scale
+	local thumbTop = if thumbstick then thumbstick.y else height
+	local stackBottom = topInset + (cards.Production.Top + cards.Production.Height) * scale
+	if not touch or stackBottom <= thumbTop - cards.Gap then
+		for name, card in { Resources = cards.Resources, Equipment = cards.Equipment, Production = cards.Production } do
+			leftCards[name] = {
+				x = cards.X,
+				y = topInset + card.Top * scale,
+				w = card.Width * scale,
+				h = card.Height * scale,
+			}
+		end
+	else
+		-- Two columns in the band above the thumbstick area and left of the clock
+		local top = topInset + Hud.TouchRow.Top
+		local byHeight = (thumbTop - cards.Gap - top) / cards.Resources.Height
+		local byWidth = (timer.x - cards.Gap - cards.X - cards.Gap) / (2 * cards.Resources.Width)
+		leftScale = math.min(scale, byHeight, byWidth)
+		local w = cards.Resources.Width * leftScale
+		local secondX = cards.X + w + cards.Gap
+		leftCards.Resources = { x = cards.X, y = top, w = w, h = cards.Resources.Height * leftScale }
+		leftCards.Equipment = { x = secondX, y = top, w = w, h = cards.Equipment.Height * leftScale }
+		leftCards.Production = {
+			x = secondX,
+			y = top + (cards.Equipment.Height * leftScale) + cards.Gap,
+			w = w,
+			h = cards.Production.Height * leftScale,
 		}
 	end
 
@@ -159,6 +201,8 @@ function HudLayout.compute(viewport: Vector2, touch: boolean, inset: number?): L
 		buttonScale = buttonScale,
 		buttonTextSize = buttonTextSize,
 		timer = timer,
+		leftCards = leftCards,
+		leftScale = leftScale,
 		eventPanel = eventPanel,
 		tutorialY = tutorialY,
 		mine = mine,

@@ -12,6 +12,9 @@ return function(t: any)
 
 	local viewports = {
 		{ name = "844x390", size = Vector2.new(844, 390), touch = true },
+		-- Small phones in landscape, where the row and the event card are tightest
+		{ name = "812x375", size = Vector2.new(812, 375), touch = true },
+		{ name = "780x360", size = Vector2.new(780, 360), touch = true },
 		{ name = "1334x750", size = Vector2.new(1334, 750), touch = true },
 		{ name = "1920x1080", size = Vector2.new(1920, 1080), touch = false },
 		-- a small desktop window, the other place the column meets the screen edge
@@ -78,6 +81,28 @@ return function(t: any)
 				t.ok(not HudLayout.overlaps(mine, layout.eventPanel), v.name .. " MINE vs event card")
 				t.ok(not HudLayout.overlaps(mine, layout.topBar), v.name .. " MINE vs top bar")
 				t.ok(HudLayout.inside(mine, screen(v.size)), v.name .. " MINE on screen")
+			end
+		end
+	end)
+
+	t.test("the left cards clear the top bar, the clock, the thumbstick area and each other", function()
+		for _, v in viewports do
+			local layout = HudLayout.compute(v.size, v.touch)
+			local names = { "Resources", "Equipment", "Production" }
+			for i, name in names do
+				local card = layout.leftCards[name]
+				t.ok(HudLayout.inside(card, screen(v.size)), v.name .. " " .. name .. " on screen")
+				t.ok(not HudLayout.overlaps(card, layout.topBar), v.name .. " " .. name .. " vs top bar")
+				t.ok(not HudLayout.overlaps(card, layout.timer), v.name .. " " .. name .. " vs clock")
+				if layout.thumbstick then
+					t.ok(not HudLayout.overlaps(card, layout.thumbstick), v.name .. " " .. name .. " vs thumbstick")
+				end
+				for j = i + 1, #names do
+					t.ok(not HudLayout.overlaps(card, layout.leftCards[names[j]]), v.name .. " " .. name .. " vs " .. names[j])
+				end
+				for _, button in Hud.ButtonOrder do
+					t.ok(not HudLayout.overlaps(card, layout.buttons[button]), v.name .. " " .. name .. " vs " .. button)
+				end
 			end
 		end
 	end)

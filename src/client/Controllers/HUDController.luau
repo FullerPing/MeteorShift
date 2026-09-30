@@ -21,6 +21,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 
 local Children = Fusion.Children
@@ -159,10 +160,21 @@ function HUDController:KnitStart()
 	local function scale()
 		return scope:New("UIScale")({ Scale = hudScale })
 	end
-	local function leftPosition(y: number)
+	-- The Resources, Equipment and Production cards: where and how big comes from the layout
+	-- (a stack on the left, or two columns above the thumbstick area on touch)
+	local function leftPosition(name: string)
 		return scope:Computed(function(use)
-			return UDim2.fromOffset(14, y * use(hudScale))
+			local l = use(hud)
+			local rect = l.leftCards[name]
+			return UDim2.fromOffset(rect.x, rect.y - l.inset)
 		end)
+	end
+	local function leftScale()
+		return scope:New("UIScale")({
+			Scale = scope:Computed(function(use)
+				return use(hud).leftScale
+			end),
+		})
 	end
 
 	local meteorState = scope:Value(nil :: any)
@@ -407,12 +419,12 @@ function HUDController:KnitStart()
 			-- Resources share one quiet backing; equipment and the factory get their own cards.
 			scope:New("Frame")({
 				Name = "Resources",
-				Position = leftPosition(80),
+				Position = leftPosition("Resources"),
 				Size = UDim2.fromOffset(236, 266),
 				BackgroundColor3 = UI.PANEL_DARK,
 				BackgroundTransparency = 0.08,
 				[Children] = {
-					scale(),
+					leftScale(),
 					UI.cardFill(scope),
 					UI.body(scope, {
 						Position = UDim2.fromOffset(14, 11),
@@ -477,12 +489,12 @@ function HUDController:KnitStart()
 			}),
 			scope:New("Frame")({
 				Name = "Equipment",
-				Position = leftPosition(356),
+				Position = leftPosition("Equipment"),
 				Size = UDim2.fromOffset(236, 70),
 				BackgroundColor3 = UI.PANEL_DARK,
 				BackgroundTransparency = 0.08,
 				[Children] = {
-					scale(),
+					leftScale(),
 					UI.cardFill(scope),
 					label(scope, {
 						Position = UDim2.fromOffset(8, 10),
@@ -517,12 +529,12 @@ function HUDController:KnitStart()
 			}),
 			scope:New("Frame")({
 				Name = "Production",
-				Position = leftPosition(436),
+				Position = leftPosition("Production"),
 				Size = UDim2.fromOffset(236, 142),
 				BackgroundColor3 = UI.PANEL_DARK,
 				BackgroundTransparency = 0.08,
 				[Children] = {
-					scale(),
+					leftScale(),
 					UI.cardFill(scope),
 					label(scope, {
 						Position = UDim2.fromOffset(14, 9),
@@ -935,10 +947,13 @@ function HUDController:KnitStart()
 	-- "+$4.8M" rises off the cash counter on every sale
 	EconomyService.Sold:Connect(function(bars: number, cash: number)
 		showToast("Sold " .. Format.number(bars) .. " bars")
-		local currentScale = Fusion.peek(hudScale)
+		local layout = Fusion.peek(hud)
+		local currentScale = layout.leftScale
+		local card = layout.leftCards.Resources
+		local cardY = card.y - layout.inset
 		local floater = Instance.new("TextLabel")
 		floater.BackgroundTransparency = 1
-		floater.Position = UDim2.fromOffset(14 + 63 * currentScale, 104 * currentScale)
+		floater.Position = UDim2.fromOffset(card.x + 63 * currentScale, cardY + 24 * currentScale)
 		floater.Size = UDim2.fromOffset(200, 36)
 		floater.Font = FONT
 		floater.Text = "+" .. Format.cash(cash)
@@ -950,7 +965,7 @@ function HUDController:KnitStart()
 		floater.Parent = ui
 		local info = TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		TweenService:Create(floater, info, {
-			Position = UDim2.fromOffset(14 + 63 * currentScale, 62 * currentScale),
+			Position = UDim2.fromOffset(card.x + 63 * currentScale, cardY - 18 * currentScale),
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,
 		}):Play()

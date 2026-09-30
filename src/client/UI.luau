@@ -241,9 +241,13 @@ function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
 		return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
 	end
 	local touch = scope:Value(isTouch())
-	local inset = GuiService:GetGuiInset().Y
+	local inset = scope:Value(GuiService:GetGuiInset().Y)
+	local function refreshInset()
+		inset:set(GuiService:GetGuiInset().Y)
+	end
 	local cameraConnection: RBXScriptConnection? = nil
 	local function bindCamera()
+		refreshInset()
 		if cameraConnection then
 			cameraConnection:Disconnect()
 			cameraConnection = nil
@@ -252,6 +256,7 @@ function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
 		if camera then
 			viewport:set(camera.ViewportSize)
 			cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+				refreshInset()
 				viewport:set(camera.ViewportSize)
 			end)
 		end
@@ -264,8 +269,16 @@ function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
 	table.insert(scope, UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(function()
 		touch:set(isTouch())
 	end))
+	-- The top bar's height can change (rotation, a different top bar), so it is re-read whenever
+	-- the viewport changes and when Roblox reports a new inset
+	local insetSignal = select(2, pcall(function()
+		return GuiService:GetPropertyChangedSignal("TopbarInset")
+	end))
+	if typeof(insetSignal) == "RBXScriptSignal" then
+		table.insert(scope, insetSignal:Connect(refreshInset))
+	end
 	return scope:Computed(function(use)
-		return HudLayout.compute(use(viewport), use(touch), inset)
+		return HudLayout.compute(use(viewport), use(touch), use(inset))
 	end)
 end
 
