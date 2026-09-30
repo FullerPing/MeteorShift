@@ -8,6 +8,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local Price = require(ReplicatedStorage.Shared.Price)
 local UI = require(script.Parent.Parent.UI)
 local EquipmentPreview = require(script.Parent.Parent.EquipmentPreview)
@@ -134,24 +135,11 @@ function ShopController:KnitStart()
 	local scope = Fusion.scoped(Fusion)
 	local open, tab, glow = scope:Value(wantOpen), scope:Value("pickaxe"), scope:Value(wantHighlight)
 	local busy, notice = scope:Value(false), scope:Value("")
-	local viewport = scope:Value(Vector2.new(1280, 720))
 	isOpen, highlight = open, glow
-	local function updateViewport()
-		local camera = workspace.CurrentCamera
-		if camera then viewport:set(camera.ViewportSize) end
-	end
-	local cameraConnection: RBXScriptConnection? = nil
-	local function bindCamera()
-		if cameraConnection then cameraConnection:Disconnect() end
-		local camera = workspace.CurrentCamera
-		if camera then cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateViewport) end
-		updateViewport()
-	end
-	bindCamera()
-	table.insert(scope, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
-	local scale = scope:Computed(function(use) return math.min(1, math.max(0.35, (use(viewport).Y - 52) / 600)) end)
-	local hudScale = scope:Computed(function(use) local v = use(viewport) return math.clamp(math.min(v.X / 1050, v.Y / 760), 0.45, 1) end)
-	local width = scope:Computed(function(use) return math.min(940, (use(viewport).X - 24) / use(scale)) end)
+	local hud = UI.hud(scope)
+	local panelFit = scope:Computed(function(use) local l = use(hud) return HudLayout.panel(l.viewport, 940, 600, l.inset) end)
+	local scale = scope:Computed(function(use) return use(panelFit).scale end)
+	local width = scope:Computed(function(use) return use(panelFit).width end)
 	local compact = scope:Computed(function(use) return use(width) < 650 end)
 	local playerState = scope:Value(nil :: any)
 	PlayerStateService.State:Observe(function(value) playerState:set(value) end)
@@ -293,11 +281,10 @@ function ShopController:KnitStart()
 	scope:New("ScreenGui")({
 		Name = "Shop", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 20, Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
-			UI.button(scope, {
-				Name = "ShopButton", AnchorPoint = Vector2.new(1, 0), Position = scope:Computed(function(use) return UDim2.new(1, -18, 0, 36 + 296 * use(hudScale)) end), Size = UDim2.fromOffset(138, 46), Text = "SHOP", TextSize = 28,
+			UI.hudButton(scope, hud, "SHOP", 28, {
+				Name = "ShopButton", Text = "SHOP",
 				BackgroundColor3 = scope:Spring(scope:Computed(function(use) return if use(glow) then UI.GREEN else UI.CASH end), 12, 1),
 				Visible = scope:Computed(function(use) return not use(open) end),
-				[Children] = { scope:New("UIScale")({ Scale = hudScale }) },
 				[OnEvent("Activated")] = function() open:set(true) end,
 			}),
 			scope:New("TextButton")({
@@ -306,7 +293,7 @@ function ShopController:KnitStart()
 				[OnEvent("Activated")] = function() open:set(false) end,
 			}),
 			scope:New("Frame")({
-				Name = "Panel", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+				Name = "Panel", AnchorPoint = Vector2.new(0.5, 0.5), Position = scope:Computed(function(use) return UDim2.new(0.5, 0, 0.5, use(hud).inset / 2) end),
 				Size = scope:Computed(function(use) return UDim2.fromOffset(use(width), 600) end), BackgroundColor3 = UI.PANEL, Visible = open, ZIndex = 3, Active = true,
 				[Children] = {
 					UI.panelFill(scope), scope:New("UIScale")({ Scale = scale }),
@@ -314,7 +301,7 @@ function ShopController:KnitStart()
 					UI.label(scope, { Position = UDim2.fromOffset(22, 12), Size = UDim2.fromOffset(246, 37), Text = "GEAR SHOP", TextSize = 32, TextColor3 = UI.CASH, TextXAlignment = Enum.TextXAlignment.Left }),
 					UI.body(scope, { Position = UDim2.fromOffset(24, 53), Size = UDim2.fromOffset(240, 24), Text = "Mine bigger. Build faster.", TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left, Visible = scope:Computed(function(use) return not use(compact) end) }),
 					balance("cash", 0, 146), balance("shard", 156, 126),
-					UI.button(scope, { Name = "Close", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 18), Size = UDim2.fromOffset(42, 42), Text = "X", TextSize = 23, BackgroundColor3 = UI.RED, TextColor3 = UI.WHITE, [OnEvent("Activated")] = function() open:set(false) end }),
+					UI.button(scope, { Name = "Close", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -18, 0, 18), Size = scope:Computed(function(use) local s = HudLayout.closeSize(42, use(scale)) return UDim2.fromOffset(s, s) end), Text = "X", TextSize = 23, BackgroundColor3 = UI.RED, TextColor3 = UI.WHITE, [OnEvent("Activated")] = function() open:set(false) end }),
 					scope:New("Frame")({ Position = UDim2.fromOffset(20, 112), Size = UDim2.new(1, -40, 0, 40), BackgroundTransparency = 1,
 						[Children] = { scope:New("UIListLayout")({ FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 9), SortOrder = Enum.SortOrder.LayoutOrder }), tabButtons },
 					}),

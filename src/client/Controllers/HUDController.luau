@@ -152,26 +152,9 @@ function HUDController:KnitStart()
 	local ShopService = Knit.GetService("ShopService")
 
 	local scope = Fusion.scoped(Fusion)
-	local viewport = scope:Value(Vector2.new(1280, 720))
-	local viewportConnection: RBXScriptConnection? = nil
-	local function observeCamera()
-		if viewportConnection then
-			viewportConnection:Disconnect()
-		end
-		local camera = workspace.CurrentCamera
-		if camera then
-			local function updateViewport()
-				viewport:set(camera.ViewportSize)
-			end
-			updateViewport()
-			viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateViewport)
-		end
-	end
-	observeCamera()
-	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(observeCamera)
+	local hud = UI.hud(scope)
 	local hudScale = scope:Computed(function(use)
-		local size = use(viewport)
-		return math.clamp(math.min(size.X / 1050, size.Y / 760), 0.45, 1)
+		return use(hud).scale
 	end)
 	local function scale()
 		return scope:New("UIScale")({ Scale = hudScale })
@@ -676,7 +659,8 @@ function HUDController:KnitStart()
 				Name = "EventPanel",
 				AnchorPoint = Vector2.new(1, 0),
 				Position = scope:Computed(function(use)
-					return UDim2.new(1, -18, 0, 82 * use(hudScale))
+					local rect = HudLayout.toGui(use(hud).eventPanel, use(hud).inset)
+					return UDim2.new(1, -Config.Hud.EdgeMargin, 0, rect.y)
 				end),
 				Size = UDim2.fromOffset(278, 204),
 				BackgroundColor3 = UI.PANEL_DARK,
@@ -776,7 +760,9 @@ function HUDController:KnitStart()
 				Name = "Banner",
 				AnchorPoint = Vector2.new(0.5, 0),
 				Position = scope:Computed(function(use)
-					return UDim2.new(0.5, 0, 0, 92 * use(hudScale))
+					local l = use(hud)
+					-- Under the touch button row, which reaches into the usual spot
+					return UDim2.new(0.5, 0, 0, if l.touch then l.eventPanel.y - l.inset else 92 * l.scale)
 				end),
 				Size = UDim2.fromOffset(480, 38),
 				Text = scope:Computed(function(use)

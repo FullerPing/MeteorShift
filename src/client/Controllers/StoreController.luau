@@ -24,6 +24,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
@@ -39,9 +40,6 @@ type ButtonState = "buy" | "owned" | "offsale" | "unavailable" | "credit"
 
 local PANEL_WIDTH, PANEL_HEIGHT = 620, 470
 local ROW_HEIGHT, ROW_GAP = 84, 8
--- The HUD button column: SHOP at 296, then INDEX, REBIRTH, and STORE under REBIRTH
-local BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_GAP = 138, 46, 10
-local STORE_BUTTON_Y = 296 + 3 * (BUTTON_HEIGHT + BUTTON_GAP)
 
 local BUTTON_TEXT: { [ButtonState]: string } = {
 	buy = "BUY",
@@ -214,31 +212,16 @@ function StoreController:KnitStart()
 	end)
 
 	-- Same sizing as the other panels: the panel scales to fit the screen height
-	local viewport = scope:Value(Vector2.new(1280, 720))
-	local cameraConnection: RBXScriptConnection? = nil
-	local function bindCamera()
-		if cameraConnection then
-			cameraConnection:Disconnect()
-		end
-		local camera = workspace.CurrentCamera
-		if camera then
-			cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-				viewport:set(camera.ViewportSize)
-			end)
-			viewport:set(camera.ViewportSize)
-		end
-	end
-	bindCamera()
-	table.insert(scope, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
-	local scale = scope:Computed(function(use)
-		return math.min(1, math.max(0.35, (use(viewport).Y - 52) / PANEL_HEIGHT))
+	local hud = UI.hud(scope)
+	local panelFit = scope:Computed(function(use)
+		local l = use(hud)
+		return HudLayout.panel(l.viewport, PANEL_WIDTH, PANEL_HEIGHT, l.inset)
 	end)
-	local hudScale = scope:Computed(function(use)
-		local v = use(viewport)
-		return math.clamp(math.min(v.X / 1050, v.Y / 760), 0.45, 1)
+	local scale = scope:Computed(function(use)
+		return use(panelFit).scale
 	end)
 	local width = scope:Computed(function(use)
-		return math.min(PANEL_WIDTH, (use(viewport).X - 24) / use(scale))
+		return use(panelFit).width
 	end)
 
 	local ownedPasses = scope:Value({} :: { [string]: boolean })
@@ -377,18 +360,11 @@ function StoreController:KnitStart()
 		DisplayOrder = 23,
 		Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
-			UI.button(scope, {
+			UI.hudButton(scope, hud, "STORE", 28, {
 				Name = "StoreButton",
-				AnchorPoint = Vector2.new(1, 0),
-				Position = scope:Computed(function(use)
-					return UDim2.new(1, -18, 0, 36 + STORE_BUTTON_Y * use(hudScale))
-				end),
-				Size = UDim2.fromOffset(BUTTON_WIDTH, BUTTON_HEIGHT),
 				Text = "STORE",
-				TextSize = 28,
 				BackgroundColor3 = UI.SHARD,
 				Visible = buttonVisible,
-				[Children] = { scope:New("UIScale")({ Scale = hudScale }) },
 				[OnEvent("Activated")] = function()
 					open:set(true)
 				end,
@@ -411,7 +387,9 @@ function StoreController:KnitStart()
 			scope:New("Frame")({
 				Name = "Panel",
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
+				Position = scope:Computed(function(use)
+					return UDim2.new(0.5, 0, 0.5, use(hud).inset / 2)
+				end),
 				Size = scope:Computed(function(use)
 					return UDim2.fromOffset(use(width), PANEL_HEIGHT)
 				end),
@@ -443,7 +421,10 @@ function StoreController:KnitStart()
 						Name = "Close",
 						AnchorPoint = Vector2.new(1, 0),
 						Position = UDim2.new(1, -18, 0, 18),
-						Size = UDim2.fromOffset(42, 42),
+						Size = scope:Computed(function(use)
+							local size = HudLayout.closeSize(42, use(scale))
+							return UDim2.fromOffset(size, size)
+						end),
 						Text = "X",
 						TextSize = 23,
 						BackgroundColor3 = UI.RED,

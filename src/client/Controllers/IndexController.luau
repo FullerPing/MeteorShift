@@ -20,6 +20,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local UI = require(script.Parent.Parent.UI)
 
@@ -37,9 +38,6 @@ local RICH = Config.Index.RichColor
 
 local PANEL_WIDTH, PANEL_HEIGHT = 740, 520
 local CARD_WIDTH, CARD_HEIGHT, CARD_GAP = 160, 222, 12
--- The HUD button column (ShopController's SHOP button sits at 296): INDEX goes right under it
-local BUTTON_WIDTH, BUTTON_HEIGHT = 138, 46
-local INDEX_BUTTON_Y = 296 + BUTTON_HEIGHT + 10
 
 -- "+2%" from a fraction of 0.02
 local function percent(fraction: number): string
@@ -293,31 +291,16 @@ function IndexController:KnitStart()
 	end)
 
 	-- Same sizing as the shop: the panel scales to fit the screen height
-	local viewport = scope:Value(Vector2.new(1280, 720))
-	local cameraConnection: RBXScriptConnection? = nil
-	local function bindCamera()
-		if cameraConnection then
-			cameraConnection:Disconnect()
-		end
-		local camera = workspace.CurrentCamera
-		if camera then
-			cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-				viewport:set(camera.ViewportSize)
-			end)
-			viewport:set(camera.ViewportSize)
-		end
-	end
-	bindCamera()
-	table.insert(scope, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
-	local scale = scope:Computed(function(use)
-		return math.min(1, math.max(0.35, (use(viewport).Y - 52) / PANEL_HEIGHT))
+	local hud = UI.hud(scope)
+	local panelFit = scope:Computed(function(use)
+		local l = use(hud)
+		return HudLayout.panel(l.viewport, PANEL_WIDTH, PANEL_HEIGHT, l.inset)
 	end)
-	local hudScale = scope:Computed(function(use)
-		local v = use(viewport)
-		return math.clamp(math.min(v.X / 1050, v.Y / 760), 0.45, 1)
+	local scale = scope:Computed(function(use)
+		return use(panelFit).scale
 	end)
 	local width = scope:Computed(function(use)
-		return math.min(PANEL_WIDTH, (use(viewport).X - 24) / use(scale))
+		return use(panelFit).width
 	end)
 	local compact = scope:Computed(function(use)
 		return use(width) < 650
@@ -382,21 +365,14 @@ function IndexController:KnitStart()
 		DisplayOrder = 21,
 		Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
-			UI.button(scope, {
+			UI.hudButton(scope, hud, "INDEX", 28, {
 				Name = "IndexButton",
-				AnchorPoint = Vector2.new(1, 0),
-				Position = scope:Computed(function(use)
-					return UDim2.new(1, -18, 0, 36 + INDEX_BUTTON_Y * use(hudScale))
-				end),
-				Size = UDim2.fromOffset(BUTTON_WIDTH, BUTTON_HEIGHT),
 				Text = "INDEX",
-				TextSize = 28,
 				-- Lights up after a new find until the panel is opened
 				BackgroundColor3 = scope:Spring(scope:Computed(function(use)
 					return if use(fresh) then UI.GREEN else UI.SHARD
 				end), 12, 1),
 				Visible = buttonVisible,
-				[Children] = { scope:New("UIScale")({ Scale = hudScale }) },
 				[OnEvent("Activated")] = function()
 					open:set(true)
 				end,
@@ -419,7 +395,9 @@ function IndexController:KnitStart()
 			scope:New("Frame")({
 				Name = "Panel",
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
+				Position = scope:Computed(function(use)
+					return UDim2.new(0.5, 0, 0.5, use(hud).inset / 2)
+				end),
 				Size = scope:Computed(function(use)
 					return UDim2.fromOffset(use(width), PANEL_HEIGHT)
 				end),
@@ -493,7 +471,10 @@ function IndexController:KnitStart()
 						Name = "Close",
 						AnchorPoint = Vector2.new(1, 0),
 						Position = UDim2.new(1, -18, 0, 18),
-						Size = UDim2.fromOffset(42, 42),
+						Size = scope:Computed(function(use)
+							local size = HudLayout.closeSize(42, use(scale))
+							return UDim2.fromOffset(size, size)
+						end),
 						Text = "X",
 						TextSize = 23,
 						BackgroundColor3 = UI.RED,
@@ -532,11 +513,18 @@ function IndexController:KnitStart()
 
 	-- "+1 Magnetite" rises off the INDEX button on a repeat find
 	local function floatUp(text: string, color: Color3)
-		local s = Fusion.peek(hudScale)
+		local layout = Fusion.peek(hud)
+		local s = layout.scale
+		local rect = layout.buttons.INDEX
 		local label = Instance.new("TextLabel")
 		label.AnchorPoint = Vector2.new(1, 0.5)
 		label.BackgroundTransparency = 1
-		label.Position = UDim2.new(1, -18 - (BUTTON_WIDTH + 8) * s, 0, 36 + (INDEX_BUTTON_Y + BUTTON_HEIGHT / 2) * s)
+		-- Left of the button in the mouse column; under it in the touch row
+		if layout.touch then
+			label.Position = UDim2.fromOffset(rect.x + rect.w, rect.y + rect.h + 18)
+		else
+			label.Position = UDim2.fromOffset(rect.x - 8, rect.y + rect.h / 2)
+		end
 		label.Size = UDim2.fromOffset(280, 30)
 		label.Font = UI.FONT
 		label.Text = text

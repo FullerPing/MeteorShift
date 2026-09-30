@@ -12,6 +12,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 
 local Children = Fusion.Children
@@ -201,27 +202,20 @@ function TutorialController:KnitStart()
 	local ShopController = Knit.GetController("ShopController")
 
 	local scope = Fusion.scoped(Fusion)
-	local viewport = scope:Value(Vector2.new(1280, 720))
-	local viewportConnection: RBXScriptConnection? = nil
-	local function observeCamera()
-		if viewportConnection then viewportConnection:Disconnect() end
-		local camera = workspace.CurrentCamera
-		if camera then
-			local function updateViewport()
-				viewport:set(camera.ViewportSize)
-			end
-			updateViewport()
-			viewportConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(updateViewport)
-		end
-	end
-	observeCamera()
-	workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(observeCamera)
+	local hud = UI.hud(scope)
 	local hudScale = scope:Computed(function(use)
-		local size = use(viewport)
-		return math.clamp(math.min(size.X / 1050, size.Y / 760), 0.45, 1)
+		return use(hud).scale
+	end)
+	-- Touch devices have the whole right edge to Roblox and the MINE button, and the buttons
+	-- in a row on top: the card stays centred under the clock there
+	-- The card is never smaller than TouchCardScale on touch, so its Skip button can reach 44 px
+	local cardScale = scope:Computed(function(use)
+		local l = use(hud)
+		return if l.touch then math.max(l.scale, Config.Hud.TouchCardScale) else l.scale
 	end)
 	local compact = scope:Computed(function(use)
-		return use(viewport).X < 1000
+		local l = use(hud)
+		return l.viewport.X < 1000 and not l.touch
 	end)
 	local step = scope:Value(nil :: any)
 	local meteorState = scope:Value(nil :: any)
@@ -294,7 +288,7 @@ function TutorialController:KnitStart()
 				end),
 				Position = scope:Computed(function(use)
 					return if use(compact)
-						then UDim2.new(1, -18, 0, 354 * use(hudScale))
+						then UDim2.new(1, -Config.Hud.EdgeMargin, 0, use(hud).tutorialY)
 						else UDim2.new(0.5, 0, 0, 138 * use(hudScale))
 				end),
 				Size = UDim2.fromOffset(380, 116),
@@ -302,7 +296,7 @@ function TutorialController:KnitStart()
 				BackgroundTransparency = 0.04,
 				Visible = shown,
 				[Children] = {
-					scope:New("UIScale")({ Scale = hudScale }),
+					scope:New("UIScale")({ Scale = cardScale }),
 					UI.cardFill(scope),
 					UI.body(scope, {
 						Position = UDim2.fromOffset(14, 10),
@@ -338,7 +332,10 @@ function TutorialController:KnitStart()
 					UI.button(scope, {
 						AnchorPoint = Vector2.new(1, 0),
 						Position = UDim2.new(1, -10, 0, 7),
-						Size = UDim2.fromOffset(58, 25),
+						Size = scope:Computed(function(use)
+							local s = use(cardScale)
+							return UDim2.fromOffset(math.max(58, Config.Hud.MinTouch / s), HudLayout.closeSize(25, s))
+						end),
 						Text = "Skip",
 						TextSize = 15,
 						BackgroundColor3 = UI.CARD,

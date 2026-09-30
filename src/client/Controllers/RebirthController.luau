@@ -18,6 +18,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local UI = require(script.Parent.Parent.UI)
 
@@ -29,9 +30,6 @@ local RebirthController = Knit.CreateController({ Name = "RebirthController" })
 type Scope = UI.Scope
 
 local PANEL_WIDTH, PANEL_HEIGHT = 620, 470
--- The HUD button column: SHOP at 296, INDEX one button below it, REBIRTH under INDEX
-local BUTTON_WIDTH, BUTTON_HEIGHT, BUTTON_GAP = 138, 46, 10
-local REBIRTH_BUTTON_Y = 296 + 2 * (BUTTON_HEIGHT + BUTTON_GAP)
 
 local RESETS = "• Cash, back to $0\n• Pickaxe, back to Tier 1\n• Backpack, back to Tier 1\n• Ore in your backpack"
 local KEEPS = "• Your production line, with its ore and bars\n• Bars you carry\n• Core Shards\n• Mineral index and titles"
@@ -88,31 +86,16 @@ function RebirthController:KnitStart()
 	end)
 
 	-- Same sizing as the shop and the index: the panel scales to fit the screen height
-	local viewport = scope:Value(Vector2.new(1280, 720))
-	local cameraConnection: RBXScriptConnection? = nil
-	local function bindCamera()
-		if cameraConnection then
-			cameraConnection:Disconnect()
-		end
-		local camera = workspace.CurrentCamera
-		if camera then
-			cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
-				viewport:set(camera.ViewportSize)
-			end)
-			viewport:set(camera.ViewportSize)
-		end
-	end
-	bindCamera()
-	table.insert(scope, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
-	local scale = scope:Computed(function(use)
-		return math.min(1, math.max(0.35, (use(viewport).Y - 52) / PANEL_HEIGHT))
+	local hud = UI.hud(scope)
+	local panelFit = scope:Computed(function(use)
+		local l = use(hud)
+		return HudLayout.panel(l.viewport, PANEL_WIDTH, PANEL_HEIGHT, l.inset)
 	end)
-	local hudScale = scope:Computed(function(use)
-		local v = use(viewport)
-		return math.clamp(math.min(v.X / 1050, v.Y / 760), 0.45, 1)
+	local scale = scope:Computed(function(use)
+		return use(panelFit).scale
 	end)
 	local width = scope:Computed(function(use)
-		return math.min(PANEL_WIDTH, (use(viewport).X - 24) / use(scale))
+		return use(panelFit).width
 	end)
 	local compact = scope:Computed(function(use)
 		return use(width) < 560
@@ -216,21 +199,14 @@ function RebirthController:KnitStart()
 		DisplayOrder = 22,
 		Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
-			UI.button(scope, {
+			UI.hudButton(scope, hud, "REBIRTH", 26, {
 				Name = "RebirthButton",
-				AnchorPoint = Vector2.new(1, 0),
-				Position = scope:Computed(function(use)
-					return UDim2.new(1, -18, 0, 36 + REBIRTH_BUTTON_Y * use(hudScale))
-				end),
-				Size = UDim2.fromOffset(BUTTON_WIDTH, BUTTON_HEIGHT),
 				Text = "REBIRTH",
-				TextSize = 26,
 				-- Lights up while a rebirth is affordable
 				BackgroundColor3 = scope:Spring(scope:Computed(function(use)
 					return if use(affordable) then UI.GREEN else UI.ORANGE
 				end), 12, 1),
 				Visible = buttonVisible,
-				[Children] = { scope:New("UIScale")({ Scale = hudScale }) },
 				[OnEvent("Activated")] = function()
 					open:set(true)
 				end,
@@ -253,7 +229,9 @@ function RebirthController:KnitStart()
 			scope:New("Frame")({
 				Name = "Panel",
 				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
+				Position = scope:Computed(function(use)
+					return UDim2.new(0.5, 0, 0.5, use(hud).inset / 2)
+				end),
 				Size = scope:Computed(function(use)
 					return UDim2.fromOffset(use(width), PANEL_HEIGHT)
 				end),
@@ -300,7 +278,10 @@ function RebirthController:KnitStart()
 						Name = "Close",
 						AnchorPoint = Vector2.new(1, 0),
 						Position = UDim2.new(1, -18, 0, 18),
-						Size = UDim2.fromOffset(42, 42),
+						Size = scope:Computed(function(use)
+							local size = HudLayout.closeSize(42, use(scale))
+							return UDim2.fromOffset(size, size)
+						end),
 						Text = "X",
 						TextSize = 23,
 						BackgroundColor3 = UI.RED,

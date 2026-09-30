@@ -4,7 +4,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
+
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 
 local Children = Fusion.Children
 
@@ -225,6 +229,84 @@ function UI.button(scope: Scope, props: { [any]: any })
 		children,
 	}
 	return scope:New("TextButton")(base)
+end
+
+
+-- The HUD layout for the current screen (Shared.HudLayout): a Computed that follows the
+-- camera viewport and whether this is a touch-only device (spec §10). Every controller
+-- that places a HUD button or sizes a panel reads it, so the geometry lives in one place.
+function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
+	local viewport = scope:Value(Vector2.new(1280, 720))
+	local function isTouch(): boolean
+		return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+	end
+	local touch = scope:Value(isTouch())
+	local inset = GuiService:GetGuiInset().Y
+	local cameraConnection: RBXScriptConnection? = nil
+	local function bindCamera()
+		if cameraConnection then
+			cameraConnection:Disconnect()
+			cameraConnection = nil
+		end
+		local camera = workspace.CurrentCamera
+		if camera then
+			viewport:set(camera.ViewportSize)
+			cameraConnection = camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
+				viewport:set(camera.ViewportSize)
+			end)
+		end
+	end
+	bindCamera()
+	table.insert(scope, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
+	table.insert(scope, UserInputService:GetPropertyChangedSignal("KeyboardEnabled"):Connect(function()
+		touch:set(isTouch())
+	end))
+	table.insert(scope, UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(function()
+		touch:set(isTouch())
+	end))
+	return scope:Computed(function(use)
+		return HudLayout.compute(use(viewport), use(touch), inset)
+	end)
+end
+
+-- A HUD button (SHOP, INDEX, REBIRTH, STORE): placed, sized and scaled by the layout, for
+-- a ScreenGui with IgnoreGuiInset = true. `textSize` is used unless the touch row sets its
+-- own. `props` are the usual UI.button props (Name, Text, colours, events, Visible).
+function UI.hudButton(
+	scope: Scope,
+	hud: Fusion.Computed<HudLayout.Layout>,
+	name: string,
+	textSize: number,
+	props: { [any]: any }
+)
+	local merged: { [any]: any } = {
+		AnchorPoint = Vector2.zero,
+		Position = scope:Computed(function(use)
+			local rect = use(hud).buttons[name]
+			return UDim2.fromOffset(rect.x, rect.y)
+		end),
+		Size = scope:Computed(function(use)
+			local base = use(hud).buttonBase
+			return UDim2.fromOffset(base.X, base.Y)
+		end),
+		TextSize = scope:Computed(function(use)
+			return use(hud).buttonTextSize or textSize
+		end),
+	}
+	for key, value in props do
+		if key ~= Children then
+			merged[key] = value
+		end
+	end
+	merged[Children] = {
+		scope:New("UIScale")({
+			Scale = scope:Computed(function(use)
+				return use(hud).buttonScale
+			end),
+		}),
+		props[Children],
+	}
+	return UI.button(scope, merged)
 end
 
 return UI
