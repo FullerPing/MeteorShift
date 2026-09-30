@@ -32,7 +32,6 @@ return {
 		firstMeteor = false,
 		firstCoreReward = false,
 		firstRefinery = false,
-		returnedOfflineIncome = false,
 	},
 	stats = {
 		meteorsJoined = 0,

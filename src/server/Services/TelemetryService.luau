@@ -11,8 +11,8 @@
 --     first_meteor_joined     first validated hit on a crust node or the core (flags.firstMeteor)
 --     first_core_reward       first Core Shards received, value = shards (flags.firstCoreReward)
 --     first_refinery_bought   first refinery station upgrade (flags.firstRefinery)
---     returned_offline_income offline catch-up that made bars, value = bars, field = hours
---                             away (flags.returnedOfflineIncome)
+-- * returned_offline_income on every join whose offline catch-up made bars (spec §13),
+--   value = bars, field = hours away (Lib.Telemetry.hoursAway bucket).
 -- * Per meteor event: the summary rows of Lib.Telemetry.eventSummary, logged against
 --   one player in the server since custom events need a player.
 -- * Economy: cash from selling bars and shards from core rewards are sources; pickaxe,
@@ -99,6 +99,8 @@ function TelemetryService:economy(
 		print(Telemetry.line("economy", flowType.Name .. " " .. currency, player.Name, amount, { transactionType, sku }))
 	end
 	call("LogEconomyEvent", function()
+		-- Documented order: (player, flowType, currencyType, amount, endingBalance, transactionType, itemSku, customFields?)
+		-- https://create.roblox.com/docs/reference/engine/classes/AnalyticsService#LogEconomyEvent
 		AnalyticsService:LogEconomyEvent(player, flowType, currency, amount, endingBalance, transactionType, sku)
 	end)
 end
@@ -211,7 +213,7 @@ function TelemetryService:KnitStart()
 	RefineryService.CaughtUp:Connect(function(player: Player, awaySeconds: number, bars: number)
 		if bars > 0 then
 			local hours = Telemetry.hoursAway(awaySeconds, Config.Telemetry.HoursAwayCap)
-			self:milestone(player, "returnedOfflineIncome", "returned_offline_income", bars, { hours })
+			self:custom(player, "returned_offline_income", bars, { hours })
 		end
 	end)
 
