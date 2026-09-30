@@ -74,11 +74,6 @@ function PlayerStateService:GetHopperCapacity(player: Player): number
 	return if data then Refining.hopperCapacity(data) else Config.Home.Stations.hopper.Levels[1].Capacity :: number
 end
 
-function PlayerStateService:IsBackpackFull(player: Player): boolean
-	local data = self:Get(player)
-	return data ~= nil and sum(data.backpack) >= self:GetCapacity(player)
-end
-
 -- Value of the bars a player carries, before sale multipliers.
 function PlayerStateService:BarValue(bars: { [string]: number }): number
 	local value = 0

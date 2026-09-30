@@ -167,18 +167,6 @@ function DataService:Save(player: Player): boolean
 	return write(profile, false)
 end
 
--- Waits until the player's profile is loaded (or they leave).
-function DataService:WaitForProfile(player: Player): Profile?
-	while player.Parent and not profiles[player] do
-		task.wait(0.1)
-	end
-	return profiles[player]
-end
-
-function DataService:IsMemoryOnly(): boolean
-	return store == nil
-end
-
 function DataService:_load(player: Player)
 	local key = keyFor(player.UserId)
 	local data, reason = nil, nil

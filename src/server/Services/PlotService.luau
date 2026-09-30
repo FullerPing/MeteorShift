@@ -35,14 +35,6 @@ local function setSign(plot: Model, text: string)
 	end
 end
 
-function PlotService:GetPlot(player: Player): Model?
-	return byPlayer[player]
-end
-
-function PlotService:GetOwner(plot: Model): Player?
-	return owners[plot]
-end
-
 -- The owner's production line on their plot, if they have one.
 function PlotService:GetStations(player: Player): Model?
 	local plot = byPlayer[player]
@@ -62,18 +54,6 @@ local function spawnStations(plot: Model): Model?
 	stations:PivotTo(pad.CFrame * CFrame.new(0, pad.Size.Y / 2, 0))
 	stations.Parent = plot
 	return stations
-end
-
--- The plot a part belongs to, if any.
-function PlotService:PlotOf(part: Instance): Model?
-	local node: Instance? = part
-	while node and node ~= workspace do
-		if node:IsA("Model") and node:GetAttribute("PlotId") then
-			return node
-		end
-		node = node.Parent
-	end
-	return nil
 end
 
 function PlotService:_assign(player: Player)

@@ -157,11 +157,6 @@ function NodeService:GetIdleSeconds(id: number): number
 	return if target then os.clock() - target.LastHit else 0
 end
 
-function NodeService:IsAlive(id: number): boolean
-	local target = targets[id]
-	return target ~= nil and target.Hp > 0
-end
-
 -- Distance from a point to the closest point on the part's bounding box.
 local function distanceToPart(part: BasePart, point: Vector3): number
 	local localPoint = part.CFrame:PointToObjectSpace(point)

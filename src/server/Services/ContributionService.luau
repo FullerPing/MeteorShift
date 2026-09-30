@@ -72,10 +72,6 @@ function ContributionService:AddCore(player: Player, power: number)
 	entry.HitCore = true
 end
 
-function ContributionService:GetEntry(player: Player): Entry?
-	return entries[player]
-end
-
 -- Everyone who took part this event, highest contribution first.
 function ContributionService:GetRanked(): { Entry }
 	local list = {}
