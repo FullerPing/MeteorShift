@@ -99,11 +99,11 @@ docs/                  balance.md (economy pacing model), plans/ (spec copy and 
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance and Atmosphere. All tuning numbers live there.
+`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
 
 Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `ActivityService` (who counts as active), `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile, batched State replication), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths), `TelemetryService` (analytics), `MonetizationService` (game passes and developer products). `src/server/Lib` holds the profile template, the pure refinery simulation (`Refining`), the shard reward math (`Rewards`) and the analytics helpers (`Telemetry`).
 
-Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`, `IndexController`, `RebirthController`, `StoreController`, `MobileControlsController`, `AtmosphereController`.
+Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`, `IndexController`, `RebirthController`, `StoreController`, `MobileControlsController`, `AtmosphereController`, `LandingFXController`.
 
 Services announce what players do through server-side signals (`NodeService.Hit`, `MeteorService.Landed`, `RewardService.ShardsAwarded`, `RefineryService.OreDeposited` / `BarsCollected`, `EconomyService.BarsSold`, `ShopService.ItemBought`, `UpgradeService.StationUpgraded`, `MeteorService.Ended`, `RefineryService.CaughtUp`, `RebirthService.Reborn`). The tutorial and `TelemetryService` listen to them.
 
@@ -121,6 +121,8 @@ The Pickaxe Shop (`Workspace.Map.TownSquare.PickaxeShop`) opens the shop through
 
 Two things are cloned at runtime from `ServerStorage.Assets`: the meteor when it lands, and a player's production line (`PlotStations`) when they claim a plot. The plot pads themselves stay in Workspace.
 
+The mountains outside the play area are terrain. `tools/terrain/author-mountains.luau` added 113 rounded peaks in three rings: one just past the boundary ridge, one filling the gaps in the older mountain ring, and a far skyline the haze softens. To rebuild them, run it from the command bar with Play stopped, then save the place. It only adds terrain, so running it again changes nothing.
+
 `default.project.json` only syncs code, so Rojo never touches the map. Edit the map in Studio and save the place. `assets/*.rbxm` are Studio exports of the same instances, kept in git as a backup; use Studio's *Insert from File* to restore them. `assets/Terrain.rbxm` holds the terrain as a TerrainRegion; restore it with `workspace.Terrain:PasteRegion(region, Vector3int16.new(-160, -32, -160), true)`. (Rojo 7.6 can't read the newest Studio binary format, so they aren't wired into a Rojo project.)
 
 ## Fog, atmosphere and lighting
@@ -134,11 +136,20 @@ During a meteor, `AtmosphereController` blends moods on top of the saved values 
 
 Tuning is in `Config.Atmosphere`, the rules in `Shared.AtmosphereMood`. In Studio, setting the boolean attribute `DevMeteorApproachFX` on ReplicatedStorage to `false` turns the approach mood off.
 
+## Ice and Crystal landing effects
+
+When an Ice or Crystal meteor lands, `LandingFXController` grows effects around the crater on each client. Iron meteors get none.
+- Ice: a glaze spreads over the crater floor, glowing cracks race out to a ring of ice spikes, frost creeps outward while the meteor cools, and snow and mist settle. Nodes that refreeze grow rime.
+- Crystal: energy spokes and a ring of light run out to glowing crystals that keep growing while the meteor is down, arcs link them to a gem floating above the core, small crystals sprout as players break the crust, and the arcs brighten as it breaks.
+- When the core cracks the effects shatter; when the meteor cools they wither and sink.
+
+The scene is seeded by the event, so everyone sees the same one, and a player who joins mid-event sees it at the same moment. The pieces never collide or block mining, and stay off the paths, the plaza and the mining area. Tuning is in `Config.LandingFX`, the layout and rules in `Shared.LandingFX`. In Studio, setting the boolean attribute `DevLandingFX` on ReplicatedStorage to `false` turns them off.
+
 ## Working on it
 
 1. Open the saved place in Studio.
 2. `rojo serve` in this folder, then connect from the Rojo plugin.
-3. Run the specs from the command bar or `execute_luau` in Edit mode (no Play needed): `require(game.ServerStorage.Tests.Runner)()`. Pass a name (or part of one) to run only matching specs, e.g. `require(game.ServerStorage.Tests.Runner)("Pacing")`. Pure-logic modules (Format, MiningPower, Refining, Rewards, Telemetry, MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Pacing, Net, AtmosphereMood) have a `<Name>.spec` under `tests/`, synced to `ServerStorage.Tests`. The runner requires fresh clones of `Shared` and `Server.Lib`, so edits show up without restarting Studio.
+3. Run the specs from the command bar or `execute_luau` in Edit mode (no Play needed): `require(game.ServerStorage.Tests.Runner)()`. Pass a name (or part of one) to run only matching specs, e.g. `require(game.ServerStorage.Tests.Runner)("Pacing")`. Pure-logic modules (Format, MiningPower, Refining, Rewards, Telemetry, MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Pacing, Net, AtmosphereMood, LandingFX) have a `<Name>.spec` under `tests/`, synced to `ServerStorage.Tests`. The runner requires fresh clones of `Shared` and `Server.Lib`, so edits show up without restarting Studio.
 4. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only (the tutorial starts from step 1 every time). In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings).
 
 Studio-only dev hooks (none exist in a live server). Two buttons on the HUD:

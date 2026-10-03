@@ -24,6 +24,8 @@ local Sounds: { [string]: Entry } = {
 	CoreChime = { Id = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.5, PitchMin = 0.6, PitchMax = 0.6 },
 	MeteorImpact = { Id = "rbxassetid://9114221261", Volume = 1 },
 	MeteorRumble = { Id = "rbxasset://sounds/Rocket whoosh 01.wav", Volume = 0.2, PitchMin = 0.5, PitchMax = 0.5 },
+	FrostCrackle = { Id = "rbxassetid://9118588165", Volume = 0.5, PitchMin = 1.5, PitchMax = 1.8, Cooldown = 0.05, Max = 3 },
+	CrystalChime = { Id = "rbxasset://sounds/electronicpingshort.wav", Volume = 0.4, PitchMin = 1.3, PitchMax = 1.6, Cooldown = 0.05, Max = 3 },
 	Sell = { Id = "rbxassetid://9113728042", Volume = 0.6, Cooldown = 0.3, Max = 2 },
 	Purchase = { Id = "rbxassetid://9113728049", Volume = 0.6, Cooldown = 0.3, Max = 2 },
 	Click = { Id = "rbxassetid://9119717523", Volume = 0.4, PitchMin = 0.97, PitchMax = 1.05, Cooldown = 0.05 },

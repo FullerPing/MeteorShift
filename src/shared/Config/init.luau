@@ -26,5 +26,6 @@ return {
 	Hud = require(script.Hud),
 	Balance = require(script.Balance),
 	Atmosphere = require(script.Atmosphere),
+	LandingFX = require(script.LandingFX),
 	Sounds = Sounds,
 }
