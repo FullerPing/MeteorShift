@@ -208,7 +208,8 @@ function PlayerStateService:AddOre(player: Player, oreType: string, amount: numb
 		then math.max(Refining.hopperCapacity(data) - sum(data.hopper), 0)
 		else 0
 	if space <= 0 and hopperSpace <= 0 then
-		remainders[oreType] = 0
+		-- This hit's ore is lost; the fraction banked from earlier hits (an under-tier
+		-- meteor's Crystal can be most of one ore) is kept
 		local now = os.clock()
 		if now - (lastFullNotice[player] or 0) > 3 then
 			lastFullNotice[player] = now

@@ -8,9 +8,13 @@
 --                  up when at least 25% of active players meet its tier; otherwise it
 --                  drops to the next type down (Iron always can)
 --   underTier      true when your pickaxe is below the meteor's tier. Everyone mines the
---                  meteor's own ore; under tier you mine it slowly (underTierPowerMult:
---                  about Meteor.UnderTier.NodeSeconds per crust node on your own) and only
---                  every OreEvery-th hit drops ore (underTierDropsOre). Nobody is locked out
+--                  meteor's own ore; under tier it scales with your pickaxe: slower the
+--                  more tiers short you are (underTierPowerMult), and each meteor type
+--                  above your best one is worth 3x the type below (underTierWorth): to a
+--                  tier 1 pickaxe Ice pays 3 Iron meteors, Crystal 9. Each hit pays that
+--                  multiple of a hit on your own ore, in the meteor's ore (underTierYield),
+--                  up to that multiple of your own meteor's haul (underTierCap). Nobody is
+--                  locked out
 --   missed         what an under-tier player missed (full-speed mining), and missedHint,
 --                  the results line for it
 --   resonanceMult  Crystal twist: +20% Mining Power per extra hitter on a node, max +60%
@@ -23,6 +27,8 @@
 
 local Meteor = require(script.Parent.Config.Meteor)
 local Home = require(script.Parent.Config.Home)
+local Pickaxes = require(script.Parent.Config.Pickaxes)
+local Balance = require(script.Parent.Config.Balance)
 local Format = require(script.Parent.Format)
 
 type MeteorType = Meteor.MeteorType
@@ -84,21 +90,94 @@ function MeteorTypes.underTier(pickaxeTier: number, meteorType: MeteorType): boo
 	return pickaxeTier < meteorType.RequiredTier
 end
 
+-- How many tiers this pickaxe is below the meteor's (0 at or above it).
+function MeteorTypes.tiersShort(pickaxeTier: number, meteorType: MeteorType): number
+	return math.max(meteorType.RequiredTier - pickaxeTier, 0)
+end
+
 -- Multiplier on an under-tier hit's Mining Power: `power` per hit every `swingSeconds`
--- clears a crust node of `nodeHp` in Meteor.UnderTier.NodeSeconds. Never above 1, so
--- a node that is quicker than that anyway (a big lobby's) isn't sped up.
-function MeteorTypes.underTierPowerMult(power: number, swingSeconds: number, nodeHp: number): number
-	if power <= 0 then
+-- clears a crust node of `nodeHp` in Meteor.UnderTier.NodeSecondsPerTier x `tiersShort`
+-- seconds. Never above 1, so a node that is quicker than that anyway (a big lobby's)
+-- isn't sped up.
+function MeteorTypes.underTierPowerMult(power: number, swingSeconds: number, nodeHp: number, tiersShort: number): number
+	if power <= 0 or tiersShort <= 0 then
 		return 1
 	end
-	local slowPower = nodeHp * swingSeconds / Meteor.UnderTier.NodeSeconds
+	local slowPower = nodeHp * swingSeconds / (Meteor.UnderTier.NodeSecondsPerTier * tiersShort)
 	return math.min(slowPower / power, 1)
 end
 
--- Whether a player's `hit`-th under-tier hit on the crust (1, 2, 3, ...) drops ore:
--- every OreEvery-th one does.
-function MeteorTypes.underTierDropsOre(hit: number): boolean
-	return hit % Meteor.UnderTier.OreEvery == 0
+-- TypeOrder index of the best type this pickaxe mines at full speed.
+local function bestIndex(pickaxeTier: number): number
+	for i = #TypeOrder, 1, -1 do
+		if Types[TypeOrder[i]].RequiredTier <= pickaxeTier then
+			return i
+		end
+	end
+	return 1
+end
+
+-- The ore of the best type this pickaxe mines at full speed.
+function MeteorTypes.bestOre(pickaxeTier: number): string
+	return Types[TypeOrder[bestIndex(pickaxeTier)]].Ore
+end
+
+-- How many types up TypeOrder this meteor is from the best one this pickaxe mines at
+-- full speed (tier 1 on Crystal: 2). 0 at or above its tier.
+function MeteorTypes.typesAbove(pickaxeTier: number, meteorType: MeteorType): number
+	local index = table.find(TypeOrder, meteorType.Id) or 1
+	return math.max(index - bestIndex(pickaxeTier), 0)
+end
+
+-- What this meteor is worth to the pickaxe against one of its own best type:
+-- Meteor.UnderTier.TypeMult per type above (tier 1 on Ice: 3, on Crystal: 9). 1 at or
+-- above its tier.
+function MeteorTypes.underTierWorth(pickaxeTier: number, meteorType: MeteorType): number
+	return Meteor.UnderTier.TypeMult ^ MeteorTypes.typesAbove(pickaxeTier, meteorType)
+end
+
+-- Ore a pickaxe and a backpack of `capacity` bring home from a meteor active for
+-- `seconds`, mining at full speed: Shared.Pacing's ore rate (a full backpack per trip,
+-- Config.Balance's hit share and trip time) over that time.
+function MeteorTypes.meteorHaul(pickaxeTier: number, capacity: number, seconds: number): number
+	local pickaxe = Pickaxes[pickaxeTier] or Pickaxes[1]
+	if capacity <= 0 or pickaxe.OrePerHit <= 0 then
+		return 0
+	end
+	local fillSeconds = capacity / pickaxe.OrePerHit * pickaxe.Swing / Balance.HitsPerMinuteShare
+	return capacity / (fillSeconds + Balance.TripSeconds) * seconds
+end
+
+-- Multiplier on a pickaxe's ore per hit from this meteor: 1 at or above its tier. Under
+-- it, the meteor's ore worth underTierWorth x the same hit on bestOre, by bar price (a
+-- Basic Pickaxe on Crystal: 9 x $5 / $3K). Never above 1.
+function MeteorTypes.underTierYield(pickaxeTier: number, meteorType: MeteorType): number
+	if not MeteorTypes.underTier(pickaxeTier, meteorType) then
+		return 1
+	end
+	local price = Home.BarPrices[meteorType.Ore] or 0
+	if price <= 0 then
+		return 0
+	end
+	local own = Home.BarPrices[MeteorTypes.bestOre(pickaxeTier)] or 0
+	return math.min(MeteorTypes.underTierWorth(pickaxeTier, meteorType) * own / price, 1)
+end
+
+-- The most of the meteor's ore an under-tier pickaxe takes from one meteor: worth
+-- underTierWorth x what the pickaxe and a backpack of `capacity` bring home from one
+-- meteor of their own best type (meteorHaul over this meteor's cooling timer). Swinging
+-- nonstop reaches it before the meteor cools. math.huge at or above the meteor's tier.
+function MeteorTypes.underTierCap(pickaxeTier: number, capacity: number, meteorType: MeteorType): number
+	if not MeteorTypes.underTier(pickaxeTier, meteorType) then
+		return math.huge
+	end
+	local price = Home.BarPrices[meteorType.Ore] or 0
+	if price <= 0 then
+		return 0
+	end
+	local own = Home.BarPrices[MeteorTypes.bestOre(pickaxeTier)] or 0
+	local haul = MeteorTypes.meteorHaul(pickaxeTier, capacity, meteorType.ActiveDuration)
+	return MeteorTypes.underTierWorth(pickaxeTier, meteorType) * haul * own / price
 end
 
 -- What an under-tier player missed on this meteor, full-speed mining ("Tier 5 pickaxe

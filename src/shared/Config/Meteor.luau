@@ -52,11 +52,19 @@ Meteor.Knockback = {
 -- rules (schedule, ore by pickaxe tier, twist math). Alien Boss and Seasonal
 -- meteors are not built yet.
 Meteor.EligibleShare = 0.25 -- a type can come up only if this share of active players meet its tier
--- Under-tier pickaxes (below a type's RequiredTier) still mine its ore, just slowly: one
--- player swinging alone clears a crust node in about NodeSeconds (never faster than their
--- pickaxe would anyway; the core takes the same Mining Power per hit), and only every
--- OreEvery-th hit on the crust drops ore
-Meteor.UnderTier = { NodeSeconds = 30, OreEvery = 3 }
+-- Under-tier pickaxes (below a type's RequiredTier) still mine its ore, scaled to the pickaxe:
+--   speed  one player swinging alone clears a crust node in NodeSecondsPerTier for each
+--          tier short (tier 1 on Ice: 30 s, tier 4 on Crystal: 15 s), never faster than
+--          their pickaxe would anyway; the core takes the same Mining Power per hit
+--   ore    each type up TypeOrder from the best one the pickaxe mines at full speed is
+--          worth TypeMult x the type below: to a tier 1 or 2 pickaxe an Ice meteor pays
+--          3 Iron meteors and a Crystal meteor 9; to a tier 3 or 4, Crystal pays 3 Ice
+--          meteors. One meteor of your own is what you bring home from it at full speed,
+--          trips included (Shared.Pacing's ore rate). Each crust hit pays the same multiple
+--          of a hit on your own ore, in the meteor's ore (fractions add up over hits), until
+--          the meteor's worth is reached (a Basic Pickaxe with the Canvas Sack: one Frost
+--          every 8 hits, $1.4K an Ice meteor; one Crystal every 67, $4.1K a Crystal meteor)
+Meteor.UnderTier = { NodeSecondsPerTier = 15, TypeMult = 3 }
 Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest; an ineligible pick drops down this list
 
 Meteor.Twists = {

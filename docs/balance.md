@@ -66,3 +66,25 @@ Times are m:ss under an hour and h:mm:ss from an hour on.
 Drill to Plasma is a 60x price jump, but Ice bars ($120) make the gap a non-issue: income at the Drill is already $1.7K/min, so Plasma is in reach at 57:00 and the greedy only delays it by buying line upgrades first. No Plasma price change was needed.
 
 The greedy order buys the line before Steel because a refinery upgrade pays back faster than a pickaxe while the line is the bottleneck. A player who buys Steel first is only slightly behind.
+
+## Under-tier meteors
+
+A pickaxe below an Ice or Crystal meteor's tier mines the meteor's own ore at its own pickaxe's worth (`Shared.MeteorTypes`, `Config.Meteor.UnderTier`). The target: each meteor type up from the best one your pickaxe mines at full speed pays `TypeMult` (3) times the one below. To a tier 1 or 2 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9; to a tier 3 or 4, Crystal is worth 3 Ice meteors.
+
+- **Your own meteor** is what you bring home from it at full speed, trips included: the model's ore rate over the 150 s cooling timer (`MeteorTypes.meteorHaul`, pinned to `Pacing.oreRate` by `tests/Pacing.spec`). The Bigger Backpack pass raises it with the backpack.
+- **Per hit:** each crust hit pays the same multiple of a hit on your own ore, in the meteor's ore (`underTierYield`); fractions add up over hits and stay banked for the session.
+- **Per meteor:** pay stops at that multiple of your own meteor (`underTierCap`). Swinging steadily reaches it in the haul's worth of hits (91 for a Basic Pickaxe with the Canvas Sack, about a minute), well inside the meteor.
+- **Speed:** on your own a crust node takes 15 s per tier short (`NodeSecondsPerTier`). It slows the crust, not the pay.
+
+It used to pay the meteor's full ore on every 3rd hit. A crystal bar sells for 600 iron bars, and the backpack, the walk home and the refinery throttle how much ore a player moves, not what it is worth, so a Basic Pickaxe with a Canvas Sack carried about $150K of Crystal home from one meteor, past the Plasma Pick.
+
+What one under-tier meteor pays, with the backpack the model holds when it reaches each pickaxe, against the model's own income after that point:
+
+| Pickaxe (reached) | Backpack | Own meteor | Ice pays | Crystal pays | Model, next 30 min | Next 60 min |
+|---|---|---|---|---|---|---|
+| Basic (2:00) | Canvas Sack (50) | 90 Iron, $453 | 11.3 Frost, $1.4K | 1.36 Crystal, $4.1K | $7.9K | $120K |
+| Steel (20:00) | Leather Pack (150) | 227 Iron, $1.1K | 28 Frost, $3.4K | 3.4 Crystal, $10K | $47K | $230K |
+| Drill (28:00) | Leather Pack (150) | 366 Frost, $44K | full speed | 44 Crystal, $132K | $92K | $279K |
+| Plasma (1:53:00) | Reinforced Pack (1,000) | 1,563 Frost, $188K | full speed | 188 Crystal, $563K | $201K | $374K |
+
+The model's income lags its own meteor hauls from the Drill on because the line, not the meteor, is the bottleneck there: a Plasma Pick's 1,563 Frost take the level 3 conveyor (3 ore/s) almost nine minutes to move, longer than a meteor cycle. An under-tier Crystal haul is 188 ore, about a minute, so it reaches the bank sooner than the Ice hauls it is priced against. At the Plasma Pick that makes one Crystal meteor about 1.5 hours of the model's income. If that is too generous, lower `TypeMult` or price the own meteor at the line rate instead. The 2x Ore pass doubles all of it, as it does all mining.

@@ -343,27 +343,34 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		return state.phase == Phase.Active and current == meteor
 	end
 
-	-- Everyone mines the meteor's own ore (spec §8.1). A pickaxe under its tier gets
-	-- ore only on every OreEvery-th crust hit, counted per player over the meteor.
-	local underTierHits: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
+	-- Everyone mines the meteor's own ore (spec §8.1). A pickaxe under its tier gets a
+	-- fraction of it per crust hit, worth 3x a hit on the pickaxe's own best ore per type
+	-- above it (MeteorTypes.underTierYield), up to MeteorTypes.underTierCap over this
+	-- meteor; PlayerStateService:AddOre adds the fractions up.
+	local underTierOre: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
 	local function oreFor(player: Player): (string?, number)
-		if MeteorTypes.underTier(PlayerStateService:GetPickaxe(player).Tier, meteorType) then
-			local hits = (underTierHits[player] or 0) + 1
-			underTierHits[player] = hits
-			if not MeteorTypes.underTierDropsOre(hits) then
-				return nil, 0
-			end
+		local pickaxe = PlayerStateService:GetPickaxe(player)
+		if not MeteorTypes.underTier(pickaxe.Tier, meteorType) then
+			return meteorType.Ore, meteorType.YieldMult
 		end
-		return meteorType.Ore, meteorType.YieldMult
+		local cap = MeteorTypes.underTierCap(pickaxe.Tier, PlayerStateService:GetCapacity(player), meteorType)
+		local taken = underTierOre[player] or 0
+		local quantity = math.min(pickaxe.OrePerHit * MeteorTypes.underTierYield(pickaxe.Tier, meteorType), cap - taken)
+		if quantity <= 0 or pickaxe.OrePerHit <= 0 then
+			return nil, 0
+		end
+		underTierOre[player] = taken + quantity
+		return meteorType.Ore, meteorType.YieldMult * quantity / pickaxe.OrePerHit
 	end
 
-	-- Mining Power per hit: a pickaxe under the meteor's tier mines slowly, and the
-	-- Crystal twist makes every player on the same node or core mine harder
+	-- Mining Power per hit: a pickaxe under the meteor's tier mines slower the more tiers
+	-- short it is, and the Crystal twist makes every player on the same node or core mine harder
 	local function powerMult(player: Player, hitters: number): number
 		local mult = if meteorType.Twist == "Resonance" then MeteorTypes.resonanceMult(hitters) else 1
 		local pickaxe = PlayerStateService:GetPickaxe(player)
-		if MeteorTypes.underTier(pickaxe.Tier, meteorType) then
-			mult *= MeteorTypes.underTierPowerMult(MiningPower.power(pickaxe.Tier), pickaxe.Swing, meteor.CrustHp)
+		local short = MeteorTypes.tiersShort(pickaxe.Tier, meteorType)
+		if short > 0 then
+			mult *= MeteorTypes.underTierPowerMult(MiningPower.power(pickaxe.Tier), pickaxe.Swing, meteor.CrustHp, short)
 		end
 		return mult
 	end

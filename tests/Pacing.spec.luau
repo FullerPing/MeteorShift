@@ -68,6 +68,20 @@ return function(t: any)
 		t.ok(cap > 8e3 and cap <= 9.5e3, "offline cap " .. cap)
 	end)
 
+	t.test("one meteor's haul in the game's under-tier pay is the model's ore rate over the meteor", function()
+		-- MeteorTypes.underTierCap prices an under-tier meteor in hauls of the player's own
+		-- best meteor; this keeps that haul the same as the model's
+		local MeteorTypes = require(t.shared.MeteorTypes)
+		local seconds = Config.Meteor.Types.Iron.ActiveDuration
+		for pickaxe = 1, #Config.Pickaxes do
+			for backpack = 1, #Config.Backpacks do
+				local haul = MeteorTypes.meteorHaul(pickaxe, Config.Backpacks[backpack].Capacity, seconds)
+				local model = Pacing.oreRate(pickaxe, backpack, 1) * seconds
+				t.near(haul, model, 1e-6 * model, string.format("pickaxe %d, backpack %d", pickaxe, backpack))
+			end
+		end
+	end)
+
 	t.test("a longer session never earns less than a shorter one", function()
 		local short = Pacing.sampleAt(result, 3600).earned
 		local long = Pacing.sampleAt(result, 7200).earned
