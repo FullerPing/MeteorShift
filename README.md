@@ -149,6 +149,10 @@ Command bar hooks, all `BindableFunction`s in `ServerStorage` (`local p = game.P
 - `DevGrant:Invoke(p, cash, ore, shards, pickaxeTier)`: every argument after the player is optional. `pickaxeTier` sets your pickaxe tier (restyling the tool), e.g. `DevGrant:Invoke(p, nil, nil, nil, 5)` for a tier-5 pickaxe that mines Crystal. Use it to test the shop, and `DevGrant:Invoke(p, 10e6)` to afford a rebirth.
 - `DevMineral:Invoke(p, "starfallIron")` adds one mineral through the real path (toast, page announcement, title); a page id (`"Iron"`) adds one of every mineral on that page.
 - `DevBench:Invoke(p, 1000)` measures the ore hot path: it gains ore 1000 times (into a borrowed, empty top-tier backpack; yours comes back afterwards) and returns the elapsed ms and how many State snapshots went out. State is batched, so expect one.
+- `DevMeteor:Invoke("Crystal")` brings a meteor of that type (Iron, Ice or Crystal) down soon: during a countdown it lands in 10 s; if a meteor is down, that one ends early (it cools) and yours lands 10 s into the next countdown.
+- `DevGear:Invoke(p, 5, 8)` sets your pickaxe tier and backpack tier (1 to 8 each; `nil` leaves one as is) and restyles the pickaxe. It returns their names.
+
+The same in chat while playing (Studio only; the reply shows as a notice): `/meteor crystal`, `/pickaxe 5`, `/backpack 8`.
 
 String attributes on `ServerStorage` (set them before the play session unless noted):
 - `DevFakeTiers`, e.g. `1,1,1,8`: each number adds a pretend active player with that pickaxe tier, so you can test meteor sizing solo. The meteor model's `ServerPower` attribute shows what it is sized for. Pretend players count toward the meteor type's tier gate too, so `5,5,5` lets Ice and Crystal come up.

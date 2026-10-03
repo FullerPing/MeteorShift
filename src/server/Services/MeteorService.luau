@@ -92,6 +92,9 @@ local current: Meteor? = nil
 local lastCalledEnd: number? = nil
 local eventCalled = false
 local callTimes: { number } = {}
+-- Studio only (DevSpawn): the meteor type asked for from the command bar or chat. It
+-- ends a meteor that is still down and comes in StreakLeadTime seconds into its countdown.
+local devNext: Config.MeteorType? = nil
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -525,7 +528,7 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 			self:_refreeze(meteor, clock - lastRefreeze)
 			lastRefreeze = clock
 		end
-		return meteor.Cracked or now() >= state.endsAt
+		return meteor.Cracked or now() >= state.endsAt or devNext ~= nil
 	end)
 	ContributionService:Stop()
 	-- The Call a Meteor cooldown runs from the end of a called meteor's event only
@@ -559,10 +562,12 @@ end
 function MeteorService:_loop()
 	local first = true
 	while true do
-		local meteorType = pickType()
+		local queued = devNext
+		devNext = nil
+		local meteorType = queued or pickType()
 		self:_publish({
 			phase = Phase.Countdown,
-			endsAt = now() + countdownLength(first),
+			endsAt = now() + (if queued then MeteorConfig.StreakLeadTime else countdownLength(first)),
 			type = meteorType.Id,
 			typeName = meteorType.DisplayName,
 			requiredTier = meteorType.RequiredTier,
@@ -575,6 +580,11 @@ function MeteorService:_loop()
 		waitUntil(function()
 			return now() >= state.endsAt
 		end)
+		-- DevSpawn swapped the type during this countdown
+		if devNext then
+			meteorType = devNext
+			devNext = nil
+		end
 
 		local ok, err = pcall(self._runEvent, self, meteorType)
 		if not ok then
@@ -590,6 +600,36 @@ function MeteorService:_loop()
 			end
 		end
 	end
+end
+
+-- Studio only, for testing: brings a meteor of the given type ("Iron", "Ice", "Crystal",
+-- any case) down soon. During a countdown it swaps the type and lands in StreakLeadTime
+-- seconds; otherwise the meteor that is down ends early (it cools) and the asked-for one
+-- comes in StreakLeadTime seconds into the next countdown. Returns what will happen.
+function MeteorService:DevSpawn(typeId: string): string
+	if not RunService:IsStudio() then
+		return "DevSpawn only works in Studio"
+	end
+	local meteorType: Config.MeteorType? = nil
+	for id, candidate in MeteorConfig.Types do
+		if string.lower(id) == string.lower(tostring(typeId)) then
+			meteorType = candidate
+		end
+	end
+	if not meteorType then
+		return string.format("No meteor type %q (try %s)", tostring(typeId), table.concat(MeteorConfig.TypeOrder, ", "))
+	end
+	devNext = meteorType
+	if state.phase == Phase.Countdown then
+		self:_publish({
+			endsAt = now() + MeteorConfig.StreakLeadTime,
+			type = meteorType.Id,
+			typeName = meteorType.DisplayName,
+			requiredTier = meteorType.RequiredTier,
+		})
+		return string.format("%s lands in %d s", meteorType.DisplayName, MeteorConfig.StreakLeadTime)
+	end
+	return string.format("The current meteor ends now; %s is next, %d s into the next countdown", meteorType.DisplayName, MeteorConfig.StreakLeadTime)
 end
 
 -- Studio-only shortcut for playtesting: jump to the last few seconds of the countdown.
