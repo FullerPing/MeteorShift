@@ -113,11 +113,11 @@ Nothing builds the world at runtime. The crater town, plots, debris rocks, sky c
 
 | Instance | What it is |
 |---|---|
-| `Workspace.Map` | Ground, crater, town square (Trading Post with sell counter, Pickaxe Shop, spawn), 20 empty plot pads with signs, roads, debris rocks, trees, boundary cliffs |
+| `Workspace.Map` | Ground, crater, town square (plaza, fountain and spawn), 20 empty plot pads with signs, roads, debris rocks, trees, boundary cliffs |
 | `ServerStorage.Assets` | Meteor core (with `NodeSlot` attachments and glowing `Vein` parts), the ore cluster pieces, and `PlotStations` (the production line template) |
 | `StarterPack.Pickaxe` | The Basic Pickaxe tool (mark the parts to recolour per tier with a `Tint` attribute) |
 
-The Pickaxe Shop (`Workspace.Map.TownSquare.PickaxeShop`) opens the shop through its saved ProximityPrompt; if it has none, one is added on a part named `ShopPoint` inside it. Without either, the shop still opens from the HUD button.
+Shopping and selling are in the HUD, so the town square holds only the plaza, its fountain and the spawn. A `PickaxeShop` or `TradingPost` model saved back into `Workspace.Map.TownSquare` would still open the shop or sell bars through its ProximityPrompt.
 
 Two things are cloned at runtime from `ServerStorage.Assets`: the meteor when it lands, and a player's production line (`PlotStations`) when they claim a plot. The plot pads themselves stay in Workspace.
 
@@ -143,7 +143,7 @@ When an Ice or Crystal meteor lands, `LandingFXController` grows effects around 
 - Crystal: energy spokes and a ring of light run out to glowing crystals that keep growing while the meteor is down, arcs link them to a gem floating above the core, small crystals sprout as players break the crust, and the arcs brighten as it breaks.
 - When the core cracks the effects shatter; when the meteor cools they wither and sink.
 
-The scene is seeded by the event, so everyone sees the same one, and a player who joins mid-event sees it at the same moment. The pieces never collide or block mining, and stay off the paths, the plaza and the mining area. Tuning is in `Config.LandingFX`, the layout and rules in `Shared.LandingFX`. In Studio, setting the boolean attribute `DevLandingFX` on ReplicatedStorage to `false` turns them off.
+The scene is seeded by the event, so everyone sees the same one, and a player who joins mid-event sees it at the same moment. The pieces never collide or block mining, and stay off the paths, the spawn, the fountain and the mining area. Tuning is in `Config.LandingFX`, the layout and rules in `Shared.LandingFX`. In Studio, setting the boolean attribute `DevLandingFX` on ReplicatedStorage to `false` turns them off.
 
 ## Working on it
 

@@ -20,7 +20,7 @@ Tutorial.Steps = {
 	{ Id = "core_shards", Text = "Collect your shards", Hint = "Keep hitting the core until it cracks." },
 	{ Id = "deposit", Text = "Go home and deposit ore", Hint = "Step on the DROP ORE pad at your plot." },
 	{ Id = "collect_bar", Text = "Collect a bar", Hint = "Your refinery makes bars. Step on the collection post." },
-	{ Id = "sell", Text = "Sell bars", Hint = "Sell them at the Trading Post counter in town." },
+	{ Id = "sell", Text = "Sell bars", Hint = "Tap your bars at the bottom of the screen, then SELL ALL." },
 	{ Id = "buy", Text = "Buy an upgrade", Hint = "Open the SHOP and buy a better pickaxe or backpack." },
 } :: { Step }
 

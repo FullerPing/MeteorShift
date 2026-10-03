@@ -246,7 +246,7 @@ function HUDController:KnitStart()
 		end
 	end)
 	RefineryService.Collected:Connect(function(bars: number)
-		showToast("Picked up " .. Format.number(bars) .. " bars. Sell them at the Trading Post!")
+		showToast("Picked up " .. Format.number(bars) .. " bars. Tap your bars below to sell them!")
 	end)
 	RefineryService.WhileAway:Connect(function(report)
 		if report.bars > 0 then

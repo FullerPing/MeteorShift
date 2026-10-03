@@ -28,6 +28,7 @@ local SMOKE = "rbxasset://textures/particles/smoke_main.dds"
 local WHITE = Color3.new(1, 1, 1)
 local X_UP = CFrame.Angles(0, 0, math.pi / 2) -- beams bow along their attachments' X axis
 local FLOOR_PROBE_HEIGHT = 40
+local PAVING_HEIGHT = 0.6 -- town square parts no taller than this lie flat
 local GEM_START_SIZE = 0.5
 local GEM_FLASH_SIZE = 10
 local SMALL_TRANSPARENCY = 0.2 -- satellites and sprouts
@@ -263,9 +264,18 @@ local function readScene(): Scene
 		end
 	end
 
+	-- Effects reach onto the plaza, so its paving counts as ground
+	local townSquare = child(map, "TownSquare")
+	local plaza = child(townSquare, "Plaza")
 	local groundParams = RaycastParams.new()
 	groundParams.FilterType = Enum.RaycastFilterType.Include
-	groundParams.FilterDescendantsInstances = if bowl then { bowl, workspace.Terrain } else { workspace.Terrain }
+	local groundParts: { Instance } = { workspace.Terrain }
+	for _, item in { bowl, plaza } do
+		if item then
+			table.insert(groundParts, item)
+		end
+	end
+	groundParams.FilterDescendantsInstances = groundParts
 	-- Ground height at an offset from the centre; a hit far from the bowl profile is
 	-- something else (or not streamed in), so the profile wins
 	local function probe(x: number, z: number): number
@@ -279,7 +289,7 @@ local function readScene(): Scene
 		return profile
 	end
 
-	-- Paving, rocks, landmarks and lamps that upright pieces must stay off
+	-- Roads, plots, rocks, landmarks, lamps and what stands on the plaza: upright pieces stay off them
 	local obstacles: { Obstacle } = {}
 	local function box(cframe: CFrame, size: Vector3)
 		local right = Vector2.new(cframe.RightVector.X, cframe.RightVector.Z)
@@ -321,9 +331,13 @@ local function readScene(): Scene
 			end
 		end
 	end
-	local plaza = child(child(map, "TownSquare"), "Plaza")
-	if plaza and plaza:IsA("BasePart") then
-		box(plaza.CFrame, plaza.Size)
+	-- The spawn, the fountain and the planters; flat paving and trim don't count
+	if townSquare then
+		for _, item in townSquare:GetDescendants() do
+			if item:IsA("BasePart") and item ~= plaza and item.Size.Y > PAVING_HEIGHT then
+				box(item.CFrame, item.Size)
+			end
+		end
 	end
 	local debris = child(map, "Debris")
 	if debris then

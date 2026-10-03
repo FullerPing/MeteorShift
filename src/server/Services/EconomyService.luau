@@ -68,10 +68,16 @@ function EconomyService:KnitInit()
 	MonetizationService = Knit.GetService("MonetizationService")
 end
 
+-- Bars sell from the HUD. A Trading Post saved in the town square sells them too
+-- (TownSquare.TradingPost.SellPoint's ProximityPrompt); the current map has none.
 function EconomyService:KnitStart()
-	local tradingPost = workspace:WaitForChild("Map"):WaitForChild("TownSquare"):WaitForChild("TradingPost")
-	local sellPoint = tradingPost:WaitForChild("SellPoint")
-	local prompt = sellPoint:FindFirstChildWhichIsA("ProximityPrompt", true)
+	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
+	local tradingPost = if townSquare then townSquare:FindFirstChild("TradingPost") else nil
+	if not tradingPost then
+		return
+	end
+	local sellPoint = tradingPost:FindFirstChild("SellPoint")
+	local prompt = if sellPoint then sellPoint:FindFirstChildWhichIsA("ProximityPrompt", true) else nil
 	if prompt then
 		prompt.Triggered:Connect(function(player)
 			self:SellAll(player)

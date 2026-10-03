@@ -13,12 +13,12 @@ LandingFX.Crater = {
 	LineStartRadius = 26, -- crust reaches ~23.5 at floor level
 	VerticalClearRadius = 66, -- no upright piece's base inside this
 }
--- Paths and the plaza stay clear of upright pieces (tools/map-art/Landscape.luau corridors)
+-- The four paths stay clear of upright pieces (tools/map-art/Landscape.luau corridors).
+-- The plaza is open ground; only what stands on it (spawn, fountain, planters) is avoided.
 LandingFX.Corridors = {
-	{ Angle = 45, Half = 12 }, { Angle = 135, Half = 12 }, { Angle = 225, Half = 12 },
-	{ Angle = 315, Half = 12 }, { Angle = 270, Half = 32 },
+	{ Angle = 45, Half = 12 }, { Angle = 135, Half = 12 }, { Angle = 225, Half = 12 }, { Angle = 315, Half = 12 },
 }
-LandingFX.Obstacles = { Padding = 4, RetryDegrees = { 0, 4, -4, 8, -8 } }
+LandingFX.Obstacles = { Padding = 4, RetryDegrees = { 0, 4, -4, 8, -8, 12, -12, 16, -16 } }
 LandingFX.Strip = { Thickness = 0.2, Lift = 0.1, StartLength = 0.05 }
 LandingFX.FlatLift = 0.02
 LandingFX.Sink = 1

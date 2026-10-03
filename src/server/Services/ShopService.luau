@@ -3,9 +3,9 @@
 -- another with cash, and Core Shards at the top tiers; the server checks the
 -- order and the price. Plot station upgrades are UpgradeService.
 --
--- The shop opens from the HUD's SHOP button or from the Pickaxe Shop in the town
--- square (Workspace.Map.TownSquare.PickaxeShop: its ProximityPrompt, or one made
--- on its ShopPoint part if none was saved).
+-- The shop opens from the HUD. A Pickaxe Shop saved in the town square opens it too
+-- (Workspace.Map.TownSquare.PickaxeShop: its ProximityPrompt, or one made on its
+-- ShopPoint part if none was saved); the current map has none.
 --
 -- The Pickaxe tool keeps its original handle, grip and input bindings while
 -- EquipmentModels gives each purchased tier its own visible geometry.
@@ -105,10 +105,9 @@ function ShopService.Client:Buy(player: Player, kind: Kind): boolean
 end
 
 function ShopService:_connectTownShop()
-	local townSquare = workspace:WaitForChild("Map"):WaitForChild("TownSquare")
-	local shop = townSquare:WaitForChild("PickaxeShop", 10)
+	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
+	local shop = if townSquare then townSquare:FindFirstChild("PickaxeShop") else nil
 	if not shop then
-		warn("[ShopService] no Map.TownSquare.PickaxeShop; the shop only opens from the HUD")
 		return
 	end
 	local prompt = shop:FindFirstChildWhichIsA("ProximityPrompt", true)
