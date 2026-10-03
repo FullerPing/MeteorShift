@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
@@ -31,6 +32,9 @@ local pointerHolding = false
 local touchHolding = false
 local swinging = false
 local pickaxeTier = 1
+-- Each swing at a target turns the character toward it for a moment (Config.Hud.Mine)
+local facePoint: Vector3? = nil
+local faceUntil = 0
 
 -- Hit effects stay bounded however long the button is held (spec §12.3): spark
 -- emitters come from a small pool reused round-robin, and live floaters and ore
@@ -316,6 +320,46 @@ local function oreFlyIn(from: Vector3, amount: number, oreType: string)
 	end
 end
 
+-- States where something else owns the character's rotation (knockback, seats, death)
+local NO_TURN_STATES = {
+	[Enum.HumanoidStateType.FallingDown] = true,
+	[Enum.HumanoidStateType.Ragdoll] = true,
+	[Enum.HumanoidStateType.GettingUp] = true,
+	[Enum.HumanoidStateType.Physics] = true,
+	[Enum.HumanoidStateType.PlatformStanding] = true,
+	[Enum.HumanoidStateType.Seated] = true,
+	[Enum.HumanoidStateType.Dead] = true,
+}
+
+-- Turns the character toward the last swing's target for FaceHold seconds after it. The
+-- client owns its character (spec §12.2). Walking steers as usual, and with the mouse
+-- locked (shift lock, first person) the camera already decides where you face.
+local function turnTowardTarget(dt: number)
+	local point = facePoint
+	if not point or os.clock() > faceUntil then
+		return
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not root or not humanoid or NO_TURN_STATES[humanoid:GetState()] then
+		return
+	end
+	if humanoid.MoveDirection.Magnitude > 0.1 or UserInputService.MouseBehavior == Enum.MouseBehavior.LockCenter then
+		return
+	end
+	local flat = Vector3.new(point.X - root.Position.X, 0, point.Z - root.Position.Z)
+	if flat.Magnitude < 0.5 then
+		return
+	end
+	local goal = CFrame.lookAt(root.Position, root.Position + flat)
+	if root.CFrame.LookVector:Dot(goal.LookVector) > 0.9995 then
+		facePoint = nil
+		return
+	end
+	root.CFrame = root.CFrame:Lerp(goal, 1 - math.exp(-Config.Hud.Mine.FaceTurnRate * dt))
+end
+
 function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 	if player:GetAttribute("ShopOpen") then
 		return
@@ -334,6 +378,8 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 	local id = target:GetAttribute("TargetId") :: number
 	recentTargets[id] = target
 	local position = hitPoint or target.Position
+	facePoint = position
+	faceUntil = os.clock() + Config.Hud.Mine.FaceHold
 	local isCore = target:GetAttribute("TargetKind") == "Core"
 	if not isCore and not watchedNodes[target] then
 		-- Node break: the replicated Hp reaching 0 (the core has its own crack sound)
@@ -432,6 +478,8 @@ function MiningController:KnitStart()
 			pickaxeTier = state.pickaxeTier
 		end
 	end)
+
+	RunService.PreSimulation:Connect(turnTowardTarget)
 
 	NodeService.OreGained:Connect(function(id: number, oreType: string, amount: number)
 		local part = recentTargets[id]

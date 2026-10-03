@@ -94,6 +94,11 @@ Hud.Mine = {
 	-- An exposed core is preferred over crust when they are in reach: this many studs
 	-- are taken off its distance
 	CoreBonus = 4,
+	-- Every swing at a target turns your character to face it (any input; not while
+	-- walking or while the camera locks the mouse): how fast it turns, per second, and
+	-- how long after a swing it keeps turning
+	FaceTurnRate = 18,
+	FaceHold = 0.35,
 }
 
 -- Panels (shop, index, rebirth, store): margin kept above and below, and the smallest scale
