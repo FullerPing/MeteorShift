@@ -132,7 +132,7 @@ During a meteor, `AtmosphereController` blends moods on top of the saved values 
 - Impact: brown dust thickens the fog and settles over 12 s, and the approach gloom lifts over 8 s.
 - While the meteor is down, a faint glow of its colour stays in the haze, fading out once the core cracks or the meteor cools.
 
-Tuning is in `Config.Atmosphere`, the rules in `Shared.AtmosphereMood`. Setting `DevMeteorApproachFX` to `false` (see below) also turns off the approach mood.
+Tuning is in `Config.Atmosphere`, the rules in `Shared.AtmosphereMood`. In Studio, setting the boolean attribute `DevMeteorApproachFX` on ReplicatedStorage to `false` turns the approach mood off.
 
 ## Working on it
 

@@ -5,7 +5,8 @@
 --             approach  rises over the last ApproachLead seconds of the countdown,
 --                       then lifts over ApproachClear seconds after impact
 --             event     1 while the meteor is down (Impact, Active), fading out
---                       over CoreCracked and Cooled
+--                       over CoreCracked and Cooled (their length from the State,
+--                       or Config.Meteor's when the State doesn't carry one)
 --             dust      1 at impact, settling over DustSeconds
 --   blend     the calm look with the weighted layers added on top, clamped to
 --             what Lighting accepts
@@ -15,6 +16,7 @@
 -- reads and writes the real Lighting.
 
 local AtmosphereConfig = require(script.Parent.Config.Atmosphere)
+local MeteorConfig = require(script.Parent.Config.Meteor)
 
 export type Look = {
 	Brightness: number,
@@ -65,8 +67,8 @@ local function darker(color: Color3, amount: number): Color3
 end
 
 -- phase: the meteor phase; secondsLeft / phaseLength: time left in it and its full
--- length; sinceImpact: seconds since this client saw the impact (nil if it didn't)
-function AtmosphereMood.weights(phase: string, secondsLeft: number, phaseLength: number, sinceImpact: number?, tuning: any?): Weights
+-- length (nil: the configured length); sinceImpact: seconds since this client saw the impact (nil if it didn't)
+function AtmosphereMood.weights(phase: string, secondsLeft: number, phaseLength: number?, sinceImpact: number?, tuning: any?): Weights
 	local config = tuning or AtmosphereConfig
 	local weights = { approach = 0, event = 0, dust = 0 }
 
@@ -85,8 +87,12 @@ function AtmosphereMood.weights(phase: string, secondsLeft: number, phaseLength:
 
 	if phase == "Impact" or phase == "Active" then
 		weights.event = 1
-	elseif (phase == "CoreCracked" or phase == "Cooled") and phaseLength > 0 then
-		weights.event = smooth(secondsLeft / phaseLength)
+	elseif phase == "CoreCracked" or phase == "Cooled" then
+		local length = phaseLength
+			or (if phase == "CoreCracked" then MeteorConfig.CrackedDuration else MeteorConfig.CooledDuration)
+		if length > 0 then
+			weights.event = smooth(secondsLeft / length)
+		end
 	end
 	return weights
 end

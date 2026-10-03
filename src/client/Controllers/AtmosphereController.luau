@@ -99,8 +99,8 @@ function AtmosphereController:KnitStart()
 			local now = workspace:GetServerTimeNow()
 			local left = math.max(0, state.endsAt - now)
 			local sinceImpact = if impactAt then now - impactAt else nil
-			local weights = AtmosphereMood.weights(state.phase, left, state.duration or left, sinceImpact)
-			-- Studio isolation control (see MeteorFXController): no approach mood either
+			local weights = AtmosphereMood.weights(state.phase, left, state.duration, sinceImpact)
+			-- Studio isolation control: ReplicatedStorage.DevMeteorApproachFX = false turns the approach mood off
 			if RunService:IsStudio() and ReplicatedStorage:GetAttribute("DevMeteorApproachFX") == false then
 				weights.approach = 0
 			end

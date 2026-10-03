@@ -80,6 +80,15 @@ return function(t: any)
 		t.ok(none(AtmosphereMood.weights("Cleanup", 3, 5, 200)), "cleanup is calm")
 	end)
 
+	t.test("without a phase length the fades use Config.Meteor's durations", function()
+		local Meteor = require(t.shared.Config.Meteor)
+		for phase, length in { CoreCracked = Meteor.CrackedDuration, Cooled = Meteor.CooledDuration } do
+			t.near(AtmosphereMood.weights(phase, length, nil, 200).event, 1, 1e-9, phase .. " start")
+			t.near(AtmosphereMood.weights(phase, length / 2, nil, 200).event, 0.5, 1e-9, phase .. " halfway")
+			t.near(AtmosphereMood.weights(phase, 0, nil, 200).event, 0, 1e-9, phase .. " end")
+		end
+	end)
+
 	t.test("no weights leave the calm look as it is", function()
 		local look = AtmosphereMood.blend(base, { approach = 0, event = 0, dust = 0 }, glow)
 		t.ok(AtmosphereMood.near(look, base, 1e-9), "unchanged")
