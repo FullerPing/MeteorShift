@@ -9,10 +9,11 @@
 -- attribute so clients can find it; HP is replicated through the Hp / MaxHp
 -- attributes, flushed at ~10 Hz for changed targets only.
 --
--- Meteor types (spec §8.1) hook in through the TargetDef: OreFor picks each
--- player's ore by their own pickaxe, PowerMult scales a hit's Mining Power by
--- how many players are on the target (Crystal resonance), and Heal plus the
--- idle clock let MeteorService refreeze Ice nodes nobody is hitting.
+-- Meteor types (spec §8.1) hook in through the TargetDef: OreFor decides each
+-- player's ore per hit (an under-tier pickaxe only gets some), PowerMult scales a
+-- hit's Mining Power by the player's pickaxe (under-tier mining is slow) and by how
+-- many players are on the target (Crystal resonance), and Heal plus the idle clock
+-- let MeteorService refreeze Ice nodes nobody is hitting.
 --
 -- The 2x Ore pass (spec §9.1) multiplies the ore quantity per hit here and nothing
 -- else: mineral drops are rolled by IndexService on the Hit signal, whose odds no

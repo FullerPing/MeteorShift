@@ -52,7 +52,11 @@ Meteor.Knockback = {
 -- rules (schedule, ore by pickaxe tier, twist math). Alien Boss and Seasonal
 -- meteors are not built yet.
 Meteor.EligibleShare = 0.25 -- a type can come up only if this share of active players meet its tier
-Meteor.ConsolationMult = 1.25 -- under-tier players get their best ore at this quantity instead
+-- Under-tier pickaxes (below a type's RequiredTier) still mine its ore, just slowly: one
+-- player swinging alone clears a crust node in about NodeSeconds (never faster than their
+-- pickaxe would anyway; the core takes the same Mining Power per hit), and only every
+-- OreEvery-th hit on the crust drops ore
+Meteor.UnderTier = { NodeSeconds = 30, OreEvery = 3 }
 Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest; an ineligible pick drops down this list
 
 Meteor.Twists = {

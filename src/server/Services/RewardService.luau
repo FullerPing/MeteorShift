@@ -18,8 +18,8 @@ local RewardService = Knit.CreateService({
 	Name = "RewardService",
 	Client = {
 		-- To each participant: { cracked, ore, oreType, contribution, rank, hitCore, floor,
-		-- bonus, top, shards, leaders, missed? }. oreType is the ore id their pickaxe mines
-		-- from this meteor; missed is MeteorTypes.missed, nil when their pickaxe met its tier.
+		-- bonus, top, shards, leaders, missed? }. oreType is the meteor's ore id; missed is
+		-- MeteorTypes.missed, nil when their pickaxe met its tier.
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
@@ -68,7 +68,7 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 		self.Client.Results:Fire(entry.Player, {
 			cracked = cracked,
 			ore = entry.Ore,
-			oreType = (MeteorTypes.oreFor(pickaxeTier, meteorType)),
+			oreType = meteorType.Ore,
 			missed = MeteorTypes.missed(pickaxeTier, meteorType),
 			contribution = entry.Contribution,
 			rank = index,

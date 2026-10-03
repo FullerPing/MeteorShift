@@ -7,11 +7,12 @@
 --   pick           weighted odds (Iron 60, Ice 25, Crystal 15), but a type can only come
 --                  up when at least 25% of active players meet its tier; otherwise it
 --                  drops to the next type down (Iron always can)
---   oreFor         your own pickaxe decides your ore: the meteor's ore at ×1 if you meet
---                  its tier, else the best ore you can extract at ×1.25. Nobody is locked
---                  out, and being near veterans never gives a better ore than you could
---                  mine alone
---   missed         what an under-tier player missed, and missedHint, the results line for it
+--   underTier      true when your pickaxe is below the meteor's tier. Everyone mines the
+--                  meteor's own ore; under tier you mine it slowly (underTierPowerMult:
+--                  about Meteor.UnderTier.NodeSeconds per crust node on your own) and only
+--                  every OreEvery-th hit drops ore (underTierDropsOre). Nobody is locked out
+--   missed         what an under-tier player missed (full-speed mining), and missedHint,
+--                  the results line for it
 --   resonanceMult  Crystal twist: +20% Mining Power per extra hitter on a node, max +60%
 --   refreezeHp     Ice twist: a node nobody has hit for 5 s regains 2% of max HP per second
 --   shardPoolMult  the type's shard pool ×, scaled down when meteors come faster than the
@@ -78,23 +79,30 @@ function MeteorTypes.pick(activeTiers: { number }, roll: number): MeteorType
 	return Types[TypeOrder[index]]
 end
 
--- The ore a pickaxe tier mines from this meteor, and its quantity multiplier.
-function MeteorTypes.oreFor(pickaxeTier: number, meteorType: MeteorType): (string, number)
-	if pickaxeTier >= meteorType.RequiredTier then
-		return meteorType.Ore, 1
-	end
-	for i = #TypeOrder, 1, -1 do
-		local best = Types[TypeOrder[i]]
-		if best.RequiredTier <= pickaxeTier then
-			return best.Ore, Meteor.ConsolationMult
-		end
-	end
-	-- Only reachable with a tier below every type's; the lowest type's ore then
-	return Types[TypeOrder[1]].Ore, Meteor.ConsolationMult
+-- True when this pickaxe tier is below the meteor's, so it mines slowly.
+function MeteorTypes.underTier(pickaxeTier: number, meteorType: MeteorType): boolean
+	return pickaxeTier < meteorType.RequiredTier
 end
 
--- What an under-tier player missed on this meteor ("Tier 5 pickaxe mines Crystal:
--- $3K bars"), or nil when their pickaxe met its tier.
+-- Multiplier on an under-tier hit's Mining Power: `power` per hit every `swingSeconds`
+-- clears a crust node of `nodeHp` in Meteor.UnderTier.NodeSeconds. Never above 1, so
+-- a node that is quicker than that anyway (a big lobby's) isn't sped up.
+function MeteorTypes.underTierPowerMult(power: number, swingSeconds: number, nodeHp: number): number
+	if power <= 0 then
+		return 1
+	end
+	local slowPower = nodeHp * swingSeconds / Meteor.UnderTier.NodeSeconds
+	return math.min(slowPower / power, 1)
+end
+
+-- Whether a player's `hit`-th under-tier hit on the crust (1, 2, 3, ...) drops ore:
+-- every OreEvery-th one does.
+function MeteorTypes.underTierDropsOre(hit: number): boolean
+	return hit % Meteor.UnderTier.OreEvery == 0
+end
+
+-- What an under-tier player missed on this meteor, full-speed mining ("Tier 5 pickaxe
+-- mines Crystal at full speed: $3K bars"), or nil when their pickaxe met its tier.
 function MeteorTypes.missed(pickaxeTier: number, meteorType: MeteorType): Missed?
 	if pickaxeTier >= meteorType.RequiredTier then
 		return nil
@@ -107,10 +115,10 @@ function MeteorTypes.missed(pickaxeTier: number, meteorType: MeteorType): Missed
 end
 
 -- The results panel's upgrade hint for what was missed: "Tier 5 pickaxe mines
--- Crystal: $3K bars".
+-- Crystal at full speed: $3K bars".
 function MeteorTypes.missedHint(missed: Missed): string
 	local oreName = Home.OreNames[missed.ore] or missed.ore
-	return string.format("Tier %d pickaxe mines %s: %s bars", missed.tier, oreName, Format.cash(missed.barPrice))
+	return string.format("Tier %d pickaxe mines %s at full speed: %s bars", missed.tier, oreName, Format.cash(missed.barPrice))
 end
 
 -- Resonance: Mining Power multiplier for each of the players currently on one node.

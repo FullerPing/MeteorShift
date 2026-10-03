@@ -308,15 +308,15 @@ Every meteor type is the same event loop (§5) with four things swapped: **ore**
 
 **Mixed lobbies: nobody is locked out.**
 - Every player can hit every node, the core and weak points on every meteor. Mining Power, contribution and Core Shards work the same for everyone (§5.3, §5.6), so a newcomer at an Alien Boss still helps crack it and still gets the floor plus their share of a 4× pool.
-- **Ore depends on your pickaxe.** If your tier meets the meteor's required tier, you get its ore. If not, you get the best ore you *can* extract, at **×1.25 quantity** as a small consolation bonus. Example: a tier 2 player on a Crystal meteor gets Iron ore ×1.25, a tier 4 player gets Frost ore ×1.25, a tier 5+ player gets Crystal ore.
-- The results panel tells under-tier players what they missed ("Tier 5 pickaxe mines Crystal: $3K bars"), which is the upgrade hook.
+- **Speed depends on your pickaxe.** Everyone mines the meteor's own ore. If your tier meets the meteor's required tier, you mine at full speed. If not, you mine slowly: on your own a crust node takes about **30 s**, and only **every 3rd hit** drops ore (`Config.Meteor.UnderTier`). Example: a tier 1 player on an Ice meteor still gets Frost ore, a little at a time; a tier 3+ player mines it at full speed.
+- The results panel tells under-tier players what they missed ("Tier 5 pickaxe mines Crystal at full speed: $3K bars"), which is the upgrade hook.
 
 **Guardrails: an early player in a veteran lobby can't fast-track.** **[A]**
-- **Ore type is gated by your own pickaxe**, which is bought with cash. Being near veterans never gives you a better ore than you could mine alone; the only boost is the ×1.25 consolation, and it only applies on meteors above your tier.
+- **Mining speed is gated by your own pickaxe**, which is bought with cash. Being near veterans lets you mine a better ore than your tier, but only at the under-tier pace (a node in about 30 s, ore on every 3rd hit), so it is a taste of the next tier, not a shortcut.
 - **Refineries are the real throttle.** Cash only comes from bars, and bars come out of your refineries at their own speed. Extra ore from a lucky lobby just waits in the hopper (and is capped by hopper size), so income can't spike much beyond what your refinery level allows.
 - **Shards can't skip tiers.** Every shard price is paired with a cash price (§7), so a newcomer who stockpiles shards from Alien Boss events still has to earn the cash for each tier. Shard share is counted in Mining Power, where a newcomer has roughly 1/8 of a maxed veteran's weight, so they get the floor plus a modest share, not the lion's share.
 - **Faster meteors pay less per meteor.** Call a Meteor is capped at 3 per hour per server, and in private servers with an interval under the default, the shard pool scales down in proportion (a 2-minute interval pays half), so a group can't farm shards for a friend by speeding up the schedule.
-- **Telemetry check (Week 5):** compare time-to-tier for new players in mixed lobbies vs. beginner lobbies. If mixed lobbies are more than ~25% faster, lower the consolation bonus first, then the shard pool multipliers.
+- **Telemetry check (Week 5):** compare time-to-tier for new players in mixed lobbies vs. beginner lobbies. If mixed lobbies are more than ~25% faster, slow the under-tier pace first (`UnderTier.NodeSeconds`, `OreEvery`), then the shard pool multipliers.
 
 **Schedule (which meteor comes next):**
 - The server picks each regular meteor from weighted odds: Iron 60, Ice 25, Crystal 15. A type is only eligible if at least **25% of active players** meet its required tier; otherwise it drops to the next type down. A lobby of beginners gets mostly Iron; a lobby of veterans sees plenty of Crystal. **[A]**

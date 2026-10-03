@@ -71,6 +71,7 @@ type Meteor = {
 	CrackedAt: number, -- os.clock() when the core broke, 0 until then
 	Type: Config.MeteorType,
 	SizedPower: number, -- server power the current HP is sized for
+	CrustHp: number, -- a crust node's max HP at that power (under-tier mining is paced on it)
 	LastRescale: number,
 }
 
@@ -318,6 +319,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 			table.insert(slots, child)
 		end
 	end
+	local crustHp, coreHp = MiningPower.size(power, #slots, meteorType.HpMult)
 
 	local meteor: Meteor = {
 		Model = model,
@@ -332,29 +334,38 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		CrackedAt = 0,
 		Type = meteorType,
 		SizedPower = power,
+		CrustHp = crustHp,
 		LastRescale = os.clock(),
 	}
 	model:SetAttribute("ServerPower", power)
-
-	local crustHp, coreHp = MiningPower.size(power, #slots, meteorType.HpMult)
 
 	local function isActive(): boolean
 		return state.phase == Phase.Active and current == meteor
 	end
 
-	-- Your own pickaxe decides your ore (spec §8.1): the meteor's ore if you meet its
-	-- tier, else your best ore at the consolation multiplier.
+	-- Everyone mines the meteor's own ore (spec §8.1). A pickaxe under its tier gets
+	-- ore only on every OreEvery-th crust hit, counted per player over the meteor.
+	local underTierHits: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
 	local function oreFor(player: Player): (string?, number)
-		local ore, mult = MeteorTypes.oreFor(PlayerStateService:GetPickaxe(player).Tier, meteorType)
-		return ore, mult * meteorType.YieldMult
+		if MeteorTypes.underTier(PlayerStateService:GetPickaxe(player).Tier, meteorType) then
+			local hits = (underTierHits[player] or 0) + 1
+			underTierHits[player] = hits
+			if not MeteorTypes.underTierDropsOre(hits) then
+				return nil, 0
+			end
+		end
+		return meteorType.Ore, meteorType.YieldMult
 	end
 
-	-- Crystal twist: every player on the same node or core mines harder
-	local powerMult: ((Player, number) -> number)? = nil
-	if meteorType.Twist == "Resonance" then
-		powerMult = function(_player: Player, hitters: number): number
-			return MeteorTypes.resonanceMult(hitters)
+	-- Mining Power per hit: a pickaxe under the meteor's tier mines slowly, and the
+	-- Crystal twist makes every player on the same node or core mine harder
+	local function powerMult(player: Player, hitters: number): number
+		local mult = if meteorType.Twist == "Resonance" then MeteorTypes.resonanceMult(hitters) else 1
+		local pickaxe = PlayerStateService:GetPickaxe(player)
+		if MeteorTypes.underTier(pickaxe.Tier, meteorType) then
+			mult *= MeteorTypes.underTierPowerMult(MiningPower.power(pickaxe.Tier), pickaxe.Swing, meteor.CrustHp)
 		end
+		return mult
 	end
 
 	local crustFolder = Instance.new("Folder")
@@ -438,6 +449,7 @@ function MeteorService:_checkRescale(meteor: Meteor)
 	end
 	NodeService:Rescale(meteor.CoreId, ratio)
 	meteor.SizedPower = power
+	meteor.CrustHp *= ratio
 	meteor.LastRescale = os.clock()
 	meteor.Model:SetAttribute("ServerPower", power)
 end
