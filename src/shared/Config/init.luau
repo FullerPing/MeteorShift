@@ -25,5 +25,6 @@ return {
 	Monetization = require(script.Monetization),
 	Hud = require(script.Hud),
 	Balance = require(script.Balance),
+	Atmosphere = require(script.Atmosphere),
 	Sounds = Sounds,
 }
