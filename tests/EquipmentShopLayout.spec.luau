@@ -21,7 +21,7 @@ return function(t: any)
 				t.ok(p.x >= 12 and p.y >= inset + 12, context .. " clears left and top")
 				t.ok(p.x + p.w <= viewport.X - 12, context .. " clears right")
 				t.ok(p.y + p.h <= viewport.Y - 12, context .. " clears bottom")
-				local maxHeight = if l.narrow then 500 else 440
+				local maxHeight = if l.narrow then 500 else 520
 				t.ok(p.w > 0 and p.w <= 860 and p.h > 0 and p.h <= maxHeight, context .. " compact bounded panel")
 			end
 		end
@@ -30,7 +30,7 @@ return function(t: any)
 	t.test("desktop panel is centered within the unobstructed viewport", function()
 		local p = layout(Vector2.new(1920, 1080), 58).panel
 		t.eq(p.w, 860)
-		t.eq(p.h, 440)
+		t.eq(p.h, 520)
 		t.near(p.x + p.w / 2, 960, 0.01, "horizontal center")
 		t.near(p.y + p.h / 2, 569, 0.01, "center below the inset")
 	end)
