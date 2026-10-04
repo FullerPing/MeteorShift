@@ -28,9 +28,16 @@
 -- crowd time, not the player's ore); Crystal's Resonance likewise.
 --
 -- Core Shards come only from the shard floor of every meteor (a lone weak contributor).
+--
+-- Rebirth (spec §8.3, optional, `Options.rebirths`): once cash covers Shared.Rebirth.cost the
+-- player relocates: cash, pickaxe, backpack, hopper, conveyor, collection post and carried
+-- stock reset, the refinery level and shards stay, and every sale pays Rebirth.multiplier.
+-- With `Options.paybackLimit` the player only buys what pays itself back within that many
+-- seconds, so cash can pile up for the rebirth instead of going into slow upgrades.
 -- Pure functions, cheap enough to call from a spec (about 3,600 steps for two hours).
 
 local Config = require(script.Parent.Config)
+local Rebirth = require(script.Parent.Rebirth)
 
 local Pacing = {}
 
@@ -52,8 +59,14 @@ export type Purchase = {
 	cashAfter: number,
 }
 
+export type Options = {
+	rebirths: number?, -- most rebirths the player takes (default 0)
+	paybackLimit: number?, -- seconds; skip upgrades that take longer than this to pay back
+}
+
 export type Sample = {
 	time: number,
+	rebirths: number,
 	cash: number,
 	shards: number,
 	earned: number, -- total bar sales so far
@@ -67,6 +80,7 @@ export type Result = {
 	affordableAt: { [string]: number }, -- first time the next level of a track was in reach
 	earnedAt: { [string]: number }, -- first time lifetime sales reached a pickaxe's or backpack's price
 	samples: { Sample },
+	rebirthTimes: { number }, -- when each rebirth happened
 	cycle: number, -- seconds from one impact to the next
 	firstCycleEnd: number, -- when the first meteor's event cycle is over
 }
@@ -138,9 +152,9 @@ local function lineRate(owned: Owned): number
 end
 
 -- Cash per second in the long run
-local function income(owned: Owned, cycle: number): number
+local function income(owned: Owned, cycle: number, mult: number?): number
 	local supply, price = averageSupply(owned, cycle)
-	return math.min(supply, lineRate(owned)) * price
+	return math.min(supply, lineRate(owned)) * price * (mult or 1)
 end
 
 type Candidate = { id: string, name: string, cost: number, shards: number, apply: (Owned) -> () }
@@ -192,8 +206,11 @@ local function candidates(owned: Owned): { Candidate }
 end
 
 -- Runs the model for `horizon` seconds (default Balance.Horizon).
-function Pacing.simulate(horizon: number?): Result
+function Pacing.simulate(horizon: number?, options: Options?): Result
 	local total = horizon or Balance.Horizon
+	local maxRebirths = if options and options.rebirths then options.rebirths else 0
+	local paybackLimit = if options and options.paybackLimit then options.paybackLimit else math.huge
+	local rebirths, mult = 0, 1
 	local step = Balance.StepSeconds
 	local cycle = Pacing.cycleSeconds()
 	local owned: Owned = { pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 }
@@ -204,6 +221,7 @@ function Pacing.simulate(horizon: number?): Result
 		affordableAt = {},
 		earnedAt = {},
 		samples = {},
+		rebirthTimes = {},
 		cycle = cycle,
 		firstCycleEnd = Config.Meteor.FirstCountdown + cycle,
 	}
@@ -213,12 +231,13 @@ function Pacing.simulate(horizon: number?): Result
 	local function sample(time: number)
 		table.insert(result.samples, {
 			time = time,
+			rebirths = rebirths,
 			cash = cash,
 			shards = shards,
 			earned = earned,
 			owned = table.clone(owned),
 			lineRate = lineRate(owned),
-			incomePerMinute = income(owned, cycle) * 60,
+			incomePerMinute = income(owned, cycle, mult) * 60,
 		})
 	end
 
@@ -260,8 +279,8 @@ function Pacing.simulate(horizon: number?): Result
 		-- Home: sell, then shop
 		if time >= nextSell then
 			nextSell += Balance.SellInterval
-			cash += barsValue
-			earned += barsValue
+			cash += barsValue * mult
+			earned += barsValue * mult
 			bars, barsValue = 0, 0
 			for _, tier in Config.Pickaxes do
 				if tier.Cost > 0 and earned >= tier.Cost and result.earnedAt["pickaxe" .. tier.Tier] == nil then
@@ -283,15 +302,15 @@ function Pacing.simulate(horizon: number?): Result
 				bought = false
 				local best: Candidate? = nil
 				local bestPayback = math.huge
-				local now = income(owned, cycle)
+				local now = income(owned, cycle, mult)
 				for _, item in candidates(owned) do
 					if item.shards > shards then
 						continue
 					end
 					local after = table.clone(owned)
 					item.apply(after)
-					local gain = income(after, cycle) - now
-					if gain > 1e-9 and item.cost / gain < bestPayback then
+					local gain = income(after, cycle, mult) - now
+					if gain > 1e-9 and item.cost / gain <= paybackLimit and item.cost / gain < bestPayback then
 						best, bestPayback = item, item.cost / gain
 					end
 				end
@@ -309,6 +328,14 @@ function Pacing.simulate(horizon: number?): Result
 					})
 					bought = true
 				end
+			end
+			if rebirths < maxRebirths and cash >= Rebirth.cost(rebirths) then
+				rebirths += 1
+				mult = Rebirth.multiplier(rebirths)
+				table.insert(result.rebirthTimes, time)
+				cash = 0
+				owned.pickaxe, owned.backpack, owned.hopper, owned.conveyor, owned.collector = 1, 1, 1, 1, 1
+				hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
 			end
 		end
 		time += step
