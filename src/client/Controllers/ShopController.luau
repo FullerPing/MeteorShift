@@ -577,6 +577,9 @@ function ShopController:KnitStart()
 		local entry, equipped = petEntry(def.Id), petEquipped(def.Id)
 		local role = Config.Pets.Roles[def.Role]
 		local id = "pet_" .. def.Id
+		-- A pass pet is bought with Robux through its game pass; Id 0 means not on sale yet
+		local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
+		local onSale = pass ~= nil and pass.Id ~= 0
 		petCards[order] = itemCard(scope, geometry, {
 			Id = id, Order = order, Title = def.Name, TitleName = "PetName",
 			LevelText = string.upper(role.Name) .. " PET",
@@ -588,15 +591,18 @@ function ShopController:KnitStart()
 			Wallet = wallet, Loaded = loaded, BusyId = busyId,
 			Enabled = scope:Computed(function(use)
 				if use(entry) then return true end
+				if pass then return onSale end
 				return Price.canAfford(use(wallet), 0, def.Cost)
 			end),
 			ButtonText = scope:Computed(function(use)
 				if use(equipped) then return "PUT AWAY" end
 				if use(entry) then return "EQUIP" end
+				if pass then return if onSale then "GET FOR R$" .. (def.Robux or "") else "NOT ON SALE YET" end
 				return if Price.canAfford(use(wallet), 0, def.Cost) then "BUY" else "SAVE UP"
 			end),
 			PriceText = scope:Computed(function(use)
 				if use(entry) then return def.Blurb end
+				if pass then return '<font color="#7EEBBE">R$ ' .. (def.Robux or 0) .. '</font>  fixed price' end
 				return priceText(0, def.Cost)
 			end),
 			ReadyText = "BUY",
@@ -620,7 +626,9 @@ function ShopController:KnitStart()
 				end), UI.HUD_MINT),
 			},
 			OnBuy = function()
-				if Fusion.peek(entry) == nil then
+				if Fusion.peek(entry) == nil and pass then
+					if onSale then game:GetService("MarketplaceService"):PromptGamePassPurchase(player, pass.Id) end
+				elseif Fusion.peek(entry) == nil then
 					purchase(id, def.Name .. " joined you.", function() return PetService:Buy(def.Id) end)
 				elseif Fusion.peek(equipped) then
 					purchase(id, def.Name .. " put away.", function() return PetService:Unequip(def.Id) end)

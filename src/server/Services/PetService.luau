@@ -38,6 +38,7 @@ local IDLE_RETRY = 0.4 -- how soon a miner pet looks again when it found nothing
 
 local PlayerStateService
 local NodeService
+local MonetizationService
 
 -- Per player: when the miner pet swings next, and the fraction of ore the hauler owes
 local nextSwing: { [Player]: number } = {}
@@ -87,6 +88,10 @@ function PetService:Buy(player: Player, petId: string): boolean
 	if not data or not def or data.pets.owned[petId] then
 		return false
 	end
+	if def.Pass then
+		self.Client.Notice:Fire(player, def.Name .. " comes with its pass. Buy it from the Pets tab.")
+		return false
+	end
 	local shortfall = Price.shortfall(data, 0, def.Cost, def.Name)
 	if shortfall then
 		self.Client.Notice:Fire(player, shortfall)
@@ -101,6 +106,26 @@ function PetService:Buy(player: Player, petId: string): boolean
 	self.Client.Bought:Fire(player, petId)
 	self.PetBought:Fire(player, petId)
 	return true
+end
+
+-- Gives the player every pet whose pass they own and don't have yet (equipped if a slot is
+-- free). Called when a profile and the passes are known and when a pass is bought.
+function PetService:SyncPassPets(player: Player)
+	local data = PlayerStateService:Get(player)
+	if not data then
+		return
+	end
+	for _, def in Config.Pets.List do
+		if def.Pass and not data.pets.owned[def.Id] and MonetizationService:HasPass(player, def.Pass) then
+			data.pets.owned[def.Id] = { level = 1, xp = 0 }
+			if slotsFree(data) then
+				table.insert(data.pets.equipped, def.Id)
+			end
+			PlayerStateService:ReplicateNow(player)
+			self.Client.Bought:Fire(player, def.Id)
+			self.PetBought:Fire(player, def.Id)
+		end
+	end
 end
 
 -- Every equipped pet earns XP from one validated hit of the owner's.
@@ -197,9 +222,26 @@ end
 function PetService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	NodeService = Knit.GetService("NodeService")
+	MonetizationService = Knit.GetService("MonetizationService")
 end
 
 function PetService:KnitStart()
+	-- A pass pet is yours whenever you own its pass: on join (once the passes resolve) and on purchase
+	Knit.GetService("DataService").ProfileLoaded:Connect(function(player: Player)
+		task.spawn(function()
+			MonetizationService:WaitForPasses(player)
+			for _ = 1, 10 do -- the state may build a moment after the profile loads
+				if PlayerStateService:Get(player) or not player.Parent then
+					break
+				end
+				task.wait(0.5)
+			end
+			self:SyncPassPets(player)
+		end)
+	end)
+	MonetizationService.PassBought:Connect(function(player: Player)
+		self:SyncPassPets(player)
+	end)
 	NodeService.Hit:Connect(function(player: Player, kind: string)
 		self:_award(player, kind)
 	end)

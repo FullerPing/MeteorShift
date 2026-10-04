@@ -1,8 +1,9 @@
 --!strict
 -- Pets (Shared.Pets holds the rules; PetService runs them). Each pet has one role and levels
 -- up from 1 to MaxLevel; its perk grows from the role's Min to its Max. You equip a few at a
--- time (Slots). Pets are never random: the Drillbot is yours from the start, the others cost
--- Core Shards, and nothing here changes mineral odds (spec §9.4).
+-- time (Slots). Pets are never random: the Drillbot is a fixed-price game pass (199 Robux, the
+-- `Drillbot` pass in Config.Monetization), the others cost Core Shards, and nothing here
+-- changes mineral odds (spec §9.4).
 --
 --   miner     mines for you while you are mining (a swing of yours in the last MinerWindow
 --             seconds): every swing of your pickaxe it hits
@@ -18,7 +19,11 @@
 local Pets = {}
 
 export type Role = { Name: string, Min: number, Max: number, Cap: number, Text: string }
-export type Pet = { Id: string, Name: string, Role: string, Cost: number, Color: Color3, Blurb: string }
+export type Pet = {
+	Id: string, Name: string, Role: string, Cost: number, Color: Color3, Blurb: string,
+	Pass: string?, -- Config.Monetization pass key: owning the pass gives the pet (no shard price)
+	Robux: number?, -- the pass price, shown in the shop (the pass itself is priced on Roblox)
+}
 
 Pets.MaxLevel = 10
 -- XP to go from level L to L + 1 is XpBase x XpGrowth^(L - 1); about 14K XP to max a pet
@@ -43,15 +48,15 @@ Pets.Roles = {
 } :: { [string]: Role }
 Pets.RoleOrder = { "miner", "hauler", "pack", "swift", "merchant" }
 
--- Cost is in Core Shards (0 = yours from the start)
+-- Cost is in Core Shards (a pass pet has none: Pass and Robux instead)
 Pets.List = {
-	{ Id = "drillbot", Name = "Drillbot", Role = "miner", Cost = 0, Color = Color3.fromRGB(255, 176, 48), Blurb = "A little drill on legs. It keeps swinging while you do." },
+	{ Id = "drillbot", Name = "Drillbot", Role = "miner", Cost = 0, Pass = "Drillbot", Robux = 199, Color = Color3.fromRGB(255, 176, 48), Blurb = "A little drill on legs. It keeps swinging while you do." },
 	{ Id = "cargoMole", Name = "Cargo Mole", Role = "hauler", Cost = 25, Color = Color3.fromRGB(150, 120, 96), Blurb = "Digs your ore home for you." },
 	{ Id = "packMule", Name = "Pack Mule", Role = "pack", Cost = 40, Color = Color3.fromRGB(190, 160, 120), Blurb = "Carries what your sack can't." },
 	{ Id = "jetWisp", Name = "Jet Wisp", Role = "swift", Cost = 60, Color = Color3.fromRGB(110, 220, 255), Blurb = "Hurries your pickaxe along." },
 	{ Id = "coinMagpie", Name = "Coin Magpie", Role = "merchant", Cost = 80, Color = Color3.fromRGB(255, 220, 100), Blurb = "Haggles for a better price." },
 } :: { Pet }
 
-Pets.Starter = { "drillbot" }
+Pets.Starter = {} :: { string } -- pets every new profile starts with (none: the Drillbot is a pass)
 
 return Pets

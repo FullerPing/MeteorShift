@@ -5,6 +5,13 @@ return function(t: any)
 	local Pets = require(t.shared.Pets)
 	local Config = require(t.shared.Config).Pets
 
+	t.test("the Drillbot is a 199 Robux pass pet whose pass exists", function()
+		local def = Pets.def("drillbot") :: any
+		t.eq(def.Robux, 199)
+		t.eq(def.Cost, 0)
+		t.ok(require(t.shared.Config).Monetization.Passes[def.Pass] ~= nil)
+	end)
+
 	t.test("the Drillbot mines at 25% at level 1 and 40% at the max level", function()
 		t.near(Pets.perk("miner", 1), 0.25, 1e-9)
 		t.near(Pets.perk("miner", Config.MaxLevel), 0.40, 1e-9)
@@ -83,16 +90,16 @@ return function(t: any)
 		t.near(Pets.bonuses(saved).miner, 0.25, 1e-9, "a pet only counts once, unknown ones never")
 	end)
 
-	t.test("clean keeps the starter pet, drops unknown pets and fixes levels and the loadout", function()
+	t.test("clean starts a new profile with no pets, drops unknown pets and fixes levels and the loadout", function()
 		local fresh = Pets.clean(nil, 0)
-		t.ok(fresh.owned.drillbot ~= nil)
-		t.eq(fresh.equipped[1], "drillbot")
+		t.ok(next(fresh.owned) == nil, "the Drillbot is a pass pet, not a starter")
+		t.eq(#fresh.equipped, 0)
 		local cleaned = Pets.clean({
 			owned = { packMule = { level = 99, xp = 5 }, ghost = { level = 3, xp = 0 }, jetWisp = { level = -2 } },
 			equipped = { "packMule", "jetWisp", "ghost", "packMule", "coinMagpie" },
 		}, 1) -- two slots
 		t.ok(cleaned.owned.ghost == nil)
-		t.ok(cleaned.owned.drillbot ~= nil, "the starter pet can't be lost")
+		t.ok(cleaned.owned.drillbot == nil, "no pet is invented")
 		t.eq(cleaned.owned.packMule.level, Config.MaxLevel)
 		t.eq(cleaned.owned.packMule.xp, 0)
 		t.eq(cleaned.owned.jetWisp.level, 1)
