@@ -17,6 +17,7 @@ return {
 	Pickaxes = require(script.Pickaxes),
 	Backpacks = require(script.Backpacks),
 	Gear = require(script.Gear),
+	Pets = require(script.Pets),
 	Debris = require(script.Debris),
 	Home = Home,
 	Tutorial = require(script.Tutorial),

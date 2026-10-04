@@ -201,7 +201,7 @@ end
 -- complete preference list; empty requests restore the configured default.
 function RefineryService:SetPriority(player: Player, requested: any): boolean
 	local data = PlayerStateService:Get(player)
-	if not data or not PlotService:GetStations(player) then
+	if not data or not (PlotService:GetStations(player) or PlotService:HasSharedRefinery()) then
 		return false
 	end
 	local priority = RefineryQueue.validate(requested)
@@ -363,6 +363,59 @@ function RefineryService:_connectStations(player: Player, stations: Model)
 	end
 end
 
+-- The shared refinery in town (Workspace.Map.TownSquare.Refinery): using it empties your
+-- backpack into your hopper, collects your finished bars and opens your refinery panel. It is
+-- the same line everywhere; each player works their own saved hopper and bars.
+local sharedCooldown: { [Player]: number } = {}
+
+function RefineryService:UseShared(player: Player)
+	local now = os.clock()
+	if now - (sharedCooldown[player] or 0) < 0.5 then
+		return
+	end
+	sharedCooldown[player] = now
+	self:Deposit(player)
+	self:Collect(player)
+	self.Client.Open:Fire(player)
+end
+
+function RefineryService:_connectShared()
+	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
+	local refinery = if townSquare then townSquare:FindFirstChild("Refinery") else nil
+	if not refinery then
+		return
+	end
+	local point = refinery:FindFirstChild("UsePoint", true)
+	if not (point and point:IsA("BasePart")) then
+		point = if refinery:IsA("Model") then refinery.PrimaryPart else nil
+	end
+	if not (point and point:IsA("BasePart")) then
+		point = refinery:FindFirstChildWhichIsA("BasePart", true)
+	end
+	if not (point and point:IsA("BasePart")) then
+		warn("[RefineryService] TownSquare.Refinery has no UsePoint part; players can't use it")
+		return
+	end
+	-- not named ManageRefinery: the client hides that one from everyone but a plot's owner
+	local existing = point:FindFirstChild("UseRefinery")
+	local prompt: ProximityPrompt
+	if existing and existing:IsA("ProximityPrompt") then
+		prompt = existing
+	else
+		prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "UseRefinery"
+		prompt.ActionText = "Use refinery"
+		prompt.ObjectText = "Deposit ore, collect bars"
+		prompt.KeyboardKeyCode = Enum.KeyCode.E
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 14
+		prompt.Parent = point
+	end
+	prompt.Triggered:Connect(function(who)
+		self:UseShared(who)
+	end)
+end
+
 function RefineryService.Client:SetPriority(player: Player, requested: any): boolean
 	local now = os.clock()
 	local previous = priorityCooldown[player]
@@ -390,6 +443,8 @@ function RefineryService:KnitInit()
 end
 
 function RefineryService:KnitStart()
+	self:_connectShared()
+
 	PlotService.PlotAssigned:Connect(function(player, _plot)
 		local stations = PlotService:GetStations(player)
 		if stations then
@@ -421,6 +476,7 @@ function RefineryService:KnitStart()
 		touchCooldown[player] = nil
 		blockedBy[player] = nil
 		priorityCooldown[player] = nil
+		sharedCooldown[player] = nil
 	end)
 
 	-- Online tick

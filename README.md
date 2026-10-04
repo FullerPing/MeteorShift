@@ -45,6 +45,15 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 - HUD shows your pickaxe, the cash counter counts up to the new total, and a "+$" floater rises off it on every sale
 - Tutorial (spec §11): 10 steps from "Mine a debris rock" to "Buy an upgrade", each completed by the real action on the server, with a step card, a marker over the target and a beam from you to it. Doing a later step's action first also completes the steps before it, so joining mid-event never gets you stuck. Skippable, saved in the profile (`tutorialStep`), and each step is logged as an onboarding funnel step
 
+**Pets (Shared.Pets, Config.Pets, PetService)**
+- You put out a few pets at a time (1 slot, +1 per rebirth, up to 3). Each has one role and levels from 1 to 10 on your own validated hits, and its perk grows from the role's start to its max. The Pets tab of the shop lists them: the Drillbot is yours from the start, the others cost Core Shards (never random). Rebirth keeps pets
+- **Miner** (Drillbot): while you are mining (a validated swing of yours in the last 15 s) it hits the nearest target in your reach every swing with 25% of your pickaxe's Mining Power and ore, rising to 40% at level 10. Its ore goes straight to the hopper; it never counts for the podium, core rewards, mineral drops or the meteor's size
+- **Hauler** (Cargo Mole): moves 1% (to 2.5%) of your backpack capacity to the hopper every second. **Pack** (Pack Mule): backpack +15% (to +30%). **Swift** (Jet Wisp): swing time down 5% (to 15%). **Merchant** (Coin Magpie): bars sell for 5% (to 15%) more. Several pets of one role add up to a cap (`Config.Pets.Roles`)
+- Profiles migrate from v3 to v4 (everyone gets the Drillbot equipped). Studio: `DevPet:Invoke(player, "packMule", 10)` gives a pet at a level
+
+**Shared refinery**
+- If a model named `Refinery` is saved in `Workspace.Map.TownSquare` (with a `UsePoint` part), it replaces the plot production lines: using its prompt empties your backpack into your hopper, collects your finished bars and opens your refinery panel. The plots stay as empty pads and no line is cloned onto them. Without the model everything works as before, on the plots. Sell All stays in the HUD. `docs/studio-refinery-prompt.md` is the brief for building and placing the model in Studio
+
 **Week 4: meteor types (spec §8.1)**
 - Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors fall alongside Iron. Each countdown picks the next type from weighted odds (Iron 60, Ice 25, Crystal 15), but a type only comes up when at least 25% of active players' pickaxes meet its tier, otherwise it drops to the next type down. The sky board and HUD timer name it from the start of the countdown, with the title in the type's glow colour (Iron orange, Ice cyan, Crystal magenta). Types, tier gates and twists are in `Config.Meteor`, the rules in `Shared.MeteorTypes`
 - Everyone mines the meteor's own ore. A pickaxe under the meteor's tier gets less the further below it is: on your own a crust node takes 15 s per tier short (tier 1 on Ice: 30 s), and each meteor type above your best pays 3x the one below: to a tier 1 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9 ($13.6K and $40.7K with the Canvas Sack), paid per hit in the meteor's ore. `Config.Meteor.UnderTier`, numbers in docs/balance.md. Debris always drops Iron whatever its tint (cyan rocks once dropped Frost, which paid a Basic Pickaxe about 6x an Iron meteor per swing).
@@ -91,7 +100,7 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config/, Format, Phase, Price, MiningPower, Gear, Pacing,
+src/shared/            ReplicatedStorage.Shared: Config/, Format, Phase, Price, MiningPower, Gear, Pets, Pacing,
                        MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Aim, EquipmentModels,
                        AtmosphereMood
 src/server/            ServerScriptService.Server: Knit services, Lib/, Main.server.luau (Studio dev hooks)
@@ -102,7 +111,7 @@ docs/                  balance.md (economy pacing model), plans/ (spec copy and 
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Gear, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
+`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Gear, Pets, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
 
 Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `ActivityService` (who counts as active), `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile, batched State replication), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths), `TelemetryService` (analytics), `MonetizationService` (game passes and developer products). `src/server/Lib` holds the profile template, the pure refinery simulation (`Refining`), the shard reward math (`Rewards`) and the analytics helpers (`Telemetry`).
 

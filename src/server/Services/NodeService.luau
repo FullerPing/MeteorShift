@@ -158,6 +158,11 @@ function NodeService:GetIdleSeconds(id: number): number
 	return if target then os.clock() - target.LastHit else 0
 end
 
+-- os.clock() of the player's last validated swing (0 if none yet)
+function NodeService:GetLastSwing(player: Player): number
+	return lastSwing[player] or 0
+end
+
 -- Distance from a point to the closest point on the part's bounding box.
 local function distanceToPart(part: BasePart, point: Vector3): number
 	local localPoint = part.CFrame:PointToObjectSpace(point)
@@ -185,6 +190,62 @@ local function countHitters(target: Target, player: Player, now: number): number
 		end
 	end
 	return count
+end
+
+-- The closest live target within `range` of a point that `player` could hit right now (a
+-- locked core and a meteor that isn't active don't count). Used by miner pets, which pick
+-- their own targets. Returns the target id, or nil.
+function NodeService:NearestTarget(position: Vector3, range: number, player: Player): number?
+	local best, bestDistance = nil, range
+	for id, target in targets do
+		if target.Hp > 0 and target.Part.Parent and (not target.Def.CanHit or target.Def.CanHit(player)) then
+			local distance = distanceToPart(target.Part, position)
+			if distance <= bestDistance then
+				best, bestDistance = id, distance
+			end
+		end
+	end
+	return best
+end
+
+-- A miner pet's hit for `player` (PetService): the owner's pickaxe Power and ore per hit at
+-- `efficiency` (0.25 to 0.40), no crit or twist bonus. The ore goes straight to the hopper.
+-- It breaks targets like a swing does, but it adds nothing to the contribution tally, the
+-- core rewards, mineral drops, the Hit signal or the tutorial: pets help the lobby and your
+-- hopper, not your rank. Returns whether it landed.
+function NodeService:PetHit(player: Player, id: number, efficiency: number): boolean
+	local target = targets[id]
+	if not target or target.Hp <= 0 or not target.Part.Parent then
+		return false
+	end
+	local def = target.Def
+	if def.CanHit and not def.CanHit(player) then
+		return false
+	end
+	local pickaxe = PlayerStateService:GetPickaxe(player)
+	target.LastHit = os.clock() -- someone is on it, so Ice doesn't refreeze it
+	target.Hp -= pickaxe.Power * efficiency
+	if target.Hp < 1e-6 then
+		target.Hp = 0
+	end
+	target.Dirty = true
+
+	local oreType, oreMult = def.Ore, def.OreMult
+	if def.OreFor then
+		oreType, oreMult = def.OreFor(player)
+	end
+	if oreType then
+		PlayerStateService:AddOreToHopper(player, oreType, pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player) * efficiency)
+	end
+
+	if target.Hp == 0 then
+		target.Part:SetAttribute("Hp", 0)
+		target.Dirty = false
+		if def.OnBroken then
+			def.OnBroken(player)
+		end
+	end
+	return true
 end
 
 -- Server-side validation of one swing. Invalid swings are rejected silently.

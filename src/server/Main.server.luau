@@ -146,6 +146,26 @@ Knit.Start()
 				PlayerStateService:ReplicateNow(player)
 				return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)
 			end
+			-- Studio only: gives the player a pet at a level and equips it if a slot is free (ignores
+			-- the shard price). Returns the player's pets.
+			-- game.ServerStorage.DevPet:Invoke(game.Players:GetPlayers()[1], "packMule", 10)
+			local Pets = require(ReplicatedStorage.Shared.Pets)
+			local petHook = Instance.new("BindableFunction")
+			petHook.Name = "DevPet"
+			petHook.OnInvoke = function(player: Player, petId: string, level: number?)
+				local data = PlayerStateService:Get(player)
+				if not data or not Pets.def(petId) then
+					return nil
+				end
+				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0 }
+				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < Pets.slots(data.rebirths) then
+					table.insert(data.pets.equipped, petId)
+				end
+				PlayerStateService:ReplicateNow(player)
+				return data.pets
+			end
+			petHook.Parent = ServerStorage
+
 			local gearHook = Instance.new("BindableFunction")
 			gearHook.Name = "DevGear"
 			gearHook.OnInvoke = setGear

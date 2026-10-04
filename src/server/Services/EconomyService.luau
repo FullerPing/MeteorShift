@@ -1,7 +1,7 @@
 --!strict
 -- Selling bars at the Trading Post (spec §6.5). Raw ore can't be sold.
 --
---   sale = base price × rebirth multiplier × index bonus × VIP bonus
+--   sale = base price × rebirth multiplier × index bonus × VIP bonus × Merchant pet bonus
 --
 -- The rebirth multiplier is Shared.Rebirth.multiplier of the profile's rebirths
 -- (×2 per rebirth, multiplicative, spec §8.3). The index bonus adds each completed
@@ -15,6 +15,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 
 local EconomyService = Knit.CreateService({
 	Name = "EconomyService",
@@ -37,7 +38,8 @@ function EconomyService:SaleMultiplier(player: Player): number
 	local rebirth = Rebirth.multiplier(data.rebirths)
 	local index = MineralIndex.cashBonus(data.index)
 	local vip = MonetizationService:VIPMult(player)
-	return rebirth * index * vip
+	local merchant = 1 + Pets.bonuses(data.pets).merchant -- a Merchant pet
+	return rebirth * index * vip * merchant
 end
 
 function EconomyService:SellAll(player: Player): number

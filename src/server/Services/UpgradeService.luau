@@ -55,12 +55,12 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 	return true
 end
 
--- The shop's Plot tab. Needs a plot, like the prompts on the stations.
+-- The shop's Production tab. Needs a plot or the shared refinery in town.
 function UpgradeService.Client:BuyStation(player: Player, stationId: string): boolean
 	if typeof(stationId) ~= "string" or not Config.Home.Stations[stationId] then
 		return false
 	end
-	if not PlotService:GetStations(player) then
+	if not (PlotService:GetStations(player) or PlotService:HasSharedRefinery()) then
 		self.Notice:Fire(player, "You need a plot first.")
 		return false
 	end

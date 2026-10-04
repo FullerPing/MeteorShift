@@ -11,6 +11,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local ShopLayout = require(ReplicatedStorage.Shared.EquipmentShopLayout)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 local UI = require(script.Parent.Parent.UI)
 local EquipmentPreview = require(script.Parent.Parent.EquipmentPreview)
 
@@ -22,6 +23,7 @@ type RowState = "owned" | "equipped" | "next" | "locked" | "max"
 local TABS = {
 	{ Id = "pickaxe", Name = "PICKAXE" },
 	{ Id = "backpack", Name = "BACKPACK" },
+	{ Id = "pets", Name = "PETS" },
 	{ Id = "plot", Name = "PRODUCTION" },
 }
 local STATION_UNITS = { hopper = "ore", conveyor = "ore/s", refinery = "bars/s", collector = "bars" }
@@ -131,6 +133,7 @@ local function itemCard(scope: Scope, geometry: any, props: any)
 		return Price.canAfford(use(props.Wallet), use(cost), use(shards))
 	end)
 	local enabled = scope:Computed(function(use)
+		if props.Enabled then return use(props.Enabled) and use(props.Loaded) and use(props.BusyId) == nil end
 		return use(state) == "next" and use(affordable) and use(props.Loaded) and use(props.BusyId) == nil
 	end)
 	local buyingThis = scope:Computed(function(use) return use(props.BusyId) == props.Id end)
@@ -185,6 +188,7 @@ local function itemCard(scope: Scope, geometry: any, props: any)
 				RichText = true, TextScaled = true, TextStrokeTransparency = 1,
 				Text = scope:Computed(function(use)
 					local s = use(state)
+					if props.PriceText then return use(props.PriceText) end
 					return if s == "equipped" then "Your current gear" elseif s == "owned" then "Already owned"
 						elseif s == "max" then "Fully upgraded" else priceText(use(cost), use(shards))
 				end),
@@ -196,6 +200,7 @@ local function itemCard(scope: Scope, geometry: any, props: any)
 				TextScaled = true, AutoButtonColor = enabled, Active = enabled, Selectable = enabled,
 				Text = scope:Computed(function(use)
 					local s = use(state)
+					if props.ButtonText then return use(props.ButtonText) end
 					if s == "equipped" then return "EQUIPPED" end
 					if s == "owned" then return "OWNED" end
 					if s == "max" then return "MAX LEVEL" end
@@ -220,6 +225,7 @@ end
 function ShopController:KnitStart()
 	local ShopService = Knit.GetService("ShopService")
 	local UpgradeService = Knit.GetService("UpgradeService")
+	local PetService = Knit.GetService("PetService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local scope = Fusion.scoped(Fusion)
 	local open, tab, glow = scope:Value(wantOpen), scope:Value("pickaxe"), scope:Value(wantHighlight)
@@ -236,6 +242,7 @@ function ShopController:KnitStart()
 	ShopService.Open:Connect(function() open:set(true) end)
 	ShopService.Notice:Connect(function(message) notice:set(message) end)
 	UpgradeService.Notice:Connect(function(message) notice:set(message) end)
+	PetService.Notice:Connect(function(message) notice:set(message) end)
 	local wallet = scope:Computed(function(use): Price.Wallet
 		local s = use(playerState)
 		return { cash = if s then s.cash else 0, shards = if s then s.shards else 0 }
@@ -422,6 +429,81 @@ function ShopController:KnitStart()
 		backpackCards[order] = statCard("backpack", stat, order)
 	end
 	backpackCards[#backpackCards + 1] = evolveCard("backpack", #backpackCards + 1)
+	-- Pets: owned ones can be put out or away, the rest cost Core Shards (Shared.Pets)
+	local petIcons = { miner = "equipment", hauler = "ore", pack = "backpack", swift = "chevron", merchant = "coin" }
+	local petCards = {}
+	local function petEntry(petId: string)
+		return scope:Computed(function(use)
+			local s = use(playerState)
+			return if s and s.pets then s.pets.owned[petId] else nil
+		end)
+	end
+	local function petEquipped(petId: string)
+		return scope:Computed(function(use)
+			local s = use(playerState)
+			return s ~= nil and s.pets ~= nil and table.find(s.pets.equipped, petId) ~= nil
+		end)
+	end
+	local function percent(value: number): string
+		return string.format("%g%%", math.floor(value * 1000 + 0.5) / 10)
+	end
+	for order, def in Config.Pets.List do
+		local entry, equipped = petEntry(def.Id), petEquipped(def.Id)
+		local role = Config.Pets.Roles[def.Role]
+		local id = "pet_" .. def.Id
+		petCards[order] = itemCard(scope, geometry, {
+			Id = id, Order = order, Title = def.Name, TitleName = "PetName",
+			LevelText = string.upper(role.Name) .. " PET",
+			State = scope:Computed(function(use): RowState
+				if use(equipped) then return "equipped" end
+				return if use(entry) then "owned" else "next"
+			end),
+			Cost = 0, Shards = def.Cost,
+			Wallet = wallet, Loaded = loaded, BusyId = busyId,
+			Enabled = scope:Computed(function(use)
+				if use(entry) then return true end
+				return Price.canAfford(use(wallet), 0, def.Cost)
+			end),
+			ButtonText = scope:Computed(function(use)
+				if use(equipped) then return "PUT AWAY" end
+				if use(entry) then return "EQUIP" end
+				return if Price.canAfford(use(wallet), 0, def.Cost) then "BUY" else "SAVE UP"
+			end),
+			PriceText = scope:Computed(function(use)
+				if use(entry) then return def.Blurb end
+				return priceText(0, def.Cost)
+			end),
+			ReadyText = "BUY",
+			Preview = UI.hudIcon(scope, petIcons[def.Role] or "equipment", {
+				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.55, 0.75), ImageColor3 = def.Color,
+			}),
+			Stats = {
+				statCell(scope, geometry, 1, 3, "LEVEL", scope:Computed(function(use)
+					local e = use(entry)
+					return (if e then e.level else 1) .. " / " .. Config.Pets.MaxLevel
+				end), UI.WHITE),
+				statCell(scope, geometry, 2, 3, string.upper(role.Name), scope:Computed(function(use)
+					local e = use(entry)
+					return percent(Pets.perk(def.Role, if e then e.level else 1))
+				end), UI.HUD_GOLD),
+				statCell(scope, geometry, 3, 3, "NEXT LEVEL", scope:Computed(function(use)
+					local e = use(entry)
+					local needed = if e then Pets.xpToNext(e.level) else nil
+					return if not e then "-" elseif needed then Format.number(math.floor(e.xp)) .. " / " .. Format.number(needed) else "MAX"
+				end), UI.HUD_MINT),
+			},
+			OnBuy = function()
+				if Fusion.peek(entry) == nil then
+					purchase(id, def.Name .. " joined you.", function() return PetService:Buy(def.Id) end)
+				elseif Fusion.peek(equipped) then
+					purchase(id, def.Name .. " put away.", function() return PetService:Unequip(def.Id) end)
+				else
+					purchase(id, def.Name .. " is out.", function() return PetService:Equip(def.Id) end)
+				end
+			end,
+		})
+	end
 	for order, stationId in Config.Home.StationOrder do
 		local station = Config.Home.Stations[stationId]
 		local level = scope:Computed(function(use)
@@ -451,7 +533,7 @@ function ShopController:KnitStart()
 			OnBuy = function() purchase(stationId, station.Name .. " upgraded.", function() return UpgradeService:BuyStation(stationId) end) end,
 		})
 	end
-	local carousels = { makeList("pickaxe", pickaxeCards), makeList("backpack", backpackCards), makeList("plot", stationCards) }
+	local carousels = { makeList("pickaxe", pickaxeCards), makeList("backpack", backpackCards), makeList("pets", petCards), makeList("plot", stationCards) }
 	local function move(direction: number)
 		local kind = Fusion.peek(tab)
 		local list = lists[kind]
@@ -489,7 +571,7 @@ function ShopController:KnitStart()
 	local tabButtons = {}
 	for index, info in TABS do
 		tabButtons[index] = UI.button(scope, {
-			Name = info.Id .. "Tab", LayoutOrder = index, Size = UDim2.new(1 / 3, -4, 1, 0),
+			Name = info.Id .. "Tab", LayoutOrder = index, Size = UDim2.new(1 / #TABS, -4, 1, 0),
 			Text = info.Name, TextScaled = true,
 			BackgroundColor3 = scope:Computed(function(use) return if use(tab) == info.Id then UI.HUD_GOLD else UI.CARD end),
 			TextColor3 = scope:Computed(function(use) return if use(tab) == info.Id then UI.OUTLINE else UI.HUD_MUTED end),
@@ -592,8 +674,14 @@ function ShopController:KnitStart()
 							if message ~= "" then return message end
 							if not use(loaded) then return "Loading your equipment..." end
 							local kind, g = use(tab), use(geometry)
-							local count = if kind == "plot" then #stationCards elseif kind == "pickaxe" then #pickaxeCards else #backpackCards
+							local count = if kind == "plot" then #stationCards elseif kind == "pickaxe" then #pickaxeCards elseif kind == "pets" then #petCards else #backpackCards
 							local first = math.clamp(math.floor(use(positions[kind]) / (g.cardWidth + g.gap) + 0.5) + 1, 1, count)
+							if kind == "pets" then
+								local s = use(playerState)
+								if s and s.pets then
+									return string.format("%d / %d pets out. Rebirths open more slots.   %d / %d", #s.pets.equipped, s.pets.slots, first, count)
+								end
+							end
 							return string.format("%d / %d", first, count)
 						end),
 					}),

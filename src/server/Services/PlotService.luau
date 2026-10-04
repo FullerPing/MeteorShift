@@ -6,6 +6,10 @@
 -- refinery, collection post) is cloned from ServerStorage.Assets.PlotStations,
 -- whose pivot is the top centre of a pad with -Z facing the crater. The line is
 -- removed again when the owner leaves.
+--
+-- Shared refinery: when a model named Refinery is saved in Workspace.Map.TownSquare, everyone
+-- deposits, collects and manages the line there (RefineryService), so the plots stay empty
+-- pads and no production line is cloned onto them.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,6 +37,14 @@ local function setSign(plot: Model, text: string)
 	if textLabel and textLabel:IsA("TextLabel") then
 		textLabel.Text = text
 	end
+end
+
+-- Whether the town has the shared refinery (Workspace.Map.TownSquare.Refinery). Checked live,
+-- so placing the model switches the game over on the next join.
+function PlotService:HasSharedRefinery(): boolean
+	local map = workspace:FindFirstChild("Map")
+	local townSquare = map and map:FindFirstChild("TownSquare")
+	return townSquare ~= nil and townSquare:FindFirstChild("Refinery") ~= nil
 end
 
 -- The owner's production line on their plot, if they have one.
@@ -64,7 +76,9 @@ function PlotService:_assign(player: Player)
 			plot:SetAttribute("OwnerUserId", player.UserId)
 			player:SetAttribute("PlotId", plot:GetAttribute("PlotId"))
 			setSign(plot, player.DisplayName .. "'s Colony")
-			spawnStations(plot)
+			if not self:HasSharedRefinery() then
+				spawnStations(plot)
+			end
 			self.PlotAssigned:Fire(player, plot)
 			return
 		end

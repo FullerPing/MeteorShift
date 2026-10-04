@@ -15,6 +15,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -73,20 +74,34 @@ function PlayerStateService:ResetTransientInventory(player: Player)
 	lastFullNotice[player] = nil
 end
 
+-- The equipped pets' perks (Shared.Pets): miner, hauler, pack, swift, merchant
+function PlayerStateService:GetPetBonuses(player: Player): Pets.Bonuses
+	local data = self:Get(player)
+	return Pets.bonuses(if data then data.pets else Pets.fresh())
+end
+
 -- The pickaxe as it plays right now (Shared.Gear): the tier's name and ore per hit with
--- the leveled Power, swing, reach and crit. Tier is the evolution tier.
+-- the leveled Power, swing, reach and crit, and a Swift pet's shorter swing. Tier is the
+-- evolution tier.
 function PlayerStateService:GetPickaxe(player: Player): any
 	local data = self:Get(player)
 	if not data then
 		return Gear.pickaxe(1, Gear.freshPickaxeStats(1))
 	end
-	return Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
+	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
+	local swift = Pets.bonuses(data.pets).swift
+	if swift > 0 then
+		pickaxe.Swing *= 1 - swift
+	end
+	return pickaxe
 end
 
+-- Backpack capacity: the leveled Capacity, the Bigger Backpack pass and a Pack pet
 function PlayerStateService:GetCapacity(player: Player): number
 	local data = self:Get(player)
 	local base = if data then Gear.capacity(data.backpackTier, data.backpackStats) else Gear.capacity(1, Gear.freshBackpackStats(1))
-	return base * MonetizationService:BackpackMult(player)
+	local pack = if data then Pets.bonuses(data.pets).pack else 0
+	return base * MonetizationService:BackpackMult(player) * (1 + pack)
 end
 
 function PlayerStateService:GetHopperCapacity(player: Player): number
@@ -158,14 +173,20 @@ function PlayerStateService:_sendState(player: Player)
 		rate = Refining.lineRate(data, speedMult),
 	}
 
-	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
+	local pickaxe = self:GetPickaxe(player)
 	self.Client.State:SetFor(player, {
 		pickaxeTier = data.pickaxeTier,
 		backpackTier = data.backpackTier,
 		pickaxeStats = table.clone(data.pickaxeStats), -- stat levels (Shared.Gear)
 		backpackStats = table.clone(data.backpackStats),
-		swing = pickaxe.Swing, -- seconds between swings, as leveled
+		swing = pickaxe.Swing, -- seconds between swings, as leveled and with a Swift pet
 		reach = pickaxe.Reach, -- studs
+		pets = { -- Shared.Pets: owned with level and XP, the ones out, the slots and their perks
+			owned = Pets.cloneOwned(data.pets.owned),
+			equipped = table.clone(data.pets.equipped),
+			slots = Pets.slots(data.rebirths),
+			bonuses = Pets.bonuses(data.pets),
+		},
 		backpack = data.backpack,
 		carried = sum(data.backpack),
 		capacity = self:GetCapacity(player),
@@ -287,6 +308,62 @@ function PlayerStateService:HasOreRoom(player: Player): boolean
 		return true
 	end
 	return MonetizationService:HasAutoDeposit(player) and Refining.hopperCapacity(data) - sum(data.hopper) > 0
+end
+
+-- Adds mined ore straight to the hopper (a miner pet's ore), up to its capacity. Fractions
+-- are banked like AddOre's. Returns the whole ore added.
+function PlayerStateService:AddOreToHopper(player: Player, oreType: string, amount: number): number
+	local data = self:Get(player)
+	local remainders = oreRemainder[player]
+	if not data or not remainders or amount <= 0 then
+		return 0
+	end
+	local room = Refining.hopperCapacity(data) - sum(data.hopper)
+	if room <= 0 then
+		return 0
+	end
+	local pending = (remainders[oreType] or 0) + amount
+	local whole = math.floor(pending)
+	remainders[oreType] = pending - whole
+	local added = math.min(whole, room)
+	if added > 0 then
+		data.hopper[oreType] = (data.hopper[oreType] or 0) + added
+		self.OreAutoDeposited:Fire(player, added)
+		self:Replicate(player)
+	end
+	return added
+end
+
+-- Moves up to `amount` whole ore from the backpack to the hopper (a Hauler pet), in the
+-- player's refining order, as far as the hopper has room. Returns the ore moved.
+function PlayerStateService:MoveBackpackToHopper(player: Player, amount: number): number
+	local data = self:Get(player)
+	if not data then
+		return 0
+	end
+	local room = Refining.hopperCapacity(data) - sum(data.hopper)
+	local budget = math.min(math.floor(amount), room)
+	local moved = 0
+	if budget <= 0 then
+		return 0
+	end
+	for _, oreType in RefineryQueue.order(data.refinePriority, data.backpack) do
+		local have = data.backpack[oreType] or 0
+		local n = math.min(have, budget - moved)
+		if n > 0 then
+			data.backpack[oreType] = have - n
+			if data.backpack[oreType] <= 0 then
+				data.backpack[oreType] = nil
+			end
+			data.hopper[oreType] = (data.hopper[oreType] or 0) + n
+			moved += n
+		end
+	end
+	if moved > 0 then
+		self.OreAutoDeposited:Fire(player, moved)
+		self:Replicate(player)
+	end
+	return moved
 end
 
 function PlayerStateService:AddShards(player: Player, amount: number)

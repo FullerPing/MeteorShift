@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 local Format = require(ReplicatedStorage.Shared.Format)
 local HudMessages = require(ReplicatedStorage.Shared.HudMessages)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
@@ -65,6 +66,7 @@ function HUDController:KnitStart()
 	local EconomyService = Knit.GetService("EconomyService")
 	local UpgradeService = Knit.GetService("UpgradeService")
 	local ShopService = Knit.GetService("ShopService")
+	local PetService = Knit.GetService("PetService")
 
 	local scope = Fusion.scoped(Fusion)
 	local hud = UI.hud(scope)
@@ -183,6 +185,20 @@ function HUDController:KnitStart()
 		Sfx.play("Purchase")
 		if item then
 			showToast("Evolved to the " .. item.Name .. "!")
+		end
+	end)
+	PetService.Notice:Connect(showToast)
+	PetService.Bought:Connect(function(petId: string)
+		local pet = Pets.def(petId)
+		Sfx.play("Purchase")
+		if pet then
+			showToast("You got " .. pet.Name .. "!")
+		end
+	end)
+	PetService.Leveled:Connect(function(petId: string, level: number)
+		local pet = Pets.def(petId)
+		if pet then
+			showToast(pet.Name .. " reached level " .. level .. "!")
 		end
 	end)
 	ShopService.Upgraded:Connect(function(kind: string, stat: string, level: number)
