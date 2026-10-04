@@ -3,13 +3,14 @@
 -- Pure functions, covered by tests/Pets.spec; PetService, PlayerStateService and
 -- EconomyService use them.
 --
---   perk(role, level, power) what a pet of that role gives at that level (times its Power)
+--   perksOf(def, level)    a pet's ordered { role, value } perks at that level
 --   roll(egg, roll, pity, pick) which pet an egg hatches (pure; PetService passes the randoms)
 --   bonuses(pets)           the equipped pets' perks added up per role, to each role's cap
---   slots(rebirths)         how many pets can be out
+--   slots(rebirths, extra)  how many pets can be out, including the optional slot pass
+--   minerActive(last, now)  whether a real validated swing is inside the miner window
 --   xpToNext(level)         XP to the next level, nil at the max
 --   addXp(entry, xp)        adds XP to a { level, xp } entry, levelling up; returns levels gained
---   clean(saved, rebirths)  a saved `pets` table made legal: known pets, levels in range,
+--   clean(saved, rebirths, extra) a saved `pets` table made legal: known pets, levels in range,
 --                           equipped ones owned, unique and within the slots
 
 local Config = require(script.Parent.Config.Pets)
@@ -18,7 +19,11 @@ local Pets = {}
 
 export type Entry = { level: number, xp: number }
 export type Saved = { owned: { [string]: Entry }, equipped: { string }, hatches: { [string]: number }? }
-export type Bonuses = { miner: number, hauler: number, pack: number, swift: number, merchant: number }
+export type PerkValue = { role: string, value: number }
+export type Bonuses = {
+	miner: number, hauler: number, pack: number, swift: number, merchant: number,
+	yield: number, sprint: number, vault: number, crit: number, scholar: number, shards: number,
+}
 
 local byId: { [string]: Config.Pet } = {}
 for _, pet in Config.List do
@@ -29,23 +34,50 @@ function Pets.def(petId: string): Config.Pet?
 	return byId[petId]
 end
 
--- A role's perk at a pet level: Min at level 1 growing to Max at the max level
-function Pets.perk(role: string, level: number, power: number?): number
-	local def = Config.Roles[role]
-	if not def then
-		return 0
-	end
+-- Each pet carries its own range. Preserve order so the first perk stays the main role.
+function Pets.perksOf(def: Config.Pet, level: number): { PerkValue }
 	local fraction = (math.clamp(level, 1, Config.MaxLevel) - 1) / math.max(Config.MaxLevel - 1, 1)
-	return (def.Min + (def.Max - def.Min) * fraction) * (power or 1)
+	local perks: { PerkValue } = {}
+	for _, perk in def.Perks do
+		table.insert(perks, { role = perk.Role, value = perk.Min + (perk.Max - perk.Min) * fraction })
+	end
+	return perks
 end
 
--- A pet's perk at a level: its Range if it has one, else the role's range times its Power
-function Pets.petPerk(def: Config.Pet, level: number): number
-	if def.Range then
-		local fraction = (math.clamp(level, 1, Config.MaxLevel) - 1) / math.max(Config.MaxLevel - 1, 1)
-		return def.Range[1] + (def.Range[2] - def.Range[1]) * fraction
+local function finite(value: number): boolean
+	return value == value and math.abs(value) < math.huge
+end
+
+function Pets.minerActive(lastSwing: number?, now: number): boolean
+	return lastSwing ~= nil and finite(lastSwing) and finite(now)
+		and lastSwing <= now and now - lastSwing <= Config.MinerWindow
+end
+
+local function scaled(role: string, amount: number, bonus: number): number
+	if not finite(amount) or amount <= 0 then
+		return 0
 	end
-	return Pets.perk(def.Role, level, def.Power)
+	local mult = if finite(bonus) then 1 + math.clamp(bonus, 0, Config.Roles[role].Cap) else 1
+	local result = amount * mult
+	return if finite(result) then result else 0
+end
+
+-- Quantity bonuses never touch a roll or its odds. Preserve fractional ore and XP;
+-- their existing consumers carry fractions forward. Shards round the complete payout.
+function Pets.oreYield(ore: number, bonus: number): number
+	return scaled("yield", ore, bonus)
+end
+
+function Pets.playerXp(amount: number, bonus: number): number
+	return scaled("scholar", amount, bonus)
+end
+
+function Pets.coreShards(amount: number, bonus: number): number
+	return math.floor(scaled("shards", amount, bonus))
+end
+
+function Pets.vaultCapacity(capacity: number, bonus: number): number
+	return scaled("vault", capacity, bonus)
 end
 
 local rarityIndex: { [string]: number } = {}
@@ -104,9 +136,9 @@ function Pets.roll(egg: Config.Egg, roll: number, pity: number, pick: number): (
 	return pet.Id, newPity
 end
 
-function Pets.slots(rebirths: number?): number
+function Pets.slots(rebirths: number?, extraSlot: boolean?): number
 	local slots = Config.Slots
-	return math.min(slots.Base + slots.PerRebirth * math.max(math.floor(rebirths or 0), 0), slots.Max)
+	return math.min(slots.Base + slots.PerRebirth * math.max(math.floor(rebirths or 0), 0), slots.Max) + (if extraSlot then 1 else 0)
 end
 
 function Pets.xpToNext(level: number): number?
@@ -141,14 +173,19 @@ end
 
 -- The equipped pets' perks, one number per role (0 when none), each capped
 function Pets.bonuses(pets: Saved): Bonuses
-	local totals: any = { miner = 0, hauler = 0, pack = 0, swift = 0, merchant = 0 }
+	local totals: any = {}
+	for _, role in Config.RoleOrder do
+		totals[role] = 0
+	end
 	local seen: { [string]: boolean } = {}
 	for _, petId in pets.equipped do
 		local def = byId[petId]
 		local entry = pets.owned[petId]
 		if def and entry and not seen[petId] then
 			seen[petId] = true
-			totals[def.Role] += Pets.petPerk(def, entry.level)
+			for _, perk in Pets.perksOf(def, entry.level) do
+				totals[perk.role] += perk.value
+			end
 		end
 	end
 	for role, total in totals do
@@ -180,7 +217,7 @@ function Pets.fresh(): Saved
 end
 
 -- Makes a saved `pets` table legal (profile loads, migrations)
-function Pets.clean(saved: any, rebirths: number?): Saved
+function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?): Saved
 	local owned: { [string]: Entry } = {}
 	if type(saved) == "table" and type(saved.owned) == "table" then
 		for petId, entry in saved.owned do
@@ -196,7 +233,7 @@ function Pets.clean(saved: any, rebirths: number?): Saved
 	end
 	local equipped: { string } = {}
 	local seen: { [string]: boolean } = {}
-	local limit = Pets.slots(rebirths)
+	local limit = Pets.slots(rebirths, extraSlot)
 	if type(saved) == "table" and type(saved.equipped) == "table" then
 		for _, petId in saved.equipped do
 			if type(petId) == "string" and owned[petId] and not seen[petId] and #equipped < limit then

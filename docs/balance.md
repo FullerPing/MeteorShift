@@ -62,6 +62,18 @@ Everyone mines every meteor type at their pickaxe's full rate and Iron/Ice/Cryst
 
 The model (`Pacing`) levels the player from finished meteors (70 XP each), mixes the three ores by weight, and tracks the line time each ore costs. Mining quantity (pickaxe, backpack) only matters once the line is faster than the ore supply.
 
+## Pet perks and clearance
+
+The pet roster now uses explicit level 1 and level 10 values, interpolated linearly; [the pet brief](pets.md) lists every endpoint and role cap. Equipped values add per role before capping. Drillbot costs 99 Robux and Solar Phoenix 199 Robux as fixed game passes; eggs still cost earned Core Shards and keep their published odds and pity. No pet changes mineral odds.
+
+- Yield multiplies the ore of every validated player hit after the existing meteor/debris and pass quantity multipliers. It preserves fractional ore for the existing inventory remainder. Mining Power and crit damage are separate.
+- Scholar multiplies player XP in `LevelService:AddXp`, including per-hit XP and the cracked-core bonus. This reaches Frost clearance at level 4 and Crystal clearance at level 6 sooner, without changing the clearance formula, bar prices or tier evolution requirements. Pet XP and its 400-XP duplicate reward are unchanged.
+- Shards multiplies the complete cracked-core payout and rounds down once. Contribution, podium ranking and mineral rolls keep their existing rules.
+- Vault multiplies both hopper and collection post capacity by the same value, in live play and offline catch-up. It raises storage room without changing conveyor or refinery speed, and unequipping it never deletes existing stock.
+- Miner still needs the owner's recent validated swing and sends its ore straight to the hopper. Hauler moves a share of the current backpack capacity per second; Pack raises that capacity. Swift shortens swings, Merchant raises bar-sale value, Crit adds absolute chance points, and Sprint raises base walking speed without overriding another system's speed change.
+
+The pacing targets and timeline above still describe the existing free-player model. This pass changes no `Config.Balance` numbers and does not yet include pets in `Shared.Pacing`; the later Drillbot-at-level-5 comparison will report its effect without retuning the economy.
+
 ## What changed in this rebase
 
 - Ore per hit 1 to 450 became 1 to 20 (flat per tier), and backpack capacity 50 to 40,000 became 50 to 1,800, so veterans mine more per hit but not hundreds of times more. Everything priced in cash was rescaled to keep the numbers big: bar prices x10 (Iron $50, Frost $1,200, Crystal $30,000) and line, backpack and pickaxe prices re-fitted to the pacing model.
