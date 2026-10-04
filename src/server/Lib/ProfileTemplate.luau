@@ -4,7 +4,7 @@
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 4,
+	version = 5,
 	cash = 0,
 	shards = 0,
 	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
@@ -13,6 +13,8 @@ return {
 	backpackStats = { capacity = 1 },
 	-- Pets (Shared.Pets): owned ones with their level and XP, and the ones out (kept through rebirth)
 	pets = { owned = { drillbot = { level = 1, xp = 0 } }, equipped = { "drillbot" } },
+	level = 1, -- player level (Shared.Levels): earned from meteors, kept through rebirth
+	xp = 0,
 	backpack = {}, -- ore carried, by type
 	-- Plot production line: hopper -> conveyor -> refinery -> collection post
 	stations = {

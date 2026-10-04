@@ -12,6 +12,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
 local RewardService = Knit.CreateService({
@@ -23,6 +24,8 @@ local RewardService = Knit.CreateService({
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
+		-- To the player who levelled up: (level)
+		LevelUp = Knit.CreateSignal(),
 	},
 })
 
@@ -58,6 +61,14 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			data.stats.meteorsJoined += 1
 			if reward then
 				data.stats.coresCracked += 1
+			end
+			-- Player level (Shared.Levels): XP only for a meteor you hit, by effort against the top player
+			if entry.Contribution > 0 then
+				local top = ranked[1].Contribution
+				local xp = Levels.meteorXp(meteorType.Ore, if top > 0 then entry.Contribution / top else 0, cracked)
+				if Levels.addXp(data, xp) > 0 then
+					self.Client.LevelUp:Fire(entry.Player, data.level)
+				end
 			end
 		end
 		if reward then

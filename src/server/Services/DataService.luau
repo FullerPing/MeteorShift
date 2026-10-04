@@ -18,6 +18,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
 
 local STORE_NAME = "PlayerData_v1"
@@ -107,6 +108,9 @@ local function migrate(data: { [any]: any }): { [any]: any }
 	data.backpackStats = Gear.cleanBackpackStats(data.backpackTier, data.backpackStats)
 	-- v3 -> v4: pets. Everyone gets the Drillbot, equipped; Pets.clean also repairs any saved table.
 	data.pets = Pets.clean(data.pets, data.rebirths)
+	-- v4 -> v5: player level and XP (everyone starts at level 1)
+	local progress = Levels.clean(data.level, data.xp)
+	data.level, data.xp = progress.level, progress.xp
 	data.version = Template.version
 	return data
 end

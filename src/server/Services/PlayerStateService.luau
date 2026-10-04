@@ -16,6 +16,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -175,6 +176,9 @@ function PlayerStateService:_sendState(player: Player)
 
 	local pickaxe = self:GetPickaxe(player)
 	self.Client.State:SetFor(player, {
+		level = data.level, -- player level (Shared.Levels)
+		xp = data.xp,
+		xpNeeded = Levels.xpToNext(data.level) or 0, -- 0 at the max level
 		pickaxeTier = data.pickaxeTier,
 		backpackTier = data.backpackTier,
 		pickaxeStats = table.clone(data.pickaxeStats), -- stat levels (Shared.Gear)

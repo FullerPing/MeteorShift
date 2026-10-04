@@ -45,6 +45,9 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 - HUD shows your pickaxe, the cash counter counts up to the new total, and a "+$" floater rises off it on every sale
 - Tutorial (spec §11): 10 steps from "Mine a debris rock" to "Buy an upgrade", each completed by the real action on the server, with a step card, a marker over the target and a beam from you to it. Doing a later step's action first also completes the steps before it, so joining mid-event never gets you stuck. Skippable, saved in the profile (`tutorialStep`), and each step is logged as an onboarding funnel step
 
+**Player level (Shared.Levels, Config.Levels)**
+- Every meteor you hit pays XP (a base plus a bonus for your share of the top player's contribution, more for Ice/Crystal, half when it cools). Debris and idling pay nothing. The level survives rebirth. Evolving a pickaxe or backpack to tier 5 and up also needs a player level (`Config.Levels.EvolveLevel`), checked by `ShopService:Evolve`; the Evolve card shows "NEEDS LEVEL n". `tests/Levels.spec` checks an average player isn't held back through tier 6.
+
 **Pets (Shared.Pets, Config.Pets, PetService)**
 - You put out a few pets at a time (1 slot, +1 per rebirth, up to 3). Each has one role and levels from 1 to 10 on your own validated hits, and its perk grows from the role's start to its max. The Pets tab of the shop lists them: the Drillbot is yours from the start, the others cost Core Shards (never random). Rebirth keeps pets
 - **Miner** (Drillbot): while you are mining (a validated swing of yours in the last 15 s) it hits the nearest target in your reach every swing with 25% of your pickaxe's Mining Power and ore, rising to 40% at level 10. Its ore goes straight to the hopper; it never counts for the podium, core rewards, mineral drops or the meteor's size
@@ -100,7 +103,7 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config/, Format, Phase, Price, MiningPower, Gear, Pets, Pacing,
+src/shared/            ReplicatedStorage.Shared: Config/, Format, Phase, Price, MiningPower, Gear, Pets, Levels, Pacing,
                        MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Aim, EquipmentModels,
                        AtmosphereMood
 src/server/            ServerScriptService.Server: Knit services, Lib/, Main.server.luau (Studio dev hooks)
@@ -111,7 +114,7 @@ docs/                  balance.md (economy pacing model), plans/ (spec copy and 
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Gear, Pets, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
+`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Gear, Pets, Levels, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
 
 Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `ActivityService` (who counts as active), `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile, batched State replication), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths), `TelemetryService` (analytics), `MonetizationService` (game passes and developer products). `src/server/Lib` holds the profile template, the pure refinery simulation (`Refining`), the shard reward math (`Rewards`) and the analytics helpers (`Telemetry`).
 

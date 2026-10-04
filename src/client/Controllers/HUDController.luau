@@ -201,6 +201,10 @@ function HUDController:KnitStart()
 			showToast(pet.Name .. " reached level " .. level .. "!")
 		end
 	end)
+	RewardService.LevelUp:Connect(function(level: number)
+		Sfx.play("Purchase")
+		showToast("Player level " .. level .. "!")
+	end)
 	ShopService.Upgraded:Connect(function(kind: string, stat: string, level: number)
 		local names = if kind == "pickaxe" then Config.Gear.Pickaxe.Names else Config.Gear.Backpack.Names
 		Sfx.play("Purchase")

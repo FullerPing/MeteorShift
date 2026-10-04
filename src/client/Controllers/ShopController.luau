@@ -11,6 +11,8 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local ShopLayout = require(ReplicatedStorage.Shared.EquipmentShopLayout)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local Levels = require(ReplicatedStorage.Shared.Levels)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local UI = require(script.Parent.Parent.UI)
 local EquipmentPreview = require(script.Parent.Parent.EquipmentPreview)
@@ -400,9 +402,17 @@ function ShopController:KnitStart()
 			end),
 			State = scope:Computed(function(use): RowState
 				local e = use(evolution)
-				return if not e then "max" elseif e.ready then "next" else "locked"
+				if not e then return "max" end
+				local s = use(playerState)
+				return if e.ready and (s == nil or s.level >= Levels.evolveLevel(e.tier)) then "next" else "locked"
 			end),
-			LockedText = "MAX " .. string.upper(settings.Names[settings.Gate]) .. " FIRST",
+			LockedText = scope:Computed(function(use)
+				local e, s = use(evolution), use(playerState)
+				if e and e.ready and s and s.level < Levels.evolveLevel(e.tier) then
+					return "NEEDS LEVEL " .. Levels.evolveLevel(e.tier)
+				end
+				return "MAX " .. string.upper(settings.Names[settings.Gate]) .. " FIRST"
+			end),
 			ReadyText = "EVOLVE",
 			Cost = scope:Computed(function(use) local e = use(evolution) return if e then e.cost else 0 end),
 			Shards = scope:Computed(function(use) local e = use(evolution) return if e then e.shards else 0 end),
@@ -682,7 +692,9 @@ function ShopController:KnitStart()
 									return string.format("%d / %d pets out. Rebirths open more slots.   %d / %d", #s.pets.equipped, s.pets.slots, first, count)
 								end
 							end
-							return string.format("%d / %d", first, count)
+							local s = use(playerState)
+							local levelText = if s then string.format("Player level %d%s   ", s.level, if s.xpNeeded > 0 then string.format(" (%d / %d XP)", math.floor(s.xp), s.xpNeeded) else " (max)") else ""
+							return levelText .. string.format("%d / %d", first, count)
 						end),
 					}),
 				},

@@ -20,6 +20,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Price = require(ReplicatedStorage.Shared.Price)
 local EquipmentModels = require(ReplicatedStorage.Shared.EquipmentModels)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 
 local ShopService = Knit.CreateService({
 	Name = "ShopService",
@@ -91,6 +92,11 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 	if not evolution.ready then
 		local gate = Config.Gear[if kind == "pickaxe" then "Pickaxe" else "Backpack"]
 		self.Client.Notice:Fire(player, string.format("Level %s to %d before evolving to the %s.", string.lower(gate.Names[gate.Gate]), Gear.cap(current), item.Name))
+		return false
+	end
+	local levelNeeded = Levels.evolveLevel(evolution.tier)
+	if data.level < levelNeeded then
+		self.Client.Notice:Fire(player, string.format("Reach player level %d to evolve to the %s. Take part in meteors to earn XP.", levelNeeded, item.Name))
 		return false
 	end
 	local shortfall = Price.shortfall(data, evolution.cost, evolution.shards, "the " .. item.Name)
