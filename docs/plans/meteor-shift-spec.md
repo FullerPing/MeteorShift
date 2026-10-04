@@ -110,7 +110,7 @@ So a maxed veteran clears nodes about **8× faster** than a newcomer (4.8× powe
 ```
 active       = players with any input in the last 2 min (idle ones excluded)
 serverPower  = sum over active players of powerPerSec
-serverPower  = max(serverPower, floorPower)   -- floorPower = 4 basic players, so tiny lobbies still get a real meteor
+serverPower  = max(serverPower, floorPower)   -- floorPower = 1 basic player (HP scales with power, so any lobby size cracks in the same time)
 crustHP      = serverPower × 70 s × type HP multiplier   (split evenly across crust nodes)
 coreHP       = serverPower × 45 s × type HP multiplier
 coreUnlock   = 60% of crust nodes broken (core glows and becomes hittable)

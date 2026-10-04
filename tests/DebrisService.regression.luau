@@ -65,12 +65,12 @@ local function fixture(tier)
 	return service, state, part, fleck, drop
 end
 
-test("blue tier-3 debris rewards Frost at its existing yield", function()
+test("blue tier-3 debris keeps its look but drops Iron at its existing yield", function()
 	local _, state, part, fleck, drop = fixture(3)
 	eq(part:GetAttribute("Tier"), 3)
 	eq(fleck.Color, roblox.Color3.fromRGB(90, 200, 220), "blue appearance")
 	local ore, mult = drop()
-	eq(ore, "frost", "actual registered mining drop")
+	eq(ore, "iron", "actual registered mining drop")
 	eq(mult, 0.25, "debris yield")
 	eq(state.def.Kind, "Debris", "mineral index eligibility stays debris")
 end)
@@ -81,12 +81,12 @@ test("purple tier-5 debris keeps its Iron reward", function()
 	eq(drop(), "iron")
 end)
 
-test("untouched reroll changes the registered drop together with its colour", function()
+test("untouched reroll changes the rock's tier and colour, never its Iron drop", function()
 	local service, state, part, fleck, drop = fixture(1)
 	eq(drop(), "iron")
 	state.tier = 4
 	service:_reroll()
-	eq(drop(), "frost")
+	eq(drop(), "iron")
 	eq(part:GetAttribute("Tier"), 4)
 	eq(fleck.Color, roblox.Color3.fromRGB(90, 200, 220))
 end)
@@ -96,7 +96,7 @@ test("damaged rocks retain their ore until respawn", function()
 	state.hp = state.maxHp - 1
 	state.tier = 5
 	service:_reroll()
-	eq(drop(), "frost")
+	eq(drop(), "iron")
 	state.def.OnBroken()
 	eq(part.CanQuery, false)
 	eq(#state.delayed, 1)

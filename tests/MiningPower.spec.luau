@@ -14,9 +14,28 @@ return function(t: any)
 		t.near(MiningPower.power(4), 1.953, 0.001)
 	end)
 
-	t.test("floorPower is 4 basic pickaxes per second", function()
-		-- FloorPlayers = 4, tier 1 power (1) / tier 1 swing (0.6s)
-		t.near(MiningPower.floorPower(), 4 * (1 / 0.6), 0.0001)
+	t.test("floorPower is FloorPlayers basic pickaxes per second", function()
+		-- tier 1 power (1) / tier 1 swing (0.6s)
+		t.near(MiningPower.floorPower(), require(t.shared.Config).Meteor.FloorPlayers * (1 / 0.6), 0.0001)
+	end)
+
+	t.test("a lobby of any size can crack the core in time (a floor above the real lobby made 1-3 players unable to)", function()
+		local Config = require(t.shared.Config)
+		local Meteor = Config.Meteor
+		local timer = Meteor.Types.Iron.ActiveDuration
+		local nodes = 36
+		for players = 1, 20 do
+			local tiers = {}
+			for _ = 1, players do
+				table.insert(tiers, 1)
+			end
+			local crustHp, coreHp = MiningPower.size(MiningPower.serverPower(tiers), nodes, 1)
+			-- power the lobby actually lands per second at 100% effort
+			local landed = players * MiningPower.perSecond(1)
+			local needed = math.ceil(nodes * Meteor.CoreUnlockFraction) * crustHp + coreHp
+			local seconds = needed / landed
+			t.ok(seconds <= timer * 0.85, players .. " basic pickaxes need " .. math.floor(seconds) .. "s of the " .. timer .. "s timer")
+		end
 	end)
 
 	t.test("serverPower floors a tiny lobby", function()

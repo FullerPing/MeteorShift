@@ -357,6 +357,9 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		if not MeteorTypes.underTier(pickaxe.Tier, meteorType) then
 			return meteorType.Ore, meteorType.YieldMult
 		end
+		if not PlayerStateService:HasOreRoom(player) then
+			return nil, 0 -- a full backpack drops this hit's ore; don't spend the meteor's allowance on it
+		end
 		local cap = MeteorTypes.underTierCap(pickaxe.Tier, PlayerStateService:GetCapacity(player), meteorType)
 		local taken = underTierOre[player] or 0
 		local quantity = math.min(pickaxe.OrePerHit * MeteorTypes.underTierYield(pickaxe.Tier, meteorType), cap - taken)

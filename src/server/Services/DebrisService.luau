@@ -87,7 +87,7 @@ function DebrisService:_track(part: BasePart)
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
 		-- The tier changes on untouched rerolls and respawns. Read its current value
-		-- so cyan rocks always reward Frost while keeping the debris ore quantity.
+		-- (debris always drops the default ore; the tint only shows how tough a rock is).
 		OreFor = function()
 			return DebrisOre.forTier(part:GetAttribute("Tier") :: number?), Config.Debris.YieldFraction
 		end,

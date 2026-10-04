@@ -1,16 +1,11 @@
 --!strict
--- Cyan debris represents Frost ore. Other debris keeps its existing ore rule.
+-- Debris is filler (spec §5.7): every rock drops the default ore whatever its tier or tint.
 
 return function(t: any)
 	local DebrisOre = require(t.shared.DebrisOre)
 
-	t.test("cyan tiers mine Frost ore", function()
-		t.eq(DebrisOre.forTier(3), "frost")
-		t.eq(DebrisOre.forTier(4), "frost")
-	end)
-
-	t.test("other coloured debris keeps Iron ore", function()
-		for _, tier in { 1, 2, 5, 6, 7, 8 } do
+	t.test("every tier of debris drops Iron, cyan rocks included", function()
+		for tier = 1, 8 do
 			t.eq(DebrisOre.forTier(tier), "iron")
 		end
 	end)

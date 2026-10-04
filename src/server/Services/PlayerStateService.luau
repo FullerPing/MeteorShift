@@ -264,6 +264,20 @@ function PlayerStateService:AddOre(player: Player, oreType: string, amount: numb
 	return deposited + added
 end
 
+-- True when mined ore would find room right now: in the backpack, or in the hopper with
+-- Auto-Deposit. Callers that spend a per-meteor allowance on each hit check it first, so a
+-- full backpack doesn't burn the allowance on ore that is dropped.
+function PlayerStateService:HasOreRoom(player: Player): boolean
+	local data = self:Get(player)
+	if not data then
+		return false
+	end
+	if self:GetCapacity(player) - sum(data.backpack) > 0 then
+		return true
+	end
+	return MonetizationService:HasAutoDeposit(player) and Refining.hopperCapacity(data) - sum(data.hopper) > 0
+end
+
 function PlayerStateService:AddShards(player: Player, amount: number)
 	local data = self:Get(player)
 	if not data then
