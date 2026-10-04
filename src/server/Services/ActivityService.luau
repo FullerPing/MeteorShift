@@ -60,15 +60,6 @@ function ActivityService:GetActivePickaxes(): { any }
 	return pickaxes
 end
 
--- Pickaxe tiers of the active players (meteor type eligibility).
-function ActivityService:GetActiveTiers(): { number }
-	local tiers = {}
-	for _, pickaxe in self:GetActivePickaxes() do
-		table.insert(tiers, pickaxe.Tier)
-	end
-	return tiers
-end
-
 -- Mining Power per second of each active player (meteor sizing, Shared.MiningPower).
 function ActivityService:GetActiveRates(): { number }
 	local rates = {}

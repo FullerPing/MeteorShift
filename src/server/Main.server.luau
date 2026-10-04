@@ -166,6 +166,23 @@ Knit.Start()
 			end
 			petHook.Parent = ServerStorage
 
+			-- Studio only: sets the player level (clears XP). Returns the level.
+			-- game.ServerStorage.DevLevel:Invoke(game.Players:GetPlayers()[1], 7)
+			local Levels = require(ReplicatedStorage.Shared.Levels)
+			local levelHook = Instance.new("BindableFunction")
+			levelHook.Name = "DevLevel"
+			levelHook.OnInvoke = function(player: Player, level: number)
+				local data = PlayerStateService:Get(player)
+				if not data then
+					return nil
+				end
+				local progress = Levels.clean(level, 0)
+				data.level, data.xp = progress.level, progress.xp
+				PlayerStateService:ReplicateNow(player)
+				return data.level
+			end
+			levelHook.Parent = ServerStorage
+
 			local gearHook = Instance.new("BindableFunction")
 			gearHook.Name = "DevGear"
 			gearHook.OnInvoke = setGear

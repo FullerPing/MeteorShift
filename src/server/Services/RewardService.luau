@@ -3,15 +3,14 @@
 -- (floor, contribution share of the bonus pool, top three, the meteor type's pool
 -- multiplier) is the pure Server.Lib.Rewards.
 --
--- Each participant's results also say which ore their pickaxe mined from this
--- meteor and, when it was under the meteor's tier, what they missed (spec §8.1).
+-- Each participant's results also say which ore they mined from this meteor and how
+-- fast their refinery handles it (clearance, 1 = full speed; Shared.Levels).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
-local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
@@ -19,8 +18,8 @@ local RewardService = Knit.CreateService({
 	Name = "RewardService",
 	Client = {
 		-- To each participant: { cracked, ore, oreType, contribution, rank, hitCore, floor,
-		-- bonus, top, shards, leaders, missed? }. oreType is the meteor's ore id; missed is
-		-- MeteorTypes.missed, nil when their pickaxe met its tier.
+		-- bonus, top, shards, leaders, clearance }. oreType is the meteor's ore id; clearance
+		-- is the refining speed for it at their level, 0 to 1.
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
@@ -75,12 +74,11 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			PlayerStateService:AddShards(entry.Player, reward.Total)
 			self.ShardsAwarded:Fire(entry.Player, reward.Total)
 		end
-		local pickaxeTier = PlayerStateService:GetPickaxe(entry.Player).Tier
 		self.Client.Results:Fire(entry.Player, {
 			cracked = cracked,
 			ore = entry.Ore,
 			oreType = meteorType.Ore,
-			missed = MeteorTypes.missed(pickaxeTier, meteorType),
+			clearance = Levels.clearance(if data then data.level else 1, meteorType.Ore),
 			contribution = entry.Contribution,
 			rank = index,
 			hitCore = entry.HitCore,

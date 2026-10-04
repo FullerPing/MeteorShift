@@ -8,6 +8,8 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Queue = require(ReplicatedStorage.Shared.RefineryQueue)
 local Home = require(ReplicatedStorage.Shared.Config.Home)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Levels = require(ReplicatedStorage.Shared.Levels)
+local Config = require(ReplicatedStorage.Shared.Config)
 local UI = require(script.Parent.Parent.UI)
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
 local player = Players.LocalPlayer
@@ -133,7 +135,15 @@ function Controller:KnitStart()
 					Text = rowScope:Computed(function(use) return use(row).name .. (if use(current) then " · NEXT" else "") end), TextTruncate = Enum.TextTruncate.AtEnd,
 					TextColor3 = rowScope:Computed(function(use) return if use(current) then UI.HUD_MINT else UI.WHITE end) }),
 				caption(rowScope, { Name = "Contents", Position = rowScope:Computed(function(use) return UDim2.fromOffset(10, if use(layout).compact then 26 else 30) end), Size = UDim2.new(1, -114, 0, 22), TextSize = 12, TextColor3 = UI.HUD_MUTED,
-					Text = rowScope:Computed(function(use) local r = use(row); return Format.number(r.ore) .. " ore  ·  " .. Format.number(r.bars) .. " ready bars" end), TextTruncate = Enum.TextTruncate.AtEnd }),
+					Text = rowScope:Computed(function(use)
+						local r, s = use(row), use(state)
+						local text = Format.number(r.ore) .. " ore  ·  " .. Format.number(r.bars) .. " ready bars"
+						local speed = Levels.clearance(if s and s.level then s.level else 1, id)
+						if speed < 1 then
+							text ..= string.format("  ·  %d%% speed, full at level %d", math.max(math.floor(speed * 100 + 0.5), 1), Config.Levels.OreLevel[id] or 1)
+						end
+						return text
+					end), TextTruncate = Enum.TextTruncate.AtEnd }),
 				controls,
 			},
 		})

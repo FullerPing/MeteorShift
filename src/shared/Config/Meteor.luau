@@ -49,23 +49,10 @@ Meteor.Knockback = {
 
 -- Meteor types (spec §8.1): every type is the same event with the ore, the required
 -- pickaxe tier, one twist and the multipliers swapped. Shared.MeteorTypes holds the
--- rules (schedule, ore by pickaxe tier, twist math). Alien Boss and Seasonal
+-- rules (odds, twist math). Everyone mines every type; the refinery's clearance
+-- by player level (Config.Levels) is what keeps it fair. Alien Boss and Seasonal
 -- meteors are not built yet.
-Meteor.EligibleShare = 0.25 -- a type can come up only if this share of active players meet its tier
--- Under-tier pickaxes (below a type's RequiredTier) still mine its ore, scaled to the pickaxe:
---   speed  one player swinging alone clears a crust node in NodeSecondsPerTier for each
---          tier short (tier 1 on Ice: 30 s, tier 4 on Crystal: 15 s), never faster than
---          their pickaxe would anyway; the core takes the same Mining Power per hit
---   ore    each type up TypeOrder from the best one the pickaxe mines at full speed is
---          worth TypeMult x the type below: to a tier 1 or 2 pickaxe an Ice meteor pays
---          3 Iron meteors and a Crystal meteor 9; to a tier 3 or 4, Crystal pays 3 Ice
---          meteors. One meteor of your own is what you bring home from it at full speed,
---          trips included (Shared.Pacing's ore rate). Each crust hit pays the same multiple
---          of a hit on your own ore, in the meteor's ore (fractions add up over hits), until
---          the meteor's worth is reached (a Basic Pickaxe with the Canvas Sack: one Frost
---          every 8 hits, $13.6K an Ice meteor; one Crystal every 67, $40.7K a Crystal meteor)
-Meteor.UnderTier = { NodeSecondsPerTier = 15, TypeMult = 3 }
-Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest; an ineligible pick drops down this list
+Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest
 
 Meteor.Twists = {
 	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second.

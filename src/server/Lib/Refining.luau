@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Queue = require(ReplicatedStorage.Shared.RefineryQueue)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 
 local Stations = Config.Home.Stations
 
@@ -24,6 +25,7 @@ export type HomeData = {
 	bin: { [string]: number }, -- bars waiting at the collection post
 	progress: number?, -- fractional ore carried between ticks
 	refinePriority: { string }?, -- preferred ore types, falling through when empty
+	level: number?, -- player level: sets each ore's refining speed (Shared.Levels.clearance); nil = full speed
 }
 
 local Refining = {}
@@ -63,30 +65,32 @@ local function sum(t: { [string]: number }): number
 end
 Refining.sum = sum
 
--- Takes up to `amount` ore in the saved order, then deterministic defaults.
-local function takeOre(hopper: { [string]: number }, amount: number, priority: { string }?): { [string]: number }
+-- Takes ore in the saved order, then deterministic defaults, until `budget` line units or
+-- `limit` ore are used up. An ore refined at speed e costs 1/e units (Levels.clearance), so
+-- with full speed everywhere a unit is an ore. Returns the ore taken and the units left.
+local function takeOre(hopper: { [string]: number }, limit: number, budget: number, priority: { string }?, level: number?): ({ [string]: number }, number)
 	local taken = {}
-	local remaining = amount
-	local function take(oreType: string, have: number)
-		local n = math.min(have, remaining)
+	local remaining = limit
+	for _, oreType in Queue.order(priority, hopper) do
+		if remaining <= 0 or budget < 1 then
+			break
+		end
+		local have = hopper[oreType] or 0
+		local cost = 1 / (if level then Levels.clearance(level, oreType) else 1)
+		local n = math.min(have, remaining, math.floor(budget / cost + 1e-9))
 		if n > 0 then
 			hopper[oreType] = have - n
 			taken[oreType] = (taken[oreType] or 0) + n
 			remaining -= n
+			budget -= n * cost
 		end
-	end
-	for _, oreType in Queue.order(priority, hopper) do
-		if remaining <= 0 then
-			break
-		end
-		take(oreType, hopper[oreType] or 0)
 	end
 	for oreType, have in hopper do
 		if have <= 0 then
 			hopper[oreType] = nil
 		end
 	end
-	return taken
+	return taken, budget
 end
 
 -- Why the line isn't running at full speed, for the UI
@@ -96,22 +100,24 @@ export type Blocked = "hopper" | "collector" | nil
 -- the total, and what limited it (empty hopper or full collection post).
 function Refining.run(data: HomeData, seconds: number, speedMult: number?): ({ [string]: number }, number, Blocked)
 	local capacity = Refining.lineRate(data, speedMult) * seconds + (data.progress or 0)
-	local wanted = math.floor(capacity)
 	local room = math.max(Refining.collectorCapacity(data) - sum(data.bin), 0)
 	local stock = sum(data.hopper)
-	local n = math.min(wanted, room, stock)
 
-	local made = takeOre(data.hopper, n, data.refinePriority)
+	local made, left = takeOre(data.hopper, room, capacity, data.refinePriority, data.level)
+	local n = 0
 	for oreType, amount in made do
 		data.bin[oreType] = (data.bin[oreType] or 0) + amount
+		n += amount
 	end
 
+	-- Unused line time because the post is full or the hopper is dry. Ore that is still
+	-- waiting but costs more than what is left (a slow ore) keeps its progress banked.
 	local blocked: Blocked = nil
-	if n < wanted then
+	if left >= 1 and (room - n <= 0 or sum(data.hopper) <= 0) then
 		blocked = if room <= stock then "collector" else "hopper"
 	end
 	-- An idle or blocked line doesn't bank capacity
-	data.progress = if blocked then 0 else capacity - wanted
+	data.progress = if blocked then 0 else left
 	return made, n, blocked
 end
 

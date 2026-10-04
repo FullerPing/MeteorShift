@@ -44,6 +44,7 @@
 local Config = require(script.Parent.Config)
 local Rebirth = require(script.Parent.Rebirth)
 local Gear = require(script.Parent.Gear)
+local Levels = require(script.Parent.Levels)
 
 local Pacing = {}
 
@@ -95,20 +96,27 @@ local Balance = Config.Balance
 local Iron = Config.Meteor.Types.Iron
 local BarPrice = Config.Home.BarPrices[Iron.Ore]
 
--- Expected bar price of one ore mined from a meteor, for a lobby of `tier` pickaxes.
-local function meteorBarPrice(tier: number): number
+-- XP a player earns per finished meteor in the model (an average player; tests/Levels.spec)
+local XP_PER_METEOR = 70
+
+-- Player level after `meteors` finished meteors
+local function levelAfter(meteors: number): number
+	return Levels.clean(1, meteors * XP_PER_METEOR).level
+end
+
+-- One ore mined from a meteor at a player level: the average bar price, and the average
+-- refining cost in line units (1 / clearance, Shared.Levels). Meteor types come up by weight
+-- and everyone mines all of them.
+local function meteorMix(level: number): (number, number)
 	local order = Config.Meteor.TypeOrder
-	local total, value = 0, 0
-	for index, id in order do
-		local weight = Config.Meteor.Types[id].Weight
-		local target = index
-		while target > 1 and Config.Meteor.Types[order[target]].RequiredTier > tier do
-			target -= 1
-		end
-		total += weight
-		value += weight * Config.Home.BarPrices[Config.Meteor.Types[order[target]].Ore]
+	local total, price, cost = 0, 0, 0
+	for _, id in order do
+		local type = Config.Meteor.Types[id]
+		total += type.Weight
+		price += type.Weight * Config.Home.BarPrices[type.Ore]
+		cost += type.Weight / Levels.clearance(level, type.Ore)
 	end
-	return value / total
+	return price / total, cost / total
 end
 
 -- Seconds from one impact to the next: the event, its end phase, cleanup, then the countdown.
@@ -140,13 +148,15 @@ end
 
 -- Ore per second averaged over a whole cycle, and the blended bar price of that ore
 -- (meteor and debris time weighted).
-local function averageSupply(owned: Owned, cycle: number): (number, number)
+local function averageSupply(owned: Owned, cycle: number, level: number): (number, number, number)
 	local meteor = Pacing.oreRate(owned.pickaxe, owned.backpack, 1) * Iron.ActiveDuration
 	local debris = Pacing.oreRate(owned.pickaxe, owned.backpack, Config.Debris.YieldFraction)
 		* Balance.DebrisActivityShare
 		* (cycle - Iron.ActiveDuration)
-	local price = (meteor * meteorBarPrice(owned.pickaxe) + debris * BarPrice) / (meteor + debris)
-	return (meteor + debris) / cycle, price
+	local meteorPrice, meteorCost = meteorMix(level)
+	local price = (meteor * meteorPrice + debris * BarPrice) / (meteor + debris)
+	local cost = (meteor * meteorCost + debris) / (meteor + debris)
+	return (meteor + debris) / cycle, price, cost
 end
 
 local function lineRate(owned: Owned): number
@@ -158,9 +168,9 @@ local function lineRate(owned: Owned): number
 end
 
 -- Cash per second in the long run
-local function income(owned: Owned, cycle: number, mult: number?): number
-	local supply, price = averageSupply(owned, cycle)
-	return math.min(supply, lineRate(owned)) * price * (mult or 1)
+local function income(owned: Owned, cycle: number, level: number, mult: number?): number
+	local supply, price, cost = averageSupply(owned, cycle, level)
+	return math.min(supply, lineRate(owned) / cost) * price * (mult or 1)
 end
 
 type Candidate = { id: string, name: string, cost: number, shards: number, apply: (Owned) -> () }
@@ -221,7 +231,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 	local cycle = Pacing.cycleSeconds()
 	local owned: Owned = { pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 }
 	local cash, shards, earned = 0, 0, 0
-	local hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
+	local hopperOre, hopperValue, hopperCost, bars, barsValue = 0, 0, 0, 0, 0
 	local result: Result = {
 		purchases = {},
 		affordableAt = {},
@@ -243,7 +253,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 			earned = earned,
 			owned = table.clone(owned),
 			lineRate = lineRate(owned),
-			incomePerMinute = income(owned, cycle, mult) * 60,
+			incomePerMinute = income(owned, cycle, levelAfter(meteorsCounted), mult) * 60,
 		})
 	end
 
@@ -257,18 +267,25 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 		-- Mining: ore into the hopper, capped by its capacity
 		local onMeteor = meteorActive(time, cycle)
 		local yield = if onMeteor then 1 else Config.Debris.YieldFraction * Balance.DebrisActivityShare
-		local orePrice = if onMeteor then meteorBarPrice(owned.pickaxe) else BarPrice
+		local level = levelAfter(meteorsCounted)
+		local meteorPrice, meteorCost = meteorMix(level)
+		local orePrice = if onMeteor then meteorPrice else BarPrice
+		local oreCost = if onMeteor then meteorCost else 1
 		local hopperRoom = (Config.Home.Stations.hopper.Levels[owned.hopper].Capacity :: number) - hopperOre
 		local mined = math.min(Pacing.oreRate(owned.pickaxe, owned.backpack, yield) * step, hopperRoom)
 		hopperOre += mined
 		hopperValue += mined * orePrice
+		hopperCost += mined * oreCost
 
 		-- The line: limited by time, hopper stock and room at the collection post
 		local room = (Config.Home.Stations.collector.Levels[owned.collector].Capacity :: number) - bars
-		local made = math.max(math.min(lineRate(owned) * step, hopperOre, room), 0)
+		local avgCost = if hopperOre > 0 then hopperCost / hopperOre else 1
+		local made = math.max(math.min(lineRate(owned) * step / avgCost, hopperOre, room), 0)
 		local madeValue = if hopperOre > 0 then hopperValue * made / hopperOre else 0
+		local madeCost = if hopperOre > 0 then hopperCost * made / hopperOre else 0
 		hopperOre -= made
 		hopperValue -= madeValue
+		hopperCost -= madeCost
 		bars += made
 		barsValue += madeValue
 
@@ -310,14 +327,14 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 				bought = false
 				local best: Candidate? = nil
 				local bestPayback = math.huge
-				local now = income(owned, cycle, mult)
+				local now = income(owned, cycle, level, mult)
 				for _, item in candidates(owned) do
 					if item.shards > shards then
 						continue
 					end
 					local after = table.clone(owned)
 					item.apply(after)
-					local gain = income(after, cycle, mult) - now
+					local gain = income(after, cycle, level, mult) - now
 					if gain > 1e-9 and item.cost / gain <= paybackLimit and item.cost / gain < bestPayback then
 						best, bestPayback = item, item.cost / gain
 					end
@@ -343,7 +360,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 				table.insert(result.rebirthTimes, time)
 				cash = 0
 				owned.pickaxe, owned.backpack, owned.hopper, owned.conveyor, owned.collector = 1, 1, 1, 1, 1
-				hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
+				hopperOre, hopperValue, hopperCost, bars, barsValue = 0, 0, 0, 0, 0
 			end
 		end
 		time += step

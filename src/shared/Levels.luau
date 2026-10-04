@@ -57,6 +57,13 @@ function Levels.meteorXp(oreName: string, share: number, cracked: boolean): numb
 	return (Settings.Participation + Settings.ShareBonus * math.clamp(share, 0, 1)) * typeMult * result
 end
 
+-- Refinery speed for an ore at a level: 1 at or above the ore's clearance level, then
+-- Config.Levels.ClearancePerLevel for each level short
+function Levels.clearance(level: number, oreId: string): number
+	local need = (Settings.OreLevel :: { [string]: number })[oreId] or 1
+	return Settings.ClearancePerLevel ^ math.max(need - level, 0)
+end
+
 -- Player level needed to evolve to `tier`
 function Levels.evolveLevel(tier: number): number
 	local list = Settings.EvolveLevel

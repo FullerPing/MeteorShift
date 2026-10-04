@@ -170,15 +170,14 @@ local function countdownLength(first: boolean): number
 	return if first then MeteorConfig.FirstCountdown else interval
 end
 
--- The next meteor's type (spec §8.1): weighted odds, gated by the active players'
--- pickaxe tiers (MeteorTypes.pick). In Studio, ServerStorage's DevMeteorType
+-- The next meteor's type (spec §8.1): weighted odds (MeteorTypes.pick). In Studio, ServerStorage's DevMeteorType
 -- attribute ("Ice") forces a type for testing.
 local function pickType(): Config.MeteorType
 	local forced = ServerStorage:GetAttribute("DevMeteorType")
 	if RunService:IsStudio() and typeof(forced) == "string" and MeteorConfig.Types[forced] then
 		return MeteorConfig.Types[forced]
 	end
-	return MeteorTypes.pick(ActivityService:GetActiveTiers(), math.random())
+	return MeteorTypes.pick(math.random())
 end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
@@ -347,39 +346,15 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		return state.phase == Phase.Active and current == meteor
 	end
 
-	-- Everyone mines the meteor's own ore (spec §8.1). A pickaxe under its tier gets a
-	-- fraction of it per crust hit, worth 3x a hit on the pickaxe's own best ore per type
-	-- above it (MeteorTypes.underTierYield), up to MeteorTypes.underTierCap over this
-	-- meteor; PlayerStateService:AddOre adds the fractions up.
-	local underTierOre: { [Player]: number } = setmetatable({}, { __mode = "k" }) :: any
-	local function oreFor(player: Player): (string?, number)
-		local pickaxe = PlayerStateService:GetPickaxe(player)
-		if not MeteorTypes.underTier(pickaxe.Tier, meteorType) then
-			return meteorType.Ore, meteorType.YieldMult
-		end
-		if not PlayerStateService:HasOreRoom(player) then
-			return nil, 0 -- a full backpack drops this hit's ore; don't spend the meteor's allowance on it
-		end
-		local cap = MeteorTypes.underTierCap(pickaxe.Tier, PlayerStateService:GetCapacity(player), meteorType)
-		local taken = underTierOre[player] or 0
-		local quantity = math.min(pickaxe.OrePerHit * MeteorTypes.underTierYield(pickaxe.Tier, meteorType), cap - taken)
-		if quantity <= 0 or pickaxe.OrePerHit <= 0 then
-			return nil, 0
-		end
-		underTierOre[player] = taken + quantity
-		return meteorType.Ore, meteorType.YieldMult * quantity / pickaxe.OrePerHit
+	-- Everyone mines the meteor's own ore at their pickaxe's full rate (spec §8.1); the
+	-- refinery's clearance by player level (Shared.Levels) decides how fast it is refined.
+	local function oreFor(_player: Player): (string?, number)
+		return meteorType.Ore, meteorType.YieldMult
 	end
 
-	-- Mining Power per hit: a pickaxe under the meteor's tier mines slower the more tiers
-	-- short it is, and the Crystal twist makes every player on the same node or core mine harder
-	local function powerMult(player: Player, hitters: number): number
-		local mult = if meteorType.Twist == "Resonance" then MeteorTypes.resonanceMult(hitters) else 1
-		local pickaxe = PlayerStateService:GetPickaxe(player)
-		local short = MeteorTypes.tiersShort(pickaxe.Tier, meteorType)
-		if short > 0 then
-			mult *= MeteorTypes.underTierPowerMult(pickaxe.Power, pickaxe.Swing, meteor.CrustHp, short)
-		end
-		return mult
+	-- Mining Power per hit: the Crystal twist makes every player on the same node or core mine harder
+	local function powerMult(_player: Player, hitters: number): number
+		return if meteorType.Twist == "Resonance" then MeteorTypes.resonanceMult(hitters) else 1
 	end
 
 	local crustFolder = Instance.new("Folder")

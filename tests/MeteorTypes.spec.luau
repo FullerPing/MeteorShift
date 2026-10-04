@@ -1,10 +1,7 @@
 --!strict
--- Spec for Shared.MeteorTypes (spec §8.1): which meteor type comes next, how an
--- under-tier pickaxe mines it, and the Ice (Refreeze) and Crystal (Resonance)
--- twist math. Tuning numbers (weights, under-tier pace, twist values, bar
--- prices) are read from Config so a retune doesn't break these cases; the
--- tier gates (Iron 1, Ice 3, Crystal 5) and the 25% eligibility share are the
--- spec's rules and are used as given.
+-- Spec for Shared.MeteorTypes (spec §8.1): which meteor type comes next, and the Ice
+-- (Refreeze) and Crystal (Resonance) twist math. The type is picked by weight alone:
+-- how well a player's refinery handles it is Shared.Levels' clearance (tests/Levels.spec).
 
 return function(t: any)
 	local MeteorTypes = require(t.shared.MeteorTypes)
@@ -12,25 +9,10 @@ return function(t: any)
 	local Home = require(t.shared.Config.Home)
 	local Types = Meteor.Types
 
-	-- { [pickaxe tier] = players } -> one tier per active player
-	local function lobby(counts: { [number]: number }): { number }
-		local tiers = {}
-		for tier, players in counts do
-			for _ = 1, players do
-				table.insert(tiers, tier)
-			end
-		end
-		return tiers
-	end
-
-	-- Roll bands from the weights, in TypeOrder: Iron [0, iceFrom), Ice [iceFrom, crystalFrom), Crystal [crystalFrom, 1)
 	local total = Types.Iron.Weight + Types.Ice.Weight + Types.Crystal.Weight
 	local iceFrom = Types.Iron.Weight / total
 	local crystalFrom = (Types.Iron.Weight + Types.Ice.Weight) / total
 	local EPS = 1e-9
-	local iceRoll = (iceFrom + crystalFrom) / 2
-	local crystalRoll = (crystalFrom + 1) / 2
-	local veterans = lobby({ [8] = 10 })
 
 	t.test("config: every type in TypeOrder is complete and sellable", function()
 		t.eq(#Meteor.TypeOrder, 3, "the roll bands in this spec assume Iron, Ice and Crystal only")
@@ -50,211 +32,13 @@ return function(t: any)
 	end)
 
 	t.test("weights split the roll Iron, Ice, Crystal in TypeOrder", function()
-		t.eq(MeteorTypes.pick(veterans, 0).Id, "Iron", "roll 0")
-		t.eq(MeteorTypes.pick(veterans, iceFrom - EPS).Id, "Iron", "just below the Ice band")
-		t.eq(MeteorTypes.pick(veterans, iceFrom + EPS).Id, "Ice", "just inside the Ice band")
-		t.eq(MeteorTypes.pick(veterans, crystalFrom - EPS).Id, "Ice", "just below the Crystal band")
-		t.eq(MeteorTypes.pick(veterans, crystalFrom + EPS).Id, "Crystal", "just inside the Crystal band")
-		t.eq(MeteorTypes.pick(veterans, 1 - EPS).Id, "Crystal", "roll just under 1")
+		t.eq(MeteorTypes.pick(0).Id, "Iron", "roll 0")
+		t.eq(MeteorTypes.pick(iceFrom - EPS).Id, "Iron", "just below the Ice band")
+		t.eq(MeteorTypes.pick(iceFrom + EPS).Id, "Ice", "just inside the Ice band")
+		t.eq(MeteorTypes.pick(crystalFrom - EPS).Id, "Ice", "just below the Crystal band")
+		t.eq(MeteorTypes.pick(crystalFrom + EPS).Id, "Crystal", "just inside the Crystal band")
+		t.eq(MeteorTypes.pick(1 - EPS).Id, "Crystal", "roll just under 1")
 	end)
-
-	t.test("a lobby of 10 tier-1 players never gets Ice or Crystal whatever the roll", function()
-		local beginners = lobby({ [1] = 10 })
-		for step = 0, 99 do
-			local roll = step / 100
-			t.eq(MeteorTypes.pick(beginners, roll).Id, "Iron", "roll " .. roll)
-		end
-		t.eq(MeteorTypes.pick(beginners, 1 - EPS).Id, "Iron", "roll just under 1")
-	end)
-
-	t.test("with no active players only Iron is eligible", function()
-		t.eq(MeteorTypes.pick({}, iceRoll).Id, "Iron", "Ice roll")
-		t.eq(MeteorTypes.pick({}, crystalRoll).Id, "Iron", "Crystal roll")
-	end)
-
-	t.test("3 of 10 at tier 3 allows Ice; a Crystal roll drops to Ice", function()
-		local mixed = lobby({ [3] = 3, [1] = 7 })
-		t.eq(MeteorTypes.pick(mixed, iceRoll).Id, "Ice", "Ice roll")
-		t.eq(MeteorTypes.pick(mixed, crystalRoll).Id, "Ice", "Crystal roll")
-	end)
-
-	t.test("2 of 10 at tier 3 does not allow Ice", function()
-		local mixed = lobby({ [3] = 2, [1] = 8 })
-		t.eq(MeteorTypes.pick(mixed, iceRoll).Id, "Iron", "Ice roll")
-		t.eq(MeteorTypes.pick(mixed, crystalRoll).Id, "Iron", "Crystal roll")
-	end)
-
-	t.test("a Crystal roll falls through Ice to Iron when neither is eligible", function()
-		-- 2 of 10 are tier 5: they meet Ice's tier 3 too, but 20% is under the 25% share
-		t.eq(MeteorTypes.pick(lobby({ [5] = 2, [1] = 8 }), crystalRoll).Id, "Iron")
-	end)
-
-	t.test("exactly a quarter of the lobby is enough", function()
-		t.eq(MeteorTypes.pick(lobby({ [5] = 1, [1] = 3 }), crystalRoll).Id, "Crystal", "1 of 4 at tier 5")
-		t.eq(MeteorTypes.pick(lobby({ [5] = 3, [1] = 7 }), crystalRoll).Id, "Crystal", "3 of 10 at tier 5")
-	end)
-
-	t.test("underTier is true only below the meteor's tier", function()
-		t.eq(MeteorTypes.underTier(1, Types.Ice), true, "tier 1 on Ice")
-		t.eq(MeteorTypes.underTier(2, Types.Ice), true, "tier 2 on Ice")
-		t.eq(MeteorTypes.underTier(3, Types.Ice), false, "tier 3 on Ice")
-		t.eq(MeteorTypes.underTier(4, Types.Crystal), true, "tier 4 on Crystal")
-		t.eq(MeteorTypes.underTier(8, Types.Crystal), false, "tier 8 on Crystal")
-		t.eq(MeteorTypes.underTier(1, Types.Iron), false, "tier 1 on Iron")
-	end)
-
-	t.test("tiersShort counts the tiers below the meteor's", function()
-		t.eq(MeteorTypes.tiersShort(1, Types.Ice), 2, "tier 1 on Ice")
-		t.eq(MeteorTypes.tiersShort(1, Types.Crystal), 4, "tier 1 on Crystal")
-		t.eq(MeteorTypes.tiersShort(4, Types.Crystal), 1, "tier 4 on Crystal")
-		t.eq(MeteorTypes.tiersShort(3, Types.Ice), 0, "tier 3 on Ice")
-		t.eq(MeteorTypes.tiersShort(8, Types.Iron), 0, "tier 8 on Iron")
-	end)
-
-	t.test("an under-tier pickaxe on its own clears a crust node in NodeSecondsPerTier per tier short", function()
-		local MiningPower = require(t.shared.MiningPower)
-		local Pickaxes = require(t.shared.Config.Pickaxes)
-		for _, case in { { 1, Types.Ice }, { 2, Types.Ice }, { 1, Types.Crystal }, { 4, Types.Crystal } } do
-			local tier, meteorType = case[1], case[2]
-			local pickaxe = Pickaxes[tier]
-			local short = MeteorTypes.tiersShort(tier, meteorType)
-			-- A small lobby's meteor: 36 nodes sized for the floor power
-			local nodeHp = MiningPower.size(MiningPower.floorPower(), 36, meteorType.HpMult)
-			local power = MiningPower.power(tier)
-			local mult = MeteorTypes.underTierPowerMult(power, pickaxe.Swing, nodeHp, short)
-			local label = "tier " .. tier .. " on " .. meteorType.Id
-			t.ok(mult < 1, label .. " is slowed")
-			local seconds = nodeHp / (power * mult) * pickaxe.Swing
-			t.near(seconds, Meteor.UnderTier.NodeSecondsPerTier * short, 1e-6, label)
-		end
-	end)
-
-	t.test("under-tier mining is never sped up", function()
-		t.eq(MeteorTypes.underTierPowerMult(1, 0.6, 1e6, 2), 1, "a huge node")
-		t.eq(MeteorTypes.underTierPowerMult(0, 0.6, 10, 2), 1, "no power")
-		t.eq(MeteorTypes.underTierPowerMult(1, 0.6, 10, 0), 1, "not under tier")
-	end)
-
-	t.test("bestOre is the ore of the highest type the pickaxe meets", function()
-		t.eq(MeteorTypes.bestOre(1), Types.Iron.Ore, "tier 1")
-		t.eq(MeteorTypes.bestOre(2), Types.Iron.Ore, "tier 2")
-		t.eq(MeteorTypes.bestOre(3), Types.Ice.Ore, "tier 3")
-		t.eq(MeteorTypes.bestOre(4), Types.Ice.Ore, "tier 4")
-		t.eq(MeteorTypes.bestOre(5), Types.Crystal.Ore, "tier 5")
-		t.eq(MeteorTypes.bestOre(8), Types.Crystal.Ore, "tier 8")
-	end)
-
-	t.test("each meteor type above the pickaxe's best is worth TypeMult x the type below", function()
-		local mult = Meteor.UnderTier.TypeMult
-		for _, case in {
-			{ 1, Types.Iron, 0 },
-			{ 1, Types.Ice, 1 },
-			{ 2, Types.Crystal, 2 },
-			{ 3, Types.Ice, 0 },
-			{ 4, Types.Crystal, 1 },
-			{ 5, Types.Crystal, 0 },
-			{ 8, Types.Ice, 0 },
-		} do
-			local tier, meteorType, above = case[1], case[2], case[3]
-			local label = "tier " .. tier .. " on " .. meteorType.Id
-			t.eq(MeteorTypes.typesAbove(tier, meteorType), above, label)
-			t.near(MeteorTypes.underTierWorth(tier, meteorType), mult ^ above, 1e-9, label)
-		end
-	end)
-
-	t.test("an under-tier hit pays underTierWorth x the same hit on the pickaxe's own best ore", function()
-		local Pickaxes = require(t.shared.Config.Pickaxes)
-		for tier = 1, 4 do
-			local pickaxe = Pickaxes[tier]
-			for _, meteorType in { Types.Ice, Types.Crystal } do
-				local label = "tier " .. tier .. " on " .. meteorType.Id
-				local yield = MeteorTypes.underTierYield(tier, meteorType)
-				if MeteorTypes.underTier(tier, meteorType) then
-					local paid = pickaxe.OrePerHit * yield * Home.BarPrices[meteorType.Ore]
-					local own = pickaxe.OrePerHit * Home.BarPrices[MeteorTypes.bestOre(tier)]
-					t.near(paid, MeteorTypes.underTierWorth(tier, meteorType) * own, 1e-6, label)
-					t.ok(yield < 1, label .. " gets less ore than a pickaxe at tier")
-				else
-					t.eq(yield, 1, label)
-				end
-			end
-		end
-		t.eq(MeteorTypes.underTierYield(1, Types.Iron), 1, "tier 1 on Iron")
-		t.eq(MeteorTypes.underTierYield(8, Types.Crystal), 1, "tier 8 on Crystal")
-	end)
-
-	t.test("underTierCap is underTierWorth x one of the pickaxe's own meteors, in the meteor's ore", function()
-		for _, case in { { 1, 50, Types.Ice }, { 1, 50, Types.Crystal }, { 2, 150, Types.Crystal }, { 4, 1000, Types.Crystal } } do
-			local tier, capacity, meteorType = case[1], case[2], case[3]
-			local cap = MeteorTypes.underTierCap(tier, capacity, meteorType)
-			local haul = MeteorTypes.meteorHaul(tier, capacity, meteorType.ActiveDuration)
-			local worth = MeteorTypes.underTierWorth(tier, meteorType) * haul * Home.BarPrices[MeteorTypes.bestOre(tier)]
-			t.near(cap * Home.BarPrices[meteorType.Ore], worth, 1e-6, "tier " .. tier .. " on " .. meteorType.Id)
-		end
-		t.eq(MeteorTypes.underTierCap(3, 150, Types.Ice), math.huge, "at tier: no cap")
-		t.eq(MeteorTypes.underTierCap(1, 50, Types.Iron), math.huge, "Iron: no cap")
-	end)
-
-	t.test("a Basic Pickaxe and Canvas Sack get 3 Iron meteors' worth from an Ice meteor and 9 from a Crystal one", function()
-		-- The target: one meteor type up pays about 3x the one below. The original
-		-- complaint was a Crystal meteor worth about $150K to this player, past the Plasma Pick
-		local Pickaxes = require(t.shared.Config.Pickaxes)
-		local Backpacks = require(t.shared.Config.Backpacks)
-		local Balance = require(t.shared.Config.Balance)
-		local pickaxe, capacity = Pickaxes[1], Backpacks[1].Capacity
-		local iron = MeteorTypes.meteorHaul(1, capacity, Types.Iron.ActiveDuration) * Home.BarPrices[Types.Iron.Ore]
-		for _, case in { { Types.Ice, 3 }, { Types.Crystal, 9 } } do
-			local meteorType, meteors = case[1], case[2]
-			-- Swinging through the whole cooling timer at the model's hit share
-			local hits = meteorType.ActiveDuration / pickaxe.Swing * Balance.HitsPerMinuteShare
-			local mined = hits * pickaxe.OrePerHit * MeteorTypes.underTierYield(1, meteorType)
-			local cap = MeteorTypes.underTierCap(1, capacity, meteorType)
-			t.ok(mined > cap, meteorType.Id .. ": the cap is reached before the meteor cools")
-			local value = math.min(mined, cap) * meteorType.YieldMult * Home.BarPrices[meteorType.Ore]
-			t.near(value, meteors * iron, 1e-6, meteorType.Id .. " pays $" .. math.floor(value))
-		end
-	end)
-
-	t.test("missed names the tier, ore and bar price an under-tier player missed", function()
-		local missed = MeteorTypes.missed(2, Types.Crystal)
-		t.ok(missed, "tier 2 on Crystal missed something")
-		if missed then
-			t.eq(missed.tier, 5, "tier")
-			t.eq(missed.ore, "crystal", "ore")
-			t.eq(missed.barPrice, Home.BarPrices.crystal, "bar price")
-		end
-		local missedIce = MeteorTypes.missed(1, Types.Ice)
-		t.ok(missedIce and missedIce.tier == 3 and missedIce.ore == "frost", "tier 1 on Ice")
-	end)
-
-	t.test("missed is nil when the pickaxe meets the tier", function()
-		t.eq(MeteorTypes.missed(5, Types.Crystal), nil, "tier 5 on Crystal")
-		t.eq(MeteorTypes.missed(7, Types.Ice), nil, "tier 7 on Ice")
-		t.eq(MeteorTypes.missed(1, Types.Iron), nil, "tier 1 on Iron")
-	end)
-
-	t.test("missedHint reads 'Tier 5 pickaxe mines Crystal at full speed: $3K bars' for the results panel", function()
-		local Format = require(t.shared.Format)
-		local crystal = MeteorTypes.missed(2, Types.Crystal)
-		t.ok(crystal, "tier 2 on Crystal missed something")
-		if crystal then
-			t.eq(
-				MeteorTypes.missedHint(crystal),
-				"Tier 5 pickaxe mines Crystal at full speed: " .. Format.cash(Home.BarPrices.crystal) .. " bars",
-				"Crystal hint"
-			)
-		end
-		local ice = MeteorTypes.missed(1, Types.Ice)
-		t.ok(ice, "tier 1 on Ice missed something")
-		if ice then
-			t.eq(
-				MeteorTypes.missedHint(ice),
-				"Tier 3 pickaxe mines Frost at full speed: " .. Format.cash(Home.BarPrices.frost) .. " bars",
-				"Ice hint"
-			)
-		end
-	end)
-
 	t.test("resonance adds BonusPerExtra per extra hitter up to MaxBonus", function()
 		local resonance = Meteor.Twists.Resonance
 		t.eq(MeteorTypes.resonanceMult(1), 1, "one hitter gets no bonus")

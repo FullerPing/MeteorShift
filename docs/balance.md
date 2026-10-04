@@ -20,7 +20,7 @@ The economy follows the Roblox simulator rhythm: millions on day 1, billions wit
 
 ## Model
 
-- **Meteors:** the first impact is `Meteor.FirstCountdown` (120 s) in, then one every full cycle: impact 3 s + active 150 s + end 5 s + cleanup 5 s + countdown 240 s = **403 s**. Until the player's pickaxe meets Ice's tier (3) every meteor is Iron. From then on each meteor is worth its **expected value**: the type is picked by `Meteor.Types` weights (Iron 60, Ice 25, Crystal 15) and a type the pickaxe can't mine drops to the next one down. **Assumption: the whole lobby holds the player's own pickaxe tier.** Ice's Refreeze twist and HP multiplier are ignored (they cost the crowd time, not the player's ore); so is Crystal's Resonance. Debris always drops Iron.
+- **Meteors:** the first impact is `Meteor.FirstCountdown` (120 s) in, then one every full cycle: impact 3 s + active 150 s + end 5 s + cleanup 5 s + countdown 240 s = **403 s**. The type is picked by `Meteor.Types` weights (Iron 60, Ice 25, Crystal 15) and every player mines it; the refinery's clearance by level (below) sets what the ore is worth per line-second. Ice's Refreeze twist and HP multiplier are ignored (they cost the crowd time, not the player's ore); so is Crystal's Resonance. Debris always drops Iron.
 - **Mining:** the player mines the meteor while it is active and debris between meteors (`Debris.YieldFraction` = a quarter of a hit, `DebrisActivityShare` = 0.5 of that time). Ore rate = backpack / (fill time + `TripSeconds` 40 s), fill time = hits needed x swing / `HitsPerMinuteShare` 0.7. Ore per hit is flat per tier (1, 2, 3, 5, 7, 10, 14, 20) and the backpack tracks it, so a full load is 50 to 90 hits at every stage. Ore goes to the hopper.
 - **Line:** `min(conveyor, refinery)` bars per second, limited by hopper stock and collection post room, same as `Server.Lib.Refining`. Conveyor and refinery rates are ore per second and follow what a player mines at that stage (0.25 at level 1 up to about 18).
 - **Gear:** one pickaxe and one backpack (`Shared.Gear`). A tier is bought as a bundle: the Power (or Capacity) levels up to the tier's cap plus the evolve price (`Gear.bundleCost`). Speed, Reach and Crit levels are the player's own side budget and don't move income in the model.
@@ -51,25 +51,16 @@ Times are m:ss under an hour and h:mm:ss from an hour on. Prices are the bundles
 
 The line, not mining, caps income from the Drill on: ore supply is 0.3 ore/s with the starter kit and about 10 ore/s with the best, and each line level is priced to follow it.
 
-## Under-tier meteors
+## Refinery clearance
 
-A pickaxe below an Ice or Crystal meteor's tier mines the meteor's own ore at its own pickaxe's worth (`Shared.MeteorTypes`, `Config.Meteor.UnderTier`). Each meteor type up from the best one your pickaxe mines at full speed pays `TypeMult` (3) times the one below: to a tier 1 or 2 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9; to a tier 3 or 4, Crystal is worth 3 Ice meteors.
+Everyone mines every meteor type at their pickaxe's full rate and Iron/Ice/Crystal come up by weight alone (60/25/15), so no lobby is stuck on one type. What a player's **level** decides is how fast their refinery handles each ore (`Shared.Levels.clearance`, `Config.Levels`):
 
-- **Your own meteor** is what you bring home from it at full speed, trips included (`MeteorTypes.meteorHaul`, pinned to `Pacing.oreRate` by `tests/Pacing.spec`).
-- **Per hit** each crust hit pays the same multiple of a hit on your own ore, in the meteor's ore; fractions add up over hits and stay banked for the session. A full backpack no longer spends the allowance on ore that is dropped.
-- **Per meteor** pay stops at that multiple of your own meteor (`underTierCap`).
-- **Speed:** on your own a crust node takes 15 s per tier short (`NodeSecondsPerTier`).
+- Iron is cleared at level 1, Frost at 4, Crystal at 6.
+- Under its level an ore is refined at `0.35^levelsShort` of the line's speed (it costs `1 / that` line time per ore). The bar price is the same for everyone and nobody is blocked.
+- At level 1 each ore pays about the same per line-second as Iron (Frost 24x the price at 0.35^3, Crystal 600x at 0.35^5 are both about 3x Iron per line unit); each level cleared multiplies that ore's pay by 2.86 until it is cleared. So the early game matches the old curve, and levels are the climb that replaces pickaxe-gated meteors.
+- XP (`Config.Levels`): 30 to level 2, x1.3 per level; about 70 XP per meteor you hit. About level 4 at 10 to 15 minutes, level 6 at 30 minutes. Evolving to tier 5+ needs level 5, 7, 9, 11 (`EvolveLevel`).
 
-What one under-tier meteor pays, with the backpack tier matching the pickaxe tier:
-
-| Pickaxe | Backpack | Own meteor | Ice pays | Crystal pays |
-|---|---|---|---|---|
-| Basic | Canvas Sack (50) | 90 Iron, $4.5K | 11 Frost, $13.6K | 1.4 Crystal, $40.7K |
-| Steel | Leather Pack (150) | 227 Iron, $11K | 28 Frost, $34K | 3.4 Crystal, $102K |
-| Drill | Miner's Pack (250) | 377 Frost, $452K | full speed | 45 Crystal, $1.36M |
-| Plasma | Reinforced Pack (400) | 640 Frost, $768K | full speed | 77 Crystal, $2.3M |
-
-The 2x Ore pass doubles all of it, as it does all mining.
+The model (`Pacing`) levels the player from finished meteors (70 XP each), mixes the three ores by weight, and tracks the line time each ore costs. Mining quantity (pickaxe, backpack) only matters once the line is faster than the ore supply.
 
 ## What changed in this rebase
 

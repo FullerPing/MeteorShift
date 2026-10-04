@@ -137,4 +137,23 @@ return function(t: any)
 		t.eq(data.hopper.amber, nil)
 		t.eq(data.hopper.zeta, 2)
 	end)
+
+	t.test("a slow ore under the player's level still refines, at its clearance speed", function()
+		local Levels = require(t.shared.Levels)
+		local data = { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = { crystal = 5 }, bin = {}, level = 1 }
+		local speed = Levels.clearance(1, "crystal")
+		t.ok(speed < 0.05 and speed > 0)
+		local total, seconds = 0, 0
+		while total < 5 and seconds < 100000 do
+			local _, n = Refining.run(data, 10)
+			total += n
+			seconds += 10
+		end
+		t.eq(total, 5)
+		local expected = 5 / speed / Refining.lineRate(data)
+		t.ok(seconds >= expected - 10 and seconds <= expected + 20, "took " .. seconds .. " vs " .. expected)
+		local cleared = { stations = data.stations, hopper = { crystal = 5 }, bin = {}, level = 6 }
+		local _, n = Refining.run(cleared, 20)
+		t.eq(n, 5)
+	end)
 end
