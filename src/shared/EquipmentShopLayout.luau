@@ -26,7 +26,7 @@ function EquipmentShopLayout.compute(viewport: Vector2, inset: number): Layout
 	local availableHeight = math.max(0, viewport.Y - topInset - 24)
 	local panelWidth = math.min(860, availableWidth)
 	local narrow = panelWidth < 540
-	local panelHeight = math.min(if narrow then 500 else 440, availableHeight)
+	local panelHeight = math.min(if narrow then 500 else 520, availableHeight)
 	local padding = 12
 	local sectionGap = 6
 	local headerHeight = if narrow then 80 else 54

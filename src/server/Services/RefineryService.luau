@@ -374,8 +374,6 @@ function RefineryService:UseShared(player: Player)
 		return
 	end
 	sharedCooldown[player] = now
-	self:Deposit(player)
-	self:Collect(player)
 	self.Client.Open:Fire(player)
 end
 
@@ -405,7 +403,7 @@ function RefineryService:_connectShared()
 		prompt = Instance.new("ProximityPrompt")
 		prompt.Name = "UseRefinery"
 		prompt.ActionText = "Use refinery"
-		prompt.ObjectText = "Deposit ore, collect bars"
+		prompt.ObjectText = "Town refinery"
 		prompt.KeyboardKeyCode = Enum.KeyCode.E
 		prompt.HoldDuration = 0
 		prompt.MaxActivationDistance = 14
@@ -414,6 +412,47 @@ function RefineryService:_connectShared()
 	prompt.Triggered:Connect(function(who)
 		self:UseShared(who)
 	end)
+end
+
+-- Menu transactions require a living character near the shared building or
+-- the caller's own production line. No client supplies inventory or quantities.
+function RefineryService:CanUseMenu(player: Player): boolean
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not (root and root:IsA("BasePart") and humanoid and humanoid.Health > 0) then return false end
+	local map = workspace:FindFirstChild("Map")
+	local town = map and map:FindFirstChild("TownSquare")
+	local shared = town and town:FindFirstChild("Refinery")
+	local point = shared and shared:FindFirstChild("UsePoint", true)
+	if point and point:IsA("BasePart") and (root.Position - point.Position).Magnitude <= 18 then return true end
+	local stations = PlotService:GetStations(player)
+	if stations then
+		for _, id in { "hopper", "collector" } do
+			local container = station(stations, id)
+			local anchor = container and container:FindFirstChildWhichIsA("BasePart", true)
+			if anchor and (root.Position - anchor.Position).Magnitude <= 18 then return true end
+		end
+	end
+	return false
+end
+
+function RefineryService.Client:Deposit(player: Player): number
+	if not self.Server:CanUseMenu(player) then
+		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to deposit ore.")
+		return 0
+	end
+	if not touchReady(player, "menuDeposit") then return 0 end
+	return self.Server:Deposit(player)
+end
+
+function RefineryService.Client:Claim(player: Player): number
+	if not self.Server:CanUseMenu(player) then
+		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to claim bars.")
+		return 0
+	end
+	if not touchReady(player, "menuClaim") then return 0 end
+	return self.Server:Collect(player)
 end
 
 function RefineryService.Client:SetPriority(player: Player, requested: any): boolean

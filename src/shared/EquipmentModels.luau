@@ -345,4 +345,29 @@ function EquipmentModels.applyToTool(tool: Tool, tier: number)
 	model.Parent = tool
 end
 
+-- Wear the same backpack shown in the shop; R6 and R15 both mount to the torso.
+function EquipmentModels.applyToCharacter(character: Model, tier: number)
+	local torso = character:FindFirstChild("UpperTorso") or character:FindFirstChild("Torso")
+	if not (torso and torso:IsA("BasePart")) then return end
+	local previous = character:FindFirstChild("BackpackVisual")
+	local item = Config.Backpacks[tier] or Config.Backpacks[1]
+	if previous and previous:GetAttribute("EquipmentTier") == item.Tier then return end
+	local model = EquipmentModels.backpack(item.Tier)
+	model.Name = "BackpackVisual"
+	model:ScaleTo(math.clamp(torso.Size.X / 2, 0.7, 1.4))
+	-- Model's decorated front points outward from the avatar's back.
+	model:PivotTo(torso.CFrame * CFrame.new(0, 0, torso.Size.Z / 2 + 0.65) * CFrame.Angles(0, math.pi, 0))
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Anchored = false
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = torso
+			weld.Part1 = descendant
+			weld.Parent = descendant
+		end
+	end
+	if previous then previous:Destroy() end
+	model.Parent = character
+end
+
 return EquipmentModels

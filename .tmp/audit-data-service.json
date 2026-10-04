@@ -1,0 +1,11 @@
+{
+  "cashAfterOlderSaveCompletes": 100,
+  "cashAfterRelease": 200,
+  "lockAfterOlderSaveCompletes": "SESSION-A",
+  "lockLossSaveResult": false,
+  "nonStudioDurableWriteCount": 0,
+  "nonStudioMemoryProfile": true,
+  "nonStudioMemorySaveReportsSuccess": true,
+  "unrelatedCashActuallyPersisted": 123,
+  "unrelatedSaveResultAfterLockLoss": false
+}

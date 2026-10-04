@@ -60,6 +60,10 @@ end
 -- Restyles the player's pickaxe wherever it is (backpack or in hand).
 function ShopService:ApplyPickaxe(player: Player)
 	local pickaxe = PlayerStateService:GetPickaxe(player)
+	local data = PlayerStateService:Get(player)
+	if data and player.Character then
+		EquipmentModels.applyToCharacter(player.Character, data.backpackTier)
+	end
 	for _, container in { player:FindFirstChildOfClass("Backpack"), player.Character } do
 		if container then
 			for _, child in (container :: Instance):GetChildren() do
@@ -108,9 +112,7 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 	data.cash -= evolution.cost
 	data.shards -= evolution.shards
 	data[entry.Key] = evolution.tier
-	if kind == "pickaxe" then
-		self:ApplyPickaxe(player)
-	end
+	self:ApplyPickaxe(player)
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Purchased:Fire(player, kind, evolution.tier)
 	self.ItemBought:Fire(player, kind, evolution.tier)
@@ -221,6 +223,12 @@ function ShopService:KnitStart()
 		end
 		player.DescendantAdded:Connect(added)
 		local function characterAdded(character: Model)
+			task.spawn(function()
+				local torso = character:WaitForChild("UpperTorso", 3) or character:FindFirstChild("Torso")
+				if torso and player.Character == character and PlayerStateService:Get(player) then
+					self:ApplyPickaxe(player)
+				end
+			end)
 			character.DescendantAdded:Connect(added)
 			for _, descendant in character:GetChildren() do
 				added(descendant)

@@ -1,0 +1,285 @@
+{
+  "exports": [
+    {
+      "classes": {
+        "BillboardGui": 2,
+        "Folder": 6,
+        "Model": 114,
+        "Part": 892,
+        "ParticleEmitter": 1,
+        "PointLight": 16,
+        "ProximityPrompt": 1,
+        "SpawnLocation": 1,
+        "SurfaceGui": 22,
+        "TextLabel": 25,
+        "UIPadding": 2,
+        "UnionOperation": 3,
+        "WedgePart": 4
+      },
+      "file": "assets/Map.rbxm",
+      "rootNames": [
+        "Map"
+      ]
+    },
+    {
+      "classes": {
+        "Attachment": 38,
+        "BillboardGui": 4,
+        "Folder": 2,
+        "Model": 5,
+        "Part": 155,
+        "ParticleEmitter": 2,
+        "PointLight": 2,
+        "ProximityPrompt": 4,
+        "Smoke": 1,
+        "SurfaceGui": 2,
+        "TextLabel": 6,
+        "Texture": 1,
+        "WedgePart": 25
+      },
+      "file": "assets/ServerAssets.rbxm",
+      "rootNames": [
+        "Assets"
+      ]
+    }
+  ],
+  "places": [
+    {
+      "classes": {
+        "BillboardGui": 2,
+        "Folder": 6,
+        "MeshPart": 75,
+        "Model": 203,
+        "Part": 1523,
+        "ParticleEmitter": 1,
+        "PointLight": 16,
+        "ProximityPrompt": 2,
+        "SpawnLocation": 1,
+        "SurfaceGui": 45,
+        "TextLabel": 48,
+        "UIPadding": 2,
+        "UnionOperation": 434,
+        "WedgePart": 4
+      },
+      "debris": 60,
+      "decor": {
+        "collision": 0,
+        "parts": 1165,
+        "query": 0,
+        "shadow": 0,
+        "touch": 0
+      },
+      "file": "MeteorShift-newest.rbxl",
+      "maxPlayers": "30",
+      "outsideScripts": {},
+      "parts": 2037,
+      "plots": 20,
+      "preciseCollision": 0,
+      "sources": {
+        "src/client/Controllers/LandingFXController.luau": false,
+        "src/client/Controllers/RebirthController.luau": false,
+        "src/client/Controllers/ShopController.luau": false,
+        "src/server/Services/DataService.luau": true,
+        "src/server/Services/DebrisService.luau": false
+      },
+      "stationCount": 117,
+      "stationPrompts": [
+        "Upgrade",
+        "Upgrade",
+        "Upgrade",
+        "Upgrade"
+      ],
+      "streaming": "true",
+      "unanchored": 0
+    },
+    {
+      "classes": {
+        "BillboardGui": 1,
+        "Folder": 9,
+        "MeshPart": 75,
+        "Model": 199,
+        "Part": 1439,
+        "ParticleEmitter": 20,
+        "PointLight": 16,
+        "SpawnLocation": 1,
+        "SurfaceGui": 41,
+        "TextLabel": 43,
+        "UnionOperation": 434
+      },
+      "debris": 60,
+      "decor": {
+        "collision": 0,
+        "parts": 1071,
+        "query": 0,
+        "shadow": 0,
+        "touch": 0
+      },
+      "file": "MeteorShift-backpack-foundry.rbxl",
+      "maxPlayers": "30",
+      "outsideScripts": [
+        {
+          "bytes": 698,
+          "class": "Script",
+          "path": "ServerScriptService.Script"
+        }
+      ],
+      "parts": 1949,
+      "plots": 20,
+      "preciseCollision": 0,
+      "sources": {
+        "src/client/Controllers/LandingFXController.luau": true,
+        "src/client/Controllers/RebirthController.luau": false,
+        "src/client/Controllers/ShopController.luau": false,
+        "src/server/Services/DataService.luau": true,
+        "src/server/Services/DebrisService.luau": false
+      },
+      "stationCount": 384,
+      "stationPrompts": {},
+      "streaming": "true",
+      "unanchored": 0
+    },
+    {
+      "classes": {
+        "BillboardGui": 2,
+        "Folder": 6,
+        "MeshPart": 75,
+        "Model": 203,
+        "Part": 1523,
+        "ParticleEmitter": 1,
+        "PointLight": 16,
+        "ProximityPrompt": 2,
+        "SpawnLocation": 1,
+        "SurfaceGui": 45,
+        "TextLabel": 48,
+        "UIPadding": 2,
+        "UnionOperation": 434,
+        "WedgePart": 4
+      },
+      "debris": 60,
+      "decor": {
+        "collision": 0,
+        "parts": 1165,
+        "query": 0,
+        "shadow": 0,
+        "touch": 0
+      },
+      "file": "MeteorShift-expanded-mining-pass.rbxl",
+      "maxPlayers": "30",
+      "outsideScripts": {},
+      "parts": 2037,
+      "plots": 20,
+      "preciseCollision": 0,
+      "sources": {
+        "src/client/Controllers/LandingFXController.luau": false,
+        "src/client/Controllers/RebirthController.luau": false,
+        "src/client/Controllers/ShopController.luau": false,
+        "src/server/Services/DataService.luau": true,
+        "src/server/Services/DebrisService.luau": false
+      },
+      "stationCount": 117,
+      "stationPrompts": [
+        "Upgrade",
+        "Upgrade",
+        "Upgrade",
+        "Upgrade"
+      ],
+      "streaming": "true",
+      "unanchored": 0
+    },
+    {
+      "classes": {
+        "BillboardGui": 2,
+        "Folder": 6,
+        "MeshPart": 75,
+        "Model": 203,
+        "Part": 1523,
+        "ParticleEmitter": 1,
+        "PointLight": 16,
+        "ProximityPrompt": 2,
+        "SpawnLocation": 1,
+        "SurfaceGui": 45,
+        "TextLabel": 48,
+        "UIPadding": 2,
+        "UnionOperation": 434,
+        "WedgePart": 4
+      },
+      "debris": 60,
+      "decor": {
+        "collision": 0,
+        "parts": 1165,
+        "query": 0,
+        "shadow": 0,
+        "touch": 0
+      },
+      "file": "MeteorShift-hud-redesign.rbxl",
+      "maxPlayers": "30",
+      "outsideScripts": {},
+      "parts": 2037,
+      "plots": 20,
+      "preciseCollision": 0,
+      "sources": {
+        "src/client/Controllers/LandingFXController.luau": false,
+        "src/client/Controllers/RebirthController.luau": false,
+        "src/client/Controllers/ShopController.luau": false,
+        "src/server/Services/DataService.luau": true,
+        "src/server/Services/DebrisService.luau": false
+      },
+      "stationCount": 117,
+      "stationPrompts": [
+        "Upgrade",
+        "Upgrade",
+        "Upgrade",
+        "Upgrade"
+      ],
+      "streaming": "true",
+      "unanchored": 0
+    },
+    {
+      "classes": {
+        "BillboardGui": 2,
+        "Folder": 6,
+        "Model": 114,
+        "Part": 892,
+        "ParticleEmitter": 1,
+        "PointLight": 16,
+        "ProximityPrompt": 1,
+        "SpawnLocation": 1,
+        "SurfaceGui": 22,
+        "TextLabel": 25,
+        "UIPadding": 2,
+        "UnionOperation": 3,
+        "WedgePart": 4
+      },
+      "debris": 30,
+      "decor": {
+        "collision": 0,
+        "parts": 0,
+        "query": 0,
+        "shadow": 0,
+        "touch": 0
+      },
+      "file": "new.rbxl",
+      "maxPlayers": "30",
+      "outsideScripts": {},
+      "parts": 900,
+      "plots": 20,
+      "preciseCollision": 0,
+      "sources": {
+        "src/client/Controllers/LandingFXController.luau": false,
+        "src/client/Controllers/RebirthController.luau": false,
+        "src/client/Controllers/ShopController.luau": false,
+        "src/server/Services/DataService.luau": true,
+        "src/server/Services/DebrisService.luau": false
+      },
+      "stationCount": 67,
+      "stationPrompts": [
+        "Upgrade",
+        "Upgrade",
+        "Upgrade",
+        "Upgrade"
+      ],
+      "streaming": "true",
+      "unanchored": 0
+    }
+  ]
+}

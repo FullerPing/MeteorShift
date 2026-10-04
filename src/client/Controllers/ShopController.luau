@@ -12,7 +12,6 @@ local ShopLayout = require(ReplicatedStorage.Shared.EquipmentShopLayout)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Levels = require(ReplicatedStorage.Shared.Levels)
-local Levels = require(ReplicatedStorage.Shared.Levels)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local UI = require(script.Parent.Parent.UI)
 local EquipmentPreview = require(script.Parent.Parent.EquipmentPreview)
@@ -26,10 +25,7 @@ local TABS = {
 	{ Id = "pickaxe", Name = "PICKAXE" },
 	{ Id = "backpack", Name = "BACKPACK" },
 	{ Id = "pets", Name = "PETS" },
-	{ Id = "plot", Name = "PRODUCTION" },
 }
-local STATION_UNITS = { hopper = "ore", conveyor = "ore/s", refinery = "bars/s", collector = "bars" }
-local STATION_ICONS = { hopper = "ore", conveyor = "chevron", refinery = "foundry", collector = "bars" }
 local STATE_TEXT = { owned = "OWNED", equipped = "EQUIPPED", next = "NEXT UPGRADE", locked = "LOCKED", max = "MAX LEVEL" }
 local wantOpen, wantHighlight = false, false
 local isOpen: Fusion.Value<boolean>? = nil
@@ -226,7 +222,6 @@ end
 
 function ShopController:KnitStart()
 	local ShopService = Knit.GetService("ShopService")
-	local UpgradeService = Knit.GetService("UpgradeService")
 	local PetService = Knit.GetService("PetService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local scope = Fusion.scoped(Fusion)
@@ -243,7 +238,6 @@ function ShopController:KnitStart()
 	PlayerStateService.State:Observe(function(value) playerState:set(value) end)
 	ShopService.Open:Connect(function() open:set(true) end)
 	ShopService.Notice:Connect(function(message) notice:set(message) end)
-	UpgradeService.Notice:Connect(function(message) notice:set(message) end)
 	PetService.Notice:Connect(function(message) notice:set(message) end)
 	local wallet = scope:Computed(function(use): Price.Wallet
 		local s = use(playerState)
@@ -312,7 +306,6 @@ function ShopController:KnitStart()
 		return list
 	end
 
-	local stationCards = {}
 	local tierOf = { pickaxe = pickaxeTier, backpack = backpackTier }
 	local settingsOf = { pickaxe = Config.Gear.Pickaxe, backpack = Config.Gear.Backpack }
 	local tiersOf = { pickaxe = Config.Pickaxes, backpack = Config.Backpacks }
@@ -346,8 +339,7 @@ function ShopController:KnitStart()
 		return string.format("%.1f%%", pickaxe.CritChance * 100)
 	end
 	-- One screen per gear kind: a big preview of what you hold, a row per stat with +1 and
-	-- +10 buttons, and an evolve banner with what is still missing. Pets and Production keep
-	-- the card carousel.
+	-- +10 buttons, and one evolve banner with what is still missing.
 	local gearScreens = {}
 	local function gearScreen(kind: string)
 		local settings, tier, tiers = settingsOf[kind], tierOf[kind], tiersOf[kind]
@@ -368,7 +360,8 @@ function ShopController:KnitStart()
 					return use(count) >= 1 and use(loaded) and use(busyId) == nil
 				end)
 				return UI.button(scope, {
-					Name = name, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 66 - slot * 70, 0.5, 0), Size = UDim2.fromOffset(66, 34),
+					Name = name, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 66 - slot * 70, 0.5, 0), Size = UDim2.fromOffset(66, 44),
+					Visible = scope:Computed(function(use) return not use(atCap) end),
 					TextScaled = true, AutoButtonColor = enabled, Active = enabled, Selectable = enabled,
 					Text = scope:Computed(function(use)
 						local n, total, allowed, allowedTotal = bulk(use, limit)
@@ -376,7 +369,7 @@ function ShopController:KnitStart()
 							return if Gear.price(kind, stat, use(level)) == nil then "MAX" else "EVOLVE"
 						end
 						local shown, cost = if n > 0 then n else allowed, if n > 0 then total else allowedTotal
-						return (if limit > 1 then "+" .. shown .. "\n" else "") .. Format.cash(cost)
+						return "+" .. shown .. "\n" .. Format.cash(cost)
 					end),
 					TextColor3 = scope:Computed(function(use) return if use(enabled) then UI.OUTLINE else UI.HUD_MUTED end),
 					BackgroundColor3 = scope:Computed(function(use) return if use(enabled) then UI.HUD_GOLD else UI.PANEL_DARK end),
@@ -396,18 +389,18 @@ function ShopController:KnitStart()
 				})
 			end
 			rows[order] = scope:New("Frame")({
-				Name = stat .. "Row", LayoutOrder = order, Size = UDim2.new(1, -4, 0, 42),
+				Name = stat .. "Row", LayoutOrder = order, Size = UDim2.new(1, -4, 0, 54),
 				BackgroundColor3 = UI.CARD, BorderSizePixel = 0,
 				[Children] = {
 					UI.corner(scope, 10),
 					UI.label(scope, {
-						Name = "StatName", Position = UDim2.fromOffset(10, 2), Size = UDim2.new(1, -156, 0, 20),
+						Name = "StatName", Position = UDim2.fromOffset(10, 6), Size = UDim2.new(1, -156, 0, 20),
 						Text = scope:Computed(function(use) return settings.Names[stat] .. "  LV " .. use(level) end),
 						TextXAlignment = Enum.TextXAlignment.Left, TextScaled = true, TextStrokeTransparency = 1,
 						[Children] = { scope:New("UITextSizeConstraint")({ MinTextSize = 11, MaxTextSize = 16 }) },
 					}),
 					UI.body(scope, {
-						Name = "Effect", Position = UDim2.fromOffset(10, 22), Size = UDim2.new(1, -156, 0, 16),
+						Name = "Effect", Position = UDim2.fromOffset(10, 30), Size = UDim2.new(1, -156, 0, 16),
 						Text = scope:Computed(function(use)
 							local lv = use(level)
 							return statValue(kind, stat, lv) .. (if use(atCap) then "" else "  >  " .. statValue(kind, stat, lv + 1))
@@ -415,6 +408,11 @@ function ShopController:KnitStart()
 						TextXAlignment = Enum.TextXAlignment.Left, TextSize = 12, TextColor3 = UI.HUD_MINT, TextTruncate = Enum.TextTruncate.AtEnd,
 					}),
 					buyButton("Buy10", 10, 1), buyButton("Buy1", 1, 2),
+					UI.body(scope, {
+						Name = "CapStatus", AnchorPoint = Vector2.new(1, .5), Position = UDim2.new(1, -10, .5, 0), Size = UDim2.fromOffset(132, 44),
+						Visible = atCap, TextSize = 12, TextColor3 = UI.HUD_MINT,
+						Text = scope:Computed(function(use) return if use(tier) == #tiers then "MAX LEVEL" else "TIER CAP\nEvolve below" end),
+					}),
 				},
 			})
 		end
@@ -491,13 +489,12 @@ function ShopController:KnitStart()
 			},
 		})
 
-		local previews = {}
-		for index in tiers do
-			previews[index] = EquipmentPreview(scope, kind, index, {
-				Size = UDim2.fromScale(1, 1), Visible = scope:Computed(function(use) return use(tier) == index end),
-			})
-		end
 		local function previewWell(size: any)
+			-- Each layout owns its viewport. Build only the currently equipped tier.
+			local currentTier = scope:Computed(function(use) return { use(tier) } end)
+			local previews = scope:ForValues(currentTier, function(_use: any, previewScope: Scope, index: number)
+				return EquipmentPreview(previewScope, kind, index, { Size = UDim2.fromScale(1, 1) })
+			end)
 			return scope:New("Frame")({
 				Name = "PreviewWell", BackgroundColor3 = UI.PANEL_DARK, BorderSizePixel = 0, Size = size,
 				[Children] = { UI.corner(scope, 10), scope:New("UIStroke")({ Color = UI.HUD_BORDER, Transparency = 0.65 }), previews },
@@ -633,36 +630,7 @@ function ShopController:KnitStart()
 			end,
 		})
 	end
-	for order, stationId in Config.Home.StationOrder do
-		local station = Config.Home.Stations[stationId]
-		local level = scope:Computed(function(use)
-			local s = use(playerState)
-			return if s and s.line and s.line[stationId] then s.line[stationId].level else 1
-		end)
-		local nextLevel = scope:Computed(function(use) return station.Levels[use(level) + 1] end)
-		local function statText(entry: any)
-			local value = entry.Capacity or entry.Rate or 0
-			return (if entry.Rate then string.format("%g", value) else Format.number(value)) .. " " .. STATION_UNITS[stationId]
-		end
-		stationCards[order] = itemCard(scope, geometry, {
-			Id = stationId, Order = order, Title = station.Name, TitleName = "StationName",
-			LevelText = scope:Computed(function(use) return "LEVEL " .. use(level) end),
-			State = scope:Computed(function(use): RowState return if use(nextLevel) then "next" else "max" end),
-			Cost = scope:Computed(function(use) local n = use(nextLevel) return if n then n.Cost else 0 end),
-			Shards = scope:Computed(function(use) local n = use(nextLevel) return if n then n.Shards else 0 end),
-			Wallet = wallet, Loaded = loaded, BusyId = busyId,
-			Preview = UI.hudIcon(scope, STATION_ICONS[stationId], {
-				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.fromScale(0.55, 0.75), ImageColor3 = if stationId == "collector" then UI.HUD_GOLD else UI.WHITE,
-			}),
-			Stats = {
-				statCell(scope, geometry, 1, 2, "CURRENT", scope:Computed(function(use) return statText(station.Levels[use(level)]) end), UI.WHITE),
-				statCell(scope, geometry, 2, 2, "NEXT LEVEL", scope:Computed(function(use) local n = use(nextLevel) return if n then statText(n) else "MAX" end), UI.HUD_MINT),
-			},
-			OnBuy = function() purchase(stationId, station.Name .. " upgraded.", function() return UpgradeService:BuyStation(stationId) end) end,
-		})
-	end
-	local carousels = { makeList("pets", petCards), makeList("plot", stationCards) }
+	local carousels = { makeList("pets", petCards) }
 	local function move(direction: number)
 		local kind = Fusion.peek(tab)
 		local list = lists[kind]
@@ -733,7 +701,7 @@ function ShopController:KnitStart()
 			Name = name, AnchorPoint = if right then Vector2.new(1, 0) else Vector2.zero,
 			Position = scope:Computed(function(use) local g = use(geometry) return UDim2.new(if right then 1 else 0, if right then -g.padding else g.padding, 0, g.footerY) end),
 			Size = UDim2.fromOffset(44, 44), Text = "", BackgroundColor3 = UI.CARD,
-			Visible = scope:Computed(function(use) local k = use(tab) return k == "pets" or k == "plot" end),
+			Visible = scope:Computed(function(use) local k = use(tab) return k == "pets" end),
 			[Children] = { UI.hudIcon(scope, "chevron", { Position = UDim2.fromOffset(12, 12), Size = UDim2.fromOffset(20, 20), Rotation = if right then 0 else 180, ImageColor3 = UI.HUD_GOLD }) },
 			[OnEvent("Activated")] = function() move(direction) end,
 		})
@@ -803,7 +771,7 @@ function ShopController:KnitStart()
 							if not use(loaded) then return "Loading your equipment..." end
 							local kind, g = use(tab), use(geometry)
 							local gearTab = kind == "pickaxe" or kind == "backpack"
-							local count = if kind == "plot" then #stationCards elseif kind == "pets" then #petCards else 1
+							local count = if kind == "pets" then #petCards else 1
 							local first = if gearTab then 1 else math.clamp(math.floor(use(positions[kind]) / (g.cardWidth + g.gap) + 0.5) + 1, 1, count)
 							if kind == "pets" then
 								local s = use(playerState)

@@ -1,0 +1,60 @@
+{
+  "assetLoadIds": {
+    "UNAVAILABLE_IN_LUNE": 75
+  },
+  "assetTemplates": {
+    "ArtMeshes": {
+      "class": "Model",
+      "descendants": 3
+    },
+    "GeologyMinerals": {
+      "class": "Model",
+      "descendants": 3
+    },
+    "Meteor": {
+      "class": "Folder",
+      "descendants": 104
+    },
+    "NodePieces": {
+      "class": "Folder",
+      "descendants": 48
+    },
+    "PlotStations": {
+      "class": "Model",
+      "descendants": 384
+    }
+  },
+  "collision": {
+    "UNAVAILABLE_IN_LUNE": 434
+  },
+  "coreSlots": 36,
+  "extraScripts": [
+    {
+      "enabled": true,
+      "path": "ServerScriptService.Script",
+      "source": "local Players = game:GetService(\"Players\")\nlocal Knit = require(game.ReplicatedStorage.Packages.Knit)\nKnit.OnStart():andThen(function()\n\tlocal states = Knit.GetService(\"PlayerStateService\")\n\tlocal function fixture(player)\n\t\tlocal data\n\t\trepeat task.wait(0.1); data = states:Get(player) until data or not player.Parent\n\t\tif not data then return end\n\t\tdata.bars = { iron = 23, frost = 2, crystal = 1 }\n\t\tdata.cash = 12345; data.shards = 17; data.rebirths = 2\n\t\tstates:ReplicateNow(player)\n\t\tprint(\"HUD_QA: mixed carried bars replicated\")\n\tend\n\tPlayers.PlayerAdded:Connect(function(player) task.spawn(fixture, player) end)\n\tfor _, player in Players:GetPlayers() do task.spawn(fixture, player) end\nend)"
+    }
+  ],
+  "nodePieceBounds": [
+    {
+      "class": "UnionOperation",
+      "descendants": 11,
+      "name": "CrownRock"
+    },
+    {
+      "class": "UnionOperation",
+      "descendants": 12,
+      "name": "ShardHeap"
+    },
+    {
+      "class": "UnionOperation",
+      "descendants": 11,
+      "name": "SpikeCluster"
+    },
+    {
+      "class": "UnionOperation",
+      "descendants": 10,
+      "name": "VeinBoulder"
+    }
+  ]
+}
