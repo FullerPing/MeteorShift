@@ -49,12 +49,21 @@ function Levels.addXp(progress: Progress, amount: number): number
 	return gained
 end
 
--- XP one meteor pays a player who hit it. `share` is their contribution over the top
--- player's (0 to 1); `contribution <= 0` means they never landed a hit.
-function Levels.meteorXp(oreName: string, share: number, cracked: boolean): number
-	local typeMult = (Settings.TypeMult :: { [string]: number })[oreName] or 1
-	local result = if cracked then Settings.CrackedMult else Settings.CooledMult
-	return (Settings.Participation + Settings.ShareBonus * math.clamp(share, 0, 1)) * typeMult * result
+-- XP for one validated hit: kind is "Crust", "Core" or anything else (debris pays 0).
+-- `oreId` is the ore of the meteor being mined.
+function Levels.hitXp(oreId: string, kind: string): number
+	local mult = (Settings.TypeMult :: { [string]: number })[oreId] or 1
+	if kind == "Crust" then
+		return Settings.CrustHitXp * mult
+	elseif kind == "Core" then
+		return Settings.CoreHitXp * mult
+	end
+	return 0
+end
+
+-- XP bonus for a player who hit a core that then cracked
+function Levels.crackXp(oreId: string): number
+	return Settings.CrackBonusXp * ((Settings.TypeMult :: { [string]: number })[oreId] or 1)
 end
 
 -- Refinery speed for an ore at a level: 1 at or above the ore's clearance level, then

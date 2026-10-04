@@ -58,7 +58,7 @@ Everyone mines every meteor type at their pickaxe's full rate and Iron/Ice/Cryst
 - Iron is cleared at level 1, Frost at 4, Crystal at 6.
 - Under its level an ore is refined at `0.35^levelsShort` of the line's speed (it costs `1 / that` line time per ore). The bar price is the same for everyone and nobody is blocked.
 - At level 1 each ore pays about the same per line-second as Iron (Frost 24x the price at 0.35^3, Crystal 600x at 0.35^5 are both about 3x Iron per line unit); each level cleared multiplies that ore's pay by 2.86 until it is cleared. So the early game matches the old curve, and levels are the climb that replaces pickaxe-gated meteors.
-- XP (`Config.Levels`): 30 to level 2, x1.3 per level; about 70 XP per meteor you hit. About level 4 at 10 to 15 minutes, level 6 at 30 minutes. Evolving to tier 5+ needs level 5, 7, 9, 11 (`EvolveLevel`).
+- XP (`Config.Levels`): 30 to level 2, x1.3 per level; about 70 XP per meteor you take part in (per hit, plus a bonus when a core you hit cracks). About level 4 at 10 to 15 minutes, level 6 at 30 minutes. Evolving to tier 5+ needs level 5, 7, 9, 11 (`EvolveLevel`).
 
 The model (`Pacing`) levels the player from finished meteors (70 XP each), mixes the three ores by weight, and tracks the line time each ore costs. Mining quantity (pickaxe, backpack) only matters once the line is faster than the ore supply.
 

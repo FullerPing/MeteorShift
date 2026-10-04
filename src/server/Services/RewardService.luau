@@ -23,8 +23,6 @@ local RewardService = Knit.CreateService({
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
-		-- To the player who levelled up: (level)
-		LevelUp = Knit.CreateSignal(),
 	},
 })
 
@@ -32,6 +30,7 @@ RewardService.ShardsAwarded = Signal.new() -- (player, shards) when a cracked co
 
 local ContributionService
 local PlayerStateService
+local LevelService
 
 function RewardService:Announce(kind: string, text: string)
 	self.Client.Announcement:FireAll({ kind = kind, text = text })
@@ -61,13 +60,9 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			if reward then
 				data.stats.coresCracked += 1
 			end
-			-- Player level (Shared.Levels): XP only for a meteor you hit, by effort against the top player
-			if entry.Contribution > 0 then
-				local top = ranked[1].Contribution
-				local xp = Levels.meteorXp(meteorType.Ore, if top > 0 then entry.Contribution / top else 0, cracked)
-				if Levels.addXp(data, xp) > 0 then
-					self.Client.LevelUp:Fire(entry.Player, data.level)
-				end
+			-- Player level (Shared.Levels): hits already paid XP as they landed; a cracked core adds a bonus
+			if cracked and entry.HitCore then
+				LevelService:AddXp(entry.Player, Levels.crackXp(meteorType.Ore))
 			end
 		end
 		if reward then
@@ -106,6 +101,7 @@ end
 function RewardService:KnitInit()
 	ContributionService = Knit.GetService("ContributionService")
 	PlayerStateService = Knit.GetService("PlayerStateService")
+	LevelService = Knit.GetService("LevelService")
 end
 
 return RewardService

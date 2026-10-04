@@ -193,12 +193,18 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 		frame(scope, hud, "Resources", 250, function(l) return l.leftCards.Resources end, {
 			UI.hudIcon(scope, "crystal", { Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(39, 39) }),
 			text(scope, "Shards", shards, 56, 1, 190, 46, 37, WHITE, true, true),
-			UI.hudIcon(scope, "coin", { Position = UDim2.fromOffset(0, 62), Size = UDim2.fromOffset(48, 48) }),
+			UI.hudIcon(scope, "coin", { Position = UDim2.fromOffset(2, 58), Size = UDim2.fromOffset(42, 42) }),
 			text(scope, "Cash", scope:Computed(function(use) return Format.cash(use(data.cashShown)) end), 57, 53, 189, 48, 45, WHITE, true, true),
+			-- Player level: "LV 5", an XP bar that fills as you hit, then the rebirth sale multiplier
+			text(scope, "Level", scope:Computed(function(use) local s = state(use); return "LV " .. (if s and s.level then s.level else 1) end), 2, 100, 52, 16, 14, UI.HUD_GOLD, true, true),
+			meter(scope, "LevelMeter", 56, 105, 84, scope:Computed(function(use)
+				local s = state(use)
+				return if s and s.xpNeeded and s.xpNeeded > 0 then s.xp / s.xpNeeded else 1
+			end), UI.HUD_GOLD, 6),
 			text(scope, "Multiplier", scope:Computed(function(use)
 				local s = state(use); local m = Rebirth.multiplier(if s then s.rebirths else 0)
 				return if m > 1 then "×" .. Format.number(m) .. " sales" else ""
-			end), 60, 101, 185, 15, 12, UI.HUD_MINT, false, true),
+			end), 146, 101, 100, 15, 12, UI.HUD_MINT, false, true),
 		}, true),
 		frame(scope, hud, "Production", 400, function(l) return l.leftCards.Production end, { details, summary }, true),
 		frame(scope, hud, "Backpack", 230, function(l) return l.backpack end, {
