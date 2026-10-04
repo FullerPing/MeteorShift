@@ -83,7 +83,6 @@ Pets.DuplicateXp = 400
 Pets.List = {
 	-- Common
 	{ Id = "pebblePup", Name = "Pebble Pup", Role = "miner", Rarity = "common", Power = 0.6, Color = Color3.fromRGB(150, 150, 150), Blurb = "A grey pup who digs where you dig." },
-	{ Id = "cargoMole", Name = "Cargo Mole", Role = "hauler", Rarity = "common", Power = 1.0, Color = Color3.fromRGB(150, 120, 96), Blurb = "Digs your ore home for you." },
 	{ Id = "scrapSparrow", Name = "Scrap Sparrow", Role = "merchant", Rarity = "common", Power = 0.8, Color = Color3.fromRGB(190, 160, 110), Blurb = "Haggles with the odds and ends." },
 	-- Uncommon
 	{ Id = "packMule", Name = "Pack Mule", Role = "pack", Rarity = "uncommon", Power = 1.0, Color = Color3.fromRGB(190, 160, 120), Blurb = "Carries what your sack can't." },
@@ -91,9 +90,11 @@ Pets.List = {
 	-- Rare
 	{ Id = "jetWisp", Name = "Jet Wisp", Role = "swift", Rarity = "rare", Power = 1.2, Color = Color3.fromRGB(110, 220, 255), Blurb = "Hurries your pickaxe along." },
 	{ Id = "coinMagpie", Name = "Coin Magpie", Role = "merchant", Rarity = "rare", Power = 1.2, Color = Color3.fromRGB(255, 220, 100), Blurb = "Haggles for a better price." },
+	{ Id = "cargoMole", Name = "Cargo Mole", Role = "hauler", Rarity = "rare", Power = 1.2, Color = Color3.fromRGB(150, 120, 96), Blurb = "Digs your ore home for you." },
 	{ Id = "graniteGolem", Name = "Granite Golem", Role = "pack", Rarity = "rare", Power = 1.2, Color = Color3.fromRGB(120, 130, 140), Blurb = "A walking boulder with room inside." },
 	-- Epic
 	{ Id = "crystalStag", Name = "Crystal Stag", Role = "miner", Rarity = "epic", Power = 0.85, Color = Color3.fromRGB(190, 130, 255), Blurb = "Antlers of living crystal. It breaks rock with them." },
+	{ Id = "lodeWyrm", Name = "Lode Wyrm", Role = "hauler", Rarity = "epic", Power = 1.5, Color = Color3.fromRGB(255, 170, 70), Blurb = "A burrowing worm that tunnels your ore home." },
 	{ Id = "auroraOwl", Name = "Aurora Owl", Role = "merchant", Rarity = "epic", Power = 1.35, Color = Color3.fromRGB(120, 255, 210), Blurb = "Sees the best price in any light." },
 	-- Legendary
 	{ Id = "meteorDrake", Name = "Meteor Drake", Role = "miner", Rarity = "legendary", Power = 0.95, Color = Color3.fromRGB(255, 130, 50), Blurb = "Born in a crater. It never stops digging." },
