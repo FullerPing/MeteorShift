@@ -27,7 +27,8 @@ local PetService = Knit.CreateService({
 	Client = {
 		Notice = Knit.CreateSignal(), -- (text)
 		Leveled = Knit.CreateSignal(), -- (petId, level)
-		Bought = Knit.CreateSignal(), -- (petId)
+		Bought = Knit.CreateSignal(), -- (petId) a pass pet arrived
+		Hatched = Knit.CreateSignal(), -- (eggId, petId, duplicate)
 	},
 })
 
@@ -82,30 +83,36 @@ function PetService:Unequip(player: Player, petId: string): boolean
 end
 
 -- Buys a pet with Core Shards (never random) and puts it out when a slot is free.
-function PetService:Buy(player: Player, petId: string): boolean
+-- Hatches an egg for Core Shards. The pet comes from Pets.roll (the egg's published odds plus
+-- its pity count); a duplicate gives DuplicateXp to the pet you own. Returns the pet id.
+function PetService:Hatch(player: Player, eggId: string): string?
 	local data = PlayerStateService:Get(player)
-	local def = Pets.def(petId)
-	if not data or not def or data.pets.owned[petId] then
-		return false
+	local egg = Pets.egg(eggId)
+	if not data or not egg then
+		return nil
 	end
-	if def.Pass then
-		self.Client.Notice:Fire(player, def.Name .. " comes with its pass. Buy it from the Pets tab.")
-		return false
-	end
-	local shortfall = Price.shortfall(data, 0, def.Cost, def.Name)
+	local shortfall = Price.shortfall(data, 0, egg.Cost, "the " .. egg.Name)
 	if shortfall then
 		self.Client.Notice:Fire(player, shortfall)
-		return false
+		return nil
 	end
-	data.shards -= def.Cost
-	data.pets.owned[petId] = { level = 1, xp = 0 }
-	if slotsFree(data) then
-		table.insert(data.pets.equipped, petId)
+	data.shards -= egg.Cost
+	local petId, pity = Pets.roll(egg, math.random(), data.pets.hatches[eggId] or 0, math.random())
+	data.pets.hatches[eggId] = pity
+	local entry = data.pets.owned[petId]
+	local duplicate = entry ~= nil
+	if entry then
+		Pets.addXp(entry, Config.Pets.DuplicateXp)
+	else
+		data.pets.owned[petId] = { level = 1, xp = 0 }
+		if slotsFree(data) then
+			table.insert(data.pets.equipped, petId)
+		end
+		self.PetBought:Fire(player, petId)
 	end
 	PlayerStateService:ReplicateNow(player)
-	self.Client.Bought:Fire(player, petId)
-	self.PetBought:Fire(player, petId)
-	return true
+	self.Client.Hatched:Fire(player, eggId, petId, duplicate)
+	return petId
 end
 
 -- Gives the player every pet whose pass they own and don't have yet (equipped if a slot is
@@ -212,11 +219,11 @@ function PetService.Client:Unequip(player: Player, petId: string): boolean
 	return self.Server:Unequip(player, petId)
 end
 
-function PetService.Client:Buy(player: Player, petId: string): boolean
-	if typeof(petId) ~= "string" or throttled(player) then
-		return false
+function PetService.Client:Hatch(player: Player, eggId: string): string?
+	if typeof(eggId) ~= "string" or throttled(player) then
+		return nil
 	end
-	return self.Server:Buy(player, petId)
+	return self.Server:Hatch(player, eggId)
 end
 
 function PetService:KnitInit()

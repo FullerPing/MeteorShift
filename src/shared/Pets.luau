@@ -3,7 +3,8 @@
 -- Pure functions, covered by tests/Pets.spec; PetService, PlayerStateService and
 -- EconomyService use them.
 --
---   perk(role, level)       what a pet of that role gives at that level
+--   perk(role, level, power) what a pet of that role gives at that level (times its Power)
+--   roll(egg, roll, pity, pick) which pet an egg hatches (pure; PetService passes the randoms)
 --   bonuses(pets)           the equipped pets' perks added up per role, to each role's cap
 --   slots(rebirths)         how many pets can be out
 --   xpToNext(level)         XP to the next level, nil at the max
@@ -16,7 +17,7 @@ local Config = require(script.Parent.Config.Pets)
 local Pets = {}
 
 export type Entry = { level: number, xp: number }
-export type Saved = { owned: { [string]: Entry }, equipped: { string } }
+export type Saved = { owned: { [string]: Entry }, equipped: { string }, hatches: { [string]: number }? }
 export type Bonuses = { miner: number, hauler: number, pack: number, swift: number, merchant: number }
 
 local byId: { [string]: Config.Pet } = {}
@@ -29,13 +30,69 @@ function Pets.def(petId: string): Config.Pet?
 end
 
 -- A role's perk at a pet level: Min at level 1 growing to Max at the max level
-function Pets.perk(role: string, level: number): number
+function Pets.perk(role: string, level: number, power: number?): number
 	local def = Config.Roles[role]
 	if not def then
 		return 0
 	end
 	local fraction = (math.clamp(level, 1, Config.MaxLevel) - 1) / math.max(Config.MaxLevel - 1, 1)
-	return def.Min + (def.Max - def.Min) * fraction
+	return (def.Min + (def.Max - def.Min) * fraction) * (power or 1)
+end
+
+local rarityIndex: { [string]: number } = {}
+for index, id in Config.RarityOrder do
+	rarityIndex[id] = index
+end
+
+-- The pets an egg can hatch of one rarity (pass pets are never in an egg)
+function Pets.eggPets(rarity: string): { Config.Pet }
+	local out = {}
+	for _, pet in Config.List do
+		if pet.Rarity == rarity and not pet.Pass then
+			table.insert(out, pet)
+		end
+	end
+	return out
+end
+
+function Pets.egg(eggId: string): Config.Egg?
+	for _, egg in Config.Eggs do
+		if egg.Id == eggId then
+			return egg
+		end
+	end
+	return nil
+end
+
+-- Hatches one egg. `roll` and `pick` are uniform in [0, 1) (math.random() on the server): roll
+-- lands in the egg's odds, pick chooses among that rarity's pets. `pity` is how many hatches
+-- of this egg since the last PityFrom-or-better pet; on the egg's Pity-th hatch the rarity is
+-- drawn from the PityFrom-or-better odds only. Returns the pet id and the new pity count.
+function Pets.roll(egg: Config.Egg, roll: number, pity: number, pick: number): (string, number)
+	local floor = rarityIndex[egg.PityFrom] or 1
+	local guaranteed = pity >= egg.Pity - 1
+	local total = 0
+	for _, id in Config.RarityOrder do
+		if egg.Odds[id] and (not guaranteed or rarityIndex[id] >= floor) then
+			total += egg.Odds[id]
+		end
+	end
+	local target = math.clamp(roll, 0, 1 - 1e-9) * total
+	local chosen = nil
+	local acc = 0
+	for _, id in Config.RarityOrder do
+		if egg.Odds[id] and (not guaranteed or rarityIndex[id] >= floor) then
+			acc += egg.Odds[id]
+			chosen = id
+			if target < acc then
+				break
+			end
+		end
+	end
+	local pool = Pets.eggPets(chosen :: string)
+	local pet = pool[math.min(math.floor(math.clamp(pick, 0, 1 - 1e-9) * #pool) + 1, #pool)]
+	local newPity = if rarityIndex[pet.Rarity] >= floor then 0 else pity + 1
+	return pet.Id, newPity
 end
 
 function Pets.slots(rebirths: number?): number
@@ -82,7 +139,7 @@ function Pets.bonuses(pets: Saved): Bonuses
 		local entry = pets.owned[petId]
 		if def and entry and not seen[petId] then
 			seen[petId] = true
-			totals[def.Role] += Pets.perk(def.Role, entry.level)
+			totals[def.Role] += Pets.perk(def.Role, entry.level, def.Power)
 		end
 	end
 	for role, total in totals do
@@ -110,7 +167,7 @@ end
 
 -- A fresh `pets` table: the starter pets, owned and equipped
 function Pets.fresh(): Saved
-	return { owned = starterOwned(), equipped = table.clone(Config.Starter) }
+	return { owned = starterOwned(), equipped = table.clone(Config.Starter), hatches = {} }
 end
 
 -- Makes a saved `pets` table legal (profile loads, migrations)
@@ -141,7 +198,15 @@ function Pets.clean(saved: any, rebirths: number?): Saved
 	elseif saved == nil then
 		equipped = table.clone(Config.Starter)
 	end
-	return { owned = owned, equipped = equipped }
+	local hatches: { [string]: number } = {}
+	if type(saved) == "table" and type(saved.hatches) == "table" then
+		for eggId, count in saved.hatches do
+			if type(eggId) == "string" and Pets.egg(eggId) and type(count) == "number" and count == count then
+				hatches[eggId] = math.max(math.floor(count), 0)
+			end
+		end
+	end
+	return { owned = owned, equipped = equipped, hatches = hatches }
 end
 
 return Pets

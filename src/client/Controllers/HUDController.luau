@@ -202,6 +202,16 @@ function HUDController:KnitStart()
 			showToast("You got " .. pet.Name .. "!")
 		end
 	end)
+	PetService.Hatched:Connect(function(eggId: string, petId: string, duplicate: boolean)
+		local pet = Pets.def(petId)
+		if pet then
+			Sfx.play("Purchase")
+			local rarity = Config.Pets.Rarities[pet.Rarity].Name
+			showToast(if duplicate
+				then string.format("Duplicate %s (%s): +%d XP for your %s!", pet.Name, rarity, Config.Pets.DuplicateXp, pet.Name)
+				else string.format("You hatched a %s %s!", rarity, pet.Name))
+		end
+	end)
 	PetService.Leveled:Connect(function(petId: string, level: number)
 		local pet = Pets.def(petId)
 		if pet then

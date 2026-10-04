@@ -12,7 +12,7 @@ return {
 	pickaxeStats = { power = 1, speed = 1, reach = 1, crit = 1 }, -- stat levels, 1 to the tier's cap
 	backpackStats = { capacity = 1 },
 	-- Pets (Shared.Pets): owned ones with their level and XP, and the ones out (kept through rebirth)
-	pets = { owned = {}, equipped = {} },
+	pets = { owned = {}, equipped = {}, hatches = {} }, -- hatches: per egg, hatches since the last Epic or better (pity)
 	level = 1, -- player level (Shared.Levels): earned from meteors, kept through rebirth
 	xp = 0,
 	backpack = {}, -- ore carried, by type

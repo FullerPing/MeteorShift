@@ -8,7 +8,7 @@ return function(t: any)
 	t.test("the Drillbot is a 199 Robux pass pet whose pass exists", function()
 		local def = Pets.def("drillbot") :: any
 		t.eq(def.Robux, 199)
-		t.eq(def.Cost, 0)
+		t.eq(def.Rarity, "premium")
 		t.ok(require(t.shared.Config).Monetization.Passes[def.Pass] ~= nil)
 	end)
 
@@ -114,10 +114,116 @@ return function(t: any)
 			t.ok(Config.Roles[pet.Role] ~= nil, pet.Id .. " role")
 			t.ok(not seen[pet.Id], pet.Id .. " duplicated")
 			seen[pet.Id] = true
-			t.ok(pet.Cost >= 0)
 		end
 		for _, petId in Config.Starter do
 			t.ok(seen[petId], "starter " .. petId)
 		end
+	end)
+
+	t.test("there are at least nine pets, every one with a known role and rarity", function()
+		t.ok(#Config.List >= 9, "pets: " .. #Config.List)
+		for _, pet in Config.List do
+			t.ok(Config.Roles[pet.Role] ~= nil, pet.Id .. " role")
+			t.ok(Config.Rarities[pet.Rarity] ~= nil, pet.Id .. " rarity")
+			t.ok(pet.Power > 0)
+		end
+	end)
+
+	t.test("eggs: odds add up to 100 and every rarity they name has pets to hatch", function()
+		for _, egg in Config.Eggs do
+			local total = 0
+			for rarity, odds in egg.Odds do
+				total += odds
+				t.ok(#Pets.eggPets(rarity) > 0, egg.Id .. " has no " .. rarity .. " pets")
+			end
+			t.near(total, 100, 1e-9, egg.Id)
+			t.ok(egg.Cost > 0 and egg.Pity > 0)
+		end
+	end)
+
+	t.test("the paid pets are never in an egg and are the strongest of their role", function()
+		for _, pet in Config.List do
+			if pet.Pass then
+				t.eq(pet.Rarity, "premium")
+				for _, other in Config.List do
+					if other.Role == pet.Role and not other.Pass then
+						t.ok(pet.Power > other.Power, pet.Id .. " vs " .. other.Id)
+					end
+				end
+			end
+		end
+		for rarity in Config.Rarities do
+			for _, pet in Pets.eggPets(rarity) do
+				t.ok(pet.Pass == nil)
+			end
+		end
+		local best = 0
+		for _, pet in Config.List do
+			if not pet.Pass then best = math.max(best, pet.Power) end
+		end
+		t.ok(Pets.def("solarPhoenix").Power > Pets.def("drillbot").Power)
+	end)
+
+	t.test("rarer pets are stronger within a role", function()
+		local order = {}
+		for index, id in Config.RarityOrder do order[id] = index end
+		for _, a in Config.List do
+			for _, b in Config.List do
+				if a.Role == b.Role and order[a.Rarity] > order[b.Rarity] and not a.Pass and not b.Pass then
+					t.ok(a.Power > b.Power, a.Id .. " should beat " .. b.Id)
+				end
+			end
+		end
+	end)
+
+	t.test("roll follows the odds bands and picks inside the rarity", function()
+		local egg = Config.Eggs[1]
+		local id = Pets.roll(egg, 0, 0, 0)
+		t.eq(Pets.def(id).Rarity, "common")
+		local legendary = Pets.roll(egg, 0.9999, 0, 0)
+		t.eq(Pets.def(legendary).Rarity, "legendary")
+		local first = Pets.roll(egg, 0, 0, 0)
+		local last = Pets.roll(egg, 0, 0, 0.9999)
+		t.ok(first ~= last, "pick moves through the rarity's pets")
+	end)
+
+	t.test("pity: the Pity-th hatch is Epic or better and the count resets on one", function()
+		local egg = Config.Eggs[1]
+		local _, afterCommon = Pets.roll(egg, 0, 0, 0)
+		t.eq(afterCommon, 1)
+		local id, reset = Pets.roll(egg, 0, egg.Pity - 1, 0)
+		local rarity = Pets.def(id).Rarity
+		t.ok(rarity == "epic" or rarity == "legendary", "pity gave " .. rarity)
+		t.eq(reset, 0)
+		local _, epicReset = Pets.roll(egg, 0.96, 3, 0) -- an Epic by luck resets too
+		t.eq(epicReset, 0)
+	end)
+
+	t.test("simulated hatching never goes past the pity count without an Epic and matches the odds", function()
+		local egg = Config.Eggs[1]
+		local seed, pity, drought, longest = 12345, 0, 0, 0
+		local counts = { common = 0 }
+		local function rand()
+			seed = (seed * 1103515245 + 12345) % 2147483648
+			return seed / 2147483648
+		end
+		local n = 20000
+		for _ = 1, n do
+			local id, nextPity = Pets.roll(egg, rand(), pity, rand())
+			pity = nextPity
+			local rarity = Pets.def(id).Rarity
+			counts[rarity] = (counts[rarity] or 0) + 1
+			drought = if rarity == "epic" or rarity == "legendary" then 0 else drought + 1
+			longest = math.max(longest, drought)
+		end
+		t.ok(longest < egg.Pity, "longest drought " .. longest)
+		t.ok(math.abs(counts.common / n - 0.55) < 0.03, "common share " .. counts.common / n)
+	end)
+
+	t.test("power scales the perk and the bonuses use it", function()
+		t.near(Pets.perk("miner", 1, 1.25), 0.3125, 1e-9)
+		t.near(Pets.perk("miner", Config.MaxLevel, 1.25), 0.5, 1e-9)
+		local saved = { owned = { solarPhoenix = { level = 1, xp = 0 } }, equipped = { "solarPhoenix" } }
+		t.near(Pets.bonuses(saved).miner, 0.3125, 1e-9)
 	end)
 end

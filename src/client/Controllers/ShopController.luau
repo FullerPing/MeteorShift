@@ -573,6 +573,39 @@ function ShopController:KnitStart()
 	local function percent(value: number): string
 		return string.format("%g%%", math.floor(value * 1000 + 0.5) / 10)
 	end
+	-- Eggs come first: hatch with Core Shards, odds shown on the card, pity counted
+	local eggCount = #Config.Pets.Eggs
+	for order, egg in Config.Pets.Eggs do
+		local id = "egg_" .. egg.Id
+		local pityLeft = scope:Computed(function(use)
+			local s = use(playerState)
+			return egg.Pity - (if s and s.pets and s.pets.hatches then s.pets.hatches[egg.Id] or 0 else 0)
+		end)
+		local oddsText = {}
+		for _, rarityId in Config.Pets.RarityOrder do
+			if egg.Odds[rarityId] then
+				table.insert(oddsText, string.format('<font color="#%s">%s %g%%</font>', Config.Pets.Rarities[rarityId].Color:ToHex(), Config.Pets.Rarities[rarityId].Name, egg.Odds[rarityId]))
+			end
+		end
+		petCards[order] = itemCard(scope, geometry, {
+			Id = id, Order = order, Title = egg.Name, TitleName = "EggName",
+			LevelText = "EGG  ·  " .. egg.Cost .. " SHARDS",
+			State = "next",
+			Cost = 0, Shards = egg.Cost,
+			Wallet = wallet, Loaded = loaded, BusyId = busyId,
+			ReadyText = "HATCH",
+			PriceText = table.concat(oddsText, "  "),
+			Preview = UI.hudIcon(scope, "crystal", {
+				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+				Size = UDim2.fromScale(0.55, 0.75), ImageColor3 = if egg.Id == "crystalEgg" then UI.SHARD else UI.HUD_GOLD,
+			}),
+			Stats = {
+				statCell(scope, geometry, 1, 2, "COST", tostring(egg.Cost) .. " shards", UI.SHARD),
+				statCell(scope, geometry, 2, 2, "GUARANTEED " .. string.upper(Config.Pets.Rarities[egg.PityFrom].Name) .. "+", scope:Computed(function(use) return "in " .. use(pityLeft) end), UI.HUD_MINT),
+			},
+			OnBuy = function() purchase(id, "", function() return PetService:Hatch(egg.Id) end) end,
+		})
+	end
 	for order, def in Config.Pets.List do
 		local entry, equipped = petEntry(def.Id), petEquipped(def.Id)
 		local role = Config.Pets.Roles[def.Role]
@@ -580,30 +613,29 @@ function ShopController:KnitStart()
 		-- A pass pet is bought with Robux through its game pass; Id 0 means not on sale yet
 		local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
 		local onSale = pass ~= nil and pass.Id ~= 0
-		petCards[order] = itemCard(scope, geometry, {
-			Id = id, Order = order, Title = def.Name, TitleName = "PetName",
-			LevelText = string.upper(role.Name) .. " PET",
+		petCards[eggCount + order] = itemCard(scope, geometry, {
+			Id = id, Order = eggCount + order, Title = def.Name, TitleName = "PetName",
+			LevelText = string.upper(Config.Pets.Rarities[def.Rarity].Name .. " " .. role.Name) .. " PET",
 			State = scope:Computed(function(use): RowState
 				if use(equipped) then return "equipped" end
 				return if use(entry) then "owned" else "next"
 			end),
-			Cost = 0, Shards = def.Cost,
+			Cost = 0, Shards = 0,
 			Wallet = wallet, Loaded = loaded, BusyId = busyId,
 			Enabled = scope:Computed(function(use)
 				if use(entry) then return true end
-				if pass then return onSale end
-				return Price.canAfford(use(wallet), 0, def.Cost)
+				return pass ~= nil and onSale
 			end),
 			ButtonText = scope:Computed(function(use)
 				if use(equipped) then return "PUT AWAY" end
 				if use(entry) then return "EQUIP" end
 				if pass then return if onSale then "GET FOR R$" .. (def.Robux or "") else "NOT ON SALE YET" end
-				return if Price.canAfford(use(wallet), 0, def.Cost) then "BUY" else "SAVE UP"
+				return "FROM EGGS"
 			end),
 			PriceText = scope:Computed(function(use)
 				if use(entry) then return def.Blurb end
 				if pass then return '<font color="#7EEBBE">R$ ' .. (def.Robux or 0) .. '</font>  fixed price' end
-				return priceText(0, def.Cost)
+				return "Hatch it from a " .. (if def.Rarity == "common" or def.Rarity == "uncommon" then "Meteor" else "Meteor or Crystal") .. " Egg"
 			end),
 			ReadyText = "BUY",
 			Preview = UI.hudIcon(scope, petIcons[def.Role] or "equipment", {
@@ -617,7 +649,7 @@ function ShopController:KnitStart()
 				end), UI.WHITE),
 				statCell(scope, geometry, 2, 3, string.upper(role.Name), scope:Computed(function(use)
 					local e = use(entry)
-					return percent(Pets.perk(def.Role, if e then e.level else 1))
+					return percent(Pets.perk(def.Role, if e then e.level else 1, def.Power))
 				end), UI.HUD_GOLD),
 				statCell(scope, geometry, 3, 3, "NEXT LEVEL", scope:Computed(function(use)
 					local e = use(entry)
@@ -626,10 +658,8 @@ function ShopController:KnitStart()
 				end), UI.HUD_MINT),
 			},
 			OnBuy = function()
-				if Fusion.peek(entry) == nil and pass then
-					if onSale then game:GetService("MarketplaceService"):PromptGamePassPurchase(player, pass.Id) end
-				elseif Fusion.peek(entry) == nil then
-					purchase(id, def.Name .. " joined you.", function() return PetService:Buy(def.Id) end)
+				if Fusion.peek(entry) == nil then
+					if pass and onSale then game:GetService("MarketplaceService"):PromptGamePassPurchase(player, pass.Id) end
 				elseif Fusion.peek(equipped) then
 					purchase(id, def.Name .. " put away.", function() return PetService:Unequip(def.Id) end)
 				else

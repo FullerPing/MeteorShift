@@ -190,6 +190,7 @@ function PlayerStateService:_sendState(player: Player)
 			equipped = table.clone(data.pets.equipped),
 			slots = Pets.slots(data.rebirths),
 			bonuses = Pets.bonuses(data.pets),
+			hatches = table.clone(data.pets.hatches), -- pity counts per egg
 		},
 		backpack = data.backpack,
 		carried = sum(data.backpack),

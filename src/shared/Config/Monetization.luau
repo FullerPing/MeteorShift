@@ -32,7 +32,7 @@ export type Product = {
 local Monetization = {}
 
 -- In store order
-Monetization.PassOrder = { "TwoXOre", "BiggerBackpack", "OfflineHours", "AutoDeposit", "VIP", "Drillbot" }
+Monetization.PassOrder = { "TwoXOre", "BiggerBackpack", "OfflineHours", "AutoDeposit", "VIP", "Drillbot", "SolarPhoenix" }
 
 Monetization.Passes = {
 	TwoXOre = {
@@ -64,6 +64,12 @@ Monetization.Passes = {
 		Id = 0,
 		Name = "Drillbot Pet",
 		Description = "A pet drone that mines for you at 25% of your pickaxe (40% at max level), ore straight to your hopper. A fixed price, never random. Set the pass price to 199 Robux on Roblox.",
+	} :: Pass,
+	SolarPhoenix = {
+		Key = "SolarPhoenix",
+		Id = 0,
+		Name = "Solar Phoenix Pet",
+		Description = "The best miner pet: 31% of your pickaxe (50% at max level), ore straight to your hopper. A fixed price, never random. Set the pass price to 399 Robux on Roblox.",
 	} :: Pass,
 	VIP = {
 		Key = "VIP",
