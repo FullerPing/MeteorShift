@@ -39,6 +39,15 @@ function Pets.perk(role: string, level: number, power: number?): number
 	return (def.Min + (def.Max - def.Min) * fraction) * (power or 1)
 end
 
+-- A pet's perk at a level: its Range if it has one, else the role's range times its Power
+function Pets.petPerk(def: Config.Pet, level: number): number
+	if def.Range then
+		local fraction = (math.clamp(level, 1, Config.MaxLevel) - 1) / math.max(Config.MaxLevel - 1, 1)
+		return def.Range[1] + (def.Range[2] - def.Range[1]) * fraction
+	end
+	return Pets.perk(def.Role, level, def.Power)
+end
+
 local rarityIndex: { [string]: number } = {}
 for index, id in Config.RarityOrder do
 	rarityIndex[id] = index
@@ -139,7 +148,7 @@ function Pets.bonuses(pets: Saved): Bonuses
 		local entry = pets.owned[petId]
 		if def and entry and not seen[petId] then
 			seen[petId] = true
-			totals[def.Role] += Pets.perk(def.Role, entry.level, def.Power)
+			totals[def.Role] += Pets.petPerk(def, entry.level)
 		end
 	end
 	for role, total in totals do

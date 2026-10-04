@@ -69,7 +69,7 @@ Monetization.Passes = {
 		Key = "SolarPhoenix",
 		Id = 0,
 		Name = "Solar Phoenix Pet",
-		Description = "The best miner pet: 31% of your pickaxe (50% at max level), ore straight to your hopper. A fixed price, never random. Set the pass price to 399 Robux on Roblox.",
+		Description = "The best miner pet: 50% of your pickaxe (100% at max level), ore straight to your hopper. A fixed price, never random. Set the pass price to 399 Robux on Roblox.",
 	} :: Pass,
 	VIP = {
 		Key = "VIP",

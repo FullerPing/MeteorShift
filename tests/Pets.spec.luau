@@ -147,7 +147,7 @@ return function(t: any)
 				t.eq(pet.Rarity, "premium")
 				for _, other in Config.List do
 					if other.Role == pet.Role and not other.Pass then
-						t.ok(pet.Power > other.Power, pet.Id .. " vs " .. other.Id)
+						t.ok(Pets.petPerk(pet, 1) > Pets.petPerk(other, 1) and Pets.petPerk(pet, Config.MaxLevel) > Pets.petPerk(other, Config.MaxLevel), pet.Id .. " vs " .. other.Id)
 					end
 				end
 			end
@@ -157,11 +157,7 @@ return function(t: any)
 				t.ok(pet.Pass == nil)
 			end
 		end
-		local best = 0
-		for _, pet in Config.List do
-			if not pet.Pass then best = math.max(best, pet.Power) end
-		end
-		t.ok(Pets.def("solarPhoenix").Power > Pets.def("drillbot").Power)
+		t.ok(Pets.petPerk(Pets.def("solarPhoenix") :: any, 1) > Pets.petPerk(Pets.def("drillbot") :: any, 1))
 	end)
 
 	t.test("rarer pets are stronger within a role", function()
@@ -170,7 +166,7 @@ return function(t: any)
 		for _, a in Config.List do
 			for _, b in Config.List do
 				if a.Role == b.Role and order[a.Rarity] > order[b.Rarity] and not a.Pass and not b.Pass then
-					t.ok(a.Power > b.Power, a.Id .. " should beat " .. b.Id)
+					t.ok(Pets.petPerk(a, Config.MaxLevel) > Pets.petPerk(b, Config.MaxLevel), a.Id .. " should beat " .. b.Id)
 				end
 			end
 		end
@@ -221,9 +217,11 @@ return function(t: any)
 	end)
 
 	t.test("power scales the perk and the bonuses use it", function()
-		t.near(Pets.perk("miner", 1, 1.25), 0.3125, 1e-9)
-		t.near(Pets.perk("miner", Config.MaxLevel, 1.25), 0.5, 1e-9)
+		t.near(Pets.perk("miner", 1, 0.6), 0.15, 1e-9)
+		t.near(Pets.perk("miner", Config.MaxLevel, 0.6), 0.24, 1e-9)
 		local saved = { owned = { solarPhoenix = { level = 1, xp = 0 } }, equipped = { "solarPhoenix" } }
-		t.near(Pets.bonuses(saved).miner, 0.3125, 1e-9)
+		t.near(Pets.bonuses(saved).miner, 0.5, 1e-9)
+		saved.owned.solarPhoenix.level = Config.MaxLevel
+		t.near(Pets.bonuses(saved).miner, 1.0, 1e-9)
 	end)
 end

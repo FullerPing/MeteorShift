@@ -649,7 +649,7 @@ function ShopController:KnitStart()
 				end), UI.WHITE),
 				statCell(scope, geometry, 2, 3, string.upper(role.Name), scope:Computed(function(use)
 					local e = use(entry)
-					return percent(Pets.perk(def.Role, if e then e.level else 1, def.Power))
+					return percent(Pets.petPerk(def, if e then e.level else 1))
 				end), UI.HUD_GOLD),
 				statCell(scope, geometry, 3, 3, "NEXT LEVEL", scope:Computed(function(use)
 					local e = use(entry)

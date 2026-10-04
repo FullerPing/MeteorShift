@@ -29,6 +29,7 @@ export type Rarity = { Id: string, Name: string, Color: Color3 }
 export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string }
 export type Pet = {
 	Id: string, Name: string, Role: string, Rarity: string, Power: number, Color: Color3, Blurb: string,
+	Range: { number }?, -- { level 1, max level } perk overriding the role's range times Power (the Solar Phoenix)
 	Pass: string?, -- Config.Monetization pass key: owning the pass gives the pet (not in any egg)
 	Robux: number?, -- the pass price, shown in the shop (the pass itself is priced on Roblox)
 }
@@ -48,7 +49,7 @@ Pets.XpPerHit = { Crust = 1, Core = 2, Debris = 0.2 } :: { [string]: number }
 Pets.Slots = { Base = 1, PerRebirth = 1, Max = 3 }
 
 Pets.Roles = {
-	miner = { Name = "Miner", Min = 0.25, Max = 0.40, Cap = 0.50, Text = "Mines for you at %s of your pickaxe. Its ore goes straight to the hopper." },
+	miner = { Name = "Miner", Min = 0.25, Max = 0.40, Cap = 1.0, Text = "Mines for you at %s of your pickaxe. Its ore goes straight to the hopper." },
 	hauler = { Name = "Hauler", Min = 0.01, Max = 0.025, Cap = 0.05, Text = "Carries %s of your backpack to the hopper every second." },
 	pack = { Name = "Pack", Min = 0.15, Max = 0.30, Cap = 0.45, Text = "Expands your backpack by %s." },
 	swift = { Name = "Swift", Min = 0.05, Max = 0.15, Cap = 0.225, Text = "Shortens your swing by %s." },
@@ -79,7 +80,8 @@ Pets.Eggs = {
 -- A duplicate pet gives this much XP to the one you already own
 Pets.DuplicateXp = 400
 
--- Power scales the role's whole perk range. Miner power stays below the paid miners'.
+-- Power scales the role's whole perk range (a pet's Range, when it has one, replaces that range).
+-- Miner power stays below the paid miners'.
 Pets.List = {
 	-- Common
 	{ Id = "pebblePup", Name = "Pebble Pup", Role = "miner", Rarity = "common", Power = 0.6, Color = Color3.fromRGB(150, 150, 150), Blurb = "A grey pup who digs where you dig." },
@@ -100,7 +102,7 @@ Pets.List = {
 	{ Id = "meteorDrake", Name = "Meteor Drake", Role = "miner", Rarity = "legendary", Power = 0.95, Color = Color3.fromRGB(255, 130, 50), Blurb = "Born in a crater. It never stops digging." },
 	-- Premium (game passes: fixed price, never random, the strongest miners)
 	{ Id = "drillbot", Name = "Drillbot", Role = "miner", Rarity = "premium", Power = 1.0, Pass = "Drillbot", Robux = 199, Color = Color3.fromRGB(255, 176, 48), Blurb = "A little drill on legs. It keeps swinging while you do." },
-	{ Id = "solarPhoenix", Name = "Solar Phoenix", Role = "miner", Rarity = "premium", Power = 1.25, Pass = "SolarPhoenix", Robux = 399, Color = Color3.fromRGB(255, 120, 60), Blurb = "A sun in feathers. It mines at the speed of light." },
+	{ Id = "solarPhoenix", Name = "Solar Phoenix", Role = "miner", Rarity = "premium", Power = 2.5, Range = { 0.5, 1.0 }, Pass = "SolarPhoenix", Robux = 399, Color = Color3.fromRGB(255, 120, 60), Blurb = "A sun in feathers. It mines at the speed of light." },
 } :: { Pet }
 
 Pets.Starter = {} :: { string } -- pets every new profile starts with (none: eggs and passes)
