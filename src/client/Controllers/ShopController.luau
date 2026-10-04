@@ -312,7 +312,7 @@ function ShopController:KnitStart()
 		return list
 	end
 
-	local pickaxeCards, backpackCards, stationCards = {}, {}, {}
+	local stationCards = {}
 	local tierOf = { pickaxe = pickaxeTier, backpack = backpackTier }
 	local settingsOf = { pickaxe = Config.Gear.Pickaxe, backpack = Config.Gear.Backpack }
 	local tiersOf = { pickaxe = Config.Pickaxes, backpack = Config.Backpacks }
@@ -345,100 +345,219 @@ function ShopController:KnitStart()
 		end
 		return string.format("%.1f%%", pickaxe.CritChance * 100)
 	end
-	local function statCard(kind: string, stat: string, order: number)
-		local level, tier = levelOf(kind, stat), tierOf[kind]
-		local price = scope:Computed(function(use) return Gear.price(kind, stat, use(level)) end)
-		local settings = settingsOf[kind]
-		local id = kind .. "_" .. stat
-		return itemCard(scope, geometry, {
-			Id = id, Order = order, Title = settings.Names[stat], TitleName = "StatName",
-			LevelText = scope:Computed(function(use) return "LEVEL " .. use(level) .. " / " .. Gear.cap(use(tier)) end),
-			State = scope:Computed(function(use): RowState
-				if use(price) == nil then return "max" end
-				return if Gear.canLevel(kind, use(tier), use(level)) then "next" else "locked"
-			end),
-			LockedText = "EVOLVE FIRST",
-			Cost = scope:Computed(function(use) return use(price) or 0 end), Shards = 0,
-			Wallet = wallet, Loaded = loaded, BusyId = busyId,
-			Preview = UI.hudIcon(scope, if kind == "backpack" then "backpack" else "equipment", {
-				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.55, 0.75),
-			}),
-			Stats = {
-				statCell(scope, geometry, 1, 2, "CURRENT", scope:Computed(function(use) return statValue(kind, stat, use(level)) end), UI.WHITE),
-				statCell(scope, geometry, 2, 2, "NEXT LEVEL", scope:Computed(function(use)
-					return if use(price) then statValue(kind, stat, use(level) + 1) else "MAX"
-				end), UI.HUD_MINT),
+	-- One screen per gear kind: a big preview of what you hold, a row per stat with +1 and
+	-- +10 buttons, and an evolve banner with what is still missing. Pets and Production keep
+	-- the card carousel.
+	local gearScreens = {}
+	local function gearScreen(kind: string)
+		local settings, tier, tiers = settingsOf[kind], tierOf[kind], tiersOf[kind]
+		local evolution = evolutionOf(kind)
+		local gate = settings.Gate
+		local compact = scope:Computed(function(use) return use(geometry).narrow end)
+		local rows = {}
+		for order, stat in settings.Stats do
+			local level = levelOf(kind, stat)
+			local id = kind .. "_" .. stat
+			local atCap = scope:Computed(function(use) return not Gear.canLevel(kind, use(tier), use(level)) end)
+			local function bulk(use: any, limit: number)
+				return Gear.bulk(kind, use(tier), stat, use(level), use(wallet).cash, limit)
+			end
+			local function buyButton(name: string, limit: number, slot: number)
+				local count = scope:Computed(function(use) return (bulk(use, limit)) end)
+				local enabled = scope:Computed(function(use)
+					return use(count) >= 1 and use(loaded) and use(busyId) == nil
+				end)
+				return UI.button(scope, {
+					Name = name, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 66 - slot * 70, 0.5, 0), Size = UDim2.fromOffset(66, 34),
+					TextScaled = true, AutoButtonColor = enabled, Active = enabled, Selectable = enabled,
+					Text = scope:Computed(function(use)
+						local n, total, allowed, allowedTotal = bulk(use, limit)
+						if allowed == 0 then
+							return if Gear.price(kind, stat, use(level)) == nil then "MAX" else "EVOLVE"
+						end
+						local shown, cost = if n > 0 then n else allowed, if n > 0 then total else allowedTotal
+						return (if limit > 1 then "+" .. shown .. "\n" else "") .. Format.cash(cost)
+					end),
+					TextColor3 = scope:Computed(function(use) return if use(enabled) then UI.OUTLINE else UI.HUD_MUTED end),
+					BackgroundColor3 = scope:Computed(function(use) return if use(enabled) then UI.HUD_GOLD else UI.PANEL_DARK end),
+					[Children] = { scope:New("UITextSizeConstraint")({ MinTextSize = 9, MaxTextSize = 14 }) },
+					[OnEvent("Activated")] = function()
+						if not Fusion.peek(enabled) then return end
+						local wanted = Fusion.peek(count)
+						purchase(id, settings.Names[stat] .. " upgraded.", function()
+							local any = false
+							for _ = 1, wanted do
+								if not ShopService:Upgrade(kind, stat) then break end
+								any = true
+							end
+							return any
+						end)
+					end,
+				})
+			end
+			rows[order] = scope:New("Frame")({
+				Name = stat .. "Row", LayoutOrder = order, Size = UDim2.new(1, -4, 0, 42),
+				BackgroundColor3 = UI.CARD, BorderSizePixel = 0,
+				[Children] = {
+					UI.corner(scope, 10),
+					UI.label(scope, {
+						Name = "StatName", Position = UDim2.fromOffset(10, 2), Size = UDim2.new(1, -156, 0, 20),
+						Text = scope:Computed(function(use) return settings.Names[stat] .. "  LV " .. use(level) end),
+						TextXAlignment = Enum.TextXAlignment.Left, TextScaled = true, TextStrokeTransparency = 1,
+						[Children] = { scope:New("UITextSizeConstraint")({ MinTextSize = 11, MaxTextSize = 16 }) },
+					}),
+					UI.body(scope, {
+						Name = "Effect", Position = UDim2.fromOffset(10, 22), Size = UDim2.new(1, -156, 0, 16),
+						Text = scope:Computed(function(use)
+							local lv = use(level)
+							return statValue(kind, stat, lv) .. (if use(atCap) then "" else "  >  " .. statValue(kind, stat, lv + 1))
+						end),
+						TextXAlignment = Enum.TextXAlignment.Left, TextSize = 12, TextColor3 = UI.HUD_MINT, TextTruncate = Enum.TextTruncate.AtEnd,
+					}),
+					buyButton("Buy10", 10, 1), buyButton("Buy1", 1, 2),
+				},
+			})
+		end
+
+		local gateLevel = levelOf(kind, gate)
+		local function evolveReady(use: any): boolean
+			local e, s = use(evolution), use(playerState)
+			return e ~= nil and e.ready and s ~= nil and s.level >= Levels.evolveLevel(e.tier)
+		end
+		local evolveEnabled = scope:Computed(function(use)
+			local e = use(evolution)
+			return e ~= nil and evolveReady(use) and Price.canAfford(use(wallet), e.cost, e.shards) and use(loaded) and use(busyId) == nil
+		end)
+		local evolveId = kind .. "_evolve"
+		local banner = scope:New("Frame")({
+			Name = "EvolveBanner", LayoutOrder = 100, Size = UDim2.new(1, -4, 0, 84),
+			BackgroundColor3 = UI.PANEL_DARK, BorderSizePixel = 0,
+			[Children] = {
+				UI.corner(scope, 10),
+				scope:New("UIStroke")({ Color = scope:Computed(function(use) return if use(evolveEnabled) then UI.HUD_GOLD else UI.HUD_BORDER end), Thickness = 1.5 }),
+				UI.label(scope, {
+					Name = "EvolveTitle", Position = UDim2.fromOffset(10, 4), Size = UDim2.new(1, -140, 0, 22),
+					Text = scope:Computed(function(use)
+						local e = use(evolution)
+						return if e then "EVOLVE: " .. string.upper(tiers[e.tier].Name) else "FULLY EVOLVED"
+					end),
+					TextXAlignment = Enum.TextXAlignment.Left, TextScaled = true, TextStrokeTransparency = 1, TextColor3 = UI.HUD_GOLD,
+					[Children] = { scope:New("UITextSizeConstraint")({ MinTextSize = 12, MaxTextSize = 18 }) },
+				}),
+				scope:New("Frame")({
+					Name = "GateBar", Position = UDim2.fromOffset(10, 30), Size = UDim2.new(1, -140, 0, 8),
+					BackgroundColor3 = UI.CARD, BorderSizePixel = 0,
+					Visible = scope:Computed(function(use) return use(evolution) ~= nil end),
+					[Children] = {
+						UI.corner(scope, 4),
+						scope:New("Frame")({
+							Name = "Fill", BorderSizePixel = 0, BackgroundColor3 = UI.HUD_MINT,
+							Size = scope:Computed(function(use) return UDim2.fromScale(math.clamp(use(gateLevel) / Gear.cap(use(tier)), 0, 1), 1) end),
+							[Children] = { UI.corner(scope, 4) },
+						}),
+					},
+				}),
+				UI.body(scope, {
+					Name = "Needs", Position = UDim2.fromOffset(10, 42), Size = UDim2.new(1, -140, 0, 38),
+					TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, TextSize = 12, RichText = true,
+					Text = scope:Computed(function(use)
+						local e, s = use(evolution), use(playerState)
+						if not e then return "Nothing left to evolve." end
+						local function chip(done: boolean, text: string): string
+							return string.format('<font color="%s">%s</font>', if done then "#7EEBBE" else "#B7C2D0", text)
+						end
+						local needed = Levels.evolveLevel(e.tier)
+						return chip(e.ready, settings.Names[gate] .. " " .. use(gateLevel) .. "/" .. Gear.cap(use(tier)))
+							.. "   " .. chip(s ~= nil and s.level >= needed, "Player level " .. (if s then s.level else 1) .. "/" .. needed)
+							.. "\n" .. priceText(e.cost, e.shards)
+					end),
+				}),
+				UI.button(scope, {
+					Name = "Evolve", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -8, 0.5, 0), Size = UDim2.fromOffset(112, 48),
+					TextScaled = true, AutoButtonColor = evolveEnabled, Active = evolveEnabled, Selectable = evolveEnabled,
+					Text = scope:Computed(function(use)
+						local e = use(evolution)
+						if not e then return "MAX" end
+						if not evolveReady(use) then return "LOCKED" end
+						return if Price.canAfford(use(wallet), e.cost, e.shards) then "EVOLVE" else "SAVE UP"
+					end),
+					TextColor3 = scope:Computed(function(use) return if use(evolveEnabled) then UI.OUTLINE else UI.HUD_MUTED end),
+					BackgroundColor3 = scope:Computed(function(use) return if use(evolveEnabled) then UI.HUD_GOLD else UI.CARD end),
+					[Children] = { scope:New("UITextSizeConstraint")({ MinTextSize = 12, MaxTextSize = 18 }) },
+					[OnEvent("Activated")] = function()
+						if Fusion.peek(evolveEnabled) then purchase(evolveId, "Evolved.", function() return ShopService:Evolve(kind) end) end
+					end,
+				}),
 			},
-			OnBuy = function() purchase(id, settings.Names[stat] .. " upgraded.", function() return ShopService:Upgrade(kind, stat) end) end,
 		})
-	end
-	-- The evolve card shows the next tier's model, price and what it opens up
-	local function evolveCard(kind: string, order: number)
-		local evolution, tier = evolutionOf(kind), tierOf[kind]
-		local tiers, settings = tiersOf[kind], settingsOf[kind]
+
 		local previews = {}
 		for index in tiers do
 			previews[index] = EquipmentPreview(scope, kind, index, {
-				Size = UDim2.fromScale(1, 1),
-				Visible = scope:Computed(function(use)
-					local e = use(evolution)
-					return (if e then e.tier else #tiers) == index
-				end),
+				Size = UDim2.fromScale(1, 1), Visible = scope:Computed(function(use) return use(tier) == index end),
 			})
 		end
-		local function nextItem(use: any): any
-			local e = use(evolution)
-			return tiers[if e then e.tier else #tiers]
+		local function previewWell(size: any)
+			return scope:New("Frame")({
+				Name = "PreviewWell", BackgroundColor3 = UI.PANEL_DARK, BorderSizePixel = 0, Size = size,
+				[Children] = { UI.corner(scope, 10), scope:New("UIStroke")({ Color = UI.HUD_BORDER, Transparency = 0.65 }), previews },
+			})
 		end
-		local id = kind .. "_evolve"
-		return itemCard(scope, geometry, {
-			Id = id, Order = order, TitleName = "EvolveName",
-			Title = scope:Computed(function(use)
-				return if use(evolution) then nextItem(use).Name else "Fully evolved"
-			end),
-			LevelText = scope:Computed(function(use)
-				local e = use(evolution)
-				return if e then "EVOLVE: TIER " .. use(tier) .. " TO " .. e.tier else "TIER " .. use(tier)
-			end),
-			State = scope:Computed(function(use): RowState
-				local e = use(evolution)
-				if not e then return "max" end
-				local s = use(playerState)
-				return if e.ready and (s == nil or s.level >= Levels.evolveLevel(e.tier)) then "next" else "locked"
-			end),
-			LockedText = scope:Computed(function(use)
-				local e, s = use(evolution), use(playerState)
-				if e and e.ready and s and s.level < Levels.evolveLevel(e.tier) then
-					return "NEEDS LEVEL " .. Levels.evolveLevel(e.tier)
-				end
-				return "MAX " .. string.upper(settings.Names[settings.Gate]) .. " FIRST"
-			end),
-			ReadyText = "EVOLVE",
-			Cost = scope:Computed(function(use) local e = use(evolution) return if e then e.cost else 0 end),
-			Shards = scope:Computed(function(use) local e = use(evolution) return if e then e.shards else 0 end),
-			Wallet = wallet, Loaded = loaded, BusyId = busyId,
-			Preview = previews,
-			Stats = {
-				statCell(scope, geometry, 1, 2, if kind == "pickaxe" then "ORE / HIT" else "BASE CAPACITY", scope:Computed(function(use)
-					local item = nextItem(use)
-					return if kind == "pickaxe" then Format.number(item.OrePerHit) else Format.number(item.Capacity) .. " ore"
-				end), UI.HUD_GOLD),
-				statCell(scope, geometry, 2, 2, "LEVEL CAP", scope:Computed(function(use)
-					local e = use(evolution)
-					return if e then tostring(Gear.cap(e.tier)) else "MAX"
-				end), UI.HUD_MINT),
+		local function heading()
+			return {
+				UI.label(scope, {
+					Name = "GearName", LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 24), TextScaled = true, TextStrokeTransparency = 1,
+					Text = scope:Computed(function(use) return tiers[use(tier)].Name end),
+					[Children] = { scope:New("UITextSizeConstraint")({ MinTextSize = 13, MaxTextSize = 20 }) },
+				}),
+				UI.body(scope, {
+					Name = "TierText", LayoutOrder = 2, Size = UDim2.new(1, 0, 0, 18), TextSize = 12, TextColor3 = UI.HUD_GOLD,
+					Text = scope:Computed(function(use) return "TIER " .. use(tier) .. " / " .. #tiers end),
+				}),
+			}
+		end
+		-- The preview used on wide panels sits left of the rows; on phones it heads the list
+		local showcase = scope:New("Frame")({
+			Name = "Showcase", BackgroundTransparency = 1, Size = UDim2.new(0, 196, 1, 0), Visible = scope:Computed(function(use) return not use(compact) end),
+			[Children] = {
+				previewWell(UDim2.new(1, 0, 1, -52)),
+				scope:New("Frame")({
+					Name = "Heading", BackgroundTransparency = 1, Position = UDim2.new(0, 0, 1, -48), Size = UDim2.new(1, 0, 0, 44),
+					[Children] = { scope:New("UIListLayout")({ SortOrder = Enum.SortOrder.LayoutOrder }), heading() },
+				}),
 			},
-			OnBuy = function() purchase(id, "Evolved.", function() return ShopService:Evolve(kind) end) end,
 		})
+		local strip = scope:New("Frame")({
+			Name = "NarrowHeader", LayoutOrder = 0, BackgroundTransparency = 1, Size = UDim2.new(1, -4, 0, 84), Visible = compact,
+			[Children] = {
+				previewWell(UDim2.fromOffset(84, 84)),
+				scope:New("Frame")({
+					Name = "Heading", BackgroundTransparency = 1, Position = UDim2.fromOffset(96, 20), Size = UDim2.new(1, -100, 0, 44),
+					[Children] = { scope:New("UIListLayout")({ SortOrder = Enum.SortOrder.LayoutOrder }), heading() },
+				}),
+			},
+		})
+		local list = scope:New("ScrollingFrame")({
+			Name = "Rows", BackgroundTransparency = 1, BorderSizePixel = 0,
+			Position = scope:Computed(function(use) return if use(compact) then UDim2.fromOffset(0, 0) else UDim2.fromOffset(208, 0) end),
+			Size = scope:Computed(function(use) return if use(compact) then UDim2.fromScale(1, 1) else UDim2.new(1, -208, 1, 0) end),
+			CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = 4, ScrollBarImageColor3 = UI.HUD_GOLD,
+			[Children] = {
+				scope:New("UIListLayout")({ Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }),
+				strip, rows, banner,
+			},
+		})
+		gearScreens[kind] = scope:New("Frame")({
+			Name = kind .. "Screen", BackgroundTransparency = 1, Visible = scope:Computed(function(use) return use(tab) == kind end),
+			Position = scope:Computed(function(use) local g = use(geometry) return UDim2.fromOffset(g.padding, g.carouselY) end),
+			Size = scope:Computed(function(use) local g = use(geometry) return UDim2.fromOffset(g.panel.w - 2 * g.padding, g.carouselH) end),
+			[Children] = { showcase, list },
+		})
+		return gearScreens[kind]
 	end
-	for order, stat in Config.Gear.Pickaxe.Stats do
-		pickaxeCards[order] = statCard("pickaxe", stat, order)
-	end
-	pickaxeCards[#pickaxeCards + 1] = evolveCard("pickaxe", #pickaxeCards + 1)
-	for order, stat in Config.Gear.Backpack.Stats do
-		backpackCards[order] = statCard("backpack", stat, order)
-	end
-	backpackCards[#backpackCards + 1] = evolveCard("backpack", #backpackCards + 1)
+	gearScreen("pickaxe")
+	gearScreen("backpack")
 	-- Pets: owned ones can be put out or away, the rest cost Core Shards (Shared.Pets)
 	local petIcons = { miner = "equipment", hauler = "ore", pack = "backpack", swift = "chevron", merchant = "coin" }
 	local petCards = {}
@@ -543,7 +662,7 @@ function ShopController:KnitStart()
 			OnBuy = function() purchase(stationId, station.Name .. " upgraded.", function() return UpgradeService:BuyStation(stationId) end) end,
 		})
 	end
-	local carousels = { makeList("pickaxe", pickaxeCards), makeList("backpack", backpackCards), makeList("pets", petCards), makeList("plot", stationCards) }
+	local carousels = { makeList("pets", petCards), makeList("plot", stationCards) }
 	local function move(direction: number)
 		local kind = Fusion.peek(tab)
 		local list = lists[kind]
@@ -561,9 +680,7 @@ function ShopController:KnitStart()
 		if Fusion.peek(open) then focusOwned() end
 	end)
 	scope:Observer(tab):onChange(function() notice:set("") focusOwned() end)
-	scope:Observer(pickaxeTier):onChange(function() if Fusion.peek(tab) == "pickaxe" then focusOwned() end end)
-	scope:Observer(backpackTier):onChange(function() if Fusion.peek(tab) == "backpack" then focusOwned() end end)
-	local lastGeometry = Fusion.peek(geometry)
+			local lastGeometry = Fusion.peek(geometry)
 	scope:Observer(geometry):onChange(function()
 		local g = Fusion.peek(geometry)
 		local changed = g.panel.w ~= lastGeometry.panel.w or g.panel.h ~= lastGeometry.panel.h
@@ -616,6 +733,7 @@ function ShopController:KnitStart()
 			Name = name, AnchorPoint = if right then Vector2.new(1, 0) else Vector2.zero,
 			Position = scope:Computed(function(use) local g = use(geometry) return UDim2.new(if right then 1 else 0, if right then -g.padding else g.padding, 0, g.footerY) end),
 			Size = UDim2.fromOffset(44, 44), Text = "", BackgroundColor3 = UI.CARD,
+			Visible = scope:Computed(function(use) local k = use(tab) return k == "pets" or k == "plot" end),
 			[Children] = { UI.hudIcon(scope, "chevron", { Position = UDim2.fromOffset(12, 12), Size = UDim2.fromOffset(20, 20), Rotation = if right then 0 else 180, ImageColor3 = UI.HUD_GOLD }) },
 			[OnEvent("Activated")] = function() move(direction) end,
 		})
@@ -673,7 +791,7 @@ function ShopController:KnitStart()
 							tabButtons,
 						},
 					}),
-					carousels, navButton("Previous", false, -1), navButton("Next", true, 1),
+					gearScreens.pickaxe, gearScreens.backpack, carousels, navButton("Previous", false, -1), navButton("Next", true, 1),
 					UI.body(scope, {
 						Name = "Notice",
 						Position = scope:Computed(function(use) local g = use(geometry) return UDim2.fromOffset(g.padding + 52, g.footerY) end),
@@ -684,8 +802,9 @@ function ShopController:KnitStart()
 							if message ~= "" then return message end
 							if not use(loaded) then return "Loading your equipment..." end
 							local kind, g = use(tab), use(geometry)
-							local count = if kind == "plot" then #stationCards elseif kind == "pickaxe" then #pickaxeCards elseif kind == "pets" then #petCards else #backpackCards
-							local first = math.clamp(math.floor(use(positions[kind]) / (g.cardWidth + g.gap) + 0.5) + 1, 1, count)
+							local gearTab = kind == "pickaxe" or kind == "backpack"
+							local count = if kind == "plot" then #stationCards elseif kind == "pets" then #petCards else 1
+							local first = if gearTab then 1 else math.clamp(math.floor(use(positions[kind]) / (g.cardWidth + g.gap) + 0.5) + 1, 1, count)
 							if kind == "pets" then
 								local s = use(playerState)
 								if s and s.pets then
@@ -694,7 +813,7 @@ function ShopController:KnitStart()
 							end
 							local s = use(playerState)
 							local levelText = if s then string.format("Player level %d%s   ", s.level, if s.xpNeeded > 0 then string.format(" (%d / %d XP)", math.floor(s.xp), s.xpNeeded) else " (max)") else ""
-							return levelText .. string.format("%d / %d", first, count)
+							return if gearTab then levelText else levelText .. string.format("%d / %d", first, count)
 						end),
 					}),
 				},

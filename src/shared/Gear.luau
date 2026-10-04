@@ -150,6 +150,28 @@ function Gear.bundleCost(kind: string, tier: number): number
 	return total
 end
 
+-- How many levels of one stat a buy-more button can take, one at a time up to `limit`.
+-- Returns (affordable count, their total price, allowed count, their total price): "allowed"
+-- ignores cash (only the tier's level cap and the price table stop it) so a button can show
+-- what it would cost.
+function Gear.bulk(kind: string, tier: number, stat: string, level: number, cash: number, limit: number): (number, number, number, number)
+	local count, total, allowed, allowedTotal = 0, 0, 0, 0
+	local current = level
+	while allowed < limit and Gear.canLevel(kind, tier, current) do
+		local price = Gear.price(kind, stat, current)
+		if not price then
+			break
+		end
+		allowed += 1
+		allowedTotal += price
+		if allowedTotal <= cash then
+			count, total = allowed, allowedTotal
+		end
+		current += 1
+	end
+	return count, total, allowed, allowedTotal
+end
+
 -- A stats table for a fresh item of a tier
 function Gear.freshPickaxeStats(tier: number): PickaxeStats
 	local level = Gear.levelsForTier(tier)

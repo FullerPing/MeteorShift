@@ -102,4 +102,22 @@ return function(t: any)
 		t.eq(pack.capacity, 1)
 		t.eq(Gear.cleanBackpackStats(3, { capacity = 5 }).capacity, 5)
 	end)
+
+	t.test("bulk takes as many levels as cash and the tier cap allow, one price at a time", function()
+		local Gear = require(t.shared.Gear)
+		local price1 = Gear.price("pickaxe", "power", 1) :: number
+		local price2 = Gear.price("pickaxe", "power", 2) :: number
+		local count, total, allowed = Gear.bulk("pickaxe", 1, "power", 1, price1 + price2 + 0.5, 10)
+		t.eq(count, 2)
+		t.near(total, price1 + price2, 1e-9)
+		t.eq(allowed, 9) -- tier 1 caps the stat at level 10
+		local none, zero, _, allowedTotal = Gear.bulk("pickaxe", 1, "power", 1, 0, 10)
+		t.eq(none, 0)
+		t.eq(zero, 0)
+		t.ok(allowedTotal > price1)
+		local atCap = { Gear.bulk("pickaxe", 1, "power", Gear.cap(1), 1e12, 10) }
+		t.eq(atCap[1], 0)
+		t.eq(atCap[3], 0)
+		t.eq((Gear.bulk("pickaxe", 1, "power", 1, 1e12, 3)), 3)
+	end)
 end
