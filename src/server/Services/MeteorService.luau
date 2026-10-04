@@ -183,7 +183,7 @@ end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
 local function serverPower(): number
-	return MiningPower.serverPower(ActivityService:GetActiveTiers())
+	return MiningPower.serverPowerRates(ActivityService:GetActiveRates())
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -377,7 +377,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		local pickaxe = PlayerStateService:GetPickaxe(player)
 		local short = MeteorTypes.tiersShort(pickaxe.Tier, meteorType)
 		if short > 0 then
-			mult *= MeteorTypes.underTierPowerMult(MiningPower.power(pickaxe.Tier), pickaxe.Swing, meteor.CrustHp, short)
+			mult *= MeteorTypes.underTierPowerMult(pickaxe.Power, pickaxe.Swing, meteor.CrustHp, short)
 		end
 		return mult
 	end

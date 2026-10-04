@@ -40,14 +40,14 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 - Profiles migrate from schema v1 to v2 (station levels, one hopper and one collection post)
 
 **Week 3, upgrades and UI**
-- Shop with Pickaxes, Backpacks and Plot tabs, opened from the SHOP button or the Pickaxe Shop in town. Every tier is listed; only the next one can be bought (cash, plus Core Shards at the top tiers), and the server re-checks the price. The Plot tab buys the same station upgrades as the prompts on your plot.
+- Shop with Pickaxe, Backpack and Production tabs, opened from the SHOP button or the Pickaxe Shop in town. You keep **one pickaxe and one backpack for the whole game** (`Shared.Gear`, tuning in `Config.Gear`): each stat levels up with cash (pickaxe: Power, Swing speed, Reach, Crit chance; backpack: Capacity), and the tier caps how high the stats go (10 levels per tier). The tab shows a card per stat and an Evolve card; evolving to the next tier needs the Power (or Capacity) stat at the cap and costs the tier's cash and Core Shards (`Config.Pickaxes`, `Config.Backpacks`). Evolving restyles the tool and keeps your levels; the other stats can lag behind. Power is Mining Power per hit (HP and contribution, 1.25x per tier's worth of levels), Reach is the mine range in studs, Crit is a server-rolled chance for double Mining Power with a bigger damage number. Ore per hit is flat per tier (1 to 20), so progression is in the line, the ore type and the stats, not in hundreds of times more ore. Profiles migrate from v2 to v3: everyone starts at the first level of the tier they owned. The Production tab buys the same station upgrades as the prompts on your plot
 - Your pickaxe tool is renamed after the tier you own; parts in it with a `Tint` attribute take the tier's colour
 - HUD shows your pickaxe, the cash counter counts up to the new total, and a "+$" floater rises off it on every sale
 - Tutorial (spec §11): 10 steps from "Mine a debris rock" to "Buy an upgrade", each completed by the real action on the server, with a step card, a marker over the target and a beam from you to it. Doing a later step's action first also completes the steps before it, so joining mid-event never gets you stuck. Skippable, saved in the profile (`tutorialStep`), and each step is logged as an onboarding funnel step
 
 **Week 4: meteor types (spec §8.1)**
 - Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors fall alongside Iron. Each countdown picks the next type from weighted odds (Iron 60, Ice 25, Crystal 15), but a type only comes up when at least 25% of active players' pickaxes meet its tier, otherwise it drops to the next type down. The sky board and HUD timer name it from the start of the countdown, with the title in the type's glow colour (Iron orange, Ice cyan, Crystal magenta). Types, tier gates and twists are in `Config.Meteor`, the rules in `Shared.MeteorTypes`
-- Everyone mines the meteor's own ore. A pickaxe under the meteor's tier gets less the further below it is: on your own a crust node takes 15 s per tier short (tier 1 on Ice: 30 s), and each meteor type above your best pays 3x the one below: to a tier 1 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9 ($1.4K and $4.1K with the Canvas Sack), paid per hit in the meteor's ore. `Config.Meteor.UnderTier`, numbers in docs/balance.md. Debris always drops Iron whatever its tint (cyan rocks once dropped Frost, which paid a Basic Pickaxe about 6x an Iron meteor per swing).
+- Everyone mines the meteor's own ore. A pickaxe under the meteor's tier gets less the further below it is: on your own a crust node takes 15 s per tier short (tier 1 on Ice: 30 s), and each meteor type above your best pays 3x the one below: to a tier 1 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9 ($13.6K and $40.7K with the Canvas Sack), paid per hit in the meteor's ore. `Config.Meteor.UnderTier`, numbers in docs/balance.md. Debris always drops Iron whatever its tint (cyan rocks once dropped Frost, which paid a Basic Pickaxe about 6x an Iron meteor per swing).
 - Ice twist, Refreeze: a node or core nobody has hit for 5 s regains 2% of its HP per second (never past full); its health bar turns frost blue while it refreezes. Crystal twist, Resonance: each extra player who hit the same node in the last 1.5 s adds +20% Mining Power (HP and contribution) to everyone on it, up to +60%
 - The shard bonus pool is multiplied by the type (Ice ×1.5, Crystal ×2). The results panel names the ore your pickaxe mined and, when it was under the meteor's tier, what a better one mines there ("Tier 5 pickaxe mines Crystal: $3K bars")
 
@@ -58,7 +58,7 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 
 **Week 4: rebirth, "Relocate the Colony" (spec §8.3)**
 - The REBIRTH button (under INDEX; green once you can afford it, hidden while the shop or index is open and, on narrow screens, while the tutorial card sits in the column) opens a panel with your cash multiplier now and after the rebirth, the cost with your progress toward it, and what resets and what you keep. The confirm button needs a second press ("ARE YOU SURE?") within 3 s, and says how much cash is missing while you can't afford it
-- The first rebirth costs $10M, each one after ×10 ($100M, $1B, ...). It resets all cash to $0, the pickaxe and backpack to tier 1, hopper/conveyor/collection upgrades to level 1, all carried and stored ore/bars, partial refining progress and décor. Refinery level, carried Core Shards and mineral-index discoveries, bonuses and titles are kept. Purchased value, receipt history, preferences and lifetime/tutorial history remain intact. Every rebirth doubles bar sales for good (×2, ×4, ×8, ..., multiplicative); index bonuses continue to stack. Tuning is in `Config.Rebirth`, price/multiplier rules in `Shared.Rebirth`, and inventory rules in `Server.Lib.RebirthReset`.
+- The first rebirth costs $15M, each one after ×5 ($75M, $375M, $1.9B, ...). It resets all cash to $0, the pickaxe and backpack to tier 1 with their stat levels, hopper/conveyor/collection upgrades to level 1, all carried and stored ore/bars, partial refining progress and décor. Refinery level, carried Core Shards and mineral-index discoveries, bonuses and titles are kept. Purchased value, receipt history, preferences and lifetime/tutorial history remain intact. Every rebirth multiplies bar sales by 5 for good (×5, ×25, ×125, ..., multiplicative; equal to the cost growth, so each rebirth takes about as long as the last); index bonuses continue to stack. Tuning is in `Config.Rebirth`, price/multiplier rules in `Shared.Rebirth`, and inventory rules in `Server.Lib.RebirthReset`.
 
 **Week 4: analytics (spec §13)**
 - `TelemetryService` logs to Roblox AnalyticsService (every call pcall'd; in Studio each event also prints a `[Telemetry] ...` line). Once per player, guarded by profile flags: `first_meteor_joined` (first hit on a crust node or the core), `first_core_reward` (first shards) and `first_refinery_bought` (first refinery upgrade). On every join whose offline catch-up made bars: `returned_offline_income` (value = bars, field = hours away)
@@ -82,16 +82,16 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 - One layout decides where the SHOP, INDEX, REBIRTH and STORE buttons go (`Shared.HudLayout`): a column on the left for mouse users, one row along the top right on touch, every button at least 44 px, clear of the Roblox top bar, the clock, the thumbstick area, the jump button and MINE. Training stays centred under the clock on touch and hides while the foundry details are expanded.
 - The shop, index, rebirth and store panels scale to fit below the top bar (844x390 included) and their close buttons stay at least 44 px
 
-**Week 5: economy pacing (spec §7.4)**
-- `Shared.Pacing` simulates a fresh free player (Iron meteors, no passes or rebirth) from Config and `tests/Pacing.spec.luau` asserts the §7.4 checkpoints; assumptions in `Config.Balance`, results and the inflation factor (1: Config prices are the spec's) in `docs/balance.md`
-- The level 1 line makes $75 a minute, so the shipped prices put the Drill Pick at 79 minutes in the model (reproduction in `docs/balance.md`) instead of 30. From the Drill on the model adds Ice (and, at tier 5, Crystal) meteors as expected value; Plasma lands at 1:53 (in reach at 0:57). Tuning, old to new: Drill Pick cost $8,000 to $1,500; Refinery level 2 cost $1,500 to $400; Conveyor level 2 cost $1,200 to $300
+**Week 5: economy pacing (docs/balance.md)**
+- `Shared.Pacing` simulates a fresh free player (and optionally their rebirths) from Config and `tests/Pacing.spec.luau` asserts the targets: Steel in the first minutes, the Drill Pick by 15 minutes, the Meteorite Pick by 30, the first rebirth ($15M) 40 to 60 minutes in, then a steady rebirth every half hour or so. Assumptions are in `Config.Balance`, results and the reasoning in `docs/balance.md`
+- The economy is inflated to the Roblox simulator rhythm: millions on day 1, billions within a few short sessions. Ore per hit is flat per tier (1 to 20), bar prices are Iron $50, Frost $1,200 and Crystal $30,000, the line makes 0.25 ore/s at level 1 and about 18 at the top, and rebirth costs and pays x5 each time
 
 ## Layout
 
 ```
 default.project.json   Rojo project (code only)
 Packages/              Knit 1.7, Fusion 0.3, Comm, Promise, Signal, Option (vendored)
-src/shared/            ReplicatedStorage.Shared: Config/, Format, Phase, Price, MiningPower, Pacing,
+src/shared/            ReplicatedStorage.Shared: Config/, Format, Phase, Price, MiningPower, Gear, Pacing,
                        MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Aim, EquipmentModels,
                        AtmosphereMood
 src/server/            ServerScriptService.Server: Knit services, Lib/, Main.server.luau (Studio dev hooks)
@@ -102,7 +102,7 @@ docs/                  balance.md (economy pacing model), plans/ (spec copy and 
 assets/                Studio exports of everything built in Studio (see below)
 ```
 
-`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
+`Config` is a folder of tables collected by `Config/init.luau`: Meteor, Index, Pickaxes, Backpacks, Gear, Debris, Home (stations), Tutorial, Net, Rebirth, Telemetry, Monetization, Hud, Balance, Atmosphere and LandingFX. All tuning numbers live there.
 
 Server services: `MeteorService` (schedule and state machine), `NodeService` (HP, swing validation, ore drops), `ContributionService`, `RewardService`, `DebrisService`, `ActivityService` (who counts as active), `DataService` (profiles), `PlayerStateService` (gameplay rules over the profile, batched State replication), `PlotService`, `RefineryService` (the production line, offline catch-up), `UpgradeService` (station upgrades), `ShopService` (pickaxes and backpacks), `EconomyService` (selling), `TutorialService`, `IndexService` (mineral drops and index rewards), `RebirthService` (rebirths), `TelemetryService` (analytics), `MonetizationService` (game passes and developer products). `src/server/Lib` holds the profile template, the pure refinery simulation (`Refining`), the shard reward math (`Rewards`) and the analytics helpers (`Telemetry`).
 
@@ -172,7 +172,7 @@ Command bar hooks, all `BindableFunction`s in `ServerStorage` (`local p = game.P
 - `DevMineral:Invoke(p, "starfallIron")` adds one mineral through the real path (toast, page announcement, title); a page id (`"Iron"`) adds one of every mineral on that page.
 - `DevBench:Invoke(p, 1000)` measures the ore hot path: it gains ore 1000 times (into a borrowed, empty top-tier backpack; yours comes back afterwards) and returns the elapsed ms and how many State snapshots went out. State is batched, so expect one.
 - `DevMeteor:Invoke("Crystal")` brings a meteor of that type (Iron, Ice or Crystal) down soon: during a countdown it lands in 10 s; if a meteor is down, that one ends early (it cools) and yours lands 10 s into the next countdown.
-- `DevGear:Invoke(p, 5, 8)` sets your pickaxe tier and backpack tier (1 to 8 each; `nil` leaves one as is) and restyles the pickaxe. It returns their names.
+- `DevGear:Invoke(p, 5, 8)` sets your pickaxe tier and backpack tier (1 to 8 each; `nil` leaves one as is), with stat levels at the first level of the tier, and restyles the pickaxe. It returns their names.
 
 The same in chat while playing (Studio only; the reply shows as a notice): `/meteor crystal`, `/pickaxe 5`, `/backpack 8`.
 

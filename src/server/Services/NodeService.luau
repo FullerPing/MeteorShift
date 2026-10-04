@@ -2,7 +2,7 @@
 -- Mineable targets (meteor crust nodes, the core, debris rocks): HP, hit validation,
 -- per-player ore drops and batched HP replication (spec §5.4, §12.2).
 --
--- HP is measured in Mining Power (spec §5.3): each hit takes MiningPower.power(tier)
+-- HP is measured in Mining Power (spec §5.3): each hit takes the pickaxe's Power (Shared.Gear)
 -- off the target, while the client still pops the pickaxe's big damage number.
 --
 -- Other services register a BasePart with a TargetDef. The part gets a TargetId
@@ -188,7 +188,7 @@ local function countHitters(target: Target, player: Player, now: number): number
 end
 
 -- Server-side validation of one swing. Invalid swings are rejected silently.
-function NodeService:Swing(player: Player, id: number): (boolean, number?)
+function NodeService:Swing(player: Player, id: number): (boolean, number?, boolean?)
 	if typeof(id) ~= "number" then
 		return false
 	end
@@ -208,7 +208,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	if not root then
 		return false
 	end
-	if distanceToPart(target.Part, root.Position) > Config.Meteor.MineRange then
+	if distanceToPart(target.Part, root.Position) > pickaxe.Reach then
 		return false
 	end
 
@@ -221,7 +221,12 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	target.LastHit = now
 	ActivityService:Touch(player)
 
-	local power = MiningPower.power(pickaxe.Tier)
+	local power = pickaxe.Power
+	-- Crit (Shared.Gear): a lucky hit lands extra Mining Power and shows a bigger number
+	local crit = pickaxe.CritChance > 0 and math.random() < pickaxe.CritChance
+	if crit then
+		power *= pickaxe.CritMult
+	end
 	if def.PowerMult then
 		power *= def.PowerMult(player, countHitters(target, player, now))
 	end
@@ -258,10 +263,10 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?)
 	end
 
 	-- The displayed number is the pickaxe's damage; HP went down by its Mining Power
-	return true, pickaxe.Damage
+	return true, if crit then pickaxe.Damage * pickaxe.CritMult else pickaxe.Damage, crit
 end
 
-function NodeService.Client:Swing(player: Player, id: number): (boolean, number?)
+function NodeService.Client:Swing(player: Player, id: number): (boolean, number?, boolean?)
 	return self.Server:Swing(player, id)
 end
 

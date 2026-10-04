@@ -63,7 +63,7 @@ Meteor.EligibleShare = 0.25 -- a type can come up only if this share of active p
 --          trips included (Shared.Pacing's ore rate). Each crust hit pays the same multiple
 --          of a hit on your own ore, in the meteor's ore (fractions add up over hits), until
 --          the meteor's worth is reached (a Basic Pickaxe with the Canvas Sack: one Frost
---          every 8 hits, $1.4K an Ice meteor; one Crystal every 67, $4.1K a Crystal meteor)
+--          every 8 hits, $13.6K an Ice meteor; one Crystal every 67, $40.7K a Crystal meteor)
 Meteor.UnderTier = { NodeSecondsPerTier = 15, TypeMult = 3 }
 Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest; an ineligible pick drops down this list
 

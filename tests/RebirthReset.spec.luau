@@ -15,6 +15,8 @@ return function(t: any)
 	local function profile(): any
 		local data = copy(Template)
 		data.cash, data.shards, data.pickaxeTier, data.backpackTier = 25e6, 87, 7, 6
+		data.pickaxeStats = { power = 64, speed = 61, reach = 30, crit = 12 }
+		data.backpackStats = { capacity = 55 }
 		data.stations = { hopper = 5, conveyor = 6, refinery = 7, collector = 4 }
 		data.backpack = { iron = 40, frost = 5 }
 		data.hopper = { iron = 140, frost = 20 }
@@ -36,6 +38,8 @@ return function(t: any)
 		t.eq(data.cash, 0)
 		t.eq(data.pickaxeTier, 1)
 		t.eq(data.backpackTier, 1)
+		for stat, level in Template.pickaxeStats do t.eq(data.pickaxeStats[stat], level, "pickaxe " .. stat) end
+		t.eq(data.backpackStats.capacity, 1, "backpack capacity level")
 		t.eq(data.lastSeen, 1000, "new offline checkpoint")
 	end)
 

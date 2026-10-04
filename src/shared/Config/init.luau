@@ -16,6 +16,7 @@ return {
 	Index = Index,
 	Pickaxes = require(script.Pickaxes),
 	Backpacks = require(script.Backpacks),
+	Gear = require(script.Gear),
 	Debris = require(script.Debris),
 	Home = Home,
 	Tutorial = require(script.Tutorial),

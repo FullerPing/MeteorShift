@@ -1,14 +1,16 @@
 --!strict
--- Profile schema v2 (spec §12.4, with the plot production line instead of
--- refinery slots). New keys added here are filled into old
+-- Profile schema v3 (spec §12.4, with the plot production line instead of
+-- refinery slots, and one pickaxe and backpack leveled by stat: Shared.Gear). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 2,
+	version = 3,
 	cash = 0,
 	shards = 0,
-	pickaxeTier = 1,
+	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
 	backpackTier = 1,
+	pickaxeStats = { power = 1, speed = 1, reach = 1, crit = 1 }, -- stat levels, 1 to the tier's cap
+	backpackStats = { capacity = 1 },
 	backpack = {}, -- ore carried, by type
 	-- Plot production line: hopper -> conveyor -> refinery -> collection post
 	stations = {

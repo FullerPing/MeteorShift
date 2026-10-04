@@ -32,7 +32,9 @@ local recentTargets: { [number]: BasePart } = {}
 local pointerHolding = false
 local touchHolding = false
 local swinging = false
-local pickaxeTier = 1
+-- Leveled stats of your pickaxe (Shared.Gear), from the server's State
+local swingTime = Config.Pickaxes[1].Swing
+local reach = Config.Meteor.MineRange
 -- Each swing at a target turns the character toward it for a moment (Config.Hud.Mine)
 local facePoint: Vector3? = nil
 local faceUntil = 0
@@ -120,7 +122,7 @@ local function nearestTarget(root: BasePart): BasePart?
 			core = part:GetAttribute("TargetKind") == "Core",
 		}
 	end
-	local index = Aim.nearest(entries, Config.Meteor.MineRange, Config.Hud.Mine.FrontDot, Config.Hud.Mine.CoreBonus)
+	local index = Aim.nearest(entries, reach, Config.Hud.Mine.FrontDot, Config.Hud.Mine.CoreBonus)
 	return if index then parts[index] else nil
 end
 
@@ -139,7 +141,7 @@ local function findTarget(root: BasePart, mode: "pointer" | "nearest"): (BasePar
 	local result = workspace:Raycast(ray.Origin, ray.Direction * 250, params)
 	if result and isMineable(result.Instance) then
 		local part = result.Instance :: BasePart
-		if distanceToPart(part, root.Position) <= Config.Meteor.MineRange then
+		if distanceToPart(part, root.Position) <= reach then
 			return part, result.Position
 		end
 	end
@@ -155,7 +157,7 @@ local function findTarget(root: BasePart, mode: "pointer" | "nearest"): (BasePar
 			best, bestDistance = part, distance
 		end
 	end
-	if best and distanceToPart(best, root.Position) <= Config.Meteor.MineRange then
+	if best and distanceToPart(best, root.Position) <= reach then
 		return best, nil
 	end
 	return nil, nil
@@ -401,14 +403,15 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 	sparks(position, if isCore then Color3.fromRGB(255, 140, 50) else Color3.fromRGB(255, 230, 190))
 
 	task.spawn(function()
-		local ok, damage = NodeService:Swing(id)
+		local ok, damage, crit = NodeService:Swing(id)
 		if ok and damage then
 			MiningController.Hit:Fire(target)
+			-- a crit (Shared.Gear) pops a bigger, redder number
 			floater(
 				position,
-				Format.number(damage),
-				if isCore then Color3.fromRGB(255, 170, 60) else Color3.fromRGB(255, 255, 255),
-				if isCore then 34 else 28
+				Format.number(damage) .. (if crit then "!" else ""),
+				if crit then Color3.fromRGB(255, 96, 72) elseif isCore then Color3.fromRGB(255, 170, 60) else Color3.fromRGB(255, 255, 255),
+				(if isCore then 34 else 28) + (if crit then 10 else 0)
 			)
 		end
 	end)
@@ -422,7 +425,7 @@ function MiningController:_holdLoop(tool: Tool)
 	-- Holding the button keeps swinging at the pickaxe's speed
 	while (pointerHolding or touchHolding) and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") and not player:GetAttribute("SettingsOpen") and not player:GetAttribute("RefineryOpen") do
 		self:_swing(tool, if touchHolding then "nearest" else "pointer")
-		task.wait(Config.Pickaxes[pickaxeTier].Swing)
+		task.wait(swingTime)
 	end
 	swinging = false
 end
@@ -479,7 +482,8 @@ function MiningController:KnitStart()
 
 	PlayerStateService.State:Observe(function(state)
 		if state then
-			pickaxeTier = state.pickaxeTier
+			swingTime = state.swing or swingTime
+			reach = state.reach or reach
 		end
 	end)
 

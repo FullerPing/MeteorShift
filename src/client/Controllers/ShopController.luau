@@ -10,6 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local ShopLayout = require(ReplicatedStorage.Shared.EquipmentShopLayout)
 local Price = require(ReplicatedStorage.Shared.Price)
+local Gear = require(ReplicatedStorage.Shared.Gear)
 local UI = require(script.Parent.Parent.UI)
 local EquipmentPreview = require(script.Parent.Parent.EquipmentPreview)
 
@@ -19,8 +20,8 @@ local ShopController = Knit.CreateController({ Name = "ShopController" })
 type Scope = UI.Scope
 type RowState = "owned" | "equipped" | "next" | "locked" | "max"
 local TABS = {
-	{ Id = "pickaxe", Name = "PICKAXES" },
-	{ Id = "backpack", Name = "BACKPACKS" },
+	{ Id = "pickaxe", Name = "PICKAXE" },
+	{ Id = "backpack", Name = "BACKPACK" },
 	{ Id = "plot", Name = "PRODUCTION" },
 }
 local STATION_UNITS = { hopper = "ore", conveyor = "ore/s", refinery = "bars/s", collector = "bars" }
@@ -38,13 +39,6 @@ end
 function ShopController:SetHighlight(on: boolean)
 	wantHighlight = on
 	if highlight then highlight:set(on) end
-end
-
-local function tierState(owned: number, tier: number): RowState
-	if tier == owned then return "equipped" end
-	if tier < owned then return "owned" end
-	if tier == owned + 1 then return "next" end
-	return "locked"
 end
 
 local function stateAccent(state: RowState): Color3
@@ -205,10 +199,10 @@ local function itemCard(scope: Scope, geometry: any, props: any)
 					if s == "equipped" then return "EQUIPPED" end
 					if s == "owned" then return "OWNED" end
 					if s == "max" then return "MAX LEVEL" end
-					if s == "locked" then return "UNLOCK TIER " .. (props.Order - 1) end
+					if s == "locked" then return use(props.LockedText or "LOCKED") end
 					if not use(props.Loaded) then return "LOADING" end
 					if use(buyingThis) then return "UPGRADING..." end
-					return if use(affordable) then "UPGRADE" else "SAVE UP"
+					return if use(affordable) then (props.ReadyText or "UPGRADE") else "SAVE UP"
 				end),
 				TextColor3 = scope:Computed(function(use)
 					return if use(enabled) then UI.OUTLINE elseif use(state) == "equipped" or use(state) == "max" then UI.HUD_MINT else UI.HUD_MUTED
@@ -310,32 +304,124 @@ function ShopController:KnitStart()
 	end
 
 	local pickaxeCards, backpackCards, stationCards = {}, {}, {}
-	for tier, item in Config.Pickaxes do
-		local id = "pickaxeTier" .. tier
-		pickaxeCards[tier] = itemCard(scope, geometry, {
-			Id = id, Order = tier, Title = item.Name, LevelText = "TIER " .. tier,
-			State = scope:Computed(function(use) return tierState(use(pickaxeTier), tier) end),
-			Cost = item.Cost, Shards = item.Shards, Wallet = wallet, Loaded = loaded, BusyId = busyId,
-			Preview = EquipmentPreview(scope, "pickaxe", tier, { Size = UDim2.fromScale(1, 1) }),
+	local tierOf = { pickaxe = pickaxeTier, backpack = backpackTier }
+	local settingsOf = { pickaxe = Config.Gear.Pickaxe, backpack = Config.Gear.Backpack }
+	local tiersOf = { pickaxe = Config.Pickaxes, backpack = Config.Backpacks }
+	-- Saved stat levels from the server's State (a fresh item's while it loads)
+	local function levelOf(kind: string, stat: string)
+		return scope:Computed(function(use)
+			local s = use(playerState)
+			local stats = s and s[kind .. "Stats"]
+			return if stats and stats[stat] then stats[stat] else 1
+		end)
+	end
+	local function evolutionOf(kind: string)
+		return scope:Computed(function(use)
+			local s = use(playerState)
+			if not s or not s[kind .. "Stats"] then return nil end
+			return Gear.evolution(kind, use(tierOf[kind]), s[kind .. "Stats"])
+		end)
+	end
+	-- What a stat does at a level, as text (the other stats stay at level 1)
+	local function statValue(kind: string, stat: string, level: number): string
+		if kind == "backpack" then
+			return Format.number(math.floor(Gear.capacity(1, { capacity = level }))) .. " ore"
+		end
+		local levels = { power = 1, speed = 1, reach = 1, crit = 1 }
+		levels[stat] = level
+		local pickaxe = Gear.pickaxe(1, levels)
+		if stat == "power" then return string.format("%.2f", pickaxe.Power)
+		elseif stat == "speed" then return string.format("%.2fs", pickaxe.Swing)
+		elseif stat == "reach" then return string.format("%.1f studs", pickaxe.Reach)
+		end
+		return string.format("%.1f%%", pickaxe.CritChance * 100)
+	end
+	local function statCard(kind: string, stat: string, order: number)
+		local level, tier = levelOf(kind, stat), tierOf[kind]
+		local price = scope:Computed(function(use) return Gear.price(kind, stat, use(level)) end)
+		local settings = settingsOf[kind]
+		local id = kind .. "_" .. stat
+		return itemCard(scope, geometry, {
+			Id = id, Order = order, Title = settings.Names[stat], TitleName = "StatName",
+			LevelText = scope:Computed(function(use) return "LEVEL " .. use(level) .. " / " .. Gear.cap(use(tier)) end),
+			State = scope:Computed(function(use): RowState
+				if use(price) == nil then return "max" end
+				return if Gear.canLevel(kind, use(tier), use(level)) then "next" else "locked"
+			end),
+			LockedText = "EVOLVE FIRST",
+			Cost = scope:Computed(function(use) return use(price) or 0 end), Shards = 0,
+			Wallet = wallet, Loaded = loaded, BusyId = busyId,
+			Preview = UI.hudIcon(scope, if kind == "backpack" then "backpack" else "equipment", {
+				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.55, 0.75),
+			}),
 			Stats = {
-				statCell(scope, geometry, 1, 3, "ORE / HIT", Format.number(item.OrePerHit), UI.HUD_GOLD),
-				statCell(scope, geometry, 2, 3, "SWING", string.format("%.2fs", item.Swing), UI.WHITE),
-				statCell(scope, geometry, 3, 3, "DAMAGE", Format.number(item.Damage), UI.WHITE),
+				statCell(scope, geometry, 1, 2, "CURRENT", scope:Computed(function(use) return statValue(kind, stat, use(level)) end), UI.WHITE),
+				statCell(scope, geometry, 2, 2, "NEXT LEVEL", scope:Computed(function(use)
+					return if use(price) then statValue(kind, stat, use(level) + 1) else "MAX"
+				end), UI.HUD_MINT),
 			},
-			OnBuy = function() purchase(id, item.Name .. " is ready.", function() return ShopService:Buy("pickaxe") end) end,
+			OnBuy = function() purchase(id, settings.Names[stat] .. " upgraded.", function() return ShopService:Upgrade(kind, stat) end) end,
 		})
 	end
-	for tier, item in Config.Backpacks do
-		local id = "backpackTier" .. tier
-		backpackCards[tier] = itemCard(scope, geometry, {
-			Id = id, Order = tier, Title = item.Name, LevelText = "TIER " .. tier,
-			State = scope:Computed(function(use) return tierState(use(backpackTier), tier) end),
-			Cost = item.Cost, Shards = item.Shards, Wallet = wallet, Loaded = loaded, BusyId = busyId,
-			Preview = EquipmentPreview(scope, "backpack", tier, { Size = UDim2.fromScale(1, 1) }),
-			Stats = { statCell(scope, geometry, 1, 1, "ORE CAPACITY", Format.number(item.Capacity) .. " ore", UI.SHARD) },
-			OnBuy = function() purchase(id, item.Name .. " is ready.", function() return ShopService:Buy("backpack") end) end,
+	-- The evolve card shows the next tier's model, price and what it opens up
+	local function evolveCard(kind: string, order: number)
+		local evolution, tier = evolutionOf(kind), tierOf[kind]
+		local tiers, settings = tiersOf[kind], settingsOf[kind]
+		local previews = {}
+		for index in tiers do
+			previews[index] = EquipmentPreview(scope, kind, index, {
+				Size = UDim2.fromScale(1, 1),
+				Visible = scope:Computed(function(use)
+					local e = use(evolution)
+					return (if e then e.tier else #tiers) == index
+				end),
+			})
+		end
+		local function nextItem(use: any): any
+			local e = use(evolution)
+			return tiers[if e then e.tier else #tiers]
+		end
+		local id = kind .. "_evolve"
+		return itemCard(scope, geometry, {
+			Id = id, Order = order, TitleName = "EvolveName",
+			Title = scope:Computed(function(use)
+				return if use(evolution) then nextItem(use).Name else "Fully evolved"
+			end),
+			LevelText = scope:Computed(function(use)
+				local e = use(evolution)
+				return if e then "EVOLVE: TIER " .. use(tier) .. " TO " .. e.tier else "TIER " .. use(tier)
+			end),
+			State = scope:Computed(function(use): RowState
+				local e = use(evolution)
+				return if not e then "max" elseif e.ready then "next" else "locked"
+			end),
+			LockedText = "MAX " .. string.upper(settings.Names[settings.Gate]) .. " FIRST",
+			ReadyText = "EVOLVE",
+			Cost = scope:Computed(function(use) local e = use(evolution) return if e then e.cost else 0 end),
+			Shards = scope:Computed(function(use) local e = use(evolution) return if e then e.shards else 0 end),
+			Wallet = wallet, Loaded = loaded, BusyId = busyId,
+			Preview = previews,
+			Stats = {
+				statCell(scope, geometry, 1, 2, if kind == "pickaxe" then "ORE / HIT" else "BASE CAPACITY", scope:Computed(function(use)
+					local item = nextItem(use)
+					return if kind == "pickaxe" then Format.number(item.OrePerHit) else Format.number(item.Capacity) .. " ore"
+				end), UI.HUD_GOLD),
+				statCell(scope, geometry, 2, 2, "LEVEL CAP", scope:Computed(function(use)
+					local e = use(evolution)
+					return if e then tostring(Gear.cap(e.tier)) else "MAX"
+				end), UI.HUD_MINT),
+			},
+			OnBuy = function() purchase(id, "Evolved.", function() return ShopService:Evolve(kind) end) end,
 		})
 	end
+	for order, stat in Config.Gear.Pickaxe.Stats do
+		pickaxeCards[order] = statCard("pickaxe", stat, order)
+	end
+	pickaxeCards[#pickaxeCards + 1] = evolveCard("pickaxe", #pickaxeCards + 1)
+	for order, stat in Config.Gear.Backpack.Stats do
+		backpackCards[order] = statCard("backpack", stat, order)
+	end
+	backpackCards[#backpackCards + 1] = evolveCard("backpack", #backpackCards + 1)
 	for order, stationId in Config.Home.StationOrder do
 		local station = Config.Home.Stations[stationId]
 		local level = scope:Computed(function(use)
@@ -374,10 +460,8 @@ function ShopController:KnitStart()
 	end
 	local function focusOwned()
 		local kind = Fusion.peek(tab)
-		local tier = if kind == "pickaxe" then Fusion.peek(pickaxeTier) elseif kind == "backpack" then Fusion.peek(backpackTier) else 1
 		task.defer(function()
-			local g = Fusion.peek(geometry)
-			scrollTo(kind, (tier - 1) * (g.cardWidth + g.gap), false)
+			scrollTo(kind, 0, false)
 		end)
 	end
 	scope:Observer(open):onChange(function()

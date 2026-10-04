@@ -1,9 +1,8 @@
 --!strict
--- Spec for Shared.Pacing, the economy pacing model (spec §7.4, docs/balance.md).
--- The time-based checkpoints are the primary targets. The dollar checkpoints of §7.4
--- are translated by the game's inflation factor: Config prices are the spec's own
--- (factor 1), so they are asserted as written where the model can reach them and
--- restated in docs/balance.md where it can't.
+-- Spec for Shared.Pacing, the economy pacing model (docs/balance.md). The checkpoints are
+-- the targets of the rebased economy: a first session of about 45 minutes ends in the first
+-- rebirth, and the rebirths after it keep coming at a steady pace (rebirth cost grows as fast
+-- as the multiplier it pays). Dollar amounts are in the game's own numbers.
 
 return function(t: any)
 	local Pacing = require(t.shared.Pacing)
@@ -27,8 +26,29 @@ return function(t: any)
 		t.ok(steel <= result.firstCycleEnd + result.cycle, "later than one cycle after the first: " .. tostring(steel))
 	end)
 
-	t.test("by 35 minutes the player owns Steel and the Drill Pick (the model gets there at 28:00)", function()
-		t.ok(at35.owned.pickaxe >= 3, "pickaxe tier " .. at35.owned.pickaxe)
+	t.test("by 15 minutes the player owns Steel and the Drill Pick, so Ice meteors pay", function()
+		local at15 = Pacing.sampleAt(result, 15 * 60)
+		t.ok(at15.owned.pickaxe >= 3, "pickaxe tier " .. at15.owned.pickaxe)
+	end)
+
+	t.test("by 30 minutes the Meteorite Pick is owned, so Crystal meteors pay", function()
+		t.ok(at30.owned.pickaxe >= 5, "pickaxe tier " .. at30.owned.pickaxe)
+	end)
+
+	t.test("the first rebirth lands between 40 and 60 minutes in", function()
+		local run = Pacing.simulate(2 * 3600, { rebirths = 1 })
+		local first = run.rebirthTimes[1]
+		t.ok(first ~= nil, "no rebirth in two hours")
+		t.ok(first >= 40 * 60 and first <= 60 * 60, "first rebirth at " .. tostring(first and first / 60) .. " min")
+	end)
+
+	t.test("rebirths keep a steady pace: each comes within 45 minutes of the one before", function()
+		local run = Pacing.simulate(4 * 3600, { rebirths = 5 })
+		t.ok(#run.rebirthTimes >= 5, "only " .. #run.rebirthTimes .. " rebirths in four hours")
+		for index = 2, 5 do
+			local gap = run.rebirthTimes[index] - run.rebirthTimes[index - 1]
+			t.ok(gap <= 45 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
+		end
 	end)
 
 	t.test("once the Drill Pick unlocks Ice meteors, the Plasma Pick is affordable within 3 hours", function()
@@ -43,18 +63,18 @@ return function(t: any)
 		t.ok(bought ~= nil and bought <= 3 * 3600, "Plasma bought at " .. tostring(bought))
 	end)
 
-	t.test("by 30 minutes the backpack is tier 2 or 3 (not past 3)", function()
-		t.ok(at30.owned.backpack >= 2 and at30.owned.backpack <= 3, "backpack tier " .. at30.owned.backpack)
+	t.test("by 30 minutes the backpack is tier 3 or better", function()
+		t.ok(at30.owned.backpack >= 3, "backpack tier " .. at30.owned.backpack)
 	end)
 
 	t.test("by 30 minutes a refinery upgrade is bought", function()
 		t.ok(at30.owned.refinery >= 2, "refinery level " .. at30.owned.refinery)
 	end)
 
-	t.test("30 minutes of sales cover the gear owned (no free lunch), and tens of thousands come within the hour", function()
-		t.ok(at30.earned >= 3e3, "earned by 30 min: " .. at30.earned)
+	t.test("sales cover the gear owned (no free lunch), and millions come within the hour", function()
+		t.ok(at30.earned >= 100e3, "earned by 30 min: " .. at30.earned)
 		local at60 = Pacing.sampleAt(result, 60 * 60)
-		t.ok(at60.earned >= 10e3, "earned by 60 min: " .. at60.earned)
+		t.ok(at60.earned >= 2e6, "earned by 60 min: " .. at60.earned)
 	end)
 
 	t.test("nothing is bought before it can be paid for", function()
@@ -63,9 +83,9 @@ return function(t: any)
 		end
 	end)
 
-	t.test("a level 1 line's 2-hour offline cap is worth about $9K at most", function()
+	t.test("a level 1 line's 2-hour offline cap is worth about $90K at most", function()
 		local cap = Pacing.offlineCap()
-		t.ok(cap > 8e3 and cap <= 9.5e3, "offline cap " .. cap)
+		t.ok(cap > 80e3 and cap <= 95e3, "offline cap " .. cap)
 	end)
 
 	t.test("one meteor's haul in the game's under-tier pay is the model's ore rate over the meteor", function()

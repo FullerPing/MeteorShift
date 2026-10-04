@@ -14,7 +14,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
-local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
 
 local DebrisService = Knit.CreateService({
@@ -55,16 +54,21 @@ local function setVisible(rock: BasePart, visible: boolean)
 	end
 end
 
--- The pickaxe tier of a random active player (tier 1 when nobody is active).
-local function pickTier(): number
-	local tiers = ActivityService:GetActiveTiers()
-	return if #tiers > 0 then tiers[math.random(1, #tiers)] else 1
+-- A random active player's pickaxe: its tier and Mining Power per hit (a fresh Basic
+-- Pickaxe when nobody is active).
+local function pickPickaxe(): (number, number)
+	local pickaxes = ActivityService:GetActivePickaxes()
+	if #pickaxes == 0 then
+		return 1, 1
+	end
+	local pickaxe = pickaxes[math.random(1, #pickaxes)]
+	return pickaxe.Tier, pickaxe.Power
 end
 
--- Sizes a rock for a pickaxe tier and tints its flecks to match.
-local function size(rock: Rock, tier: number)
+-- Sizes a rock for a pickaxe (its tier tints the flecks, its Power sets the HP).
+local function size(rock: Rock, tier: number, power: number)
 	rock.Part:SetAttribute("Tier", tier)
-	NodeService:SetMaxHp(rock.Id, Config.Debris.Hp * MiningPower.power(tier))
+	NodeService:SetMaxHp(rock.Id, Config.Debris.Hp * power)
 	local tint = TIER_TINTS[tier]
 	for fleck, original in rock.Flecks do
 		fleck.Color = tint or original.Color
@@ -95,14 +99,14 @@ function DebrisService:_track(part: BasePart)
 			setVisible(part, false)
 			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()
 				if part.Parent then
-					size(rock, pickTier())
+					size(rock, pickPickaxe())
 					setVisible(part, true)
 				end
 			end)
 		end,
 	})
 	rock = { Part = part, Id = id, Flecks = flecks }
-	size(rock, pickTier())
+	size(rock, pickPickaxe())
 	table.insert(rocks, rock)
 end
 
@@ -111,7 +115,7 @@ function DebrisService:_reroll()
 	for _, rock in rocks do
 		local hp, maxHp = NodeService:GetHp(rock.Id)
 		if hp > 0 and hp >= maxHp then
-			size(rock, pickTier())
+			size(rock, pickPickaxe())
 		end
 	end
 end

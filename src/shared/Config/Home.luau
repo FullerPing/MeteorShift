@@ -6,7 +6,8 @@
 -- and each of the four stations upgrades on its own. Ore flows at the slower of
 -- the conveyor and the refinery; the hopper caps how much ore waits, the
 -- collection post caps how many bars wait to be picked up (and so how much
--- offline income piles up). Prices climb roughly ×10–13 per level (spec §7).
+-- offline income piles up). Conveyor and refinery rates are ore per second and track what a
+-- player mines at that stage (docs/balance.md); their prices climb roughly ×6 per level.
 
 local Home = {}
 
@@ -53,13 +54,13 @@ Home.Stations = {
 		Name = "Conveyor",
 		Levels = levels({
 			{ 0.3, 0 },
-			{ 1, 300 },
-			{ 3, 15e3 },
-			{ 10, 200e3 },
-			{ 30, 2.5e6, 20 },
-			{ 100, 30e6, 50 },
-			{ 300, 400e6, 120 },
-			{ 1000, 5e9, 300 },
+			{ 0.8, 600 },
+			{ 1.6, 4e3 },
+			{ 3, 25e3 },
+			{ 5, 150e3, 10 },
+			{ 8, 1e6, 25 },
+			{ 12, 6e6, 60 },
+			{ 18, 40e6, 150 },
 		}, "Rate"),
 	} :: Station,
 	refinery = {
@@ -67,13 +68,13 @@ Home.Stations = {
 		Name = "Refinery",
 		Levels = levels({
 			{ 0.25, 0 },
-			{ 0.75, 400 },
-			{ 2.5, 20e3 },
-			{ 8, 250e3 },
-			{ 25, 3e6, 25 },
-			{ 80, 40e6, 60 },
-			{ 250, 500e6, 150 },
-			{ 800, 6e9, 400 },
+			{ 0.7, 800 },
+			{ 1.4, 5e3 },
+			{ 2.6, 30e3 },
+			{ 4.5, 200e3, 15 },
+			{ 7, 1.3e6, 35 },
+			{ 11, 8e6, 80 },
+			{ 16, 50e6, 200 },
 		}, "Rate"),
 	} :: Station,
 	collector = {
@@ -104,9 +105,9 @@ Home.OreOrder = { "iron", "frost", "crystal" }
 
 -- Bar sell prices (spec §6.5, §8.1)
 Home.BarPrices = {
-	iron = 5,
-	frost = 120,
-	crystal = 3000,
+	iron = 50,
+	frost = 1200,
+	crystal = 30000,
 }
 
 Home.OreNames = {

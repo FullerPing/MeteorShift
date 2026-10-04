@@ -5,6 +5,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Gear = require(ReplicatedStorage.Shared.Gear)
 
 Knit.AddServices(script.Parent.Services)
 
@@ -32,6 +33,7 @@ Knit.Start()
 				local data = PlayerStateService:Get(player)
 				if pickaxeTier and data then
 					data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
+					data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
 					Knit.GetService("ShopService"):ApplyPickaxe(player)
 				end
 				PlayerStateService:ReplicateNow(player)
@@ -77,8 +79,9 @@ Knit.Start()
 				if not data then
 					return nil
 				end
-				local ownTier, ownBackpack = data.backpackTier, table.clone(data.backpack)
+				local ownTier, ownStats, ownBackpack = data.backpackTier, data.backpackStats, table.clone(data.backpack)
 				data.backpackTier = #Config.Backpacks
+				data.backpackStats = { capacity = Gear.cap(#Config.Backpacks) }
 				table.clear(data.backpack)
 
 				local result
@@ -99,6 +102,7 @@ Knit.Start()
 
 				-- always give the player their own backpack back
 				data.backpackTier = ownTier
+				data.backpackStats = ownStats
 				table.clear(data.backpack)
 				for oreType, n in ownBackpack do
 					data.backpack[oreType] = n
@@ -123,6 +127,7 @@ Knit.Start()
 			-- Config.Pickaxes and Config.Backpacks; nil leaves it as is) and restyles the
 			-- pickaxe. Returns what the player now has.
 			-- game.ServerStorage.DevGear:Invoke(game.Players:GetPlayers()[1], 5, 8)
+			-- (stat levels start at the first level of the tier, as after evolving)
 			local ShopService = Knit.GetService("ShopService")
 			local function setGear(player: Player, pickaxeTier: number?, backpackTier: number?): string
 				local data = PlayerStateService:Get(player)
@@ -131,10 +136,12 @@ Knit.Start()
 				end
 				if pickaxeTier then
 					data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
+					data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
 					ShopService:ApplyPickaxe(player)
 				end
 				if backpackTier then
 					data.backpackTier = math.clamp(math.floor(backpackTier), 1, #Config.Backpacks)
+					data.backpackStats = Gear.freshBackpackStats(data.backpackTier)
 				end
 				PlayerStateService:ReplicateNow(player)
 				return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)

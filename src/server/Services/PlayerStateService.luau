@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Gear = require(ReplicatedStorage.Shared.Gear)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -72,14 +73,19 @@ function PlayerStateService:ResetTransientInventory(player: Player)
 	lastFullNotice[player] = nil
 end
 
-function PlayerStateService:GetPickaxe(player: Player): typeof(Config.Pickaxes[1])
+-- The pickaxe as it plays right now (Shared.Gear): the tier's name and ore per hit with
+-- the leveled Power, swing, reach and crit. Tier is the evolution tier.
+function PlayerStateService:GetPickaxe(player: Player): any
 	local data = self:Get(player)
-	return Config.Pickaxes[if data then data.pickaxeTier else 1] or Config.Pickaxes[1]
+	if not data then
+		return Gear.pickaxe(1, Gear.freshPickaxeStats(1))
+	end
+	return Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
 end
 
 function PlayerStateService:GetCapacity(player: Player): number
 	local data = self:Get(player)
-	local base = (Config.Backpacks[if data then data.backpackTier else 1] or Config.Backpacks[1]).Capacity
+	local base = if data then Gear.capacity(data.backpackTier, data.backpackStats) else Gear.capacity(1, Gear.freshBackpackStats(1))
 	return base * MonetizationService:BackpackMult(player)
 end
 
@@ -152,9 +158,14 @@ function PlayerStateService:_sendState(player: Player)
 		rate = Refining.lineRate(data, speedMult),
 	}
 
+	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
 	self.Client.State:SetFor(player, {
 		pickaxeTier = data.pickaxeTier,
 		backpackTier = data.backpackTier,
+		pickaxeStats = table.clone(data.pickaxeStats), -- stat levels (Shared.Gear)
+		backpackStats = table.clone(data.backpackStats),
+		swing = pickaxe.Swing, -- seconds between swings, as leveled
+		reach = pickaxe.Reach, -- studs
 		backpack = data.backpack,
 		carried = sum(data.backpack),
 		capacity = self:GetCapacity(player),

@@ -40,7 +40,7 @@ local function fixture(tier)
 		CreateService = function(def) return def end,
 		GetService = function(name)
 			if name == "NodeService" then return node end
-			if name == "ActivityService" then return { GetActiveTiers = function() return { state.tier } end } end
+			if name == "ActivityService" then return { GetActivePickaxes = function() return { { Tier = state.tier, Power = 1.25 ^ (state.tier - 1) } } end } end
 			error("Unexpected service " .. name)
 		end,
 	}

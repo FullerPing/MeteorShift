@@ -34,9 +34,19 @@ end
 
 -- Total power per second of the given (active) players' pickaxe tiers, with the floor.
 function MiningPower.serverPower(tiers: { number }): number
-	local total = 0
+	local rates = {}
 	for _, tier in tiers do
-		total += MiningPower.perSecond(tier)
+		table.insert(rates, MiningPower.perSecond(tier))
+	end
+	return MiningPower.serverPowerRates(rates)
+end
+
+-- The same from each player's own power per second (their leveled pickaxe's Power / Swing,
+-- Shared.Gear), with the floor.
+function MiningPower.serverPowerRates(rates: { number }): number
+	local total = 0
+	for _, rate in rates do
+		total += rate
 	end
 	return math.max(total, MiningPower.floorPower())
 end

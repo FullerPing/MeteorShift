@@ -182,8 +182,13 @@ function HUDController:KnitStart()
 		local item = if kind == "pickaxe" then Config.Pickaxes[tier] else Config.Backpacks[tier]
 		Sfx.play("Purchase")
 		if item then
-			showToast("You got the " .. item.Name .. "!")
+			showToast("Evolved to the " .. item.Name .. "!")
 		end
+	end)
+	ShopService.Upgraded:Connect(function(kind: string, stat: string, level: number)
+		local names = if kind == "pickaxe" then Config.Gear.Pickaxe.Names else Config.Gear.Backpack.Names
+		Sfx.play("Purchase")
+		showToast((names[stat] or stat) .. " upgraded to level " .. level .. "!")
 	end)
 
 	-- Clock and core HP polling (cheap: a handful of attribute reads)

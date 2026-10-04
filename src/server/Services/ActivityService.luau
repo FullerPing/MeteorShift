@@ -13,6 +13,7 @@ local ServerStorage = game:GetService("ServerStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Gear = require(ReplicatedStorage.Shared.Gear)
 
 local ActivityService = Knit.CreateService({
 	Name = "ActivityService",
@@ -40,21 +41,41 @@ function ActivityService:GetActivePlayers(): { Player }
 	return list
 end
 
--- Pickaxe tiers of the active players. In Studio, ServerStorage's DevFakeTiers
--- attribute ("1,1,8") adds pretend active players so sizing can be tested solo.
-function ActivityService:GetActiveTiers(): { number }
+-- The active players' pickaxes as they play now (Tier, Power, Swing, ...). In Studio,
+-- ServerStorage's DevFakeTiers attribute ("1,1,8") adds pretend active players, each with
+-- a fresh pickaxe of that tier, so sizing can be tested solo.
+function ActivityService:GetActivePickaxes(): { any }
 	local PlayerStateService = Knit.GetService("PlayerStateService")
-	local tiers = {}
+	local pickaxes = {}
 	for _, player in self:GetActivePlayers() do
-		table.insert(tiers, PlayerStateService:GetPickaxe(player).Tier)
+		table.insert(pickaxes, PlayerStateService:GetPickaxe(player))
 	end
 	local fake = ServerStorage:GetAttribute("DevFakeTiers")
 	if RunService:IsStudio() and typeof(fake) == "string" then
 		for tier in string.gmatch(fake, "%d+") do
-			table.insert(tiers, tonumber(tier) :: number)
+			local clamped = math.clamp(tonumber(tier) :: number, 1, #Config.Pickaxes)
+			table.insert(pickaxes, Gear.pickaxe(clamped, Gear.freshPickaxeStats(clamped)))
 		end
 	end
+	return pickaxes
+end
+
+-- Pickaxe tiers of the active players (meteor type eligibility).
+function ActivityService:GetActiveTiers(): { number }
+	local tiers = {}
+	for _, pickaxe in self:GetActivePickaxes() do
+		table.insert(tiers, pickaxe.Tier)
+	end
 	return tiers
+end
+
+-- Mining Power per second of each active player (meteor sizing, Shared.MiningPower).
+function ActivityService:GetActiveRates(): { number }
+	local rates = {}
+	for _, pickaxe in self:GetActivePickaxes() do
+		table.insert(rates, pickaxe.Power / pickaxe.Swing)
+	end
+	return rates
 end
 
 function ActivityService.Client:Ping(player: Player)

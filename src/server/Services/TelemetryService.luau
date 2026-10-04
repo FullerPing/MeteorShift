@@ -238,6 +238,11 @@ function TelemetryService:KnitStart()
 		end
 	end)
 
+	ShopService.StatUpgraded:Connect(function(player: Player, kind: string, stat: string, level: number, cash: number)
+		act(player)
+		self:_purchase(player, { Cost = cash, Shards = 0 }, kind .. "_" .. stat .. "_" .. level)
+	end)
+
 	UpgradeService.StationUpgraded:Connect(function(player: Player, stationId: string, level: number)
 		act(player)
 		local station = Config.Home.Stations[stationId]

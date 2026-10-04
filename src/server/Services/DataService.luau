@@ -15,6 +15,8 @@ local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Config = require(ReplicatedStorage.Shared.Config)
+local Gear = require(ReplicatedStorage.Shared.Gear)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
 
 local STORE_NAME = "PlayerData_v1"
@@ -90,6 +92,18 @@ local function migrate(data: { [any]: any }): { [any]: any }
 		data.hopperLevel = nil
 		data.version = 2
 	end
+	-- v2 -> v3: the pickaxe and backpack tiers became evolution tiers with stat levels.
+	-- Everyone starts at the first level of the tier they already own, which is the
+	-- same Mining Power, swing, damage and capacity as before.
+	if (data.version or 1) < 3 then
+		data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier or 1)
+		data.backpackStats = Gear.freshBackpackStats(data.backpackTier or 1)
+		data.version = 3
+	end
+	data.pickaxeTier = math.clamp(math.floor(data.pickaxeTier or 1), 1, #Config.Pickaxes)
+	data.backpackTier = math.clamp(math.floor(data.backpackTier or 1), 1, #Config.Backpacks)
+	data.pickaxeStats = Gear.cleanPickaxeStats(data.pickaxeTier, data.pickaxeStats)
+	data.backpackStats = Gear.cleanBackpackStats(data.backpackTier, data.backpackStats)
 	data.version = Template.version
 	return data
 end

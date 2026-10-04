@@ -14,6 +14,10 @@
 --   line rate    = min(conveyor, refinery)    (same as Server.Lib.Refining)
 --   income       = min(ore supply, line rate) x blended bar price (meteor ore and debris iron)
 --
+-- A pickaxe or backpack tier is bought as a bundle (Shared.Gear.bundleCost): the Gate stat's
+-- levels up to the tier cap, then the evolve price. Speed, Reach and Crit levels are the
+-- player's own side budget and don't move income in the model.
+--
 -- Purchases are greedy: whenever the player sells, of the next pickaxe, backpack, conveyor
 -- and refinery levels that they hold the shards for and that raise income, the one with
 -- the shortest payback (cost / income gained) is chosen, and the player saves up for it
@@ -27,7 +31,8 @@
 -- bar price of its ore. Ice's Refreeze twist and HP multiplier are ignored (they cost the
 -- crowd time, not the player's ore); Crystal's Resonance likewise.
 --
--- Core Shards come only from the shard floor of every meteor (a lone weak contributor).
+-- Core Shards come from every finished meteor at Balance.ShardsPerMeteor (the floor plus an
+-- average share of the bonus pool, over the meteors that crack).
 --
 -- Rebirth (spec §8.3, optional, `Options.rebirths`): once cash covers Shared.Rebirth.cost the
 -- player relocates: cash, pickaxe, backpack, hopper, conveyor, collection post and carried
@@ -38,6 +43,7 @@
 
 local Config = require(script.Parent.Config)
 local Rebirth = require(script.Parent.Rebirth)
+local Gear = require(script.Parent.Gear)
 
 local Pacing = {}
 
@@ -167,7 +173,7 @@ local function candidates(owned: Owned): { Candidate }
 		table.insert(out, {
 			id = "pickaxe" .. pickaxe.Tier,
 			name = pickaxe.Name,
-			cost = pickaxe.Cost,
+			cost = Gear.bundleCost("pickaxe", pickaxe.Tier),
 			shards = pickaxe.Shards,
 			apply = function(o: Owned)
 				o.pickaxe += 1
@@ -179,7 +185,7 @@ local function candidates(owned: Owned): { Candidate }
 		table.insert(out, {
 			id = "backpack" .. backpack.Tier,
 			name = backpack.Name,
-			cost = backpack.Cost,
+			cost = Gear.bundleCost("backpack", backpack.Tier),
 			shards = backpack.Shards,
 			apply = function(o: Owned)
 				o.backpack += 1
@@ -271,7 +277,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 		if sinceFirst >= 0 then
 			local finished = math.floor(sinceFirst / cycle) + 1
 			if finished > meteorsCounted then
-				shards += (finished - meteorsCounted) * Config.Meteor.ShardFloor
+				shards += (finished - meteorsCounted) * Balance.ShardsPerMeteor
 				meteorsCounted = finished
 			end
 		end
@@ -283,12 +289,14 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 			earned += barsValue * mult
 			bars, barsValue = 0, 0
 			for _, tier in Config.Pickaxes do
-				if tier.Cost > 0 and earned >= tier.Cost and result.earnedAt["pickaxe" .. tier.Tier] == nil then
+				local price = Gear.bundleCost("pickaxe", tier.Tier)
+				if price > 0 and earned >= price and result.earnedAt["pickaxe" .. tier.Tier] == nil then
 					result.earnedAt["pickaxe" .. tier.Tier] = time
 				end
 			end
 			for _, tier in Config.Backpacks do
-				if tier.Cost > 0 and earned >= tier.Cost and result.earnedAt["backpack" .. tier.Tier] == nil then
+				local price = Gear.bundleCost("backpack", tier.Tier)
+				if price > 0 and earned >= price and result.earnedAt["backpack" .. tier.Tier] == nil then
 					result.earnedAt["backpack" .. tier.Tier] = time
 				end
 			end
