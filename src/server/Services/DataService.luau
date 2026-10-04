@@ -6,6 +6,10 @@
 -- * Autosave every 60 s, save and release on leave, save everything on shutdown.
 -- * Unpublished places (Studio without API access) fall back to an in-memory
 --   store so the game still runs; nothing persists across play sessions then.
+--   A live server never does: if the DataStore is down at start it turns players
+--   away with a retry message instead of running a session that can't save.
+-- * Writes for one player run one at a time and a released profile is never written
+--   again, so a slow autosave can't undo the final save or re-take the lock.
 
 local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
@@ -44,6 +48,7 @@ DataService.ProfileReleasing = Signal.new() -- (player, profile), before the fin
 
 local profiles: { [Player]: Profile } = {}
 local store: DataStore? = nil
+local unavailable = false -- live server whose DataStore never answered
 local memoryStore: { [string]: any } = {}
 local sessionId = if game.JobId ~= "" then game.JobId else HttpService:GenerateGUID(false)
 
@@ -127,7 +132,6 @@ local function claim(key: string): ({ [any]: any }?, string?)
 	end
 
 	local result, reason = nil, nil
-	local aborted = false
 	local ok, err = pcall(function()
 		(store :: DataStore):UpdateAsync(key, function(record)
 			record = record or { data = nil, lock = nil }
@@ -148,13 +152,30 @@ local function claim(key: string): ({ [any]: any }?, string?)
 	return result, reason
 end
 
+local busyWriting: { [Profile]: boolean } = {}
+local released: { [Profile]: boolean } = {}
+local inFlightReleases = 0
+
 local function write(profile: Profile, release: boolean): boolean
+	-- One write at a time per profile; the snapshot is taken once it is this write's turn
+	while busyWriting[profile] do
+		task.wait(0.05)
+	end
+	if released[profile] and not release then
+		return false -- the final save already happened
+	end
+	busyWriting[profile] = true
+	if release then
+		released[profile] = true
+	end
 	local key = keyFor(profile.Player.UserId)
 	local data = deepCopy(profile.Data)
 	if profile.Memory or not store then
 		memoryStore[key] = data
+		busyWriting[profile] = nil
 		return true
 	end
+	local aborted = false
 	local ok, err = pcall(function()
 		(store :: DataStore):UpdateAsync(key, function(record)
 			record = record or {}
@@ -174,6 +195,7 @@ local function write(profile: Profile, release: boolean): boolean
 	elseif aborted then
 		warn("[DataService] save skipped for", profile.Player.Name, "(another server holds the profile)")
 	end
+	busyWriting[profile] = nil
 	return ok and not aborted
 end
 
@@ -193,6 +215,10 @@ function DataService:Save(player: Player): boolean
 end
 
 function DataService:_load(player: Player)
+	if unavailable then
+		player:Kick("Saving is unavailable right now, so your progress would be lost. Please rejoin in a few minutes.")
+		return
+	end
 	local key = keyFor(player.UserId)
 	local data, reason = nil, nil
 	for attempt = 1, LOAD_RETRIES do
@@ -239,20 +265,42 @@ function DataService:_release(player: Player)
 	self.ProfileReleasing:Fire(player, profile)
 	profile.Data.lastSeen = os.time()
 	profiles[player] = nil
-	write(profile, true)
+	-- The final save is retried a few times; shutdown waits for it (inFlightReleases)
+	inFlightReleases += 1
+	for attempt = 1, 4 do
+		released[profile] = nil -- a failed attempt may be tried again
+		if write(profile, true) then
+			break
+		end
+		task.wait(2 ^ attempt * 0.5)
+	end
+	inFlightReleases -= 1
 end
 
 function DataService:KnitInit()
-	local ok, result = pcall(function()
-		local s = DataStoreService:GetDataStore(STORE_NAME)
-		-- Probe once: unpublished places throw here
-		s:GetAsync("__probe")
-		return s
-	end)
+	-- Probe: unpublished places throw here. A live server tries a few times before giving up.
+	local attempts = if RunService:IsStudio() then 1 else 4
+	local ok: boolean, result: any = false, nil
+	for attempt = 1, attempts do
+		ok, result = pcall(function()
+			local s = DataStoreService:GetDataStore(STORE_NAME)
+			s:GetAsync("__probe")
+			return s
+		end)
+		if ok then
+			break
+		end
+		if attempt < attempts then
+			task.wait(attempt * 2)
+		end
+	end
 	if ok then
 		store = result
-	else
+	elseif RunService:IsStudio() then
 		warn("[DataService] DataStores unavailable, using in-memory profiles:", result)
+	else
+		unavailable = true
+		warn("[DataService] DataStores unavailable on a live server; players are turned away:", result)
 	end
 end
 
@@ -278,16 +326,14 @@ function DataService:KnitStart()
 	end)
 
 	game:BindToClose(function()
-		local pending = 0
 		for player in profiles do
-			pending += 1
 			task.spawn(function()
 				self:_release(player)
-				pending -= 1
 			end)
 		end
+		task.wait() -- let the releases above start counting
 		local started = os.clock()
-		while pending > 0 and os.clock() - started < 25 do
+		while inFlightReleases > 0 and os.clock() - started < 25 do
 			task.wait(0.1)
 		end
 	end)

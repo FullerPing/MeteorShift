@@ -269,6 +269,21 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 	if not root then
 		return false
 	end
+	-- Alive and holding the pickaxe, as the client requires (a modified client can't skip it)
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if not humanoid or humanoid.Health <= 0 then
+		return false
+	end
+	local holding = false
+	for _, child in (character :: Model):GetChildren() do
+		if child:IsA("Tool") and child:GetAttribute("Pickaxe") ~= nil then
+			holding = true
+			break
+		end
+	end
+	if not holding then
+		return false
+	end
 	if distanceToPart(target.Part, root.Position) > pickaxe.Reach then
 		return false
 	end
