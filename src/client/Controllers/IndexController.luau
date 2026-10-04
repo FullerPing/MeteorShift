@@ -550,7 +550,7 @@ function IndexController:KnitStart()
 			return
 		end
 		if isNew then
-			HUDController:Toast("New mineral: " .. mineral.Name .. "!")
+			HUDController:Toast("New mineral: " .. mineral.Name .. "!", mineral.Color, mineral.Name)
 			if not Fusion.peek(open) then
 				fresh:set(true)
 				tab:set(page.Id) -- the panel opens on the page of the new find

@@ -1,0 +1,326 @@
+[
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\EquipmentPreview.luau",
+    "Hash": "813BBDDBEC4D289CCB33DD3342AF8BB532D195453CEA5EA98CE89A00D1E4AFA4"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\HudView.luau",
+    "Hash": "30C41DA39AA2B775C2C066A6E7CA98448C7A40E0139F1D9B7610B3B1F1F62AFF"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Main.client.luau",
+    "Hash": "187C78052441D9CD23502AADFC3B727FE6B7FE69F61DB11E58212115518CFAAD"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Sfx.luau",
+    "Hash": "B92B49F7AF46DEB23BE1F57154C07CBF79F8BD0C57FC2DF4A00F4EC564B616B7"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\UI.luau",
+    "Hash": "B122739DB5D3F032719D6F3875C8D8DB6F888CBBF6CAC6F38C50D160ED009B49"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\ActivityController.luau",
+    "Hash": "4A2386766E654F991C0C24EC6CDCA350B009B3B30B316EEAB4A0E7E012494126"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\HomeController.luau",
+    "Hash": "25375961C26321B7F148C0349F3B3EEAF45A7AD60B8F3D997285B6C56D22F8C9"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\HUDController.luau",
+    "Hash": "CF34D847FCDED02F8E9D811575438BCEF5A6118387FF04A711F3B70F2E34B37D"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\IndexController.luau",
+    "Hash": "19E04A3BA8B8A9F712E95869AE9BCA18AB51764A14FF59A87130B034E5F02E49"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\MeteorFXController.luau",
+    "Hash": "3DD3334BA4637456BF0E1D3F3BBDF3C95927AF35DABFB38744217767B0A49982"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\MiningController.luau",
+    "Hash": "C14AC256B8D8B3BEB97DFA17DD3126245A8FCC953F6AC50A272ED90DBA80AF6F"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\MobileControlsController.luau",
+    "Hash": "762DA6DF2E2D0F8EA69B348F5A724AA0FE1D0BC070CE7184978379EF94B23810"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\NodeHealthController.luau",
+    "Hash": "DA8E765816E94ED402775DDEB73CBD2718A58B0D6C306003EAF32F19B0E2159A"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\RebirthController.luau",
+    "Hash": "593FF152C4C6324F2FC12B1014A9224514388A1C4D74468D73CF0590206A50F2"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\ShopController.luau",
+    "Hash": "5198159A60A73AD07BFD1DE05D5A568C1239655D4554D500FD992CBE4EB92EC7"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\StoreController.luau",
+    "Hash": "2B0CE161D626504E68885EEE4DF4A9C57120D589D2DFF7F42CF3CF24B7672289"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\client\\Controllers\\TutorialController.luau",
+    "Hash": "D6427AACF437E8DE4A2DD65DD700F4D772422F529E167451A2BA0EFC889BBA97"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Main.server.luau",
+    "Hash": "6F9CC174D2563777EAB491FC3CDBFC044D1F6E3A43F42299C9F47CF150650879"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Lib\\ProfileTemplate.luau",
+    "Hash": "B4AB92357BDDC32FEC1502AB14DED97A61D36F781A918D3F1AD4D5C341493892"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Lib\\Refining.luau",
+    "Hash": "B8770309F82EECC8FF1F99C24906BD90357355DA3C0B2C6A9E2376BEB0D06A06"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Lib\\Rewards.luau",
+    "Hash": "6D366520DAE529C8BE522F1F81D80556027B3D7C7550FF71632BE58B0B7D4444"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Lib\\Telemetry.luau",
+    "Hash": "787AF569D1339D55B796432E7D318570B3123CC893066762216D68334448C38C"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\ActivityService.luau",
+    "Hash": "50115E3463766A312343D6BF5B7FF2534F59D677DC2719624BF82D18218A358E"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\ContributionService.luau",
+    "Hash": "1FF479AC15E81FE477D943D178C8C4ACC066F4DEDC31895E4BF36918CC54D6E1"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\DataService.luau",
+    "Hash": "F5DB9AD86EFCE5ADDC0C919645D54508BE23C69CA7CA18FDE66CC5F4367380FA"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\DebrisService.luau",
+    "Hash": "F45B6B89368EAB43A098D8F55457212CC916DF987D8BF925543B422A34730985"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\EconomyService.luau",
+    "Hash": "9EDD1BA80D5B5EA84A47DDCF6FF25C37288B46B184E39605B3C6829A0C139B2F"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\IndexService.luau",
+    "Hash": "03C7A347D7CBB88D5A628B43FE2FBBF331F7B2309A4A3BCC1A324FB414FEB4CA"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\MeteorService.luau",
+    "Hash": "E008DAE2C62C1A8616BBC2C29D4CF1F563300489458FA2AC0D80C99BBB7B815A"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\MonetizationService.luau",
+    "Hash": "DBCBB9C8591BC64F741124FF9F212258BEAB3FBB6548C14B4F4AF47A2C1CEAA0"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\NodeService.luau",
+    "Hash": "9C9E206233F64621D65B08A4C1C3B65D35EF4B57CCB605B32E68ED9BC0D38285"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\PlayerStateService.luau",
+    "Hash": "19CBD8111CC54AAEB5077E9E5803D6EC1E0A85ABDFBF2D63677425ED8D3F02D3"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\PlotService.luau",
+    "Hash": "9AC064C9F52DC1933C31BBEF51F96DC5E4E7F8814B8857491E44819AA7E8DCE0"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\RebirthService.luau",
+    "Hash": "8BA5AE6EAD4D4CBB7E6E91C1D6987D78A44EE3E55643F1B1860075E5C5555C47"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\RefineryService.luau",
+    "Hash": "0B6B912AA7699A9701D2CB363485411DAB08FFD2770475A390A81706A282994C"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\RewardService.luau",
+    "Hash": "48FB2AEE0BA0E47753E5E88DD9973A5C4B5D8D7E05BD7E1030E679547D827A92"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\ShopService.luau",
+    "Hash": "4B426DC9635AD0F76633730E8DE193ED3EED513038D65A3B10110D9B0840CA85"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\TelemetryService.luau",
+    "Hash": "A9C4F33B8C09A7BEF9D6F1F9DFFE069FAE1E9108FAF0C0090157AE92A364A806"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\TutorialService.luau",
+    "Hash": "AAE7B062198B71DB02DD52E483F3A836BC6BB6E2A04B93F119C9445DDFE12B36"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\server\\Services\\UpgradeService.luau",
+    "Hash": "A01FBDE35632C06304CA375E268035BAA18BA9CFB2F93E48D24A7CB573F24284"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Aim.luau",
+    "Hash": "056F286558667354E21A2B4DCA13E9B29BB4DC150C0381919682EF66A87F58F1"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\CallMeteor.luau",
+    "Hash": "87BB558323CD1999BE2B34E0292E44B262691480CF276C50B91BB05EB694738F"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\EquipmentModels.luau",
+    "Hash": "35AB68A70019F222F5BED8A6DC0AF30F27751D8FF42F47301DA5DBECB24324F6"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Format.luau",
+    "Hash": "F2F65445C669E3C000631485CB7A2FA895C648DAE1E07F88BEE73DE5FCBBA3BC"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\HudLayout.luau",
+    "Hash": "0A952C1F9A6898308DADCBC7D56F283B030983FDA212A3B332620E808498A39C"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\MeteorTypes.luau",
+    "Hash": "51D00CC31BA7D938B816669A9EBA6091C2FEAE1E92350C77167E75247B70E598"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\MineralIndex.luau",
+    "Hash": "3D79A4480C1871B11799631D78522AFA2BF2EB1058C290C2121CF9DB7D4FA6AA"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\MiningPower.luau",
+    "Hash": "A46D3F6F9A0E8F392DBB170BD5786C201799990C00DDD54EF06012904C78FE9E"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Pacing.luau",
+    "Hash": "38CD73B5C3C31756A25D7101425E31E1172A891BCE3FA466990DA57E957C47C9"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Phase.luau",
+    "Hash": "F85242874C0BB936FB8EE812B3D363BA40419843A0F66CE73FC12A140A0407A3"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Price.luau",
+    "Hash": "F7D7C1173F5930C02342974E43D8B4A9E505B4AD3A181CDB41C9575D9D3527BC"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Rebirth.luau",
+    "Hash": "2C261A65E82061E2BF775C3AEA87968E10DB27EE5D2E5D6D8C2A67021B2D832F"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Backpacks.luau",
+    "Hash": "1EA01E6651D38779DDE49EAC44621F96868079E61CA2941D6753E458837314B2"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Balance.luau",
+    "Hash": "76EF4D1B3D044BB5730774A3AF803153D20D5186C73F4D9D17A9F79A714A801E"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Debris.luau",
+    "Hash": "3F3D1EA9CBBD3B51889DE608B60D39CC5BC434F48D267957507071F41297B2BB"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Home.luau",
+    "Hash": "625A012651FEAFDA267F11C77A764A7075244ED123E7140BF3C493334732B09D"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Hud.luau",
+    "Hash": "22EDC8986B2C5A69C1568CAD00D45E270BA09D35A37E4256E64322C47F356592"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\HudIcons.luau",
+    "Hash": "233A24CA392973892718A0670C5B53FABB4D889A9593157684C91737226CD1A9"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Index.luau",
+    "Hash": "01F9C6D77C2BA511E106E996F2501963239C5BECDFE44FB70366133EEFA24460"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\init.luau",
+    "Hash": "3395222AA4942B342B6738B591EDF5E77625F81109FEF9457A14B5631ED79787"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Meteor.luau",
+    "Hash": "752FD2D12533CDCDD7610DEC89BF707077E1312841A685208B829F1FFE567FB8"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Monetization.luau",
+    "Hash": "6CFAE834185989082A6967C6BA12710BCCA79D367357304B9339918E8124E899"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Net.luau",
+    "Hash": "7EE30C48924F9804FBF14068D91639DED1AD133BEE618B8A9AA48A7F8ACDE9BF"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Pickaxes.luau",
+    "Hash": "3DD31FC4060D6317D60C12F1C20120D066B22193B098AD67451649E31D5DC14B"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Rebirth.luau",
+    "Hash": "D733B238D9C5A04AB7161769C3B7460850724BFB34F9D1DC6DADE7736D7F5E1B"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Sounds.luau",
+    "Hash": "F3C1D32B6C6D6AA1AFDB5D2B81ED026BD803AAE5960A902A1175C957142D9251"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Telemetry.luau",
+    "Hash": "62D6D54C3629CAF45B7974E04C71AD40C81FA98FB7C81AE9CFA5A7CF978739EA"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\src\\shared\\Config\\Tutorial.luau",
+    "Hash": "54330DDFA89EAF347D7F6C48F4445499ED7101EF74E0935ACF9491F1EEB0E542"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\CallMeteor.spec.luau",
+    "Hash": "B47FC4684525C28503674EA8A0E141220E7FE67380AC4F1CF0FB1FF495AF2182"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Format.spec.luau",
+    "Hash": "B6ABF64F228BAAD66034AA6150CB16A1242DD0C9FD28D8EB7DA4B4CB35BDFE40"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\HudLayout.spec.luau",
+    "Hash": "B5014901FF2A68EAE39453D7B541D949551B1E062EDE02D8B50F8FECA3C118CB"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\MeteorTypes.spec.luau",
+    "Hash": "59BB5B46C01DA29B22C0403BCAE8FC83E2E6863C1ECE63BB0C64ACB9EA03D405"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\MineralIndex.spec.luau",
+    "Hash": "5AE85F3799A6FEB81E3A810274C1DA8708EA218B24A9082361D8D8F4BA95B8DD"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\MiningPower.spec.luau",
+    "Hash": "B20C41B22F61EA3238D53B91293EAC7E306279FC0F75E7290C1FE132D088DF56"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Net.spec.luau",
+    "Hash": "800DB64DD085A6F2E0D7BA83E75DEEC5AAA99EF58DDF8936D7C2FC9C7FFD7B55"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Pacing.spec.luau",
+    "Hash": "995A88E54B858215F159C08A82213DE1E82F6D36215EE68F39D4E4889F900A44"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Rebirth.spec.luau",
+    "Hash": "084EFDC95D582588A836A288BC15A749D39D826ADEC5A0192D31326F5A11EDCA"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Refining.spec.luau",
+    "Hash": "FB65758DD3EE480FAF9F7216080860B23213DEFFEEAA5292D814743BB72B3B6B"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Rewards.spec.luau",
+    "Hash": "6900ABAD7B4D42D5A25A9F8B1C43385ADEFC79B2440344067E5B21D18FA3C8F1"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Runner.luau",
+    "Hash": "A5FE12F964473D93416914B9260EF19B8E33068FBDE39BA3D8A7DE235F5A4E92"
+  },
+  {
+    "Path": "Z:\\final-final-actual-final\\MeteorShift\\tests\\Telemetry.spec.luau",
+    "Hash": "01E6CD74DF62D56C1846E7785BD4D5DB83032C7F2A2202F7C3EF58F3B2AA6043"
+  }
+]

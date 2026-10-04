@@ -169,7 +169,7 @@ Sky countdown · streak with trail and glow · screen shake scaled by distance �
 ### 6.1 Base plot
 
 - Contains a **hopper**, 6 refinery pads **[A]**, and décor slots. Selling happens in town, not on the plot **[A]**.
-- Décor is placed on a grid, saved, and survives rebirth.
+- Décor is placed on a grid and saved; the current rebirth policy resets placed décor.
 
 ### 6.2 Hopper
 
@@ -336,8 +336,8 @@ Every meteor type is the same event loop (§5) with four things swapped: **ore**
 ### 8.3 Rebirth — "Relocate the Colony"
 
 - **Requirement:** $10M for the first rebirth, ×10 for each one after ($100M, $1B, $10B…) **[A]**.
-- **Resets:** cash, pickaxe tier, backpack tier.
-- **Keeps:** base décor (per design), Core Shards, index progress, passes. Refineries and hopper are kept **[A]** (open question below).
+- **Resets:** all cash, pickaxe/backpack tiers, all carried and stored ore/bars, hopper/conveyor/collection upgrades, partial refining progress and décor.
+- **Keeps:** refinery level, carried Core Shards, index discoveries and their bonuses/titles, passes and purchased value. Preferences and lifetime/tutorial history also remain intact.
 - **Reward:** permanent **×2 cash multiplier per rebirth, multiplicative** (×2, ×4, ×8…) **[A]**. This is what drives the jump into billions; it's also the main inflation lever to tune.
 - Tune early (economy risk in §16).
 
@@ -458,7 +458,7 @@ Use a session-locked profile library (e.g. ProfileStore) **[A]**. Profile schema
   refineries = { { level = 1 } },
   hopperLevel = 1,
   bars = { iron = 0, frost = 0 },
-  decor = { },                               -- placed items, survives rebirth
+  decor = { },                               -- placed items, resets on rebirth
   index = { },                               -- discovered minerals
   rebirths = 0,
   lastSeen = 0,
@@ -542,6 +542,6 @@ Use Roblox `AnalyticsService` (onboarding funnel, economy, custom events).
 
 1. **Server size:** 20 players by default. OK, or start at 16?
 2. **Core Shards:** spent on high-tier upgrades and décor. Is that the intent?
-3. **Rebirth:** needs $10M (×10 each time), gives ×2 cash per rebirth, resets cash, pickaxe and backpack, keeps refineries, décor and shards. Should refineries reset too?
+3. **Rebirth (resolved):** needs $10M (×10 each time), gives ×2 cash per rebirth. Reset active cash/gear/resources, other station upgrades and décor; keep refinery level, Core Shards and index bonuses.
 4. **Meteor interval:** 4:00 countdown + 2:30 event (~7 min cycle). Shorter?
 5. **Rare minerals:** random drops at fixed odds that nothing purchasable changes. OK under the compliance rule?

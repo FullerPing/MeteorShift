@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
 
 local DebrisService = Knit.CreateService({
 	Name = "DebrisService",
@@ -85,6 +86,11 @@ function DebrisService:_track(part: BasePart)
 		MaxHp = Config.Debris.Hp,
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
+		-- The tier changes on untouched rerolls and respawns. Read its current value
+		-- so cyan rocks always reward Frost while keeping the debris ore quantity.
+		OreFor = function()
+			return DebrisOre.forTier(part:GetAttribute("Tier") :: number?), Config.Debris.YieldFraction
+		end,
 		OnBroken = function()
 			setVisible(part, false)
 			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()

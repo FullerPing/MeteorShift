@@ -102,6 +102,10 @@ local function now(): number
 end
 
 function MeteorService:_publish(patch: { [string]: any })
+	-- Use the actual length of each phase, including first and Studio countdowns.
+	if patch.phase ~= nil and patch.endsAt ~= nil then
+		patch.duration = math.max(0, patch.endsAt - now())
+	end
 	for key, value in patch do
 		(state :: any)[key] = value
 	end

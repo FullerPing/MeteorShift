@@ -24,6 +24,7 @@ return {
 	Telemetry = require(script.Telemetry),
 	Monetization = require(script.Monetization),
 	Hud = require(script.Hud),
+	HudIcons = require(script.HudIcons),
 	Balance = require(script.Balance),
 	Atmosphere = require(script.Atmosphere),
 	LandingFX = require(script.LandingFX),

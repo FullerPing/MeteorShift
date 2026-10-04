@@ -63,6 +63,12 @@ function EconomyService:SellAll(player: Player): number
 	return cash
 end
 
+-- The foundry menu sells only this caller's carried bars. Quantities and value
+-- come from the saved server profile, using the Trading Post's existing rules.
+function EconomyService.Client:SellAll(player: Player): number
+	return self.Server:SellAll(player)
+end
+
 function EconomyService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	MonetizationService = Knit.GetService("MonetizationService")

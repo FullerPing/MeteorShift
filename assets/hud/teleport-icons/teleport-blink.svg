@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="blink-title">
+  <title id="blink-title">Blink teleport</title>
+  <path d="M32 13l6 13 13 6-13 6-6 13-6-13-13-6 13-6Z"/>
+  <path d="M7 19V9h10m30 0h10v10M7 45v10h10m30 0h10V45"/>
+</svg>

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="warp-refined-title">
+  <title id="warp-refined-title">Warp to a destination</title>
+  <path d="M7 24h9M7 40h9"/>
+  <path d="M25 23h13v-8l19 17-19 17v-8H25Z"/>
+</svg>

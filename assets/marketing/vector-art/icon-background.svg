@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" fill="none">
+  <title>Craterworks icon background</title>
+  <path d="M0 0h512v512H0Z" fill="#183D44"/>
+  <path d="M0 346 512 60v452H0Z" fill="#214C51"/>
+  <path d="M0 462 512 264v248H0Z" fill="#102D36"/>
+  <circle cx="276" cy="264" r="184" fill="#34646A"/>
+  <circle cx="276" cy="264" r="153" fill="#3A7375"/>
+  <path d="m421 10-163 223 142 55L512 118V0Z" fill="#FFB642" opacity=".22"/>
+  <path d="m486 70-123 185 34 18L512 124Z" fill="#FFE08D" opacity=".3"/>
+  <path d="m411 61 11-24 12 24-12 24Z" fill="#FFF1CB"/>
+  <path d="m53 260 10-20 10 20-10 20Z" fill="#A2F2E2"/>
+  <path d="m465 339 8-17 8 17-8 17Z" fill="#FFE08D"/>
+  <ellipse cx="275" cy="430" rx="191" ry="24" fill="#101E25" opacity=".65"/>
+</svg>

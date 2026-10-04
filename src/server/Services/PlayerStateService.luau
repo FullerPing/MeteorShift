@@ -14,6 +14,7 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -58,6 +59,17 @@ end
 function PlayerStateService:Get(player: Player): any
 	local profile = DataService:GetProfile(player)
 	return if profile then profile.Data else nil
+end
+
+-- Fractional mined ore belongs to the current life, alongside the saved inventory.
+function PlayerStateService:ResetTransientInventory(player: Player)
+	local remainders = oreRemainder[player]
+	if remainders then
+		table.clear(remainders)
+	else
+		oreRemainder[player] = {}
+	end
+	lastFullNotice[player] = nil
 end
 
 function PlayerStateService:GetPickaxe(player: Player): typeof(Config.Pickaxes[1])
@@ -120,10 +132,22 @@ function PlayerStateService:_sendState(player: Player)
 	stateSends += 1
 
 	local speedMult = MonetizationService:RefinerySpeedMult(data) -- Refinery Overclock
+	local refineryBlocked: Refining.Blocked = nil
+	if sum(data.bin) >= Refining.collectorCapacity(data) then
+		refineryBlocked = "collector"
+	elseif sum(data.hopper) <= 0 then
+		refineryBlocked = "hopper"
+	end
 	local line = {
 		hopper = { level = data.stations.hopper, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data) },
 		conveyor = { level = data.stations.conveyor, rate = Refining.conveyorRate(data) },
-		refinery = { level = data.stations.refinery, rate = Refining.refineryRate(data, speedMult) },
+		refinery = {
+			level = data.stations.refinery,
+			rate = Refining.refineryRate(data, speedMult),
+			activeOre = RefineryQueue.nextOre(data.hopper, data.refinePriority),
+			progress = math.clamp(data.progress or 0, 0, 1),
+			blocked = refineryBlocked,
+		},
 		collector = { level = data.stations.collector, amount = sum(data.bin), capacity = Refining.collectorCapacity(data) },
 		rate = Refining.lineRate(data, speedMult),
 	}
@@ -137,9 +161,13 @@ function PlayerStateService:_sendState(player: Player)
 		cash = data.cash,
 		shards = data.shards,
 		bars = sum(data.bars),
+		barInventory = table.clone(data.bars), -- carried bars, detached from the saved profile
+		collectorInventory = table.clone(data.bin), -- stored bars stay separate from the sale total
 		-- what a sale would pay: the bars' base value times rebirth, index and VIP
 		barValue = math.floor(self:BarValue(data.bars) * EconomyService:SaleMultiplier(player)),
 		hopper = sum(data.hopper),
+		hopperInventory = table.clone(data.hopper), -- waiting ore, detached from the saved profile
+		refinePriority = RefineryQueue.order(data.refinePriority, data.hopper),
 		hopperCapacity = self:GetHopperCapacity(player),
 		line = line,
 		rebirths = data.rebirths, -- sets the cash multiplier (spec §8.3)

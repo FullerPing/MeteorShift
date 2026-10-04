@@ -8,13 +8,15 @@
 --
 -- Where it goes, and how big, comes from Shared.HudLayout (Config.Hud.Mine), the same
 -- place that keeps the HUD buttons clear of it. It hides while a panel is open, the
--- same flags the HUD buttons use.
+-- same flags the HUD buttons use; the backpack popup hides it only where it covers it,
+-- so you can keep mining with the backpack open.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
@@ -63,6 +65,13 @@ function MobileControlsController:KnitStart()
 	local indexOpen = playerFlag("IndexOpen")
 	local rebirthOpen = playerFlag("RebirthOpen")
 	local storeOpen = playerFlag("StoreOpen")
+	local settingsOpen = playerFlag("SettingsOpen")
+	local refineryOpen = playerFlag("RefineryOpen")
+	local backpackOpen = playerFlag("BackpackOpen")
+	-- The backpack popup at its tallest (three ore rows) on top of the button
+	local function backpackCoversMine(layout: any): boolean
+		return layout.mine ~= nil and HudLayout.overlaps(HudLayout.backpackPanel(layout, 3), layout.mine)
+	end
 
 	local visible = scope:Computed(function(use)
 		return use(hud).mine ~= nil
@@ -71,6 +80,9 @@ function MobileControlsController:KnitStart()
 			and not use(indexOpen)
 			and not use(rebirthOpen)
 			and not use(storeOpen)
+			and not use(settingsOpen)
+			and not use(refineryOpen)
+			and not (use(backpackOpen) and backpackCoversMine(use(hud)))
 	end)
 	-- A hidden button cannot be released, so stop swinging when it goes away
 	scope:Observer(visible):onChange(function()

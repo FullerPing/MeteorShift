@@ -7,6 +7,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -361,7 +362,7 @@ local function turnTowardTarget(dt: number)
 end
 
 function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
-	if player:GetAttribute("ShopOpen") then
+	if player:GetAttribute("ShopOpen") or player:GetAttribute("SettingsOpen") or player:GetAttribute("RefineryOpen") then
 		return
 	end
 	local character = player.Character
@@ -419,7 +420,7 @@ function MiningController:_holdLoop(tool: Tool)
 	end
 	swinging = true
 	-- Holding the button keeps swinging at the pickaxe's speed
-	while (pointerHolding or touchHolding) and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") do
+	while (pointerHolding or touchHolding) and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") and not player:GetAttribute("SettingsOpen") and not player:GetAttribute("RefineryOpen") do
 		self:_swing(tool, if touchHolding then "nearest" else "pointer")
 		task.wait(Config.Pickaxes[pickaxeTier].Swing)
 	end
@@ -446,7 +447,7 @@ function MiningController:SetTouchHold(on: boolean)
 	touchHolding = on
 	if on then
 		local tool = self:GetEquippedPickaxe()
-		if tool and not player:GetAttribute("ShopOpen") then
+		if tool and not player:GetAttribute("ShopOpen") and not player:GetAttribute("SettingsOpen") and not player:GetAttribute("RefineryOpen") then
 			self:_holdLoop(tool)
 		else
 			touchHolding = false
@@ -456,7 +457,7 @@ end
 
 function MiningController:_bindTool(tool: Tool)
 	tool.Activated:Connect(function()
-		if player:GetAttribute("ShopOpen") then return end
+		if player:GetAttribute("ShopOpen") or player:GetAttribute("SettingsOpen") or player:GetAttribute("RefineryOpen") then return end
 		pointerHolding = true
 		self:_holdLoop(tool)
 	end)
@@ -472,6 +473,9 @@ end
 function MiningController:KnitStart()
 	NodeService = Knit.GetService("NodeService")
 	PlayerStateService = Knit.GetService("PlayerStateService")
+	-- Mining uses one permanent pickaxe. Equip it directly so Roblox's tool slot
+	-- does not cover the foundry summary at the bottom of the HUD.
+	StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Backpack, false)
 
 	PlayerStateService.State:Observe(function(state)
 		if state then
@@ -496,6 +500,13 @@ function MiningController:KnitStart()
 			if child:IsA("Tool") and child:GetAttribute("Pickaxe") and not bound[child] then
 				bound[child] = true
 				self:_bindTool(child)
+				if container:IsA("Backpack") then
+					task.defer(function()
+						local character = player.Character
+						local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+						if humanoid and child.Parent == container then humanoid:EquipTool(child :: Tool) end
+					end)
+				end
 			end
 		end
 		for _, child in container:GetChildren() do

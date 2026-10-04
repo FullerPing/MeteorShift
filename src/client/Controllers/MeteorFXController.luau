@@ -68,6 +68,11 @@ end
 -- The fireball crossing the sky before impact
 function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, color: Color3)
 	self:_clearStreak()
+	-- Studio isolation control: disables the approach visuals/audio without changing
+	-- the event schedule, landing, mining rules or effects in published games.
+	if RunService:IsStudio() and ReplicatedStorage:GetAttribute("DevMeteorApproachFX") == false then
+		return
+	end
 
 	local ball = Instance.new("Part")
 	ball.Name = "MeteorStreak"
@@ -310,6 +315,13 @@ end
 
 function MeteorFXController:KnitStart()
 	local MeteorService = Knit.GetService("MeteorService")
+	if RunService:IsStudio() then
+		ReplicatedStorage:GetAttributeChangedSignal("DevMeteorApproachFX"):Connect(function()
+			if ReplicatedStorage:GetAttribute("DevMeteorApproachFX") == false then
+				self:_clearStreak()
+			end
+		end)
+	end
 
 	MeteorService.Impact:Connect(function(position: Vector3)
 		local state = MeteorService.State:Get()
@@ -337,7 +349,7 @@ function MeteorFXController:KnitStart()
 				local meteorType = Config.Meteor.Types[state.type] or Config.Meteor.Types.Iron
 				self:_startStreak(target, left, meteorType.GlowColor)
 			end
-			rumbleLevel = 1 - left / Config.Meteor.StreakLeadTime
+			rumbleLevel = if streak then 1 - left / Config.Meteor.StreakLeadTime else 0
 			if rumble then
 				rumble.Volume = 0.2 + rumbleLevel * 0.8
 			end

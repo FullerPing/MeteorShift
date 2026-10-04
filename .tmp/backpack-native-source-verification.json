@@ -1,0 +1,59 @@
+{
+  "base": ".tmp/backpack-input-fix-baseline.rbxl",
+  "baseSha256": "0dc3111b2e64c803f976e602e11391f091723e6112164809caa511dcacb18d77",
+  "errors": {},
+  "preservation": {
+    "Lighting": {
+      "baseCount": 7,
+      "baseSha256": "3c702e8b0eb32f54cb7a692b67a74eb13c64e2e25d991d82e104a2e3ede25c98",
+      "equal": true,
+      "targetCount": 7,
+      "targetSha256": "3c702e8b0eb32f54cb7a692b67a74eb13c64e2e25d991d82e104a2e3ede25c98"
+    },
+    "ReplicatedStorage/Packages": {
+      "baseCount": 97,
+      "baseSha256": "8a743511a233758e2106ae1b14556cb8cf4bf5f779ebe01098ca718427aa15d3",
+      "equal": true,
+      "targetCount": 97,
+      "targetSha256": "8a743511a233758e2106ae1b14556cb8cf4bf5f779ebe01098ca718427aa15d3"
+    },
+    "ServerStorage/ArtImports": {
+      "baseCount": 5,
+      "baseSha256": "df0a335f188ba367623c91a3d124afbfcacea88311c0639795b78a3c9c06e21c",
+      "equal": true,
+      "targetCount": 5,
+      "targetSha256": "df0a335f188ba367623c91a3d124afbfcacea88311c0639795b78a3c9c06e21c"
+    },
+    "ServerStorage/Assets": {
+      "baseCount": 281,
+      "baseSha256": "650f5af422d1c4cdd6e970a99205ab8b0cc34a2d13751483720f02145d4c3be7",
+      "equal": true,
+      "targetCount": 281,
+      "targetSha256": "650f5af422d1c4cdd6e970a99205ab8b0cc34a2d13751483720f02145d4c3be7"
+    },
+    "StarterPack": {
+      "baseCount": 9,
+      "baseSha256": "e7bcff001f29eddce5cb439c936a73f248af3c2c761a2a3e6afc7f5641f31667",
+      "equal": true,
+      "targetCount": 9,
+      "targetSha256": "e7bcff001f29eddce5cb439c936a73f248af3c2c761a2a3e6afc7f5641f31667"
+    },
+    "Workspace/Map": {
+      "baseCount": 2404,
+      "baseSha256": "fc56782a812c3d081fcf53495693f92a1a03c91ba56fb8adc58cb702dc9e04bb",
+      "equal": true,
+      "targetCount": 2404,
+      "targetSha256": "fc56782a812c3d081fcf53495693f92a1a03c91ba56fb8adc58cb702dc9e04bb"
+    }
+  },
+  "sourceCount": 87,
+  "sources": {
+    "ReplicatedStorage/Shared": 31,
+    "ServerScriptService/Server": 23,
+    "ServerStorage/Tests": 15,
+    "StarterPlayer/StarterPlayerScripts/Client": 18
+  },
+  "success": true,
+  "target": "MeteorShift-backpack-foundry.rbxl",
+  "targetSha256": "d8e7774d9b8697393c59677d23aeab831d1dc092462e93e51a731322ac71f823"
+}

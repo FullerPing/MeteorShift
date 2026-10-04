@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" fill="none">
+  <title>Craterworks illustrated mining crater</title>
+  <g id="sky">
+    <path fill="#17343C" d="M0 0h1920v1080H0z"/>
+    <path fill="#20464C" d="M990 0h930v758L875 885 728 547Z"/>
+    <path fill="#28565B" d="m1920 0-612 564 612 20Z"/>
+    <path fill="#FFE08D" opacity=".10" d="m1758 0-562 620 251-33L1920 92V0Z"/>
+    <circle cx="1230" cy="570" r="363" fill="#FFB642" opacity=".08"/>
+    <circle cx="1230" cy="570" r="302" fill="#FFB642" opacity=".10"/>
+    <path d="m1408 146 21-39 21 39-21 39Z" fill="#A2F2E2" opacity=".7"/>
+    <path d="m1740 278 15-30 15 30-15 30Z" fill="#FFF1CB" opacity=".7"/>
+    <path d="m1178 109 10-20 10 20-10 20Z" fill="#A2F2E2" opacity=".55"/>
+    <circle cx="1608" cy="110" r="6" fill="#FFF1CB" opacity=".5"/>
+    <circle cx="1837" cy="143" r="4" fill="#A2F2E2" opacity=".6"/>
+    <circle cx="1056" cy="372" r="5" fill="#FFF1CB" opacity=".45"/>
+  </g>
+  <g id="distant-crater-walls">
+    <path d="M0 560 148 436 287 479 408 405 604 494 769 436 993 492 1159 424 1354 510 1522 440 1734 498 1920 402V840H0Z" fill="#345960"/>
+    <path d="m0 638 168-108 140 55 166-66 108 69 173-49 172 67 160-72 175 57 145-50 162 49 148-50 203 105v217H0Z" fill="#2B424B"/>
+    <path d="m0 654 168-124-49 159 116 97H0Zm474-135 108 69-43 89-123 45Zm453 87 160-72-71 181-122 54Zm456-65 162 49-98 105-106-75Zm513-15 24 6v258h-151l67-145Z" fill="#3B5056"/>
+    <path d="M0 751 194 714 327 756 485 708 651 772 838 719 1030 765 1255 717 1450 762 1651 712 1920 756V916H0Z" fill="#1A3039"/>
+  </g>
+  <g id="crater-floor">
+    <ellipse cx="1000" cy="944" rx="1270" ry="320" fill="#637077"/>
+    <ellipse cx="1000" cy="972" rx="1174" ry="282" fill="#3D4A52"/>
+    <ellipse cx="1000" cy="971" rx="1044" ry="231" fill="#46565B"/>
+    <path d="m0 824 232 48 213-68 180 60 227-25 225 69 271-28 191 53 381-80v227H0Z" fill="#516269"/>
+    <path d="m0 959 280-22 268 69 251-36 371 55 243-38 303 51 204-6v48H0Z" fill="#3F5058"/>
+    <path d="m0 787 131 39 160-70 182 57 205-37 143 24 238-31 269 44 227-46 152 32 113-44" stroke="#8B9698" stroke-width="13" stroke-linejoin="round"/>
+    <path d="m0 902 194 34 168-44 194 69 157-32 208 48m434-47 151-53 159 36 255-30" stroke="#2F454D" stroke-width="10" stroke-linejoin="round"/>
+    <path d="m227 873 32 47-65 16m362 25 36 79m162-201-41 90 17 44m672-93 41 107m214-59 48 55" stroke="#354B53" stroke-width="8" stroke-linejoin="round"/>
+    <ellipse cx="1177" cy="938" rx="445" ry="96" fill="#101E25" opacity=".65"/>
+    <ellipse cx="1177" cy="927" rx="319" ry="58" fill="#FF742C" opacity=".26"/>
+    <ellipse cx="1177" cy="919" rx="229" ry="31" fill="#FFB642" opacity=".25"/>
+  </g>
+  <g id="crater-rim-rocks" stroke="#182C35" stroke-width="7" stroke-linejoin="round">
+    <path d="m63 788 65-38 90 24 16 56-85 24-74-17Z" fill="#68757A"/>
+    <path d="m128 750 28 46 78 34-16-56Z" fill="#43555D" stroke="none"/>
+    <path d="m351 759 59-35 87 26 10 58-81 17-62-24Z" fill="#748083"/>
+    <path d="m410 724 29 50 68 34-10-58Z" fill="#51636A" stroke="none"/>
+    <path d="m688 761 70-41 79 26 9 53-73 22-67-20Z" fill="#64767C"/>
+    <path d="m1699 775 60-38 78 20 40 63-104 27-73-25Z" fill="#66777E"/>
+    <path d="m1759 737 30 57 88 26-40-63Z" fill="#425860" stroke="none"/>
+    <path d="m37 1041 31-61 76-24 67 42-12 82H30Z" fill="#627279"/>
+    <path d="m144 956-19 124h74l12-82Z" fill="#314850" stroke="none"/>
+    <path d="m1795 1011 40-56 58-13 27 37v101h-143Z" fill="#5B6D75"/>
+  </g>
+</svg>

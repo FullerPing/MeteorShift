@@ -1,5 +1,5 @@
 --!strict
--- Shared look for the Fusion UI: warm frames, dark cards, chunky headings and
+-- Shared look for the Fusion UI: neutral frames, dark cards, chunky headings and
 -- clean supporting text. Resource icons use native shapes so they load instantly.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -9,6 +9,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
+local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local Sfx = require(script.Parent.Sfx)
 
 local Children = Fusion.Children
@@ -20,22 +21,52 @@ local UI = {}
 UI.FONT = Enum.Font.FredokaOne
 UI.BODY_FONT = Enum.Font.GothamMedium
 UI.WHITE = Color3.fromRGB(255, 255, 255)
-UI.SUBTEXT = Color3.fromRGB(225, 207, 184)
+UI.SUBTEXT = Color3.fromRGB(188, 196, 203)
 UI.ORANGE = Color3.fromRGB(255, 174, 52)
 UI.SHARD = Color3.fromRGB(66, 190, 255)
 UI.RED = Color3.fromRGB(235, 70, 70)
 UI.GREEN = Color3.fromRGB(105, 240, 103)
 UI.CASH = Color3.fromRGB(255, 207, 55)
 UI.BAR = Color3.fromRGB(232, 171, 89)
-UI.OUTLINE = Color3.fromRGB(31, 22, 19)
-UI.PANEL = Color3.fromRGB(164, 114, 76)
+UI.OUTLINE = Color3.fromRGB(17, 24, 28)
+UI.PANEL = Color3.fromRGB(28, 34, 40)
 -- Gradient colors multiply the frame color; keep the top bright enough to read.
-UI.PANEL_TOP = Color3.fromRGB(255, 246, 229)
-UI.PANEL_BOTTOM = Color3.fromRGB(197, 174, 149)
-UI.PANEL_DARK = Color3.fromRGB(48, 36, 31)
-UI.CARD = Color3.fromRGB(73, 54, 43)
-UI.DISABLED = Color3.fromRGB(99, 81, 66)
+UI.PANEL_TOP = Color3.fromRGB(255, 255, 255)
+UI.PANEL_BOTTOM = Color3.fromRGB(211, 224, 235)
+UI.PANEL_DARK = Color3.fromRGB(21, 25, 29)
+UI.CARD = Color3.fromRGB(36, 43, 49)
+UI.DISABLED = Color3.fromRGB(73, 83, 94)
 UI.MUTED = UI.DISABLED
+
+-- HUD and menu surfaces share the same neutral palette.
+UI.HUD_SURFACE = Color3.fromRGB(21, 25, 29)
+UI.HUD_BORDER = Color3.fromRGB(67, 76, 84)
+UI.HUD_MUTED = Color3.fromRGB(188, 196, 203)
+UI.HUD_GOLD = Color3.fromRGB(255, 219, 100)
+UI.HUD_MINT = Color3.fromRGB(139, 240, 195)
+
+function UI.hudFill(scope: Scope)
+	return {
+		UI.corner(scope, 8),
+		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+	}
+end
+
+function UI.hudText(scope: Scope, props: { [any]: any })
+	local merged: { [any]: any } = { Font = Enum.Font.GothamMedium, TextStrokeTransparency = 1 }
+	for key, value in props do merged[key] = value end
+	return UI.label(scope, merged)
+end
+
+function UI.hudIcon(scope: Scope, name: string, props: { [any]: any }?)
+	local merged: { [any]: any } = {
+		Name = name .. "Icon", BackgroundTransparency = 1, BorderSizePixel = 0,
+		Image = HudIcons[name], ScaleType = Enum.ScaleType.Fit,
+		Size = UDim2.fromOffset(32, 32),
+	}
+	if props then for key, value in props do merged[key] = value end end
+	return scope:New("ImageLabel")(merged)
+end
 
 function UI.corner(scope: Scope, radius: number)
 	return scope:New("UICorner")({ CornerRadius = UDim.new(0, radius) })
@@ -79,11 +110,11 @@ function UI.body(scope: Scope, props: { [any]: any })
 	return UI.label(scope, base)
 end
 
--- The warm outer frame behind panels (results, while you were away, shop).
+-- Rounded menu surface with a light edge and subtle neutral shading.
 function UI.panelFill(scope: Scope)
 	return {
 		UI.corner(scope, 16),
-		UI.stroke(scope),
+		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		scope:New("UIGradient")({
 			Rotation = 90,
 			Color = ColorSequence.new(UI.PANEL_TOP, UI.PANEL_BOTTOM),
@@ -94,16 +125,16 @@ end
 -- Use with BackgroundColor3 = UI.CARD for the panels' lighter inset cards.
 function UI.cardFill(scope: Scope)
 	return {
-		UI.corner(scope, 10),
+		UI.corner(scope, 12),
 		scope:New("UIStroke")({
-			Color = Color3.fromRGB(139, 105, 79),
+			Color = UI.HUD_BORDER,
 			Thickness = 1,
-			Transparency = 0.45,
+			Transparency = 0.1,
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
 		scope:New("UIGradient")({
 			Rotation = 90,
-			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(222, 214, 203)),
+			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(211, 224, 235)),
 		}),
 	}
 end
@@ -188,7 +219,7 @@ function UI.icon(scope: Scope, kind: string, props: { [any]: any }?)
 	base[Children] = {
 		UI.corner(scope, 8),
 		scope:New("UIStroke")({
-			Color = Color3.fromRGB(153, 116, 85),
+			Color = UI.HUD_BORDER,
 			Transparency = 0.55,
 			Thickness = 1,
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
@@ -217,15 +248,10 @@ function UI.button(scope: Scope, props: { [any]: any })
 	end
 	base[Children] = {
 		UI.corner(scope, 10),
-		UI.stroke(scope),
+		scope:New("UIStroke")({ Color = UI.OUTLINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		scope:New("UIGradient")({
 			Rotation = 90,
-			Color = ColorSequence.new({
-				ColorSequenceKeypoint.new(0, UI.WHITE),
-				ColorSequenceKeypoint.new(0.48, Color3.fromRGB(248, 244, 233)),
-				ColorSequenceKeypoint.new(0.50, Color3.fromRGB(224, 213, 192)),
-				ColorSequenceKeypoint.new(1, Color3.fromRGB(189, 171, 144)),
-			}),
+			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(211, 224, 235)),
 		}),
 		children,
 	}
@@ -238,12 +264,27 @@ end
 
 
 -- The HUD layout for the current screen (Shared.HudLayout): a Computed that follows the
--- camera viewport and whether this is a touch-only device (spec §10). Every controller
+-- camera viewport and touch capability (spec §10). Every controller
 -- that places a HUD button or sizes a panel reads it, so the geometry lives in one place.
 function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
+	local player = game:GetService("Players").LocalPlayer
+	local expanded = scope:Value(player:GetAttribute("FoundryExpanded") == true)
+	table.insert(scope, player:GetAttributeChangedSignal("FoundryExpanded"):Connect(function()
+		expanded:set(player:GetAttribute("FoundryExpanded") == true)
+	end))
+	local notification = scope:Value(player:GetAttribute("HudNotificationActive") == true)
+	table.insert(scope, player:GetAttributeChangedSignal("HudNotificationActive"):Connect(function()
+		notification:set(player:GetAttribute("HudNotificationActive") == true)
+	end))
+	local rewardNotification = scope:Value(player:GetAttribute("HudRewardNotificationActive") == true)
+	table.insert(scope, player:GetAttributeChangedSignal("HudRewardNotificationActive"):Connect(function()
+		rewardNotification:set(player:GetAttribute("HudRewardNotificationActive") == true)
+	end))
 	local viewport = scope:Value(Vector2.new(1280, 720))
 	local function isTouch(): boolean
-		return UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+		-- Phones in Studio and hybrid devices can report a keyboard as well.
+		-- Keep their touch controls and native movement UI clear in either case.
+		return UserInputService.TouchEnabled
 	end
 	local touch = scope:Value(isTouch())
 	local inset = scope:Value(GuiService:GetGuiInset().Y)
@@ -283,7 +324,7 @@ function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
 		table.insert(scope, insetSignal:Connect(refreshInset))
 	end
 	return scope:Computed(function(use)
-		return HudLayout.compute(use(viewport), use(touch), use(inset))
+		return HudLayout.compute(use(viewport), use(touch), use(inset), use(expanded), use(notification), use(rewardNotification))
 	end)
 end
 
@@ -316,15 +357,60 @@ function UI.hudButton(
 			merged[key] = value
 		end
 	end
+	local iconNames = { SHOP = "equipment", INDEX = "index", REBIRTH = "rebirth", STORE = "premium" }
+	local hover = scope:Value(false)
+	merged.Text = ""
+	merged.BorderSizePixel = 0
+	local accent = props.BackgroundColor3 or UI.HUD_BORDER
+	local highlighted = scope:Computed(function(use)
+		local color = use(accent)
+		return name ~= "STORE" and color.G > color.R and color.G > color.B
+	end)
+	merged.BackgroundColor3 = UI.HUD_SURFACE
+	merged.BackgroundTransparency = scope:Computed(function(use) return if use(hover) then 0.15 else 1 end)
+	merged.AutoButtonColor = true
+	merged[ Fusion.OnEvent("MouseEnter") ] = function() hover:set(true) end
+	merged[ Fusion.OnEvent("MouseLeave") ] = function() hover:set(false) end
+	merged[ Fusion.OnEvent("SelectionGained") ] = function() hover:set(true) end
+	merged[ Fusion.OnEvent("SelectionLost") ] = function() hover:set(false) end
 	merged[Children] = {
+		UI.corner(scope, 12),
+		scope:New("UIStroke")({
+			Color = accent, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Transparency = scope:Computed(function(use) return if use(highlighted) then 0.1 elseif use(hover) then 0.45 else 1 end),
+		}),
 		scope:New("UIScale")({
 			Scale = scope:Computed(function(use)
 				return use(hud).buttonScale
 			end),
 		}),
 		props[Children],
+		UI.hudIcon(scope, iconNames[name], {
+			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.02),
+			Size = UDim2.fromScale(0.74, 0.74),
+			ImageColor3 = if name == "REBIRTH" then Color3.fromRGB(91, 236, 98) else Color3.new(1, 1, 1),
+		}),
+		UI.hudText(scope, {
+			Name = "Caption", Position = UDim2.fromScale(0, 0.70), Size = UDim2.fromScale(1, 0.30),
+			Text = if name == "SHOP" then "GEAR" else name, Font = Enum.Font.GothamBold,
+			TextSize = scope:Computed(function(use) return use(hud).buttonTextSize or math.max(18, 11 / use(hud).buttonScale) end),
+			TextColor3 = UI.WHITE, TextStrokeColor3 = Color3.fromRGB(17, 24, 28), TextStrokeTransparency = 0.25,
+		}),
+		scope:New("Frame")({
+			Name = "ReadyBadge", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 4),
+			Size = UDim2.fromOffset(9, 9), BackgroundColor3 = accent, BorderSizePixel = 0,
+			Visible = highlighted, [Children] = { UI.corner(scope, 9) },
+		}),
+		UI.hudText(scope, {
+			Name = "Tooltip", Position = if name == "INDEX" then UDim2.new(0, -110, 0.5, -16) else UDim2.new(1, 8, 0.5, -16), Size = UDim2.fromOffset(102, 32),
+			Text = if name == "SHOP" then "GEAR" else name, TextSize = 14, BackgroundTransparency = 0,
+			BackgroundColor3 = UI.HUD_SURFACE, Visible = scope:Computed(function(use) return use(hover) and not use(hud).touch end), ZIndex = 2,
+			[Children] = { UI.corner(scope, 6) },
+		}),
 	}
-	return UI.button(scope, merged)
+	local button = scope:New("TextButton")(merged)
+	table.insert(scope, button.Activated:Connect(function() Sfx.play("Click") end))
+	return button
 end
 
 return UI

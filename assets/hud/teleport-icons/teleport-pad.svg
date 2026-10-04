@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="pad-title">
+  <title id="pad-title">Teleport from a pad</title>
+  <ellipse cx="32" cy="50" rx="22" ry="7"/>
+  <path d="M17 16v17m30-17v17"/>
+  <circle cx="32" cy="17" r="5" fill="currentColor" stroke="none"/>
+  <path d="M26 29a6 6 0 0 1 12 0v7H26Z" fill="currentColor" stroke="none"/>
+  <rect x="26" y="41" width="4" height="4" rx="1" fill="currentColor" stroke="none"/>
+  <rect x="35" y="39" width="4" height="4" rx="1" fill="currentColor" stroke="none"/>
+</svg>

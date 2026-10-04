@@ -1,5 +1,5 @@
 --!strict
--- First-session tutorial on the client (spec §11): a step card under the timer,
+-- First-session tutorial on the client (spec §11): a responsive training card,
 -- a marker over what to do next and a beam from your character to it. The
 -- server decides when a step is done (TutorialService); this only shows the way.
 
@@ -203,19 +203,12 @@ function TutorialController:KnitStart()
 
 	local scope = Fusion.scoped(Fusion)
 	local hud = UI.hud(scope)
-	local hudScale = scope:Computed(function(use)
-		return use(hud).scale
-	end)
-	-- Touch devices have the whole right edge to Roblox and the MINE button, and the buttons
-	-- in a row on top: the card stays centred under the clock there
-	-- The card is never smaller than TouchCardScale on touch, so its Skip button can reach 44 px
+	local showGuide = scope:Value(player:GetAttribute("HudShowGuide") ~= false)
+	table.insert(scope, player:GetAttributeChangedSignal("HudShowGuide"):Connect(function()
+		showGuide:set(player:GetAttribute("HudShowGuide") ~= false)
+	end))
 	local cardScale = scope:Computed(function(use)
-		local l = use(hud)
-		return if l.touch then math.max(l.scale, Config.Hud.TouchCardScale) else l.scale
-	end)
-	local compact = scope:Computed(function(use)
-		local l = use(hud)
-		return l.viewport.X < 1000 and not l.touch
+		return use(hud).tutorial.w / Config.Hud.Training.Width
 	end)
 	local step = scope:Value(nil :: any)
 	local meteorState = scope:Value(nil :: any)
@@ -224,16 +217,7 @@ function TutorialController:KnitStart()
 	local shown = scope:Computed(function(use)
 		return use(step) ~= nil or use(finished)
 	end)
-	-- On compact screens the card sits in the right-hand button column under SHOP, the
-	-- spots the INDEX, REBIRTH and STORE buttons take; IndexController, RebirthController
-	-- and StoreController hide them while this attribute is set, or they would draw
-	-- over the card and take taps meant for Skip
-	local inColumn = scope:Computed(function(use)
-		return use(compact) and use(shown)
-	end)
-	scope:Observer(inColumn):onBind(function()
-		player:SetAttribute("TutorialCardInColumn", Fusion.peek(inColumn))
-	end)
+	player:SetAttribute("TutorialCardInColumn", false)
 
 	local lastIndex = 0
 	TutorialService.Step:Observe(function(value)
@@ -275,97 +259,70 @@ function TutorialController:KnitStart()
 	end)
 
 	scope:New("ScreenGui")({
-		Name = "Tutorial",
-		ResetOnSpawn = false,
-		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
-		DisplayOrder = 1,
+		Name = "Tutorial", ResetOnSpawn = false, IgnoreGuiInset = true,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 1,
 		Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
 			scope:New("Frame")({
-				Name = "Card",
-				AnchorPoint = scope:Computed(function(use)
-					return if use(compact) then Vector2.new(1, 0) else Vector2.new(0.5, 0)
-				end),
+				Name = "Card", Size = UDim2.fromOffset(332, 125), BorderSizePixel = 0,
 				Position = scope:Computed(function(use)
-					return if use(compact)
-						then UDim2.new(1, -Config.Hud.EdgeMargin, 0, use(hud).tutorialY)
-						else UDim2.new(0.5, 0, 0, 138 * use(hudScale))
+					local rect = use(hud).tutorial
+					return UDim2.fromOffset(rect.x, rect.y)
 				end),
-				Size = UDim2.fromOffset(380, 116),
-				BackgroundColor3 = UI.PANEL_DARK,
-				BackgroundTransparency = 0.04,
-				Visible = shown,
+				BackgroundColor3 = UI.HUD_SURFACE,
+				Visible = scope:Computed(function(use)
+					return use(shown) and use(showGuide) and use(hud).tutorialVisible
+				end),
 				[Children] = {
-					scope:New("UIScale")({ Scale = cardScale }),
-					UI.cardFill(scope),
-					UI.body(scope, {
-						Position = UDim2.fromOffset(14, 10),
-						Size = UDim2.new(1, -90, 0, 18),
-						Text = scope:Computed(function(use)
-							local s = use(step)
-							return if s then string.format("MINER TRAINING  ·  %d / %d", s.index, s.total) else "TRAINING COMPLETE"
-						end),
-						TextSize = 12,
-						TextColor3 = UI.ORANGE,
+					scope:New("UIScale")({ Scale = cardScale }), UI.hudFill(scope),
+					UI.hudText(scope, {
+						Position = UDim2.fromOffset(16, 14), Size = UDim2.fromOffset(168, 18),
+						Text = scope:Computed(function(use) return if use(finished) then "TRAINING COMPLETE" else "MINER TRAINING" end),
+						Font = Enum.Font.GothamBold, TextSize = scope:Computed(function(use) return math.max(13, 10 / use(cardScale)) end), TextColor3 = UI.HUD_GOLD,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
-					UI.label(scope, {
-						Position = UDim2.fromOffset(14, 31),
-						Size = UDim2.new(1, -28, 0, 30),
+					UI.hudText(scope, {
+						Position = UDim2.fromOffset(196, 14), Size = UDim2.fromOffset(54, 18),
+						Text = scope:Computed(function(use)
+							local value = use(step)
+							return if value then value.index .. " / " .. value.total else ""
+						end), TextSize = scope:Computed(function(use) return math.max(13, 10 / use(cardScale)) end), TextColor3 = UI.HUD_MUTED,
+					}),
+					UI.hudIcon(scope, "equipment", { Position = UDim2.fromOffset(16, 43), Size = UDim2.fromOffset(32, 32) }),
+					UI.hudText(scope, {
+						Position = UDim2.fromOffset(58, 43), Size = UDim2.fromOffset(258, 28),
 						Text = scope:Computed(function(use)
 							local info = use(current)
-							return if info then info.Text else "You're all set. Have fun, miner!"
-						end),
-						TextSize = 23,
-						TextXAlignment = Enum.TextXAlignment.Left,
+							return if info then info.Text else "You're all set, miner!"
+						end), Font = Enum.Font.GothamBold, TextSize = scope:Computed(function(use) return math.max(18, 13 / use(cardScale)) end),
+						TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
 					}),
-					UI.body(scope, {
-						Position = UDim2.fromOffset(14, 65),
-						Size = UDim2.new(1, -28, 0, 35),
-						Text = hint,
-						TextSize = 14,
-						TextColor3 = UI.SUBTEXT,
-						TextWrapped = true,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						TextYAlignment = Enum.TextYAlignment.Top,
+					UI.hudText(scope, {
+						Position = UDim2.fromOffset(58, 70), Size = UDim2.fromOffset(258, 42),
+						Text = hint, TextSize = scope:Computed(function(use) return math.max(13, 11 / use(cardScale)) end), TextColor3 = UI.HUD_MUTED, TextWrapped = true,
+						TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
 					}),
-					UI.button(scope, {
-						AnchorPoint = Vector2.new(1, 0),
-						Position = UDim2.new(1, -10, 0, 7),
+					scope:New("ImageButton")({
+						Name = "SkipTraining", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -5, 0, 0),
 						Size = scope:Computed(function(use)
-							local s = use(cardScale)
-							return UDim2.fromOffset(math.max(58, Config.Hud.MinTouch / s), HudLayout.closeSize(25, s))
-						end),
-						Text = "Skip",
-						TextSize = 15,
-						BackgroundColor3 = UI.CARD,
-						TextColor3 = UI.WHITE,
-						Visible = scope:Computed(function(use)
-							return use(step) ~= nil
-						end),
-						[OnEvent("Activated")] = function()
-							task.spawn(function()
-								TutorialService:Skip()
-							end)
-						end,
+							local size = HudLayout.closeSize(34, use(cardScale))
+							return UDim2.fromOffset(size, size)
+						end), Image = "", BackgroundTransparency = 1,
+						Visible = scope:Computed(function(use) return use(step) ~= nil end),
+						[OnEvent("Activated")] = function() task.spawn(function() TutorialService:Skip() end) end,
+						[Children] = { UI.hudIcon(scope, "skip", {
+							AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(18, 18),
+						}) },
 					}),
 					scope:New("Frame")({
-						Position = UDim2.new(0, 14, 1, -9),
-						Size = UDim2.new(1, -28, 0, 4),
-						BorderSizePixel = 0,
-						BackgroundColor3 = UI.OUTLINE,
-						[Children] = {
-							UI.corner(scope, 2),
-							scope:New("Frame")({
-								Size = scope:Computed(function(use)
-									local s = use(step)
-									return UDim2.fromScale(if s then (s.index - 1) / math.max(s.total, 1) else 1, 1)
-								end),
-								BorderSizePixel = 0,
-								BackgroundColor3 = GUIDE_COLOR,
-								[Children] = { UI.corner(scope, 2) },
-							}),
-						},
+						Position = UDim2.fromOffset(16, 113), Size = UDim2.fromOffset(300, 4), BorderSizePixel = 0,
+						BackgroundColor3 = UI.HUD_BORDER,
+						[Children] = { UI.corner(scope, 2), scope:New("Frame")({
+							Size = scope:Computed(function(use)
+								local value = use(step)
+								return UDim2.fromScale(if value then (value.index - 1) / math.max(value.total, 1) else 1, 1)
+							end), BorderSizePixel = 0, BackgroundColor3 = UI.HUD_GOLD, [Children] = { UI.corner(scope, 2) },
+						}) },
 					}),
 				},
 			}),
@@ -383,7 +340,7 @@ function TutorialController:KnitStart()
 			local info = Fusion.peek(current)
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			local target = if info and root then targetFor(info.Id, root.Position) else nil
+			local target = if info and root and Fusion.peek(showGuide) then targetFor(info.Id, root.Position) else nil
 			if not target or not root then
 				marker.Enabled = false
 				beam.Enabled = false

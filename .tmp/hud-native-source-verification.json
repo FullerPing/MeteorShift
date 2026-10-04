@@ -1,0 +1,59 @@
+{
+  "base": "MeteorShift-newest.rbxl",
+  "baseSha256": "93f7613d2b66493893c5fa528ac845d37ed176c2d9fb9bdd9f91f1490532b2fe",
+  "errors": {},
+  "preservation": {
+    "Lighting": {
+      "baseCount": 7,
+      "baseSha256": "32454fb757a67ccae4d9fe7b4bfaca582e7d280dfbeb04e946e03536ee38c512",
+      "equal": true,
+      "targetCount": 7,
+      "targetSha256": "32454fb757a67ccae4d9fe7b4bfaca582e7d280dfbeb04e946e03536ee38c512"
+    },
+    "ReplicatedStorage/Packages": {
+      "baseCount": 97,
+      "baseSha256": "8a743511a233758e2106ae1b14556cb8cf4bf5f779ebe01098ca718427aa15d3",
+      "equal": true,
+      "targetCount": 97,
+      "targetSha256": "8a743511a233758e2106ae1b14556cb8cf4bf5f779ebe01098ca718427aa15d3"
+    },
+    "ServerStorage/ArtImports": {
+      "baseCount": 5,
+      "baseSha256": "df0a335f188ba367623c91a3d124afbfcacea88311c0639795b78a3c9c06e21c",
+      "equal": true,
+      "targetCount": 5,
+      "targetSha256": "df0a335f188ba367623c91a3d124afbfcacea88311c0639795b78a3c9c06e21c"
+    },
+    "ServerStorage/Assets": {
+      "baseCount": 281,
+      "baseSha256": "650f5af422d1c4cdd6e970a99205ab8b0cc34a2d13751483720f02145d4c3be7",
+      "equal": true,
+      "targetCount": 281,
+      "targetSha256": "650f5af422d1c4cdd6e970a99205ab8b0cc34a2d13751483720f02145d4c3be7"
+    },
+    "StarterPack": {
+      "baseCount": 9,
+      "baseSha256": "e7bcff001f29eddce5cb439c936a73f248af3c2c761a2a3e6afc7f5641f31667",
+      "equal": true,
+      "targetCount": 9,
+      "targetSha256": "e7bcff001f29eddce5cb439c936a73f248af3c2c761a2a3e6afc7f5641f31667"
+    },
+    "Workspace/Map": {
+      "baseCount": 2363,
+      "baseSha256": "49a027b1cf182245362b8fae9849d546235942da3cff4acdeea50ad0c9e57736",
+      "equal": true,
+      "targetCount": 2363,
+      "targetSha256": "49a027b1cf182245362b8fae9849d546235942da3cff4acdeea50ad0c9e57736"
+    }
+  },
+  "sourceCount": 83,
+  "sources": {
+    "ReplicatedStorage/Shared": 29,
+    "ServerScriptService/Server": 23,
+    "ServerStorage/Tests": 14,
+    "StarterPlayer/StarterPlayerScripts/Client": 17
+  },
+  "success": true,
+  "target": "MeteorShift-hud-redesign.rbxl",
+  "targetSha256": "44727bce3eb2f967e4b38a82f4992f913c41467b366b0a996e60271f35190dcf"
+}

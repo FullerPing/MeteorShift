@@ -47,7 +47,7 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 
 **Week 4: meteor types (spec §8.1)**
 - Ice (tier 3 pickaxe, frost ore) and Crystal (tier 5, crystal ore, bars sell at $3,000) meteors fall alongside Iron. Each countdown picks the next type from weighted odds (Iron 60, Ice 25, Crystal 15), but a type only comes up when at least 25% of active players' pickaxes meet its tier, otherwise it drops to the next type down. The sky board and HUD timer name it from the start of the countdown, with the title in the type's glow colour (Iron orange, Ice cyan, Crystal magenta). Types, tier gates and twists are in `Config.Meteor`, the rules in `Shared.MeteorTypes`
-- Everyone mines the meteor's own ore. A pickaxe under the meteor's tier gets less the further below it is: on your own a crust node takes 15 s per tier short (tier 1 on Ice: 30 s), and each meteor type above your best pays 3x the one below: to a tier 1 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9 ($1.4K and $4.1K with the Canvas Sack), paid per hit in the meteor's ore. `Config.Meteor.UnderTier`, numbers in docs/balance.md. Debris still drops iron
+- Everyone mines the meteor's own ore. A pickaxe under the meteor's tier gets less the further below it is: on your own a crust node takes 15 s per tier short (tier 1 on Ice: 30 s), and each meteor type above your best pays 3x the one below: to a tier 1 pickaxe an Ice meteor is worth 3 Iron meteors and a Crystal meteor 9 ($1.4K and $4.1K with the Canvas Sack), paid per hit in the meteor's ore. `Config.Meteor.UnderTier`, numbers in docs/balance.md. Blue tier 3–4 debris drops Frost ore; other debris keeps Iron.
 - Ice twist, Refreeze: a node or core nobody has hit for 5 s regains 2% of its HP per second (never past full); its health bar turns frost blue while it refreezes. Crystal twist, Resonance: each extra player who hit the same node in the last 1.5 s adds +20% Mining Power (HP and contribution) to everyone on it, up to +60%
 - The shard bonus pool is multiplied by the type (Ice ×1.5, Crystal ×2). The results panel names the ore your pickaxe mined and, when it was under the meteor's tier, what a better one mines there ("Tier 5 pickaxe mines Crystal: $3K bars")
 
@@ -58,7 +58,7 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 
 **Week 4: rebirth, "Relocate the Colony" (spec §8.3)**
 - The REBIRTH button (under INDEX; green once you can afford it, hidden while the shop or index is open and, on narrow screens, while the tutorial card sits in the column) opens a panel with your cash multiplier now and after the rebirth, the cost with your progress toward it, and what resets and what you keep. The confirm button needs a second press ("ARE YOU SURE?") within 3 s, and says how much cash is missing while you can't afford it
-- The first rebirth costs $10M, each one after ×10 ($100M, $1B, ...). It resets cash to $0, the pickaxe and backpack to tier 1 and empties the backpack; the production line with its ore and bars, carried bars, Core Shards, the mineral index, décor and flags are kept. Every rebirth doubles bar sales for good (×2, ×4, ×8, ..., multiplicative), is announced to the server and the HUD shows the multiplier under your cash. The "While you were away" value now includes your sale multipliers. Tuning is in `Config.Rebirth`, the rules in `Shared.Rebirth`
+- The first rebirth costs $10M, each one after ×10 ($100M, $1B, ...). It resets all cash to $0, the pickaxe and backpack to tier 1, hopper/conveyor/collection upgrades to level 1, all carried and stored ore/bars, partial refining progress and décor. Refinery level, carried Core Shards and mineral-index discoveries, bonuses and titles are kept. Purchased value, receipt history, preferences and lifetime/tutorial history remain intact. Every rebirth doubles bar sales for good (×2, ×4, ×8, ..., multiplicative); index bonuses continue to stack. Tuning is in `Config.Rebirth`, price/multiplier rules in `Shared.Rebirth`, and inventory rules in `Server.Lib.RebirthReset`.
 
 **Week 4: analytics (spec §13)**
 - `TelemetryService` logs to Roblox AnalyticsService (every call pcall'd; in Studio each event also prints a `[Telemetry] ...` line). Once per player, guarded by profile flags: `first_meteor_joined` (first hit on a crust node or the core), `first_core_reward` (first shards) and `first_refinery_bought` (first refinery upgrade). On every join whose offline catch-up made bars: `returned_offline_income` (value = bars, field = hours away)
@@ -76,7 +76,10 @@ Sound effects use Pro Sound Effects ids tuned in `Config/Sounds.luau` and played
 
 **Week 5: mobile controls and HUD layout (spec §10)**
 - On touch-only devices a big round MINE button sits above Roblox's jump button while a pickaxe is in your hands. Hold it to swing continuously at the pickaxe's speed at the nearest mineable target in reach and in front of you; the server still checks range and swing speed on every swing (`Shared.Aim`, `MobileControlsController`, tuning in `Config.Hud`)
-- One layout decides where the SHOP, INDEX, REBIRTH and STORE buttons go (`Shared.HudLayout`): a column on the right for mouse users, one row along the top right on touch, every button at least 44 px, clear of the Roblox top bar, the clock, the thumbstick area, the jump button and MINE. The tutorial card stays centred under the clock on touch
+- Open `MeteorShift-backpack-foundry.rbxl` for the latest HUD: wallet bottom left, Equipment/Rebirth/Store on the left, Index on the right, meteor clock top centre, objective top right, training above the compact foundry at bottom centre, and backpack bottom right. Native Fusion controls keep the existing game state and actions. Transparent icon exports and their provenance are in `assets/hud`; permanent IDs are in `Config.HudIcons`.
+- Tap the backpack icon to open a compact list directly above it, aligned to both backpack edges. It shows only ores currently carried, displays Empty for no ore, and keeps camera controls available. The height fits up to three rows; additional ore types scroll. Tap the foundry summary to expand hopper/storage meters, carried bar counts and sale values, and a Sell All button. Sales use the server's existing rebirth, index and VIP multipliers and leave raw ore and collection-post stock intact. The gear toggles training guidance and meteor objectives for the current session. Small screens reflow the cards above movement controls, with at least 44 px navigation and close targets; transient notices reserve their own space.
+- The pickaxe equips automatically on spawn; the stock Roblox tool slot is hidden to keep the foundry clear. Equipment still opens the upgrade shop. The rebirth button uses the clean 64 × 64 cycle SVG exported in `assets/hud/rebirth-icons`.
+- One layout decides where the SHOP, INDEX, REBIRTH and STORE buttons go (`Shared.HudLayout`): a column on the left for mouse users, one row along the top right on touch, every button at least 44 px, clear of the Roblox top bar, the clock, the thumbstick area, the jump button and MINE. Training stays centred under the clock on touch and hides while the foundry details are expanded.
 - The shop, index, rebirth and store panels scale to fit below the top bar (844x390 included) and their close buttons stay at least 44 px
 
 **Week 5: economy pacing (spec §7.4)**
@@ -106,6 +109,14 @@ Server services: `MeteorService` (schedule and state machine), `NodeService` (HP
 Client controllers: `MiningController`, `MeteorFXController`, `HUDController`, `HomeController`, `NodeHealthController`, `ShopController`, `TutorialController`, `ActivityController`, `IndexController`, `RebirthController`, `StoreController`, `MobileControlsController`, `AtmosphereController`, `LandingFXController`.
 
 Services announce what players do through server-side signals (`NodeService.Hit`, `MeteorService.Landed`, `RewardService.ShardsAwarded`, `RefineryService.OreDeposited` / `BarsCollected`, `EconomyService.BarsSold`, `ShopService.ItemBought`, `UpgradeService.StationUpgraded`, `MeteorService.Ended`, `RefineryService.CaughtUp`, `RebirthService.Reborn`). The tutorial and `TelemetryService` listen to them.
+
+## Player policy checks
+
+`PlayerPolicyService` calls Roblox's `PolicyService:GetPolicyInfoForPlayerAsync(player)` on join, with up to three attempts. Its cached policy starts restricted while loading and stays restricted if the lookup fails. This is independent of profile loading and does not delay joining or normal gameplay.
+
+Server code can use `Knit.GetService("PlayerPolicyService"):GetPolicyInfo(player)` for a copy of the policy summary, `:CanUsePaidRandomItems(player)` before granting a paid random outcome, and `:CanTradePaidItems(player)` for both players before transferring a paid item. The summary contains `Status` (`loading`, `ready`, or `unavailable`), `ArePaidRandomItemsRestricted`, and `IsPaidItemTradingAllowed`. Clients can observe the service's `Policy` property to display the same eligibility; server checks must still enforce any restricted action.
+
+The current store has deterministic passes/products and no player-to-player item trading. Mining, free mineral discoveries, earned shards and selling bars remain available. Any future paid random item or paid-item trading feature must call the relevant server check when performing the action. Policy information is kept only for the current player session, not saved in profiles.
 
 ## The map lives in the place, not in code
 
@@ -152,7 +163,7 @@ The scene is seeded by the event, so everyone sees the same one, and a player wh
 3. Run the specs from the command bar or `execute_luau` in Edit mode (no Play needed): `require(game.ServerStorage.Tests.Runner)()`. Pass a name (or part of one) to run only matching specs, e.g. `require(game.ServerStorage.Tests.Runner)("Pacing")`. Pure-logic modules (Format, MiningPower, Refining, Rewards, Telemetry, MeteorTypes, MineralIndex, Rebirth, CallMeteor, HudLayout, Pacing, Net, AtmosphereMood, LandingFX) have a `<Name>.spec` under `tests/`, synced to `ServerStorage.Tests`. The runner requires fresh clones of `Shared` and `Server.Lib`, so edits show up without restarting Studio.
 4. Play. Unpublished places can't use DataStores, so profiles are kept in memory for that play session only (the tutorial starts from step 1 every time). In Studio the countdown is shortened to 25 s (`Config.Meteor.StudioCountdown`, set it to `nil` for the real 2:00 / 4:00 timings).
 
-Studio-only dev hooks (none exist in a live server). Two buttons on the HUD:
+Studio-only dev hooks (none exist in a live server). Set `Workspace.DevHudHelpersVisible` to `true` before Play to show two helper buttons on the HUD:
 - **[Studio] Meteor now** skips to the last 10 s of the countdown.
 - **[Studio] Away 1 hour** runs an hour of offline refining, to check the "While you were away" panel.
 
@@ -169,3 +180,9 @@ String attributes on `ServerStorage` (set them before the play session unless no
 - `DevFakeTiers`, e.g. `1,1,1,8`: each number adds a pretend active player with that pickaxe tier, so you can test meteor sizing solo. The meteor model's `ServerPower` attribute shows what it is sized for. Pretend players count toward the meteor type's tier gate too, so `5,5,5` lets Ice and Crystal come up.
 - `DevMeteorType` (`Iron`, `Ice` or `Crystal`): forces the type. It is read when each countdown starts, so set it before the session or it applies from the next countdown.
 - `DevPasses`, e.g. `TwoXOre,VIP`: grants those passes. Setting it during play grants them to everyone in the session.
+
+For isolating pre-landing rendering/audio issues, set the boolean attribute `DevMeteorApproachFX` on **ReplicatedStorage** to `false`. This Studio-only control disables the approach fireball, fire, light, trail, smoke, looping rumble and approach camera shake. The countdown, landing effects and gameplay still run. Set it to `true` or remove the attribute to restore approach effects on the next countdown. Disabling effects is a diagnostic step; it does not establish or repair the cause of a whole-PC crash.
+
+## Polished map
+
+Open `MeteorShift-map-polished.rbxl` for the October 1 map art pass, including town buildings, twenty plot entrances, production machinery, landscape landmarks and original Blender rock meshes. Editable Blender assets are in `assets/map-art/`; authoring instructions and validation are in [tools/map-art/README.md](tools/map-art/README.md). The map is saved in the place and is not rebuilt by Rojo at runtime.

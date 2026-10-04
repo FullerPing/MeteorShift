@@ -1,0 +1,20 @@
+# Craterworks promotional artwork
+
+Generated with the built-in image-generation tool on 2026-10-04.
+
+## Icon prompt
+
+Use case: ads-marketing. Generate ONE standalone square Roblox game icon for "Craterworks: Meteor Mining", aspect ratio 1:1, ideally 1024x1024 pixels. Not a mockup, not a contact sheet.
+Scene: a friendly stylized low-poly crater mining town at dusk, cool charcoal and muted teal surroundings, warm orange molten glow. Main subject: a massive dark basalt meteor already landed in the crater, bright amber-orange fissures in its solid crust. A recognizable blocky Roblox-style miner in warm orange/gold armor, dark burgundy-red crest/plume and dark boots, is swinging a turquoise-steel pickaxe toward the rock. A clean readable pose with two arms and one pickaxe, playful determined expression. Broad bevelled shapes, crisp polished 3D game-render aesthetic, strong silhouette, restrained warm bloom and a few sparks. Meteor and miner occupy most of the image; simplify the background heavily to stone crater rim and faint fence/town shapes. Tiny metal bar accents may sit near the base, no factory clutter.
+Composition: dynamic close-up with the meteor dominant and the miner large in the foreground. Safe margins. High contrast that reads at 150x150. No rounded image border.
+Exact text: "CRATERWORKS" (C-R-A-T-E-R-W-O-R-K-S), one very legible wordmark across the lower portion, inside the safe margin. Puffy chunky rounded white 3D letters with charcoal outline and subtle warm gold underside, similar to Fredoka One. No subtitle, no extra text.
+Constraints: cheerful Roblox mining adventure, authentic meteor-mining theme. No guns, enemies, pets, currency giveaways, UI, badges, fake gameplay stats, Minecraft pixels, photographic human, watermark, or platform logo. Full opaque background.
+
+## Thumbnail prompt
+
+Use case: ads-marketing. Generate ONE standalone wide Roblox experience thumbnail for "Craterworks: Meteor Mining", exact 16:9 composition, ideally 1920x1080 pixels. Not a mockup, not a collage or contact sheet.
+Matching art direction: polished stylized low-poly Roblox 3D game render with crisp broad bevelled shapes, cool charcoal/teal crater town at dusk and vivid warm amber-orange meteor glow. A giant dark basalt meteor is already landed in a broad circular stone crater, with a continuous solid crust and bright orange fissures. Foreground: a blocky Roblox miner in warm orange/gold armor, burgundy-red crest/plume and dark boots striking the meteor with one turquoise-steel pickaxe. Clear two-handed grip, two arms, playful determined expression, restrained sparks at impact. Meteor and pickaxe strike are the hero, with a clear readable silhouette.
+Secondary story: on the side of the crater, visibly smaller than the meteor, show the player's actual compact refinery plot: a metal hopper feeds a black conveyor carrying chunky iron ore into a compact charcoal refinery with warm orange vent light, then a second conveyor delivers several metal bars into a collection tray. Make the machine readable but secondary, not an enormous invented factory. Background includes stone paths, a wooden perimeter fence, simple lamps, and small stylized trees; no busy HUD. Keep the lower 15 percent free of essential text.
+Composition: dynamic eye-level wide shot, miner and glowing meteor dominating the center/right, quiet dark sky space in upper left for strong branding. The refining line can occupy the far right foreground as a secondary detail. Avoid overlapping the wordmark and faces.
+Exact text, only these two lines: "CRATERWORKS" then "METEOR MINING". CRATERWORKS in large puffy chunky rounded white 3D letters with a charcoal outline and warm gold underside, similar to Fredoka One; METEOR MINING smaller bold golden letters below. Perfect spelling, all text inside generous safe margins. No slogan, no arrows, no sale copy.
+Constraints: show meteor mining and ore-to-bars refining that belong to the game. No pets, guns, villains, loot chests, diamonds piled as currency, promotional rewards, "FREE", UI, fake statistics, watermark, platform logo, or photographic human. Full opaque background.

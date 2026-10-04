@@ -3,9 +3,9 @@
 -- REBIRTH panel; the server re-checks the price (Shared.Rebirth.cost) against the
 -- player's cash.
 --
--- A rebirth resets cash to 0, the pickaxe and backpack to tier 1 and empties the
--- backpack. Everything else is kept (spec §8.3 defaults): plot stations, hopper,
--- collection bin, carried bars, Core Shards, the mineral index, décor and flags.
+-- Rebirth resets cash, gear, all ore/bars, other production upgrades and décor.
+-- Refinery level, Core Shards and mineral-index rewards survive. Purchased value,
+-- preferences and lifetime history are retained independently of gameplay resets.
 -- In return the rebirth count goes up by one, and with it the permanent bar sale
 -- multiplier (Shared.Rebirth.multiplier, read by EconomyService:SaleMultiplier).
 -- The server hears about it: "<name> relocated the colony! (Rebirth N, ×M cash)".
@@ -16,6 +16,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local RebirthReset = require(script.Parent.Parent.Lib.RebirthReset)
 
 local RebirthService = Knit.CreateService({
 	Name = "RebirthService",
@@ -29,6 +30,7 @@ RebirthService.Reborn = Signal.new() -- (player, rebirths, cashSpent) for analyt
 local PlayerStateService
 local ShopService
 local RewardService
+local RefineryService
 
 -- Rebirths the player if they can pay for it. Returns true when it went through.
 function RebirthService:Rebirth(player: Player): boolean
@@ -44,14 +46,13 @@ function RebirthService:Rebirth(player: Player): boolean
 	end
 
 	local cashSpent = data.cash
-	data.cash = 0
-	data.pickaxeTier = 1
-	data.backpackTier = 1
-	table.clear(data.backpack)
+	RebirthReset.apply(data, os.time())
 	rebirths += 1
 	data.rebirths = rebirths
 
+	PlayerStateService:ResetTransientInventory(player)
 	ShopService:ApplyPickaxe(player)
+	RefineryService:ResetAfterRebirth(player)
 	PlayerStateService:ReplicateNow(player)
 	RewardService:Announce(
 		"Rebirth",
@@ -74,6 +75,7 @@ function RebirthService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	ShopService = Knit.GetService("ShopService")
 	RewardService = Knit.GetService("RewardService")
+	RefineryService = Knit.GetService("RefineryService")
 end
 
 return RebirthService

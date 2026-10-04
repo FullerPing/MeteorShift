@@ -7,6 +7,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Queue = require(ReplicatedStorage.Shared.RefineryQueue)
 
 local Stations = Config.Home.Stations
 
@@ -22,6 +23,7 @@ export type HomeData = {
 	hopper: { [string]: number }, -- ore waiting
 	bin: { [string]: number }, -- bars waiting at the collection post
 	progress: number?, -- fractional ore carried between ticks
+	refinePriority: { string }?, -- preferred ore types, falling through when empty
 }
 
 local Refining = {}
@@ -61,8 +63,8 @@ local function sum(t: { [string]: number }): number
 end
 Refining.sum = sum
 
--- Takes up to `amount` ore out of the hopper, in Config.Home.OreOrder first.
-local function takeOre(hopper: { [string]: number }, amount: number): { [string]: number }
+-- Takes up to `amount` ore in the saved order, then deterministic defaults.
+local function takeOre(hopper: { [string]: number }, amount: number, priority: { string }?): { [string]: number }
 	local taken = {}
 	local remaining = amount
 	local function take(oreType: string, have: number)
@@ -73,19 +75,11 @@ local function takeOre(hopper: { [string]: number }, amount: number): { [string]
 			remaining -= n
 		end
 	end
-	for _, oreType in Config.Home.OreOrder do
+	for _, oreType in Queue.order(priority, hopper) do
 		if remaining <= 0 then
 			break
 		end
 		take(oreType, hopper[oreType] or 0)
-	end
-	for oreType, have in hopper do
-		if remaining <= 0 then
-			break
-		end
-		if have > 0 then
-			take(oreType, have)
-		end
 	end
 	for oreType, have in hopper do
 		if have <= 0 then
@@ -107,7 +101,7 @@ function Refining.run(data: HomeData, seconds: number, speedMult: number?): ({ [
 	local stock = sum(data.hopper)
 	local n = math.min(wanted, room, stock)
 
-	local made = takeOre(data.hopper, n)
+	local made = takeOre(data.hopper, n, data.refinePriority)
 	for oreType, amount in made do
 		data.bin[oreType] = (data.bin[oreType] or 0) + amount
 	end

@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="620" viewBox="0 0 480 620" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Craterworks miner</title>
+  <desc id="desc">Original editable vector illustration of a gold armored blocky miner leaning into a mining swing, with a burgundy helmet crest and a raised right hand.</desc>
+  <g stroke="#12232B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Back leg: the bent stance gives the miner a clear action silhouette. -->
+    <g id="back-leg">
+      <path d="M207 355 250 380 216 455 178 482 135 455 175 406Z" fill="#FF742C"/>
+      <path d="m207 355 22 29-33 61-23-12 22-63Z" fill="#FFB642" stroke="none"/>
+      <path d="m174 425 43 25-37 46-40-31Z" fill="#FFE08D"/>
+      <path d="m143 465 39 18-6 45-45 11-12-23Z" fill="#27333D"/>
+      <path d="m131 513 44-7 46 24 13 30-18 20-91-2-21-24Z" fill="#101E25"/>
+      <path d="m116 545 110 5 8 10-18 20-91-2-21-24Z" fill="#27333D"/>
+      <path d="m137 520 36-6 34 17-14 7-60-3Z" fill="#3A4248" stroke="none"/>
+      <path d="m150 486 20 8-4 21-20 4Z" fill="#46B5B7" stroke-width="6"/>
+    </g>
+    <!-- Raised arm is kept behind the helmet and chest. -->
+    <g id="raised-right-arm">
+      <path d="m270 248 37-29 51 17-20 43-48 17Z" fill="#FF742C"/>
+      <path d="m293 227 24-16 30 10 10 18-35 14Z" fill="#FFE08D"/>
+      <path d="m320 228 12-63 38-19 23 33-32 72Z" fill="#FFB642"/>
+      <path d="m334 211 8-39 27-15 9 14-24 48Z" fill="#FFE08D" stroke="none"/>
+      <path d="m331 172 43-16 12 24-44 19Z" fill="#FF742C" stroke-width="8"/>
+      <path d="m346 147 8-32 31-16 25 17-3 35-23 24-25-7Z" fill="#27333D"/>
+      <path d="m356 129 24-17 19 10-2 26-16 13-23-9Z" fill="#FFD394" stroke-width="7"/>
+      <path d="m381 113 3 34m-14-29 4 28" stroke="#CB895F" stroke-width="5"/>
+      <path d="m349 147 14 18 21 9-12 17-25-14-9-17Z" fill="#46B5B7" stroke-width="7"/>
+    </g>
+    <g id="front-leg">
+      <path d="m246 365 50-16 27 66 4 52-53 14-24-53Z" fill="#FF742C"/>
+      <path d="m262 373 29-10 17 56 3 32-25 6-14-40Z" fill="#FFB642" stroke="none"/>
+      <path d="m269 441 59-15 8 37-58 19-15-20Z" fill="#FFE08D"/>
+      <path d="m283 477 45-12 29 48-38 35-29-22Z" fill="#27333D"/>
+      <path d="m317 509 35-10 40 27 24 2 19 30-14 24-93 13-28-20Z" fill="#101E25"/>
+      <path d="m303 565 121-17 11 10-14 24-93 13-28-20Z" fill="#27333D"/>
+      <path d="m326 517 25-8 39 27-8 10-50 7-16-17Z" fill="#3A4248" stroke="none"/>
+      <path d="m304 490 20-6 11 18-18 16Z" fill="#46B5B7" stroke-width="6"/>
+    </g>
+    <g id="body">
+      <path d="m182 240 86-18 40 70-15 84-76 25-62-63Z" fill="#27333D"/>
+      <path d="m189 225 78-12 48 60-8 52-99 40-50-43Z" fill="#FFB642"/>
+      <path d="m193 240 66-12 26 43-10 39-68 25-30-27Z" fill="#FFE08D" stroke="none"/>
+      <path d="m267 213 48 60-8 52-26-8 9-45-35-40Z" fill="#FF742C" stroke="none"/>
+      <path d="m174 303 34 34 75-25 21 17-7 39-79 27-53-54Z" fill="#FF742C"/>
+      <path d="m207 339 17 31 60-21 9-18-13-8Z" fill="#FFB642" stroke="none"/>
+      <path d="m211 357 86-28 2 30-81 29-21-14Z" fill="#27333D" stroke-width="8"/>
+      <path d="m246 349 27-9 8 25-29 10Z" fill="#FFE08D" stroke-width="7"/>
+      <path d="m249 352 9 14 14-6" stroke="#FF742C" stroke-width="5"/>
+      <path d="m198 279 21-8 9 12-7 24-19-1-12-11Z" fill="#46B5B7" stroke-width="7"/>
+      <path d="m203 280 12-4 6 8-6 12-8-1-5-8Z" fill="#A2F2E2" stroke="none"/>
+      <path d="m247 259 19-5m-15 16 20-6" stroke="#D99136" stroke-width="6"/>
+    </g>
+    <g id="braced-left-arm">
+      <path d="m165 235 37 24-15 48-43 3-29-35Z" fill="#FF742C"/>
+      <path d="m137 242 28-15 30 21-6 29-43 12-27-21Z" fill="#FFB642"/>
+      <path d="m143 244 23-9 21 15-5 12-33 11-17-17Z" fill="#FFE08D" stroke="none"/>
+      <path d="m139 286 27 18-17 43-40-8-10-25Z" fill="#FFB642"/>
+      <path d="m106 313 47 10-6 23-40-8-8-15Z" fill="#FF742C" stroke-width="7"/>
+      <path d="m111 337 38 8 39-27 20 27-36 40-43-6-23-20Z" fill="#27333D"/>
+      <path d="m172 317 29-12 29 16-4 32-23 18-23-9-18-23Z" fill="#FFD394" stroke-width="8"/>
+      <path d="m198 311 3 18m12-11 0 18" stroke="#CB895F" stroke-width="5"/>
+      <path d="m158 330 17 24 20 11-14 16-29-16-10-19Z" fill="#46B5B7" stroke-width="7"/>
+    </g>
+    <!-- Helmet and two-eye face. The orange visor rim echoes the game's armor. -->
+    <g id="head">
+      <path d="m231 189 48-6 10 44-40 20-29-17Z" fill="#FFD394"/>
+      <path d="m246 213 33-17 6 25-36 18-17-12Z" fill="#CB895F" stroke="none"/>
+      <path d="m213 112 67-9 39 33-2 74-42 24-56-20-15-63Z" fill="#FFD394"/>
+      <path d="m286 120 33 16-2 74-29 17-10-68Z" fill="#DFAA76" stroke="none"/>
+      <path d="m216 137 64-9 5 18-67 11Z" fill="#FFE7B1" stroke="none"/>
+      <path d="m232 164 1 10m47-18 2 10" stroke="#12232B" stroke-width="10"/>
+      <path d="m251 193 17-3 6-6" stroke="#A66451" stroke-width="6"/>
+      <path d="m202 143-5-45 23-30 58-11 43 31 6 46-23 8-24-19-61 7Z" fill="#FFB642"/>
+      <path d="m213 98 21-23 42-7 28 20 8 28-32-16-57 11Z" fill="#FFE08D" stroke="none"/>
+      <path d="m281 61 40 27 6 46-23 8-24-19-3-27Z" fill="#FF742C" stroke="none"/>
+      <path d="m198 125 80-14 48 20 3 17-22 8-29-23-66 10-18 11Z" fill="#27333D" stroke-width="8"/>
+      <path d="m206 126 72-12 20 8-77 13-18 10Z" fill="#46B5B7" stroke="none"/>
+      <path d="m223 145-15 18 8 37 17 15-14 13-19-16-11-51 14-19Z" fill="#FFB642" stroke-width="8"/>
+      <path d="m230 76-18-19 5-30 32 4 22 15 22 20-24 12Z" fill="#92313B"/>
+      <path d="m221 35 24 6 25 28-25 1-16-14Z" fill="#D95246" stroke="none"/>
+      <path d="m232 73 9-29m12 26 2-15" stroke="#6A2430" stroke-width="6"/>
+    </g>
+  </g>
+</svg>

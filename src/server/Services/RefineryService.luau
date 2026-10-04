@@ -22,6 +22,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Price = require(ReplicatedStorage.Shared.Price)
+local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -32,6 +33,7 @@ local RefineryService = Knit.CreateService({
 		Collected = Knit.CreateSignal(), -- (bars)
 		WhileAway = Knit.CreateSignal(), -- (report)
 		Notice = Knit.CreateSignal(), -- (text)
+		Open = Knit.CreateSignal(), -- owner's physical refinery management prompt
 	},
 })
 
@@ -47,6 +49,7 @@ local MonetizationService
 
 local touchCooldown: { [Player]: { [string]: number } } = {}
 local blockedBy: { [Player]: Refining.Blocked } = {}
+local priorityCooldown: { [Player]: number } = {}
 
 local sum = Refining.sum
 
@@ -87,6 +90,33 @@ local function setPrompt(container: Instance?, stationId: string, currentLevel: 
 		prompt.ObjectText = Config.Home.Stations[stationId].Name
 		prompt:SetAttribute("Maxed", true)
 	end
+end
+
+-- Decorative slots and upgrade pieces read these attributes locally. Publish
+-- zero for depleted types too, so a previous pile cannot remain visible.
+local function publishAppearance(stations: Model, data: any)
+	for _, id in Config.Home.StationOrder do
+		stations:SetAttribute("StationLevel_" .. id, data.stations[id])
+	end
+	local types: { [string]: boolean } = {}
+	for _, id in Config.Home.OreOrder do types[id] = true end
+	for _, source in { Config.Home.OreNames, Config.Home.BarPrices, data.hopper, data.bin } do
+		for id in source do
+			if type(id) == "string" then types[id] = true end
+		end
+	end
+	for name in stations:GetAttributes() do
+		if string.sub(name, 1, 4) == "Ore_" then
+			types[string.sub(name, 5)] = true
+		elseif string.sub(name, 1, 5) == "Bars_" then
+			types[string.sub(name, 6)] = true
+		end
+	end
+	for id in types do
+		stations:SetAttribute("Ore_" .. id, data.hopper[id] or 0)
+		stations:SetAttribute("Bars_" .. id, data.bin[id] or 0)
+	end
+	stations:SetAttribute("ActiveOre", RefineryQueue.nextOre(data.hopper, data.refinePriority))
 end
 
 -- Brings the owner's station displays, prompts and conveyor state up to date.
@@ -131,6 +161,7 @@ function RefineryService:RefreshPlot(player: Player)
 	setPrompt(conveyor, "conveyor", s.conveyor)
 	setPrompt(refinery, "refinery", s.refinery)
 	setPrompt(collector, "collector", s.collector)
+	publishAppearance(stations, data)
 
 	-- Clients animate ore on the belt while the line is running
 	local running = sum(data.hopper) > 0 and blockedBy[player] ~= "collector"
@@ -156,6 +187,30 @@ function RefineryService:Refresh(player: Player, immediate: boolean?)
 	else
 		PlayerStateService:Replicate(player)
 	end
+end
+
+-- The rebirth caller replicates the reset profile after clearing all transient state.
+function RefineryService:ResetAfterRebirth(player: Player)
+	blockedBy[player] = nil
+	touchCooldown[player] = nil
+	priorityCooldown[player] = nil
+	self:RefreshPlot(player)
+end
+
+-- Only the caller's saved line can change. Validation creates a detached,
+-- complete preference list; empty requests restore the configured default.
+function RefineryService:SetPriority(player: Player, requested: any): boolean
+	local data = PlayerStateService:Get(player)
+	if not data or not PlotService:GetStations(player) then
+		return false
+	end
+	local priority = RefineryQueue.validate(requested)
+	if not priority then
+		return false
+	end
+	data.refinePriority = priority
+	self:Refresh(player, true)
+	return true
 end
 
 local function touchReady(player: Player, key: string): boolean
@@ -273,6 +328,49 @@ function RefineryService:_connectStations(player: Player, stations: Model)
 			end
 		end)
 	end
+
+	local refinery = station(stations, "refinery")
+	if refinery then
+		for _, descendant in refinery:GetDescendants() do
+			if descendant:IsA("ProximityPrompt") and descendant.Name == "ManageRefinery" then
+				descendant:Destroy()
+			end
+		end
+	end
+	local anchor: BasePart? = if hopper and hopper:IsA("Model") then hopper.PrimaryPart else nil
+	if not anchor and hopper then
+		local body = hopper:FindFirstChild("Body", true)
+		local part = if body and body:IsA("BasePart") then body else hopper:FindFirstChildWhichIsA("BasePart", true)
+		if part and part:IsA("BasePart") then
+			anchor = part
+		end
+	end
+	if anchor and hopper and not hopper:FindFirstChild("ManageRefinery", true) then
+		local prompt = Instance.new("ProximityPrompt")
+		prompt.Name = "ManageRefinery"
+		prompt.ActionText = "Refining order"
+		prompt.ObjectText = "Hopper"
+		prompt.KeyboardKeyCode = Enum.KeyCode.R
+		prompt.HoldDuration = 0
+		prompt.MaxActivationDistance = 12
+		prompt.UIOffset = Vector2.new(0, 0)
+		prompt.Parent = anchor
+		prompt.Triggered:Connect(function(who)
+			if who == player then
+				self.Client.Open:Fire(player)
+			end
+		end)
+	end
+end
+
+function RefineryService.Client:SetPriority(player: Player, requested: any): boolean
+	local now = os.clock()
+	local previous = priorityCooldown[player]
+	if previous and now - previous < 0.15 then
+		return false
+	end
+	priorityCooldown[player] = now
+	return self.Server:SetPriority(player, requested)
 end
 
 -- Studio-only: pretend the player was away, to test offline income.
@@ -303,11 +401,13 @@ function RefineryService:KnitStart()
 	DataService.ProfileLoaded:Connect(function(player, profile)
 		local lastSeen = profile.Data.lastSeen
 		local joinedAt = os.time()
+		local rebirths = profile.Data.rebirths or 0
 		-- The online tick runs while we wait for the passes, so it already counts
 		-- that time: the away time ends at the join, and lastSeen moves up now.
 		profile.Data.lastSeen = joinedAt
 		MonetizationService:WaitForPasses(player) -- the Offline Hours+ cap
-		if lastSeen and lastSeen > 0 then
+		-- A rebirth while pass ownership loads ends the old life's offline work.
+		if lastSeen and lastSeen > 0 and (profile.Data.rebirths or 0) == rebirths then
 			self:CatchUp(player, joinedAt - lastSeen)
 		end
 		self:Refresh(player, true)
@@ -320,6 +420,7 @@ function RefineryService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		touchCooldown[player] = nil
 		blockedBy[player] = nil
+		priorityCooldown[player] = nil
 	end)
 
 	-- Online tick
@@ -334,6 +435,7 @@ function RefineryService:KnitStart()
 				local data = PlayerStateService:Get(player)
 				if data then
 					local before = blockedBy[player]
+					local progressBefore = data.progress
 					local speedMult = MonetizationService:RefinerySpeedMult(data)
 					local _, made, blocked = Refining.run(data, dt, speedMult)
 					blockedBy[player] = blocked
@@ -345,6 +447,8 @@ function RefineryService:KnitStart()
 					end
 					if made > 0 or blocked ~= before or overclockEnded then
 						self:Refresh(player)
+					elseif data.progress ~= progressBefore then
+						PlayerStateService:Replicate(player)
 					end
 				end
 			end

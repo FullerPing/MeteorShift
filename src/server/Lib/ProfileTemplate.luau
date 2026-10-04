@@ -18,10 +18,11 @@ return {
 		collector = 1,
 	},
 	hopper = {}, -- ore waiting, by type
+	refinePriority = {}, -- ore preference; empty preserves the default order
 	bin = {}, -- bars waiting at the collection post, by type
 	progress = 0, -- fractional ore between production ticks
 	bars = {}, -- bars carried, by type
-	decor = {}, -- placed items, survives rebirth
+	decor = {}, -- placed items; reset with active gameplay on rebirth
 	index = {}, -- discovered minerals
 	rebirths = 0,
 	lastSeen = 0,

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" role="img" aria-labelledby="pad-refined-title">
+  <title id="pad-refined-title">Teleport pad with an energy field</title>
+  <path d="M16 35V22a16 16 0 0 1 32 0v13"/>
+  <ellipse cx="32" cy="53" rx="22" ry="5"/>
+  <circle cx="32" cy="20" r="5" fill="currentColor" stroke="none"/>
+  <path d="M24 33a8 8 0 0 1 16 0v4H24Z" fill="currentColor" stroke="none"/>
+  <rect x="25" y="41" width="5" height="4" rx="1" fill="currentColor" stroke="none"/>
+  <rect x="34" y="39" width="5" height="4" rx="1" fill="currentColor" stroke="none"/>
+</svg>

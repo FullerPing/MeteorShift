@@ -1,0 +1,1477 @@
+{
+  "base": "MeteorShift-newest.rbxl",
+  "target": "MeteorShift-hud-redesign.rbxl",
+  "baseSha256": "93f7613d2b66493893c5fa528ac845d37ed176c2d9fb9bdd9f91f1490532b2fe",
+  "targetSha256": "44727bce3eb2f967e4b38a82f4992f913c41467b366b0a996e60271f35190dcf",
+  "checks": [
+    {
+      "property": "CSGDictionaryService.AttributesSerialize",
+      "count": 1,
+      "type": 1,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "CSGDictionaryService.Capabilities",
+      "count": 1,
+      "type": 33,
+      "bytes": 8,
+      "equal": true,
+      "baseSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "targetSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    },
+    {
+      "property": "CSGDictionaryService.DefinesCapabilities",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "targetSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "property": "CSGDictionaryService.HistoryId",
+      "count": 1,
+      "type": 31,
+      "bytes": 16,
+      "equal": true,
+      "baseSha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+      "targetSha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+    },
+    {
+      "property": "CSGDictionaryService.Name",
+      "count": 1,
+      "type": 1,
+      "bytes": 24,
+      "equal": true,
+      "baseSha256": "8660fd4a7c7c646a97b864c6ea1cf93cf216b88bd89788fff5ae01f5c5b9e4ff",
+      "targetSha256": "8660fd4a7c7c646a97b864c6ea1cf93cf216b88bd89788fff5ae01f5c5b9e4ff"
+    },
+    {
+      "property": "CSGDictionaryService.SourceAssetId",
+      "count": 1,
+      "type": 27,
+      "bytes": 8,
+      "equal": true,
+      "baseSha256": "cd2662154e6d76b2b2b92e70c0cac3ccf534f9b74eb5b89819ec509083d00a50",
+      "targetSha256": "cd2662154e6d76b2b2b92e70c0cac3ccf534f9b74eb5b89819ec509083d00a50"
+    },
+    {
+      "property": "CSGDictionaryService.Tags",
+      "count": 1,
+      "type": 28,
+      "bytes": 68,
+      "equal": true,
+      "baseSha256": "4cb9295869046ad0df77f74713b7b648cc28f9f79712fc946ee273f7daff4485",
+      "targetSha256": "4cb9295869046ad0df77f74713b7b648cc28f9f79712fc946ee273f7daff4485"
+    },
+    {
+      "property": "CSGDictionaryService.UniqueId",
+      "count": 1,
+      "type": 31,
+      "bytes": 16,
+      "equal": true,
+      "baseSha256": "d47c7b3c4dec2b698a6143cdc57a02173da83090c7656b0372503629e63d73c2",
+      "targetSha256": "d47c7b3c4dec2b698a6143cdc57a02173da83090c7656b0372503629e63d73c2"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.AttributesSerialize",
+      "count": 1,
+      "type": 1,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.Capabilities",
+      "count": 1,
+      "type": 33,
+      "bytes": 8,
+      "equal": true,
+      "baseSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "targetSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.DefinesCapabilities",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "targetSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.HistoryId",
+      "count": 1,
+      "type": 31,
+      "bytes": 16,
+      "equal": true,
+      "baseSha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+      "targetSha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.Name",
+      "count": 1,
+      "type": 1,
+      "bytes": 37,
+      "equal": true,
+      "baseSha256": "3813d5e0bd4d0b20d0d92c4ad291fac3c34b1c75c9abc173a8836e8e11a8aa52",
+      "targetSha256": "3813d5e0bd4d0b20d0d92c4ad291fac3c34b1c75c9abc173a8836e8e11a8aa52"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.SourceAssetId",
+      "count": 1,
+      "type": 27,
+      "bytes": 8,
+      "equal": true,
+      "baseSha256": "cd2662154e6d76b2b2b92e70c0cac3ccf534f9b74eb5b89819ec509083d00a50",
+      "targetSha256": "cd2662154e6d76b2b2b92e70c0cac3ccf534f9b74eb5b89819ec509083d00a50"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.Tags",
+      "count": 1,
+      "type": 28,
+      "bytes": 68,
+      "equal": true,
+      "baseSha256": "4cb9295869046ad0df77f74713b7b648cc28f9f79712fc946ee273f7daff4485",
+      "targetSha256": "4cb9295869046ad0df77f74713b7b648cc28f9f79712fc946ee273f7daff4485"
+    },
+    {
+      "property": "NonReplicatedCSGDictionaryService.UniqueId",
+      "count": 1,
+      "type": 31,
+      "bytes": 16,
+      "equal": true,
+      "baseSha256": "a21cbded9b77495aa013d3c5c1d0d0c88c1f7bbd9d356cc8e14a215f619cd644",
+      "targetSha256": "a21cbded9b77495aa013d3c5c1d0d0c88c1f7bbd9d356cc8e14a215f619cd644"
+    },
+    {
+      "property": "Terrain.AcquisitionMethod",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "390b36a09502b05d4f8c27aea2636c6b7fd05b27d742ed32074ffea1f888ebe4",
+      "targetSha256": "390b36a09502b05d4f8c27aea2636c6b7fd05b27d742ed32074ffea1f888ebe4"
+    },
+    {
+      "property": "Terrain.Anchored",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.AttributesSerialize",
+      "count": 1,
+      "type": 1,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.AudioCanCollide",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.BackParamA",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1",
+      "targetSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1"
+    },
+    {
+      "property": "Terrain.BackParamB",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10",
+      "targetSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10"
+    },
+    {
+      "property": "Terrain.BackSurface",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.BackSurfaceInput",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.BottomParamA",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1",
+      "targetSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1"
+    },
+    {
+      "property": "Terrain.BottomParamB",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10",
+      "targetSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10"
+    },
+    {
+      "property": "Terrain.BottomSurface",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "1bc5d0e3df0ea12c4d0078668d14924f95106bbe173e196de50fe13a900b0937",
+      "targetSha256": "1bc5d0e3df0ea12c4d0078668d14924f95106bbe173e196de50fe13a900b0937"
+    },
+    {
+      "property": "Terrain.BottomSurfaceInput",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.CFrame",
+      "count": 1,
+      "type": 16,
+      "bytes": 13,
+      "equal": true,
+      "baseSha256": "edea17609e561aacc378a28195dfd3fd8916a95b3f4334b986fe0aab9bc87565",
+      "targetSha256": "edea17609e561aacc378a28195dfd3fd8916a95b3f4334b986fe0aab9bc87565"
+    },
+    {
+      "property": "Terrain.CanCollide",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.CanQuery",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.CanTouch",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.Capabilities",
+      "count": 1,
+      "type": 33,
+      "bytes": 8,
+      "equal": true,
+      "baseSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+      "targetSha256": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc"
+    },
+    {
+      "property": "Terrain.CastShadow",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.CollisionGroup",
+      "count": 1,
+      "type": 1,
+      "bytes": 11,
+      "equal": true,
+      "baseSha256": "d07ec9ad1c2fa591481676fd5e200b5bc72862fa8852d4ea67cc238c8ebd9b37",
+      "targetSha256": "d07ec9ad1c2fa591481676fd5e200b5bc72862fa8852d4ea67cc238c8ebd9b37"
+    },
+    {
+      "property": "Terrain.CollisionGroupId",
+      "count": 1,
+      "type": 3,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.Color3uint8",
+      "count": 1,
+      "type": 26,
+      "bytes": 3,
+      "equal": true,
+      "baseSha256": "eaf40139d7b27696654ff6a592e7d90ba208bfadfb113a988684c809d14fdf18",
+      "targetSha256": "eaf40139d7b27696654ff6a592e7d90ba208bfadfb113a988684c809d14fdf18"
+    },
+    {
+      "property": "Terrain.CustomPhysicalProperties",
+      "count": 1,
+      "type": 25,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986",
+      "targetSha256": "dbc1b4c900ffe48d575b5da5c638040125f65db0fe3e24494b76ea986457d986"
+    },
+    {
+      "property": "Terrain.Decoration",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.DefinesCapabilities",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "targetSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "property": "Terrain.EnableFluidForces",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.FrontParamA",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1",
+      "targetSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1"
+    },
+    {
+      "property": "Terrain.FrontParamB",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10",
+      "targetSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10"
+    },
+    {
+      "property": "Terrain.FrontSurface",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.FrontSurfaceInput",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.GrassLength",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "beb69dba1e35b1e11819a449551354184b148b15e96ea0a4b47a67007bd91bb9",
+      "targetSha256": "beb69dba1e35b1e11819a449551354184b148b15e96ea0a4b47a67007bd91bb9"
+    },
+    {
+      "property": "Terrain.HistoryId",
+      "count": 1,
+      "type": 31,
+      "bytes": 16,
+      "equal": true,
+      "baseSha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb",
+      "targetSha256": "374708fff7719dd5979ec875d56cd2286f6d3cf7ec317a3b25632aab28ec37bb"
+    },
+    {
+      "property": "Terrain.LeftParamA",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1",
+      "targetSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1"
+    },
+    {
+      "property": "Terrain.LeftParamB",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10",
+      "targetSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10"
+    },
+    {
+      "property": "Terrain.LeftSurface",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.LeftSurfaceInput",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.Locked",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a",
+      "targetSha256": "4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a"
+    },
+    {
+      "property": "Terrain.Massless",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "targetSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "property": "Terrain.Material",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6b1e73a0094b7b812d3b9e22cffb4f8239319847522c4fa103753b6950020f93",
+      "targetSha256": "6b1e73a0094b7b812d3b9e22cffb4f8239319847522c4fa103753b6950020f93"
+    },
+    {
+      "property": "Terrain.MaterialColors",
+      "count": 1,
+      "type": 1,
+      "bytes": 73,
+      "equal": true,
+      "baseSha256": "f64dcfa81ebb2a635d7c191ad3bd7acdc7cb7303c1efcf09183789072fc1844d",
+      "targetSha256": "f64dcfa81ebb2a635d7c191ad3bd7acdc7cb7303c1efcf09183789072fc1844d"
+    },
+    {
+      "property": "Terrain.MaterialVariantSerialized",
+      "count": 1,
+      "type": 1,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.Materials",
+      "count": 1,
+      "type": 28,
+      "bytes": 68,
+      "equal": true,
+      "baseSha256": "ba3d6b2ea665fbf0a01241b9e4b9198daecb6f68e6fcc7550611468a9d0bff20",
+      "targetSha256": "ba3d6b2ea665fbf0a01241b9e4b9198daecb6f68e6fcc7550611468a9d0bff20"
+    },
+    {
+      "property": "Terrain.Name",
+      "count": 1,
+      "type": 1,
+      "bytes": 11,
+      "equal": true,
+      "baseSha256": "72cf02e5fa349e4292614826bfbe78d1141084fd1c882570675def850520d26b",
+      "targetSha256": "72cf02e5fa349e4292614826bfbe78d1141084fd1c882570675def850520d26b"
+    },
+    {
+      "property": "Terrain.PhysicsGrid",
+      "count": 1,
+      "type": 1,
+      "bytes": 193638,
+      "equal": true,
+      "baseSha256": "a0c936cc01ef20c2213a4da756817328101b70f061cd9dc28996b3030ec82f2b",
+      "targetSha256": "a0c936cc01ef20c2213a4da756817328101b70f061cd9dc28996b3030ec82f2b"
+    },
+    {
+      "property": "Terrain.PivotOffset",
+      "count": 1,
+      "type": 16,
+      "bytes": 13,
+      "equal": true,
+      "baseSha256": "edea17609e561aacc378a28195dfd3fd8916a95b3f4334b986fe0aab9bc87565",
+      "targetSha256": "edea17609e561aacc378a28195dfd3fd8916a95b3f4334b986fe0aab9bc87565"
+    },
+    {
+      "property": "Terrain.Reflectance",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.RightParamA",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1",
+      "targetSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1"
+    },
+    {
+      "property": "Terrain.RightParamB",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10",
+      "targetSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10"
+    },
+    {
+      "property": "Terrain.RightSurface",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.RightSurfaceInput",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.RootPriority",
+      "count": 1,
+      "type": 3,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.RotVelocity",
+      "count": 1,
+      "type": 14,
+      "bytes": 12,
+      "equal": true,
+      "baseSha256": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "targetSha256": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
+    },
+    {
+      "property": "Terrain.SmoothGrid",
+      "count": 1,
+      "type": 1,
+      "bytes": 891644,
+      "equal": true,
+      "baseSha256": "a5034468d7f745fe139b7e63f6b9ccd611d01d2cefacc107789cad59aa305116",
+      "targetSha256": "a5034468d7f745fe139b7e63f6b9ccd611d01d2cefacc107789cad59aa305116"
+    },
+    {
+      "property": "Terrain.SmoothVoxelsUpgraded",
+      "count": 1,
+      "type": 2,
+      "bytes": 1,
+      "equal": true,
+      "baseSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d",
+      "targetSha256": "6e340b9cffb37a989ca544e6bb780a2c78901d3fb33738768511a30617afa01d"
+    },
+    {
+      "property": "Terrain.SourceAssetId",
+      "count": 1,
+      "type": 27,
+      "bytes": 8,
+      "equal": true,
+      "baseSha256": "cd2662154e6d76b2b2b92e70c0cac3ccf534f9b74eb5b89819ec509083d00a50",
+      "targetSha256": "cd2662154e6d76b2b2b92e70c0cac3ccf534f9b74eb5b89819ec509083d00a50"
+    },
+    {
+      "property": "Terrain.Tags",
+      "count": 1,
+      "type": 28,
+      "bytes": 68,
+      "equal": true,
+      "baseSha256": "4cb9295869046ad0df77f74713b7b648cc28f9f79712fc946ee273f7daff4485",
+      "targetSha256": "4cb9295869046ad0df77f74713b7b648cc28f9f79712fc946ee273f7daff4485"
+    },
+    {
+      "property": "Terrain.TopParamA",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1",
+      "targetSha256": "6d7da85165d7106b53202f21429f76f77f0873387a581b8ac4b6b9b08ee9d8e1"
+    },
+    {
+      "property": "Terrain.TopParamB",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10",
+      "targetSha256": "76803349baeb5f1ce6a8194b832de56fcdc6d0f8d14fe8cb2687956374bfda10"
+    },
+    {
+      "property": "Terrain.TopSurface",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "88185d128d9922e0e6bcd32b07b6c7f20f27968eab447a1d8d1cdf250f79f7d3",
+      "targetSha256": "88185d128d9922e0e6bcd32b07b6c7f20f27968eab447a1d8d1cdf250f79f7d3"
+    },
+    {
+      "property": "Terrain.TopSurfaceInput",
+      "count": 1,
+      "type": 18,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.Transparency",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119",
+      "targetSha256": "df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119"
+    },
+    {
+      "property": "Terrain.UniqueId",
+      "count": 1,
+      "type": 31,
+      "bytes": 16,
+      "equal": true,
+      "baseSha256": "b2aa42e564d3bc0493680cb53b143566b8be3892a62d9a2c110bc425c710f41a",
+      "targetSha256": "b2aa42e564d3bc0493680cb53b143566b8be3892a62d9a2c110bc425c710f41a"
+    },
+    {
+      "property": "Terrain.Velocity",
+      "count": 1,
+      "type": 14,
+      "bytes": 12,
+      "equal": true,
+      "baseSha256": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
+      "targetSha256": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
+    },
+    {
+      "property": "Terrain.VoxelGridAssetContentMap",
+      "count": 1,
+      "type": 35,
+      "bytes": 9,
+      "equal": true,
+      "baseSha256": "4322fd2bc0a137d1375b37b3b2e2b4715b3d3dd7ca9682438d4fea0f8437fad3",
+      "targetSha256": "4322fd2bc0a137d1375b37b3b2e2b4715b3d3dd7ca9682438d4fea0f8437fad3"
+    },
+    {
+      "property": "Terrain.WaterColor",
+      "count": 1,
+      "type": 12,
+      "bytes": 12,
+      "equal": true,
+      "baseSha256": "0d54cde7a55db0c217c364585f7a25dabeaa0bcc3363fbf0a427d5507addb408",
+      "targetSha256": "0d54cde7a55db0c217c364585f7a25dabeaa0bcc3363fbf0a427d5507addb408"
+    },
+    {
+      "property": "Terrain.WaterReflectance",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "8d12d9fcf1bb74eb413e34f28b96439b1260da900a2c70af2440c5c7dbb43c03",
+      "targetSha256": "8d12d9fcf1bb74eb413e34f28b96439b1260da900a2c70af2440c5c7dbb43c03"
+    },
+    {
+      "property": "Terrain.WaterTransparency",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "ff24d9d89f6f9b2918447f9134eee4db9b82cb552c9cb87a60aaf27d0726fad0",
+      "targetSha256": "ff24d9d89f6f9b2918447f9134eee4db9b82cb552c9cb87a60aaf27d0726fad0"
+    },
+    {
+      "property": "Terrain.WaterWaveSize",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "4f640143d9c801ceccbdeb6454c7d806f4e46bf4001fbe46790020ef6e11b1e4",
+      "targetSha256": "4f640143d9c801ceccbdeb6454c7d806f4e46bf4001fbe46790020ef6e11b1e4"
+    },
+    {
+      "property": "Terrain.WaterWaveSpeed",
+      "count": 1,
+      "type": 4,
+      "bytes": 4,
+      "equal": true,
+      "baseSha256": "7cd6a1af91189ed243f1a456ce885d6707e25821ef3e65ca1337611305d99a73",
+      "targetSha256": "7cd6a1af91189ed243f1a456ce885d6707e25821ef3e65ca1337611305d99a73"
+    },
+    {
+      "property": "Terrain.size",
+      "count": 1,
+      "type": 14,
+      "bytes": 12,
+      "equal": true,
+      "baseSha256": "2ff58c05193b8b0f927c3512320c5f30840500edccdcf1067658cd71d72b8f28",
+      "targetSha256": "2ff58c05193b8b0f927c3512320c5f30840500edccdcf1067658cd71d72b8f28"
+    },
+    {
+      "property": "UnionOperation.AeroMeshData",
+      "count": 552,
+      "type": 28,
+      "bytes": 36985,
+      "equal": true,
+      "baseSha256": "4fe5e097982941060b8a46bcbe5cc3301043d88a1e7cc35cf0f25bbbcdcb9aed",
+      "targetSha256": "4fe5e097982941060b8a46bcbe5cc3301043d88a1e7cc35cf0f25bbbcdcb9aed"
+    },
+    {
+      "property": "UnionOperation.Anchored",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "37754f4351fba7c41197388ace139d413084e5f3a9d6ac445e004c38e21b559a",
+      "targetSha256": "37754f4351fba7c41197388ace139d413084e5f3a9d6ac445e004c38e21b559a"
+    },
+    {
+      "property": "UnionOperation.AssetId",
+      "count": 552,
+      "type": 1,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.AttributesSerialize",
+      "count": 552,
+      "type": 1,
+      "bytes": 52884,
+      "equal": true,
+      "baseSha256": "5dab8ac5e6098609be9cdc2569722d61e2339d70dd37136cec6dde6dbccf5a7c",
+      "targetSha256": "5dab8ac5e6098609be9cdc2569722d61e2339d70dd37136cec6dde6dbccf5a7c"
+    },
+    {
+      "property": "UnionOperation.AudioCanCollide",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "37754f4351fba7c41197388ace139d413084e5f3a9d6ac445e004c38e21b559a",
+      "targetSha256": "37754f4351fba7c41197388ace139d413084e5f3a9d6ac445e004c38e21b559a"
+    },
+    {
+      "property": "UnionOperation.BackParamA",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70",
+      "targetSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70"
+    },
+    {
+      "property": "UnionOperation.BackParamB",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c",
+      "targetSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c"
+    },
+    {
+      "property": "UnionOperation.BackSurface",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.BackSurfaceInput",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.BottomParamA",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70",
+      "targetSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70"
+    },
+    {
+      "property": "UnionOperation.BottomParamB",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c",
+      "targetSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c"
+    },
+    {
+      "property": "UnionOperation.BottomSurface",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.BottomSurfaceInput",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.CFrame",
+      "count": 552,
+      "type": 16,
+      "bytes": 26652,
+      "equal": true,
+      "baseSha256": "27d9a5e3a7160cb77b9fa7bc05a339965067713b0ef61c04d51a0aa0c5fcd567",
+      "targetSha256": "27d9a5e3a7160cb77b9fa7bc05a339965067713b0ef61c04d51a0aa0c5fcd567"
+    },
+    {
+      "property": "UnionOperation.CanCollide",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78",
+      "targetSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78"
+    },
+    {
+      "property": "UnionOperation.CanQuery",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78",
+      "targetSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78"
+    },
+    {
+      "property": "UnionOperation.CanTouch",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78",
+      "targetSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78"
+    },
+    {
+      "property": "UnionOperation.Capabilities",
+      "count": 552,
+      "type": 33,
+      "bytes": 4416,
+      "equal": true,
+      "baseSha256": "49e387070e8882b15ad6a2870048a56e39e0743054c624f6a811ed4edb96af92",
+      "targetSha256": "49e387070e8882b15ad6a2870048a56e39e0743054c624f6a811ed4edb96af92"
+    },
+    {
+      "property": "UnionOperation.CastShadow",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78",
+      "targetSha256": "c8879a52c144efb2713820a19cd545a4d84466b1ac520869044f22c7d9f95d78"
+    },
+    {
+      "property": "UnionOperation.ChildData",
+      "count": 552,
+      "type": 1,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.ChildData2",
+      "count": 552,
+      "type": 28,
+      "bytes": 36985,
+      "equal": true,
+      "baseSha256": "16ce82c3c115ec38a00c4ebedecdf3622578f3209ec9d030ba1c29f2efcff0a5",
+      "targetSha256": "16ce82c3c115ec38a00c4ebedecdf3622578f3209ec9d030ba1c29f2efcff0a5"
+    },
+    {
+      "property": "UnionOperation.CollisionGroup",
+      "count": 552,
+      "type": 1,
+      "bytes": 6072,
+      "equal": true,
+      "baseSha256": "ac87583a71c154eddb4d51f47f335a585195043837a702a7190fe30f4420377a",
+      "targetSha256": "ac87583a71c154eddb4d51f47f335a585195043837a702a7190fe30f4420377a"
+    },
+    {
+      "property": "UnionOperation.CollisionGroupId",
+      "count": 552,
+      "type": 3,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.Color3uint8",
+      "count": 552,
+      "type": 26,
+      "bytes": 1656,
+      "equal": true,
+      "baseSha256": "543b8cfb31e4c07adedfbc211fb7d98bd509cc372ca45399481e96e70f71d25d",
+      "targetSha256": "543b8cfb31e4c07adedfbc211fb7d98bd509cc372ca45399481e96e70f71d25d"
+    },
+    {
+      "property": "UnionOperation.ComponentIndex",
+      "count": 552,
+      "type": 3,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "51cad26db4d0944a22c46a629772d0efb29a733af183eb61f08b85e3d2d87639",
+      "targetSha256": "51cad26db4d0944a22c46a629772d0efb29a733af183eb61f08b85e3d2d87639"
+    },
+    {
+      "property": "UnionOperation.CustomPhysicalProperties",
+      "count": 552,
+      "type": 25,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "a6708f8623fe5b237f1fe86b650a1acd0cadc2bf4e65e18974fb8d7fa3f35dac",
+      "targetSha256": "a6708f8623fe5b237f1fe86b650a1acd0cadc2bf4e65e18974fb8d7fa3f35dac"
+    },
+    {
+      "property": "UnionOperation.DefinesCapabilities",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500",
+      "targetSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500"
+    },
+    {
+      "property": "UnionOperation.EnableFluidForces",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "37754f4351fba7c41197388ace139d413084e5f3a9d6ac445e004c38e21b559a",
+      "targetSha256": "37754f4351fba7c41197388ace139d413084e5f3a9d6ac445e004c38e21b559a"
+    },
+    {
+      "property": "UnionOperation.FluidFidelityInternal",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.FormFactor",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "6f760f308ff0f4fc4040e1ed307cd30ce6ede32856d92d676bdc71b324d54102",
+      "targetSha256": "6f760f308ff0f4fc4040e1ed307cd30ce6ede32856d92d676bdc71b324d54102"
+    },
+    {
+      "property": "UnionOperation.FrontParamA",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70",
+      "targetSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70"
+    },
+    {
+      "property": "UnionOperation.FrontParamB",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c",
+      "targetSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c"
+    },
+    {
+      "property": "UnionOperation.FrontSurface",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.FrontSurfaceInput",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.HistoryId",
+      "count": 552,
+      "type": 31,
+      "bytes": 8832,
+      "equal": true,
+      "baseSha256": "2abd7ed4a4cb7a9433e22c90e78a931be873802ac544aff00ec6d86d58c9f8fc",
+      "targetSha256": "2abd7ed4a4cb7a9433e22c90e78a931be873802ac544aff00ec6d86d58c9f8fc"
+    },
+    {
+      "property": "UnionOperation.InertiaMigrated",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500",
+      "targetSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500"
+    },
+    {
+      "property": "UnionOperation.InitialSize",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "45ae000481285af16332a36134a0186117883a0ef929722ca681d5e2388c9035",
+      "targetSha256": "45ae000481285af16332a36134a0186117883a0ef929722ca681d5e2388c9035"
+    },
+    {
+      "property": "UnionOperation.LeftParamA",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70",
+      "targetSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70"
+    },
+    {
+      "property": "UnionOperation.LeftParamB",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c",
+      "targetSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c"
+    },
+    {
+      "property": "UnionOperation.LeftSurface",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.LeftSurfaceInput",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.Locked",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500",
+      "targetSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500"
+    },
+    {
+      "property": "UnionOperation.Massless",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500",
+      "targetSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500"
+    },
+    {
+      "property": "UnionOperation.Material",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "aad0586309bb78c199961ef8f64cf7450a949d942cce6bb63c705d65e301b29e",
+      "targetSha256": "aad0586309bb78c199961ef8f64cf7450a949d942cce6bb63c705d65e301b29e"
+    },
+    {
+      "property": "UnionOperation.MaterialVariantSerialized",
+      "count": 552,
+      "type": 1,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.MeshData",
+      "count": 552,
+      "type": 1,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.MeshData2",
+      "count": 552,
+      "type": 28,
+      "bytes": 36985,
+      "equal": true,
+      "baseSha256": "4fe5e097982941060b8a46bcbe5cc3301043d88a1e7cc35cf0f25bbbcdcb9aed",
+      "targetSha256": "4fe5e097982941060b8a46bcbe5cc3301043d88a1e7cc35cf0f25bbbcdcb9aed"
+    },
+    {
+      "property": "UnionOperation.Name",
+      "count": 552,
+      "type": 1,
+      "bytes": 6396,
+      "equal": true,
+      "baseSha256": "dbe4adbfc2fbb6bd931fc4f98df3ef509f826d5d468c6be8136cd3f3eb7ea671",
+      "targetSha256": "dbe4adbfc2fbb6bd931fc4f98df3ef509f826d5d468c6be8136cd3f3eb7ea671"
+    },
+    {
+      "property": "UnionOperation.OffCentered",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500",
+      "targetSha256": "0345bffb28f80f4d0ded1a2af09a337b18ab3a80c68205bc8321a6ad4d409500"
+    },
+    {
+      "property": "UnionOperation.PhysicalConfigData",
+      "count": 552,
+      "type": 28,
+      "bytes": 36985,
+      "equal": true,
+      "baseSha256": "7aec49be6817cb2a570ff691490f5896ea707173c9dca114dd7060f2a8e6b39b",
+      "targetSha256": "7aec49be6817cb2a570ff691490f5896ea707173c9dca114dd7060f2a8e6b39b"
+    },
+    {
+      "property": "UnionOperation.PhysicsData",
+      "count": 552,
+      "type": 1,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.PivotOffset",
+      "count": 552,
+      "type": 16,
+      "bytes": 7176,
+      "equal": true,
+      "baseSha256": "abc03c62d7a6e3936999fdc321f8856e92af48580840c657e7ebe127693b25f9",
+      "targetSha256": "abc03c62d7a6e3936999fdc321f8856e92af48580840c657e7ebe127693b25f9"
+    },
+    {
+      "property": "UnionOperation.Reflectance",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.RenderFidelity",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "38f04323899cf507fb56cf0c010d6b8b7a805cc0915c5a96d35480b195064167",
+      "targetSha256": "38f04323899cf507fb56cf0c010d6b8b7a805cc0915c5a96d35480b195064167"
+    },
+    {
+      "property": "UnionOperation.RightParamA",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70",
+      "targetSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70"
+    },
+    {
+      "property": "UnionOperation.RightParamB",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c",
+      "targetSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c"
+    },
+    {
+      "property": "UnionOperation.RightSurface",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.RightSurfaceInput",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.RootPriority",
+      "count": 552,
+      "type": 3,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.RotVelocity",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "fa15e8deeb35e938e7d6607bc9e36cb147aff8dbf4a724badf6a4b1b06f75f3a",
+      "targetSha256": "fa15e8deeb35e938e7d6607bc9e36cb147aff8dbf4a724badf6a4b1b06f75f3a"
+    },
+    {
+      "property": "UnionOperation.SmoothingAngle",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.SolidMeshHolder",
+      "count": 552,
+      "type": 28,
+      "bytes": 36985,
+      "equal": true,
+      "baseSha256": "e234d219304b95bcc244abe013f2c8049108807055d0e32807347ee0fa65649d",
+      "targetSha256": "e234d219304b95bcc244abe013f2c8049108807055d0e32807347ee0fa65649d"
+    },
+    {
+      "property": "UnionOperation.SourceAssetId",
+      "count": 552,
+      "type": 27,
+      "bytes": 4416,
+      "equal": true,
+      "baseSha256": "d2af2c0bf59bbb79c0c182eba7f8734056824678dc31b8f4436dc3a091b468fc",
+      "targetSha256": "d2af2c0bf59bbb79c0c182eba7f8734056824678dc31b8f4436dc3a091b468fc"
+    },
+    {
+      "property": "UnionOperation.Tags",
+      "count": 552,
+      "type": 28,
+      "bytes": 36985,
+      "equal": true,
+      "baseSha256": "4fe5e097982941060b8a46bcbe5cc3301043d88a1e7cc35cf0f25bbbcdcb9aed",
+      "targetSha256": "4fe5e097982941060b8a46bcbe5cc3301043d88a1e7cc35cf0f25bbbcdcb9aed"
+    },
+    {
+      "property": "UnionOperation.TopParamA",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70",
+      "targetSha256": "28629b7dca5a1c7758d5e6925edc91c29feb7ef57f1baf96224ef96023368d70"
+    },
+    {
+      "property": "UnionOperation.TopParamB",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c",
+      "targetSha256": "30e0d58fa0d12680b38b7b5f83a65ca2f8319a2dc6b616b7e514de13781bec7c"
+    },
+    {
+      "property": "UnionOperation.TopSurface",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.TopSurfaceInput",
+      "count": 552,
+      "type": 18,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a",
+      "targetSha256": "8e7b9d1bcc26c42f6cc92f9222c9922ee30ecd2ad97cbbb633cf6ef8569f103a"
+    },
+    {
+      "property": "UnionOperation.Transparency",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "107241bb9ec17cca060ca1a90a464f88a9f8aa5a0cfd1ded3fd6ee3cce7bb313",
+      "targetSha256": "107241bb9ec17cca060ca1a90a464f88a9f8aa5a0cfd1ded3fd6ee3cce7bb313"
+    },
+    {
+      "property": "UnionOperation.TriangleCount",
+      "count": 552,
+      "type": 3,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "5ba161bd966099db27a12a8a5de076c927d45312d5a4b4b7672acc50b16bd306",
+      "targetSha256": "5ba161bd966099db27a12a8a5de076c927d45312d5a4b4b7672acc50b16bd306"
+    },
+    {
+      "property": "UnionOperation.UniqueId",
+      "count": 552,
+      "type": 31,
+      "bytes": 8832,
+      "equal": true,
+      "baseSha256": "952cac6c71acc82a89ff6db82f31eb19c112cfa00d14feb1a0960d016d5a427a",
+      "targetSha256": "952cac6c71acc82a89ff6db82f31eb19c112cfa00d14feb1a0960d016d5a427a"
+    },
+    {
+      "property": "UnionOperation.UnscaledCofm",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "52c9f8fb7c1d737021b1b208dfcb3cc683b727146040dd2d8c18283373f43956",
+      "targetSha256": "52c9f8fb7c1d737021b1b208dfcb3cc683b727146040dd2d8c18283373f43956"
+    },
+    {
+      "property": "UnionOperation.UnscaledVolInertiaDiags",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "7d9063a7f5d549ca4aa413a8200d5cc0423bbf2f7480a6804b0572489ad66201",
+      "targetSha256": "7d9063a7f5d549ca4aa413a8200d5cc0423bbf2f7480a6804b0572489ad66201"
+    },
+    {
+      "property": "UnionOperation.UnscaledVolInertiaOffDiags",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "3e0f314bc8d28568525b856dc4a604ccf1e35320b2ebcd6d7f31f4a5f2c87894",
+      "targetSha256": "3e0f314bc8d28568525b856dc4a604ccf1e35320b2ebcd6d7f31f4a5f2c87894"
+    },
+    {
+      "property": "UnionOperation.UnscaledVolume",
+      "count": 552,
+      "type": 4,
+      "bytes": 2208,
+      "equal": true,
+      "baseSha256": "da4f080b6412c31f2d90bcc292fb2e71c0669a0dd472cafc1601b3442b9842d2",
+      "targetSha256": "da4f080b6412c31f2d90bcc292fb2e71c0669a0dd472cafc1601b3442b9842d2"
+    },
+    {
+      "property": "UnionOperation.UsePartColor",
+      "count": 552,
+      "type": 2,
+      "bytes": 552,
+      "equal": true,
+      "baseSha256": "ab4af6737ecc7e682eb0931edd21445118e522c58c290401c75f27f0375900dc",
+      "targetSha256": "ab4af6737ecc7e682eb0931edd21445118e522c58c290401c75f27f0375900dc"
+    },
+    {
+      "property": "UnionOperation.Velocity",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "fa15e8deeb35e938e7d6607bc9e36cb147aff8dbf4a724badf6a4b1b06f75f3a",
+      "targetSha256": "fa15e8deeb35e938e7d6607bc9e36cb147aff8dbf4a724badf6a4b1b06f75f3a"
+    },
+    {
+      "property": "UnionOperation.size",
+      "count": 552,
+      "type": 14,
+      "bytes": 6624,
+      "equal": true,
+      "baseSha256": "93c39b163797a5ef6d2fbb109073c725c295649ff52eb130e1934271094796ef",
+      "targetSha256": "93c39b163797a5ef6d2fbb109073c725c295649ff52eb130e1934271094796ef"
+    }
+  ],
+  "errors": [],
+  "success": true
+}
