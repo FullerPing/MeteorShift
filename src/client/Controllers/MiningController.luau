@@ -51,6 +51,17 @@ local watchedNodes: { [BasePart]: boolean } = {} -- nodes already listening for 
 local floaters: { BasePart } = {} -- oldest first
 local oreChunks: { BasePart } = {} -- oldest first
 
+-- Any primary menu open blocks mining (each menu sets its own attribute on the player)
+local MENU_FLAGS = { "ShopOpen", "SettingsOpen", "RefineryOpen", "IndexOpen", "RebirthOpen", "StoreOpen" }
+local function menuOpen(): boolean
+	for _, flag in MENU_FLAGS do
+		if player:GetAttribute(flag) then
+			return true
+		end
+	end
+	return false
+end
+
 local function distanceToPart(part: BasePart, point: Vector3): number
 	local localPoint = part.CFrame:PointToObjectSpace(point)
 	local half = part.Size / 2
@@ -364,7 +375,7 @@ local function turnTowardTarget(dt: number)
 end
 
 function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
-	if player:GetAttribute("ShopOpen") or player:GetAttribute("SettingsOpen") or player:GetAttribute("RefineryOpen") then
+	if menuOpen() then
 		return
 	end
 	local character = player.Character
@@ -423,7 +434,7 @@ function MiningController:_holdLoop(tool: Tool)
 	end
 	swinging = true
 	-- Holding the button keeps swinging at the pickaxe's speed
-	while (pointerHolding or touchHolding) and tool.Parent == player.Character and not player:GetAttribute("ShopOpen") and not player:GetAttribute("SettingsOpen") and not player:GetAttribute("RefineryOpen") do
+	while (pointerHolding or touchHolding) and tool.Parent == player.Character and not menuOpen() do
 		self:_swing(tool, if touchHolding then "nearest" else "pointer")
 		task.wait(swingTime)
 	end
@@ -450,7 +461,7 @@ function MiningController:SetTouchHold(on: boolean)
 	touchHolding = on
 	if on then
 		local tool = self:GetEquippedPickaxe()
-		if tool and not player:GetAttribute("ShopOpen") and not player:GetAttribute("SettingsOpen") and not player:GetAttribute("RefineryOpen") then
+		if tool and not menuOpen() then
 			self:_holdLoop(tool)
 		else
 			touchHolding = false
@@ -460,7 +471,7 @@ end
 
 function MiningController:_bindTool(tool: Tool)
 	tool.Activated:Connect(function()
-		if player:GetAttribute("ShopOpen") or player:GetAttribute("SettingsOpen") or player:GetAttribute("RefineryOpen") then return end
+		if menuOpen() then return end
 		pointerHolding = true
 		self:_holdLoop(tool)
 	end)

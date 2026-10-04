@@ -171,6 +171,12 @@ function HUDController:KnitStart()
 			whileAway:set(report)
 		end
 	end)
+	-- Escape / gamepad B dismiss the welcome-back popup like every other panel
+	table.insert(scope, game:GetService("UserInputService").InputBegan:Connect(function(input)
+		if Fusion.peek(whileAway) ~= nil and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) then
+			whileAway:set(nil)
+		end
+	end))
 	RefineryService.Notice:Connect(showToast)
 	EconomyService.Notice:Connect(showToast)
 	UpgradeService.Notice:Connect(showToast)
@@ -344,13 +350,14 @@ function HUDController:KnitStart()
 				Name = "WhileAway",
 				AnchorPoint = Vector2.new(0.5, 0.5),
 				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.fromOffset(390, 260),
+				Size = UDim2.new(1, -24, 0, 260),
 				BackgroundColor3 = UI.PANEL_DARK,
 				Visible = scope:Computed(function(use)
 					return use(whileAway) ~= nil
 				end),
 				[Children] = {
-					scale(),
+					-- Fitted to the screen instead of HUD-scaled, so the button stays a full-size touch target
+					scope:New("UISizeConstraint")({ MaxSize = Vector2.new(390, 260) }),
 					UI.cardFill(scope),
 					label(scope, {
 						Position = UDim2.fromOffset(0, 12),
@@ -383,7 +390,7 @@ function HUDController:KnitStart()
 							elseif r.blocked == "collector" then
 								table.insert(lines, "Your collection post filled up. Upgrade it to store more!")
 							end
-							table.insert(lines, "Pick them up at your collection post.")
+							table.insert(lines, "Pick them up at the refinery.")
 							return table.concat(lines, "\n")
 						end),
 						TextSize = 17,
@@ -394,7 +401,7 @@ function HUDController:KnitStart()
 					scope:New("TextButton")({
 						AnchorPoint = Vector2.new(0.5, 1),
 						Position = UDim2.new(0.5, 0, 1, -12),
-						Size = UDim2.fromOffset(140, 36),
+						Size = UDim2.fromOffset(140, 44),
 						BackgroundColor3 = CASH,
 						Font = FONT,
 						Text = "Nice!",
