@@ -11,10 +11,13 @@ end
 local ref=map.TownSquare.Refinery:Clone()
 ref:PivotTo(ref:GetPivot()-Vector3.new(0,0,3000))
 local assets=scaled:Clone()
+local lighting=assert(map.Atmosphere:FindFirstChild("LightingProfile"),"Run Lighting first"):Clone()
+lighting.Name="Lighting_Redesign"
 local entries={
 	{"Map_Redesign.rbxm",snapshot},
 	{"ServerAssets_Redesign.rbxm",assets},
 	{"Refinery_Redesign.rbxm",ref},
+	{"Lighting_Redesign.rbxm",lighting},
 }
 local serializer=game:GetService("SerializationService")
 local encoder=game:GetService("EncodingService")
@@ -36,6 +39,9 @@ for _,entry in entries do
 	local restoredParts=0
 	for _,v in restored[1]:GetDescendants() do if v:IsA("BasePart") then restoredParts+=1 end end
 	assert(restoredParts==parts,"Roundtrip part count changed")
+	for name,value in root:GetAttributes() do
+		assert(restored[1]:GetAttribute(name)==value,"Roundtrip attribute changed: "..name)
+	end
 	local pivot=if root:IsA("Model") then root:GetPivot().Position else nil
 	table.insert(manifest,{file=name,bytes=buffer.len(bytes),base64Chars=#encoded,parts=parts,
 		pivot=if pivot then {pivot.X,pivot.Y,pivot.Z} else nil,scripts=scripts,roundtripPassed=true})

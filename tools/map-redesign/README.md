@@ -11,8 +11,9 @@ Order:
 3. `Refinery.luau`, `GearHall.luau`, `Hatchery.luau`, `TradingPost.luau`, `Rebirth.luau`, `Museum.luau`, `DebrisFields.luau`, `Scenery.luau`.
 4. `MeteorPreview.luau`: pristine 2x templates in unparented `_G.MapRedesignScaledAssets` and a `PreviewOnly` geometry model in the staged crater.
 5. `MiningAccess.luau`: four terraces and continuous ascent.
-6. `StaticQA.luau` alone: contracts, budgets, 84 Edit pathfinding routes and forecourt collision probes. Its result explicitly leaves real walking/gameplay pending.
-7. `ExportCheckpoint.luau` alone: serializes three unparented clones and verifies engine deserialize round-trips. Read chunked base64 from `_G.MapRedesignStageExportStrings`; validate length, canonical base64, binary header, disk bytes and SHA256 before writing the manifest.
+6. `Lighting.luau`: stores an inactive daylight profile under `Map_Redesign.Atmosphere.LightingProfile`; live Lighting and Terrain remain unchanged.
+7. `StaticQA.luau` alone: contracts, budgets, 84 Edit pathfinding routes and forecourt collision probes. Its result explicitly leaves real walking/gameplay pending.
+8. `ExportCheckpoint.luau` alone: serializes four unparented clones and verifies engine deserialize round-trips, including root attributes. Read chunked base64 from `_G.MapRedesignStageExportStrings`; validate length, canonical base64, binary header, disk bytes and SHA256 before writing the manifest.
 
 Every stage owns only its named groups under `Workspace.Map_Redesign`, with offset `(0,0,3000)`. It refuses unowned replacements. `Routes` leaves staged spawns disabled. Nothing here swaps or deletes the original Map/Terrain/Lighting/Assets. Activate staged pads only when staged runtime selection is ready, and enable them during the final approved swap.
 
@@ -21,6 +22,8 @@ Meteor scaling uses the pristine `_G.MapRedesignBackup.assets`, falling back to 
 Large concave ground CSG closes the crater with its collision hull. Keep the grass union visual-only. Invisible primitive row tiles and a rim annulus provide ground collision; 40 ground-only rays check the opening. Do not re-enable CSG collision.
 
 The geometry preview has no node registration and cannot validate mining gameplay. Remove it before gameplay QA or a final save. It is excluded from checkpoint exports and authored-map counts. The kill plane is a marker until the boundary service is implemented. Gear Hall's cards/stands are mounts until the world client controller is implemented.
+
+The lighting profile contains six effect instances and a `CloudSettings` data Folder. Never put a Clouds instance inside a staged Workspace folder: Studio requires it directly under Terrain and warns even though this is only a profile. At the QA-approved lighting swap, apply only the 15 supported Lighting property attributes, put Sky/Atmosphere/PostEffects directly under Lighting, and materialize the CloudSettings values as Clouds directly under Terrain. Ignore ownership/version/QA metadata when applying properties. Keep the original profile for rollback. The candidate is 14:00 daylight, brightness 2.5, atmosphere density 0.17, modest bloom and disabled depth of field; it still needs visual QA.
 
 Gear mounts use **relative** `DisplayOffset` CFrames. Resolve a tier card with `card.CFrame * card:GetAttribute("DisplayOffset")`; resolve a current stand with `stand:GetPivot() * stand:GetAttribute("DisplayOffset")`. `DisplayBottomOffset` is local to the stand pivot and lets the controller rest equipment on its top. Never store/read an absolute staging frame for a final display; PivotTo does not transform CFrame attributes.
 

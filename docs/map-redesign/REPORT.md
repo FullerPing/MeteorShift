@@ -22,6 +22,7 @@ The original town remains active. Workspace.Map_Redesign contains the new world 
 | Debris | Four yards, 48 mineable roots, 14-stud aisles; nearest pad distance 317.491732 |
 | Spawn and boundary | Six isolated staging pads; 80-stud sealed wall geometry; kill-plane marker at Y -70, authority pending |
 | Decoration | 24 trees; six lights with shadows off; one emitter at 4/s, at most 16 steady particles |
+| Lighting candidate | Inactive profile; 14:00 daylight, brightness 2.5, atmosphere density 0.17; six effects and CloudSettings data; visual QA pending |
 
 The 504-part geometry preview is now detached and retained only in memory. Checkpoint exports exclude it. Staging spawn pads remain disabled until the staged runtime is connected.
 
@@ -41,9 +42,11 @@ Screenshot requests produced no image before termination. No screenshot critique
 
 ## Checkpoint and remaining work
 
-Three staging exports passed engine deserialize, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 72,794 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 21,615 bytes. Final contract exports remain untouched. Staged art and the approved tutorial lookup are saved: Studio reported `00:29:55.808 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
+Four staging exports passed engine deserialize, root-attribute comparison, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 76,970 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 21,615 bytes; Lighting_Redesign is 4,703 bytes. Final contract exports remain untouched. Staged art, the inactive lighting profile and approved tutorial lookup are saved: Studio reported `00:42:40.976 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
 
-Remaining work: implement and test world helpers/controllers/services, connect equipment and boundary authority, update geometry Config and FX/sound/shake, remove plot runtime, prepare lighting, complete staged Play/phone/variant/gameplay/rejoin/exploit/performance QA, and perform at least three screenshot critique rounds. Only then swap, repeat QA, delete the old map, save and export the final four assets.
+All 15 live Lighting properties still match the pristine baseline. An initial Clouds clone under the staged Workspace profile produced two Edit warnings; it was replaced with a CloudSettings data Folder. Fresh checks found zero staged Clouds and exactly one original Clouds directly under Terrain. Visual quality and performance of the candidate remain unverified.
+
+Remaining work: implement and test world helpers/controllers/services, connect equipment and boundary authority, update geometry Config and FX/sound/shake, remove plot runtime, preview and verify lighting, complete staged Play/phone/variant/gameplay/rejoin/exploit/performance QA, and perform at least three screenshot critique rounds. Only then swap, repeat QA, delete the old map, save and export the final four assets.
 
 Automatic approval review rejected creating world test ModuleScripts under the initial no-scripts rule, and rejected pushing backups to the configured GitHub destination. Explicit world-code and push questions remain pending. No workaround was attempted. The owner permits computer use only for saving. The separate computer-use skill's @oai/sky path completed the Edit save without publishing; save observations do not constitute scene critique or gameplay QA.
 

@@ -21,6 +21,7 @@ Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Stage3 complete Map_Redesign build andstaticQA.
 - [x] Build isolated scene art for all zones;1351authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
 - [x] Commit staged geometry checkpoint a31aeb1 and save the current Edit place through File > Save to Roblox; fresh Output confirmed at00:29:55.808 on6October. No publishing.
+- [x] Prepare inactive daylight LightingProfile; verify15liveproperties unchanged; regenerate four staging exports; save confirmed at00:42:40.976. Visual QA remains pending.
 - [ ] Stage4 stagedPlay/gameplay/phone/path/performanceQA.
 - [ ] Stage5 minimum3critique/fix rounds; allcategories4+tworoundsrunning.
 - [ ] Stage6 controlledswap, post-swapQA, deleteMap_Old onlyaftergreen.
@@ -49,9 +50,11 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 - Candidate reach sampled2330positions: all36seedednodeswithinBasicbounding-box reach12 (worst3.559263), exposedcoreminimum0.428459. These are not walking/aiming results.
 - StaticQA:84/84Editpaths successful from6spawns to3servicepoints, hatchery/rebirth/museum,4fieldentrances and4craterlandings;62jumpwaypoints must receive real walking/jump checks. Sixcharacter-sizedforecourtprobes clear. Initialprobe falselyhitTownAvenue becauseitassumedY0; corrected to raycast actualgroundheight. No assertions weakened.
 - Fresh existingrunner360passed/0failed.39frozenhashes checked; onlyapprovedTutorialControllerlookup differs. Its panel/guide suffixSHA256 remains01424D468C83D06980BD5B9FF751EDEB3407834BD973BE9E76536C3DAF05CF73.
-- Exports in`assets/staging/map-redesign/`:Map_Redesign72794bytes/1351parts;ServerAssets_Redesign73990bytes/119parts;Refinery_Redesign21615bytes/134parts. Engine deserialize, canonicalbase64, binaryheader, diskbytes andSHA256 verified inmanifest.json. Primary finalexports remain unchanged. This is data backup, not placeSave evidence.
+- Exports in`assets/staging/map-redesign/`:Map_Redesign76970bytes/1351parts;ServerAssets_Redesign73990bytes/119parts;Refinery_Redesign21615bytes/134parts;Lighting_Redesign4703bytes/0parts. Engine deserialize, rootattributes, canonicalbase64, binaryheader, diskbytes andSHA256 verified inmanifest.json. Primary finalexports remain unchanged.
 - Relative display offsets now survive final map translation:18clone-and-translation checks passed. Template audit passed for113parts,36attachments,1light and1emitter; noSpecialMeshes/nonzeroPivotOffsets, particle rates/lifetimes unchanged. Runtime impact-clear teleport must raycast destination ground height; the old deep-bowlY+4 can strand a player below outer ground. Source fix remains pending world-code permission.
 - Screenshot requests yielded no image and were terminated. No critique rounds/scores claimed. Staged art and the tutorial lookup are now saved, confirmed by fresh Studio Output at00:29:55.808. Computer-use save observations do not count as visual critique rounds.
+- The daylight profile is inactive under Map_Redesign.Atmosphere:ClockTime14/Brightness2.5, density0.17, modestbloom, depthoff, sixeffects plusCloudSettingsdata.15liveLightingproperties stillmatch thepristinebaseline. Initially cloning Clouds into Workspace produced two Edit warnings at00:35:02; corrected by storing only data. Fresh validation found exactlyoneClouds, directlyunderoriginalTerrain, and zero in the staged map. The profile is saved; freshOutputconfirmed at00:42:40.976. Do not claim its look is verified.
+- CaptureStagedTownGeometry_20261006 remained live without an image, was polled repeatedly and explicitly terminated(cell488). No capture job remains live and no critique evidence was produced. Do not keep retrying the same capture without a changed tool state/capability.
 
 - Studio ID at discovery:b1f0a7a1-146e-4d11-9832-2a8e2cc1c226, place113476105600560. Last observedEdit after stopping initialPlay.
 - Initial existingPlay was sampledread-only; noprofileQA orDataStoremutationsperformed. EditMap2043parts; runtimesample2543parts.
@@ -72,4 +75,4 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 
 ## Requirements still unverified
 
-Scene art and isolated2x templates exist. Runtime world controller/helpers/tests/services, authoritative kill plane, plot removal from live code/assets, newgeometryConfig/FX, lighting, pre-swap/post-swapPlayQA, walking/aiming/exploitproof, phones, stressperformance, critique rounds, finalfourcontractexports and push remain incomplete. Later runtime/final edits will need another save. No swap/deleteold/publish. Do not markgoalcomplete from the geometry checkpoint.
+Scene art, an inactive lighting profile and isolated2x templates exist. Runtime world controller/helpers/tests/services, authoritative kill plane, plot removal from live code/assets, newgeometryConfig/FX, lightingpreview/QA, pre-swap/post-swapPlayQA, walking/aiming/exploitproof, phones, stressperformance, critique rounds, finalfourcontractexports and push remain incomplete. Later runtime/final edits will need another save. No swap/deleteold/publish. Do not markgoalcomplete from the geometry checkpoint.
