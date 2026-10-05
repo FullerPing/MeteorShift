@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="-600 -600 1200 1200">
+ <rect x="-600" y="-600" width="1200" height="1200" fill="#18253d"/>
+ <rect x="-510" y="-510" width="1020" height="1020" rx="30" fill="#68d641" stroke="#405169" stroke-width="20"/>
+ <g transform="scale(1,-1)">
+  <circle r="320" fill="none" stroke="#efdfb7" stroke-width="18"/>
+  <path d="M0,-492V340M-395,0H395" stroke="#efdfb7" stroke-width="24"/>
+  <path d="M-230,-326H230M-155,-380V-326M140,-380V-326M70,-460H0M-360,-160H-280M360,-160H280M-275,270L-235,215M275,270L235,215M-390,55H-314M390,55H314" fill="none" stroke="#efdfb7" stroke-width="18"/>
+  <circle r="310" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="9 9" opacity=".6"/>
+  <circle r="180" fill="none" stroke="#faaf43" stroke-width="3" stroke-dasharray="9 9"/>
+  <circle r="160" fill="#485264" stroke="#fbc931" stroke-width="8"/>
+  <circle r="90" fill="#263142" stroke="#68748b" stroke-width="4"/>
+  <path d="M0,-160V-90M0,160V90M-160,0H-90M160,0H90" stroke="#e7d6a8" stroke-width="24"/>
+  <circle r="51" fill="#f28223" stroke="#2a2330" stroke-width="9"/>
+  <rect x="-38" y="-412" width="76" height="64" fill="#ff8223" stroke="#fff1d7" stroke-width="5"/>
+  <rect x="90" y="-416" width="100" height="72" fill="#29c9ff" stroke="#fff1d7" stroke-width="5"/>
+  <rect x="-205" y="-416" width="100" height="72" fill="#be63ff" stroke="#fff1d7" stroke-width="5"/>
+  <rect x="42" y="-480" width="56" height="40" fill="#f3ce45" stroke="#fff1d7" stroke-width="4"/>
+  <rect x="-68" y="-490" width="96" height="64" fill="#b6ee75" stroke="#fff1d7" stroke-width="4"/>
+  <rect x="-396" y="-196" width="72" height="72" fill="#ffd736" stroke="#fff1d7" stroke-width="5"/>
+  <rect x="318" y="-198" width="84" height="76" fill="#82e8ff" stroke="#fff1d7" stroke-width="5"/>
+  <rect x="-325" y="224" width="100" height="92" rx="12" fill="#bd673e" stroke="#fde0c0" stroke-width="4"/>
+  <rect x="225" y="224" width="100" height="92" rx="12" fill="#a1e4ff" stroke="#fff" stroke-width="4"/>
+  <rect x="-436" y="7" width="92" height="96" rx="12" fill="#9672e6" stroke="#e3d4ff" stroke-width="4"/>
+  <rect x="344" y="7" width="92" height="96" rx="12" fill="#e2c740" stroke="#fff6b5" stroke-width="4"/>
+ </g>
+ <g font-family="Arial,sans-serif" font-weight="700" text-anchor="middle" fill="#fff" stroke="#18253d" stroke-width="3" paint-order="stroke">
+  <text y="-545" font-size="32">METEORSHIFT — APPROVED STAGED LAYOUT</text>
+  <text y="-510" font-size="15">Final coordinates in studs · stage offset Z +1600 · paths 18–24 wide · boundary ±510</text>
+  <text y="-5" font-size="19">2× METEOR</text><text y="19" font-size="14">~101 × 90 × 101</text>
+  <text y="-113" font-size="14">FLOOR R90 / Y−44</text><text y="-165" font-size="14">OPENING R160</text>
+  <text x="0" y="380" font-size="16">REFINERY</text><text x="140" y="380" font-size="16">GEAR HALL</text>
+  <text x="-155" y="380" font-size="16">HATCHERY</text><text x="70" y="460" font-size="12">TRADING</text>
+  <text x="-20" y="452" font-size="12">6 SPAWNS</text><text x="-360" y="160" font-size="16">REBIRTH</text>
+  <text x="360" y="160" font-size="16">INDEX</text><text x="-275" y="-270" font-size="17">RUST WORKS</text>
+  <text x="275" y="-270" font-size="17">FROST YARD</text><text x="-390" y="-55" font-size="14">VIOLET QUARRY</text>
+  <text x="390" y="-55" font-size="14">SULFUR RIDGE</text>
+  <text y="550" font-size="16">Orange dashed: knockback R180 · White dashed: maximum landing reach R310 · Main loop R320</text>
+  <text y="578" font-size="14">Refinery nearest footprint R348 · Every zone has an entrance and a connected route</text>
+ </g>
+</svg>

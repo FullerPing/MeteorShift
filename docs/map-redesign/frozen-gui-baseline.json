@@ -1,0 +1,158 @@
+[
+  {
+    "path": "src/client/UI.luau",
+    "sha256": "EF29DE7BE278FFF4329236C74C389F2785B5A90B2CA89F251BDA98FB0A42D9AF"
+  },
+  {
+    "path": "src/client/HudView.luau",
+    "sha256": "D07DC84D8366DCFEB302A900AA576BC9F4C7B4DA69934D575D4EFFDDEADDF178"
+  },
+  {
+    "path": "src/shared/HudLayout.luau",
+    "sha256": "3F956126D725268BDED3E695E4C6B1390EECB27E19E504F6AD9DA7F68916E214"
+  },
+  {
+    "path": "src/shared/Config/Hud.luau",
+    "sha256": "793C51121D5BAE2B9E48DE32634FE4D38654B4C4FDFDB3622F76220DB78B4F20"
+  },
+  {
+    "path": "src/shared/EquipmentShopLayout.luau",
+    "sha256": "87E32DAC210C51C7246010F8ABD2FF166A22285469E2BA243C8EE9872ADC7E80"
+  },
+  {
+    "path": "src/shared/RefineryLayout.luau",
+    "sha256": "9F5504AB43D9130A8A36BF666B45BDDED2678B0D6512C8A634AFDD09A06FF437"
+  },
+  {
+    "path": "src/shared/IndexLayout.luau",
+    "sha256": "EF009ADD5A3BC26EA35694161EC5C2B4C523C6A1691F9474759B42173460EF48"
+  },
+  {
+    "path": "src/shared/StoreLayout.luau",
+    "sha256": "667F4316E04C2C26C9FC4CEAE0A914F355814655AB67D127E0A0716A48C46FA6"
+  },
+  {
+    "path": "src/shared/RebirthLayout.luau",
+    "sha256": "FF16401057A440B663339C0D20FA1AC43CDF9FBA4C0F0A9B70209F9CA21D2A28"
+  },
+  {
+    "path": "src/client/Controllers/ShopController.luau",
+    "sha256": "BC4C21E2E83DDA0A02823741B587BC85967D4B0F8C51942A4C2407A47AFCA9EF"
+  },
+  {
+    "path": "src/client/Controllers/RefineryController.luau",
+    "sha256": "8BD9029E1B4999BE06C812F4E0DE0676BABBEA06212AB4E7F6B4ED7763225B08"
+  },
+  {
+    "path": "src/client/Controllers/StoreController.luau",
+    "sha256": "7090C5E43C15B5688E591367CD26750A914AC7D0608C73BF98CB81BC1E2CFF5E"
+  },
+  {
+    "path": "src/client/Controllers/IndexController.luau",
+    "sha256": "410675F485DEE0551F5FA059EC18C94BA0CE935F3F0F3C3F0EA13F171D095476"
+  },
+  {
+    "path": "src/client/Controllers/RebirthController.luau",
+    "sha256": "3E314861E45C8C2CBA17545E9FDC318F353F07231024F2687006490760A2D488"
+  },
+  {
+    "path": "src/client/Controllers/HUDController.luau",
+    "sha256": "7915F40610A16AD96ECB02A7E17164E88B155C7DD7B2548630213F6BD252353E"
+  },
+  {
+    "path": "src/client/Controllers/TutorialController.luau",
+    "sha256": "35F725BD8B529353E5C29CB58B61D499C4D4207F2B1373BCB6D8677529F94BA4"
+  },
+  {
+    "path": "src/client/NativeUI.luau",
+    "sha256": "3CF906F6BE6A4C126164E9689F8E1745D20E41C2C48121D6B874E342C1368D10"
+  },
+  {
+    "path": "src/client/NativeHudMenus.luau",
+    "sha256": "31D18CD6496EA48FAD34D4AAF29301F1182BCA44CA7DCBF83B36C67641B6041E"
+  },
+  {
+    "path": "src/client/NativeWelcomeBack.luau",
+    "sha256": "C2F59E3D12E26AE1B9C16623129C468CA16879B9ABCD1AFE790E6B690840AF27"
+  },
+  {
+    "path": "src/client/ExactNavButton.luau",
+    "sha256": "3668B12CBBBAA4C22F89C54448154818770830E497FED87EDC745B2F9BB434A5"
+  },
+  {
+    "path": "assets/native-ui/WelcomeBack.rbxmx",
+    "sha256": "8021A3014E7A688136FFE03CBC453464C62B9B6189054481C0CACDA3F4705C30"
+  },
+  {
+    "path": "assets/native-ui/Store.rbxmx",
+    "sha256": "54DFA9E180769C42B9E1540F0D79D4933221B4F6ED3467FA7764A136FB45DC72"
+  },
+  {
+    "path": "assets/native-ui/RefineryMenu.rbxmx",
+    "sha256": "C5163D7AE96922C04A1E3026348A7EFF6D8A0E82DA60913660FEFDA7F8B5D799"
+  },
+  {
+    "path": "assets/native-ui/Rebirth.rbxmx",
+    "sha256": "59C82F01CD7DE55A60B8C3B8AECAC8EE7A8987D92A9257D9D8B87CCE3C291D2A"
+  },
+  {
+    "path": "assets/native-ui/PetHatch.rbxmx",
+    "sha256": "A3B166CB00790E4F5B02907A4A395C47D43068A99051A6ACDA2DB5C3865F3CE6"
+  },
+  {
+    "path": "assets/native-ui/MY index button.rbxmx",
+    "sha256": "A745C6FEDBDAC4EBBE5EC3AD1BC2B1F49B56E4843C607D4F8AE33B112A75B27F"
+  },
+  {
+    "path": "assets/native-ui/MineralIndex.rbxmx",
+    "sha256": "730519AE2ED5E9D59E5CADDCD60FFBB1DBEDF2E86C11480D7CB2865EF2A94EAF"
+  },
+  {
+    "path": "assets/native-ui/HudSettings.rbxmx",
+    "sha256": "BBB0544DA3779EA4D248762163685BEE9978D258F19C46FD46C6CB13FB909847"
+  },
+  {
+    "path": "assets/native-ui/GearShop.rbxmx",
+    "sha256": "11F5795A6532373C6B58774C1E391C70AB487F1431FE9F70384F5F2C63EC5F05"
+  },
+  {
+    "path": "assets/native-ui/BackpackMenu.rbxmx",
+    "sha256": "265FF0F4C951F6EA834B80352AAC38C36B6283BBF6FAEB2EBA805F6647C9218A"
+  },
+  {
+    "path": "src/client/NativeMenus/WelcomeBack.luau",
+    "sha256": "1D289CA2270CEA26EC9A80372A87CA58ADC443340F87C56E6FDBEA6EBF6A2658"
+  },
+  {
+    "path": "src/client/NativeMenus/Store.luau",
+    "sha256": "D7C9E625B67D5F0D60C315D93D999FA77A0EE7D98CB1371BB98F6013FF3A26E2"
+  },
+  {
+    "path": "src/client/NativeMenus/Shop.luau",
+    "sha256": "224818B4561487BB4FAFA6CE26E0AE14A7F043824737FEBA601BFA1214C0CC58"
+  },
+  {
+    "path": "src/client/NativeMenus/Settings.luau",
+    "sha256": "AC11EA2BE487BDE5B94C74A2D2CA2FD13C20CDDBD118AF0F073E024CE3FB61C6"
+  },
+  {
+    "path": "src/client/NativeMenus/Refinery.luau",
+    "sha256": "BDAD85EB55DD8E37B2F039D6BA352A25D1F5F74F096393D96C201350C535F24A"
+  },
+  {
+    "path": "src/client/NativeMenus/Rebirth.luau",
+    "sha256": "0CA7E940C3968E3533E4844EE9CDF1D7AECEFFD00F88FCF1C0F538A38B476D85"
+  },
+  {
+    "path": "src/client/NativeMenus/Index.luau",
+    "sha256": "C676C95865AB71F891ED79B3040DAF0EC51C4787C5F0473C701C5E04EA756012"
+  },
+  {
+    "path": "src/client/NativeMenus/Hatch.luau",
+    "sha256": "28C3D0FCC6C6D3D0C15E72A7FD23B85B888CF2B4E68C2C1FD8A3DB5BD3AEC3B8"
+  },
+  {
+    "path": "src/client/NativeMenus/Backpack.luau",
+    "sha256": "CF0DE184249C6580C0FAA40323E25AD7BF1E3D132D2A88E1FF95C806AD021E9D"
+  }
+]

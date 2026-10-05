@@ -1,0 +1,35 @@
+{
+  "captured": "2026-10-05",
+  "placeId": 113476105600560,
+  "terrainRestoreCorner": [
+    -256,
+    -64,
+    -256
+  ],
+  "files": [
+    {
+      "name": "Map.rbxm",
+      "bytes": 185912,
+      "sha256": "2860fb2cf07d2e38e3734a70e9d93b6fd09bccff6bcc87b91ea609f5f501d03b",
+      "engineDeserializeRoundtrip": true
+    },
+    {
+      "name": "Terrain.rbxm",
+      "bytes": 1073893,
+      "sha256": "27af3bff2611c123c5cf5ee332bf7cdc868eee4be358071e3a3276a959ae7b00",
+      "engineDeserializeRoundtrip": true
+    },
+    {
+      "name": "ServerAssets.rbxm",
+      "bytes": 96061,
+      "sha256": "2740c15aa2a9227daf20e7f4932fe788e71265f629efee0751413725149a0810",
+      "engineDeserializeRoundtrip": true
+    },
+    {
+      "name": "Lighting.rbxm",
+      "bytes": 4932,
+      "sha256": "5c88d48cd39813c3ec6134373a9b1c61cf347412490930a7782d89862b9ddbd2",
+      "engineDeserializeRoundtrip": true
+    }
+  ]
+}
