@@ -57,6 +57,29 @@ local corner = UI.corner
 local stroke = UI.stroke
 local label = UI.label
 
+local function supporterConfetti()
+	if player:GetAttribute("ReduceEffects") then return end
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "SupporterConfetti"
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 50
+	gui.ResetOnSpawn = false
+	gui.Parent = player:WaitForChild("PlayerGui")
+	for index = 1, 18 do
+		local piece = Instance.new("Frame")
+		piece.Size = UDim2.fromOffset(6, 10)
+		piece.Position = UDim2.fromScale(.5, .4)
+		piece.BackgroundColor3 = ({ UI.HUD_GOLD, UI.HUD_MINT, UI.SHARD })[(index - 1) % 3 + 1]
+		piece.BorderSizePixel = 0
+		piece.Rotation = index * 25
+		piece.Parent = gui
+		TweenService:Create(piece, TweenInfo.new(1.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+			Position = UDim2.fromScale(.08 + index / 21, .8 + (index % 3) * .04), Rotation = index * 65, BackgroundTransparency = 1,
+		}):Play()
+	end
+	task.delay(1.4, function() gui:Destroy() end)
+end
+
 function HUDController:KnitStart()
 	local MeteorService = Knit.GetService("MeteorService")
 	local ContributionService = Knit.GetService("ContributionService")
@@ -202,15 +225,9 @@ function HUDController:KnitStart()
 			showToast("You got " .. pet.Name .. "!")
 		end
 	end)
-	PetService.Hatched:Connect(function(eggId: string, petId: string, duplicate: boolean)
-		local pet = Pets.def(petId)
-		if pet then
-			Sfx.play("Purchase")
-			local rarity = Config.Pets.Rarities[pet.Rarity].Name
-			showToast(if duplicate
-				then string.format("Duplicate %s (%s): +%d XP for your %s!", pet.Name, rarity, Config.Pets.DuplicateXp, pet.Name)
-				else string.format("You hatched a %s %s!", rarity, pet.Name))
-		end
+	Knit.GetService("MonetizationService").Supporter:Connect(function()
+		showToast("Thank you for supporting MeteorShift! Supporter tag active for this session.")
+		supporterConfetti()
 	end)
 	PetService.Leveled:Connect(function(petId: string, level: number)
 		local pet = Pets.def(petId)

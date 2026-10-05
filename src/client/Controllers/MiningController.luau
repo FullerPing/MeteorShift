@@ -52,7 +52,7 @@ local floaters: { BasePart } = {} -- oldest first
 local oreChunks: { BasePart } = {} -- oldest first
 
 -- Any primary menu open blocks mining (each menu sets its own attribute on the player)
-local MENU_FLAGS = { "ShopOpen", "SettingsOpen", "RefineryOpen", "IndexOpen", "RebirthOpen", "StoreOpen" }
+local MENU_FLAGS = { "ShopOpen", "SettingsOpen", "RefineryOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "HatchOpen" }
 local function menuOpen(): boolean
 	for _, flag in MENU_FLAGS do
 		if player:GetAttribute(flag) then

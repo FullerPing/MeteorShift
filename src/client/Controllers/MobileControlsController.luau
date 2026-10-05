@@ -67,6 +67,7 @@ function MobileControlsController:KnitStart()
 	local storeOpen = playerFlag("StoreOpen")
 	local settingsOpen = playerFlag("SettingsOpen")
 	local refineryOpen = playerFlag("RefineryOpen")
+	local hatchOpen = playerFlag("HatchOpen")
 	local backpackOpen = playerFlag("BackpackOpen")
 	-- The backpack popup at its tallest (three ore rows) on top of the button
 	local function backpackCoversMine(layout: any): boolean
@@ -82,6 +83,7 @@ function MobileControlsController:KnitStart()
 			and not use(storeOpen)
 			and not use(settingsOpen)
 			and not use(refineryOpen)
+			and not use(hatchOpen)
 			and not (use(backpackOpen) and backpackCoversMine(use(hud)))
 	end)
 	-- A hidden button cannot be released, so stop swinging when it goes away
