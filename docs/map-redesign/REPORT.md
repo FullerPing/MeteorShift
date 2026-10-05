@@ -41,11 +41,11 @@ Screenshot requests produced no image before termination. No screenshot critique
 
 ## Checkpoint and remaining work
 
-Three staging exports passed engine deserialize, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 72,794 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 21,615 bytes. Final contract exports remain untouched. The baseline place save is confirmed; later staged edits still need a confirmed save.
+Three staging exports passed engine deserialize, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 72,794 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 21,615 bytes. Final contract exports remain untouched. Staged art and the approved tutorial lookup are saved: Studio reported `00:29:55.808 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
 
 Remaining work: implement and test world helpers/controllers/services, connect equipment and boundary authority, update geometry Config and FX/sound/shake, remove plot runtime, prepare lighting, complete staged Play/phone/variant/gameplay/rejoin/exploit/performance QA, and perform at least three screenshot critique rounds. Only then swap, repeat QA, delete the old map, save and export the final four assets.
 
-Automatic approval review rejected creating world test ModuleScripts under the initial no-scripts rule, and rejected pushing backups to the configured GitHub destination. Explicit world-code and push questions remain pending. No workaround was attempted. The owner permits computer use only for saving; native app control is unavailable in the exposed tool.
+Automatic approval review rejected creating world test ModuleScripts under the initial no-scripts rule, and rejected pushing backups to the configured GitHub destination. Explicit world-code and push questions remain pending. No workaround was attempted. The owner permits computer use only for saving. The separate computer-use skill's @oai/sky path completed the Edit save without publishing; save observations do not constitute scene critique or gameplay QA.
 
 ## Assumptions and GUI follow-ups
 

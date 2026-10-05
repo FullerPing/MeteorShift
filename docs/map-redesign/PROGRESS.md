@@ -20,6 +20,7 @@ Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Stage2 geometry/equipment specsRED→GREEN; shared-onlyservices andscaledtemplates.
 - [ ] Stage3 complete Map_Redesign build andstaticQA.
 - [x] Build isolated scene art for all zones;1351authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
+- [x] Commit staged geometry checkpoint a31aeb1 and save the current Edit place through File > Save to Roblox; fresh Output confirmed at00:29:55.808 on6October. No publishing.
 - [ ] Stage4 stagedPlay/gameplay/phone/path/performanceQA.
 - [ ] Stage5 minimum3critique/fix rounds; allcategories4+tworoundsrunning.
 - [ ] Stage6 controlledswap, post-swapQA, deleteMap_Old onlyaftergreen.
@@ -33,7 +34,7 @@ Continuation ruling: independent staged scene geometry can proceed while the req
 
 Three new specs exist on disk: WorldGeometry.spec, WorldEquipment.spec, WorldMap.spec. Rojo is not syncing them into the open place. Automatic approval review rejected the explicit ModuleScript synchronization because it still applies the original building-only no-scripts instruction. A world-code/test authorization question is pending. **No RED test result exists yet. Do not claim the new specs ran.** The approved TutorialController panel suffix hash is recorded in tutorial-panel-baseline.json before any edit.
 
-The separately approved TutorialController Deposit/Collect lookup is now changed on disk and in Studio Edit to TownSquare.Refinery.UsePoint. Exactly one UsePoint exists at that path. Disk panel/guide suffix remains byte-for-byte identical to its baseline hash. Studio's ScriptEditorService normalized CRLF to LF; a readback proved the entire suffix equal after newline normalization. No panel logic, layout, assets or visuals changed. The initial strict Studio byte comparison failed only on CRLF normalization (first difference was a line terminator); it was investigated, not treated as a gameplay test failure. This edit happened after the owner's confirmed save and requires a later save.
+The separately approved TutorialController Deposit/Collect lookup is now changed on disk and in the saved place to TownSquare.Refinery.UsePoint. Exactly one UsePoint exists at that path. Disk panel/guide suffix remains byte-for-byte identical to its baseline hash. Studio's ScriptEditorService normalized CRLF to LF; a readback proved the entire suffix equal after newline normalization. No panel logic, layout, assets or visuals changed. The initial strict Studio byte comparison failed only on CRLF normalization (first difference was a line terminator); it was investigated, not treated as a gameplay test failure. The fresh6October save includes this edit.
 
 ## Evidence and decisions
 
@@ -50,7 +51,7 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 - Fresh existingrunner360passed/0failed.39frozenhashes checked; onlyapprovedTutorialControllerlookup differs. Its panel/guide suffixSHA256 remains01424D468C83D06980BD5B9FF751EDEB3407834BD973BE9E76536C3DAF05CF73.
 - Exports in`assets/staging/map-redesign/`:Map_Redesign72794bytes/1351parts;ServerAssets_Redesign73990bytes/119parts;Refinery_Redesign21615bytes/134parts. Engine deserialize, canonicalbase64, binaryheader, diskbytes andSHA256 verified inmanifest.json. Primary finalexports remain unchanged. This is data backup, not placeSave evidence.
 - Relative display offsets now survive final map translation:18clone-and-translation checks passed. Template audit passed for113parts,36attachments,1light and1emitter; noSpecialMeshes/nonzeroPivotOffsets, particle rates/lifetimes unchanged. Runtime impact-clear teleport must raycast destination ground height; the old deep-bowlY+4 can strand a player below outer ground. Source fix remains pending world-code permission.
-- Screenshot requests yielded no image and were terminated. No critique rounds/scores claimed. Later art and tutorial edits still need a confirmed place save; only the baseline save is confirmed.
+- Screenshot requests yielded no image and were terminated. No critique rounds/scores claimed. Staged art and the tutorial lookup are now saved, confirmed by fresh Studio Output at00:29:55.808. Computer-use save observations do not count as visual critique rounds.
 
 - Studio ID at discovery:b1f0a7a1-146e-4d11-9832-2a8e2cc1c226, place113476105600560. Last observedEdit after stopping initialPlay.
 - Initial existingPlay was sampledread-only; noprofileQA orDataStoremutationsperformed. EditMap2043parts; runtimesample2543parts.
@@ -59,8 +60,8 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 - Screenshotrequest BeforeRedesignOverview didnotcomplete; itsfunctions cell375 was terminated afterrepeatedlive waits. No screenshot evidenceclaimed. CheckStudio statebefore retryingcapture; do not restartsceneauthoringbecauseof observationfailure.
 - Ruling: preserve current checkout/branch and isolate world in Map_Redesign as requested; source freeze manifest protects owner UI. Current staging offset is Z+3000; the earlier +1600 proposal is superseded.
 - Ruling: ownerexplicitlyapproved TutorialControllerworldtargets→sharedUsePoint only. FrozenRefineryController's dormantPlotIdlistenerstays andisreported; noUIexceptioninferred.
-- Save remainsunproven. PriorEditAPIrejectedserver-onlysave; noPlay-snapshot workaround, computeruse orpublishing.
-- Owner subsequently confirmed “yes saved” for this checkpoint and permits computer use for saving only. Other computer use remains prohibited.
+- The prior Edit API save failed as server-only. The owner subsequently confirmed “yes saved” and permitted computer use for saving only. The separate computer-use skill's @oai/sky native control works, despite disabled native APIs in CUA. File > Save to Roblox started at00:29:53.955 and completed at00:29:55.808 on6October2026. The place remains in Edit; nothing was published. Other computer use remains prohibited.
+- Save persistence applies to parented staged art and the approved tutorial edit. Unparented scaled Assets and the detached preview are memory-only; their checkpoint export remains the restore source. Do not infer a completed runtime integration or final swap from the save.
 - Automatic approval review rejected git push twice despite the active brief's checkpoint instruction; it requires explicit approval to disclose these assets to https://github.com/FullerPing/MeteorShift branch job-for-tomorrow. A concrete question is pending; no workaround attempted.
 - Ruling: full rollback must use TerrainComplete captured from Terrain.MaxExtents, not the initial bounded Terrain snapshot — rays proved terrain at Z1100 outside the first capture; the full capture includes ~4,896,366 occupied cells, corner(-32000,-32000,-32000),1,303,071binarybytes — cost if wrong: full terrain restore requires exact stored corner.
 - TerrainComplete transfer is complete and verified:1,303,071bytes, SHA2562c14d72a0caedc5ff7dd2554bf36c7eea18c77d81ef7e5c00c7f82ad0639ea76. All five fresh binary files are recorded in manifest.json; engine roundtrip and filesystem hashes are verified.
@@ -71,4 +72,4 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 
 ## Requirements still unverified
 
-Scene art and isolated2x templates exist. Runtime world controller/helpers/tests/services, authoritative kill plane, plot removal from live code/assets, newgeometryConfig/FX, lighting, pre-swap/post-swapPlayQA, walking/aiming/exploitproof, phones, stressperformance, critique rounds, laterplaceSave, finalfourcontractexports and push remain incomplete. No swap/deleteold/publish. Do not markgoalcomplete from the geometry checkpoint.
+Scene art and isolated2x templates exist. Runtime world controller/helpers/tests/services, authoritative kill plane, plot removal from live code/assets, newgeometryConfig/FX, lighting, pre-swap/post-swapPlayQA, walking/aiming/exploitproof, phones, stressperformance, critique rounds, finalfourcontractexports and push remain incomplete. Later runtime/final edits will need another save. No swap/deleteold/publish. Do not markgoalcomplete from the geometry checkpoint.

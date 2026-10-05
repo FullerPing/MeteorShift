@@ -119,7 +119,7 @@ Play QA uses temporary opt-in DevMemoryStore, clearedbeforeSave. Runtime-only te
 
 Before swap, oldMap is untouched and fresh unparented clones/binaryarchives preserveactualEdits. Swappedrollback usesMap_Old plusarchives; restoresource fromstagecheckpoint only for thischange'sfiles, never resetownerGUI/untrackedwork. TerrainRestoreCorner is encodedin itsTerrainRegionarchive. Lightingfolderholds cloned effects/cloudsandlightingproperties asattributes forrestore.
 
-MCP can serialize binary assets but its Edit save attempt failed: `Game:SavePlace can only be called from a server script`. The owner confirmed the baseline save and permits computer use for saving only; the currently exposed CUA tool has native computer APIs disabled. Do not save a Play/test DataModel or publish as a workaround. Keep concrete checkpoint assets/source before requesting a later manual Ctrl+S when needed. New staged art is exported locally, but its place save remains unconfirmed. Pushing is also pending explicit payload/destination approval after automatic approval review rejected it.
+MCP can serialize binary assets but its Edit save attempt failed: `Game:SavePlace can only be called from a server script`. The owner permits computer use for saving only. Although CUA has native APIs disabled, the separate computer-use skill's `@oai/sky` control works. File > Save to Roblox confirmed the latest staged art and tutorial edit at00:29:55.808 on6October2026. Do not save a Play/test DataModel or publish as a workaround. Unparented scaled Assets remain memory-only and must be restored from their binary checkpoint after reopening. Pushing remains pending explicit payload/destination approval after automatic approval review rejected it.
 
 ## Self review
 
