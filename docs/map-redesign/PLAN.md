@@ -21,7 +21,7 @@ APPROVED by self — 5 October 2026. Approval covers the measured design and sta
 
 ## Layout and access
 
-All coordinates below are final local world coordinates, X east / Z north-south. Ground top Y=0. The staged map is built at **offset (0,0,1600)** to avoid physical overlap with the original. The swap removes that offset. `layout.svg` depicts the final layout.
+All coordinates below are final local world coordinates, X east / Z north-south. Ground top Y=0. The staged map is built at **offset (0,0,3000)** to avoid physical overlap with the original. Nine Terrain-only rays at X=-510/0/510 and Z=2490/3000/3510 found no terrain. The earlier +1600 proposal overlapped distant old mountains at its north edge and is superseded. The swap removes the offset. `layout.svg` depicts the final layout.
 
 | Zone | Centre X,Z | Footprint / entrance |
 |---|---|---|

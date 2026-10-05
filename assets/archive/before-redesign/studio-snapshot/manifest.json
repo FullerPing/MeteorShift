@@ -30,6 +30,23 @@
       "bytes": 4932,
       "sha256": "5c88d48cd39813c3ec6134373a9b1c61cf347412490930a7782d89862b9ddbd2",
       "engineDeserializeRoundtrip": true
+    },
+    {
+      "name": "TerrainComplete.rbxm",
+      "bytes": 1303071,
+      "sha256": "2c14d72a0caedc5ff7dd2554bf36c7eea18c77d81ef7e5c00c7f82ad0639ea76",
+      "engineDeserializeRoundtrip": true,
+      "restoreCorner": [
+        -32000,
+        -32000,
+        -32000
+      ],
+      "maxExtents": [
+        32000,
+        32000,
+        32000
+      ],
+      "approximateOccupiedCells": 4896366
     }
   ]
 }

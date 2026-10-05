@@ -2,6 +2,22 @@
 
 Updated 5 October 2026. Repository: `Z:\final-final-actual-final\MeteorShift`. Branch: `job-for-tomorrow`.
 
+## Current handoff — full map redesign supersedes the older UI task
+
+The active objective is the full map redesign described in the owner's pasted brief at `C:\Users\37062\.codex\attachments\0ea8130b-6c1b-4f2b-a642-45be382e3361\pasted-text-1.txt`. Read `docs/map-redesign/PLAN.md` and `PROGRESS.md`, Git status, and the open Studio state before continuing. The map goal is active and incomplete; the previous paused overnight/UI task does not govern it.
+
+- Baseline checkpoint `c2bb2c1` is committed locally; HEAD before it was owner commit `9e66f0a`. The older GUI work is committed. Preserve unrelated untracked `docs/ff.md`.
+- The owner confirmed the baseline place save and now permits computer use **for saving only**. Continue authoring/testing through Roblox Studio MCP; never publish.
+- All GUI is frozen. The sole approved exception is TutorialController's Deposit/Collect world target lookup, now directed to `Workspace.Map.TownSquare.Refinery.UsePoint` on disk and in Studio. The disk panel suffix hash is unchanged; Studio normalized only CRLF to LF. This edit happened after the confirmed save and still needs a later save.
+- All four repository exports and fresh Edit snapshots are archived under `assets/archive/before-redesign/`. The complete Terrain.MaxExtents snapshot is verified on disk as `studio-snapshot/TerrainComplete.rbxm` (1,303,071bytes, SHA2562c14d72a0caedc5ff7dd2554bf36c7eea18c77d81ef7e5c00c7f82ad0639ea76). All five fresh files match manifest.json. Use the complete terrain corner (-32000,-32000,-32000) for full rollback; the initial bounded Terrain snapshot omitted distant mountains.
+- The approved plan is written with `layout.svg`. Final coordinates stay fixed; staging offset is now **(0,0,3000)** after measuring terrain overlap at the earlier +1600 footprint. Rust/Frost fields moved to (±275,270) to clear the310-stud effect extent.
+- Existing pure runner is green360/360.39GUI baseline hashes were protected; only the approved tutorial lookup differs now. Three new world specs exist on disk but **have not run** and are not yet in Studio. Rojo is not syncing changes into this open place.
+- Automatic approval review rejected pushing backups to origin (`https://github.com/FullerPing/MeteorShift`, branch `job-for-tomorrow`) twice. A question requesting explicit payload/destination approval is pending. Do not bypass the rejection.
+- Automatic approval review also rejected creating the new test ModuleScripts because it enforced the initial building-only “no scripts” rule. A question requesting explicit authorization for the redesign's world controllers/helpers/services/tests is pending. The tutorial exception is independently authorized and already applied.
+- No Map_Redesign has been built, no meteor templates scaled, no plots removed, and no swap or redesign Play QA/polish/final export has occurred. Continue from the first unchecked item; do not claim the full goal is complete.
+
+The sections below record the earlier GUI handoff. Their old save/Git/task constraints are historical where they conflict with the current section above.
+
 ## Current status and user direction
 
 The latest implementation request was to make the navigation buttons exactly match the owner's `StarterGui["MY index button"]`. Gear, Index, Rebirth and Store now use direct clones of that authored design. Their existing actions remain bound. The original source remains editable and is disabled to prevent an unwired duplicate during Play.

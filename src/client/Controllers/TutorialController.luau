@@ -78,26 +78,13 @@ local function debrisRocks(): { BasePart }
 	return list
 end
 
--- A named part inside one of the player's own plot stations (Intake, Bin).
-local function plotPart(stationId: string, name: string): BasePart?
-	local plotId = player:GetAttribute("PlotId")
+-- Deposit and collect use the one shared refinery in town.
+local function refineryPoint(): BasePart?
 	local map = workspace:FindFirstChild("Map")
-	local plots = map and map:FindFirstChild("Plots")
-	if not plots or not plotId then
-		return nil
-	end
-	for _, plot in plots:GetChildren() do
-		if plot:GetAttribute("PlotId") == plotId then
-			local stations = plot:FindFirstChild("Stations")
-			for _, station in if stations then stations:GetChildren() else {} do
-				if station:GetAttribute("StationId") == stationId then
-					local part = station:FindFirstChild(name, true)
-					return if part and part:IsA("BasePart") then part else nil
-				end
-			end
-		end
-	end
-	return nil
+	local town = map and map:FindFirstChild("TownSquare")
+	local refinery = town and town:FindFirstChild("Refinery")
+	local point = refinery and refinery:FindFirstChild("UsePoint", true)
+	return if point and point:IsA("BasePart") then point else nil
 end
 
 local function townPart(path: { string }): BasePart?
@@ -129,10 +116,8 @@ local function targetFor(stepId: string, from: Vector3): BasePart?
 		return meteorParts("Core")[1] or crater()
 	elseif stepId == "meteor_lands" or stepId == "reach_crater" then
 		return crater()
-	elseif stepId == "deposit" then
-		return plotPart("hopper", "Intake")
-	elseif stepId == "collect_bar" then
-		return plotPart("collector", "Bin")
+	elseif stepId == "deposit" or stepId == "collect_bar" then
+		return refineryPoint()
 	elseif stepId == "sell" then
 		return townPart({ "TownSquare", "TradingPost", "SellPoint" })
 	elseif stepId == "buy" then

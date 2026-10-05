@@ -6,4 +6,6 @@ The four files in this directory are exact copies of the repository exports at H
 
 The Terrain archive is a TerrainRegion captured from voxel corner (-256,-64,-256) through (256,128,256), with `RestoreCorner` stored on the instance. Restore using Terrain:PasteRegion(region, Vector3int16.new(-256,-64,-256), true). The Lighting archive is a Folder containing effects and Clouds; Lighting properties are attributes on that Folder. Restore Clouds to Terrain and the other effects to Lighting, then restore the stored properties.
 
+A later audit found distant terrain outside that bounded snapshot. `TerrainComplete.rbxm` captures **all** `Terrain.MaxExtents`, from voxel corner (-32000,-32000,-32000) through (32000,32000,32000). It contains approximately 4,896,366 occupied cells. Once its transfer is verified in the manifest, use this complete archive for full rollback, with Terrain:PasteRegion(region, Vector3int16.new(-32000,-32000,-32000), true). Keep the earlier bounded archive as baseline evidence.
+
 These backups do not prove the open place was saved. No publishing was performed.
