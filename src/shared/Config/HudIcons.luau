@@ -19,7 +19,7 @@ return table.freeze({
 	rebirth = "rbxassetid://81918678127079", -- clean 64 × 64 cycle, tinted by the HUD
 	premium = "rbxassetid://86357803148396",
 	plus = "rbxassetid://72035049172798",
-	index = "rbxassetid://99163572021418",
+	index = "rbxassetid://127110909372919", -- owner's authored Index button icon
 	close = "rbxassetid://125219065228703",
 	chat = "rbxassetid://96092458492519",
 })

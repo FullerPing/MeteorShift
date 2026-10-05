@@ -24,6 +24,7 @@ local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local UI = require(script.Parent.Parent.UI)
 local HudView = require(script.Parent.Parent.HudView)
+local NativeHudMenus = require(script.Parent.Parent.NativeHudMenus)
 local Sfx = require(script.Parent.Parent.Sfx)
 
 local Children = Fusion.Children
@@ -354,11 +355,6 @@ function HUDController:KnitStart()
 		TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 	)
 
-	scope:New("ScreenGui")({
-		Name = "HudSettings", ResetOnSpawn = false, IgnoreGuiInset = true,
-		DisplayOrder = 10, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Parent = player.PlayerGui,
-		[Children] = { HudView.settings(scope, hud) },
-	})
 	local ui = scope:New("ScreenGui")({
 		Name = "MeteorHUD",
 		ResetOnSpawn = false,
@@ -373,75 +369,6 @@ function HUDController:KnitStart()
 				openRefinery = function() Knit.GetController("RefineryController"):Open() end,
 			}),
 
-			-- While you were away (spec §6.4)
-			scope:New("Frame")({
-				Name = "WhileAway",
-				AnchorPoint = Vector2.new(0.5, 0.5),
-				Position = UDim2.fromScale(0.5, 0.5),
-				Size = UDim2.new(1, -24, 0, 260),
-				BackgroundColor3 = UI.PANEL_DARK,
-				Visible = scope:Computed(function(use)
-					return use(whileAway) ~= nil
-				end),
-				[Children] = {
-					-- Fitted to the screen instead of HUD-scaled, so the button stays a full-size touch target
-					scope:New("UISizeConstraint")({ MaxSize = Vector2.new(390, 260) }),
-					UI.cardFill(scope),
-					label(scope, {
-						Position = UDim2.fromOffset(0, 12),
-						Size = UDim2.new(1, 0, 0, 34),
-						Text = "While you were away",
-						TextSize = 28,
-						TextColor3 = CASH,
-					}),
-					UI.body(scope, {
-						Position = UDim2.fromOffset(18, 56),
-						Size = UDim2.new(1, -36, 1, -110),
-						Text = scope:Computed(function(use)
-							local r = use(whileAway)
-							if not r then
-								return ""
-							end
-							local hours = r.away / 3600
-							local awayText = if hours >= 1
-								then string.format("%.1f hours", hours)
-								else string.format("%d minutes", math.floor(r.away / 60))
-							local lines = {
-								"You were gone " .. awayText .. ".",
-								"Your production line made " .. Format.number(r.bars) .. " bars (" .. Format.cash(r.value) .. ").",
-							}
-							if r.capped then
-								table.insert(lines, "Offline time is capped at " .. math.floor(r.seconds / 3600) .. " hours.")
-							end
-							if r.blocked == "hopper" then
-								table.insert(lines, "Your hopper ran dry. Fill it up before you log off!")
-							elseif r.blocked == "collector" then
-								table.insert(lines, "Your collection post filled up. Upgrade it to store more!")
-							end
-							table.insert(lines, "Pick them up at the refinery.")
-							return table.concat(lines, "\n")
-						end),
-						TextSize = 17,
-						TextWrapped = true,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						TextYAlignment = Enum.TextYAlignment.Top,
-					}),
-					scope:New("TextButton")({
-						AnchorPoint = Vector2.new(0.5, 1),
-						Position = UDim2.new(0.5, 0, 1, -12),
-						Size = UDim2.fromOffset(140, 44),
-						BackgroundColor3 = CASH,
-						Font = FONT,
-						Text = "Nice!",
-						TextSize = 20,
-						TextColor3 = OUTLINE,
-						[OnEvent("Activated")] = function()
-							whileAway:set(nil)
-						end,
-						[Children] = { corner(scope, 10), stroke(scope) },
-					}),
-				},
-			}),
 
 			HudView.objective(scope, hud, {
 				meteorState = meteorState, standing = standing, coreHp = coreHp,
@@ -461,11 +388,14 @@ function HUDController:KnitStart()
 				TextStrokeTransparency = 0,
 				TextWrapped = true,
 				Text = scope:Computed(function(use)
-					local a = use(announcement); return use(toast) or (if a then HudMessages.toast(a.text) else "")
+					local personal = use(meteorReward)
+					local a = use(announcement)
+					return use(toast) or (if personal then HudMessages.meteorOutcome(personal.cracked, personal.ore)
+						elseif a then HudMessages.toast(a.text) else "")
 				end),
 				TextSize = 28,
 				TextColor3 = scope:Computed(function(use) return if use(toast) ~= nil then WHITE else ORANGE end),
-				Visible = scope:Computed(function(use) return use(toast) ~= nil or use(announcement) ~= nil end),
+				Visible = scope:Computed(function(use) return use(toast) ~= nil or use(announcement) ~= nil or use(meteorReward) ~= nil end),
 				[Children] = {
 					scope:New("UITextSizeConstraint")({ MinTextSize = 12, MaxTextSize = scope:Computed(function(use) return if use(hud).notificationCompact then 18 elseif use(hud).touch then 24 else 28 end) }),
 				},
@@ -485,7 +415,7 @@ function HUDController:KnitStart()
 				TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0,
 				Text = scope:Computed(function(use)
 					local r = use(meteorReward)
-					return if r then HudMessages.meteorReward(r.shards, r.top, Config.Meteor.TopBonus) else ""
+					return if r then HudMessages.meteorReward(r.shards, r.top, Config.Meteor.TopBonus, r.xp or 0) else ""
 				end),
 				TextSize = 24, TextColor3 = WHITE, Visible = rewardActive,
 				[Children] = { scope:New("UITextSizeConstraint")({
@@ -545,7 +475,9 @@ function HUDController:KnitStart()
 	})
 
 	self.Gui = ui
-	HudView.backpack(scope, hud, playerState)
+	NativeHudMenus.start()
+	local showWelcomeBack = require(script.Parent.Parent.NativeWelcomeBack).start(function() whileAway:set(nil) end)
+	scope:Observer(whileAway):onBind(function() showWelcomeBack(Fusion.peek(whileAway)) end)
 
 	-- "+$4.8M" rises off the cash counter on every sale
 	EconomyService.Sold:Connect(function(bars: number, cash: number)

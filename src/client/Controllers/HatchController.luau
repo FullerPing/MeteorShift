@@ -10,7 +10,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Visuals = require(ReplicatedStorage.Shared.PetVisuals)
-local UI = require(script.Parent.Parent.UI)
+local UI = require(script.Parent.Parent.NativeUI)
 local Sfx = require(script.Parent.Parent.Sfx)
 local PetModel = require(script.Parent.Parent.PetModel)
 
@@ -23,13 +23,6 @@ local function create(className: string, parent: Instance?, props: { [string]: a
 	for property, value in props do object[property] = value end
 	object.Parent = parent
 	return object
-end
-
-local function label(parent: Instance, name: string, text: string, size: number, color: Color3): TextLabel
-	return create("TextLabel", parent, {
-		Name = name, Text = text, Font = UI.BODY_FONT, TextSize = size, TextColor3 = color,
-		BackgroundTransparency = 1, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left,
-	})
 end
 
 function HatchController:KnitStart()
@@ -46,49 +39,26 @@ function HatchController:KnitStart()
 	local preview: PetModel.Visual? = nil
 	local egg: Model? = nil
 	local nextAt = 0
-	local gui: ScreenGui = create("ScreenGui", player:WaitForChild("PlayerGui"), {
-		Name = "PetHatch", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 100, Enabled = false,
-	})
-	local shade: TextButton = create("TextButton", gui, {
-		Name = "DismissBackdrop", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.OUTLINE,
-		BackgroundTransparency = 0.2, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
-		Active = true, Selectable = false, ZIndex = 1,
-	})
-	local panel: Frame = create("Frame", gui, {
-		Name = "HatchResult", BackgroundColor3 = UI.PANEL, BorderSizePixel = 0, ZIndex = 2,
-		AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(320, 390),
-	})
-	create("UICorner", panel, { CornerRadius = UDim.new(0, 16) })
-	local border: UIStroke = create("UIStroke", panel, { Color = UI.HUD_GOLD, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
-	local title = label(panel, "PetName", "Hatching...", 23, UI.WHITE)
-	title.Font = UI.FONT
-	local rarity = label(panel, "Rarity", "", 13, UI.HUD_MUTED)
-	local camera: Camera = create("Camera", nil, { FieldOfView = 38, CFrame = CFrame.lookAt(Vector3.new(0, 0.5, 6.2), Vector3.zero) })
-	local viewport: ViewportFrame = create("ViewportFrame", panel, {
-		Name = "PetPreview", BackgroundTransparency = 1, BorderSizePixel = 0, CurrentCamera = camera,
-		Ambient = Color3.fromRGB(190, 195, 205), LightColor = Color3.fromRGB(255, 236, 210), LightDirection = Vector3.new(-1, -1, -2), ZIndex = 2,
-	})
-	camera.Parent = viewport
-	local world: WorldModel = create("WorldModel", viewport, {})
-	local perks: ScrollingFrame = create("ScrollingFrame", panel, {
-		Name = "PetPerks", BackgroundTransparency = 1, BorderSizePixel = 0,
-		AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ScrollBarThickness = 4,
-		ScrollBarImageColor3 = UI.HUD_GOLD, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 2,
-	})
-	local perkText = label(perks, "PerkText", "", 14, UI.SUBTEXT)
-	perkText.AutomaticSize = Enum.AutomaticSize.Y
-	perkText.Size = UDim2.new(1, -8, 0, 0)
-	perkText.TextYAlignment = Enum.TextYAlignment.Top
-	local duplicate = label(panel, "Duplicate", "", 14, UI.HUD_MINT)
-	local close: TextButton = create("TextButton", panel, {
-		Name = "Close", Text = "SKIP", Font = UI.BODY_FONT, TextSize = 15,
-		TextColor3 = UI.OUTLINE, BackgroundColor3 = UI.HUD_GOLD, BorderSizePixel = 0,
-		Size = UDim2.new(1, -24, 0, 44), AutoButtonColor = true, ZIndex = 3,
-	})
-	create("UICorner", close, { CornerRadius = UDim.new(0, 10) })
-	local flash: Frame = create("Frame", gui, {
-		Name = "RarityFlash", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4,
-	})
+	local gui = UI.get("PetHatch")
+	local shade = gui:WaitForChild("DismissBackdrop") :: TextButton
+	local panel = gui:WaitForChild("HatchResult") :: Frame
+	local title = panel:WaitForChild("PetName") :: TextLabel
+	local rarity = panel:WaitForChild("Rarity") :: TextLabel
+	local headerClose = panel:WaitForChild("HeaderClose") :: TextButton
+	local viewport = panel:WaitForChild("PetPreview") :: ViewportFrame
+	-- Cameras may be excluded from StarterGui replication; keep this local to the preview.
+	local camera: Camera = (viewport:FindFirstChild("Camera") or create("Camera", viewport, {
+		Name = "Camera", FieldOfView = 38,
+		CFrame = CFrame.lookAt(Vector3.new(0, 0.5, 6.2), Vector3.zero),
+	})) :: Camera
+	local world = viewport:WaitForChild("WorldModel") :: WorldModel
+	local perks = panel:WaitForChild("PetPerks") :: ScrollingFrame
+	local perkText = perks:WaitForChild("PerkText") :: TextLabel
+	local duplicate = panel:WaitForChild("Duplicate") :: TextLabel
+	local close = panel:WaitForChild("Close") :: TextButton
+	local flash = gui:WaitForChild("RarityFlash") :: Frame
+	viewport.CurrentCamera = camera
+	gui.Enabled = false
 	local flashTween: Tween? = nil
 
 	local function layout()
@@ -100,8 +70,8 @@ function HatchController:KnitStart()
 		local height = math.min(if short then 260 else 420, size.Y - inset - 24)
 		panel.Size = UDim2.fromOffset(width, height)
 		panel.Position = UDim2.fromOffset(size.X / 2, inset + (size.Y - inset) / 2)
-		title.Position, title.Size = UDim2.fromOffset(12, 10), UDim2.fromOffset(width - 24, 32)
-		rarity.Position, rarity.Size = UDim2.fromOffset(12, 42), UDim2.fromOffset(width - 24, 20)
+		title.Position, title.Size = UDim2.fromOffset(12, 10), UDim2.fromOffset(width - 76, 32)
+		rarity.Position, rarity.Size = UDim2.fromOffset(12, 42), UDim2.fromOffset(width - 76, 20)
 		local previewWidth = if short then 170 else width - 24
 		local previewHeight = if short then height - 124 else math.min(158, height - 230)
 		viewport.Position, viewport.Size = UDim2.fromOffset(12, 66), UDim2.fromOffset(previewWidth, previewHeight)
@@ -138,7 +108,7 @@ function HatchController:KnitStart()
 		local owned = state and state.pets and state.pets.owned and state.pets.owned[hatch.petId]
 		local level = if owned then owned.level else 1
 		local rarityDef = Config.Pets.Rarities[def.Rarity]
-		border.Color, rarity.TextColor3 = rarityDef.Color, rarityDef.Color
+		rarity.TextColor3 = rarityDef.Color
 		title.Text, rarity.Text = def.Name, rarityDef.Name .. "  ·  Level " .. tostring(level)
 		local lines = {}
 		for _, perk in Pets.perksOf(def, level) do
@@ -174,7 +144,6 @@ function HatchController:KnitStart()
 		layout()
 		title.Text, rarity.Text = "Hatching...", (Pets.egg(hatch.eggId) or { Name = "Pet" }).Name
 		perkText.Text, duplicate.Text, close.Text = "", "Tap or Escape to skip", "SKIP"
-		border.Color = UI.HUD_GOLD
 		shade.Visible, shade.Active, viewport.Visible = true, true, true
 		flash.BackgroundTransparency = 1
 		gui.Enabled = true
@@ -191,7 +160,7 @@ function HatchController:KnitStart()
 			create("Part", egg, {
 				Name = "OreFleck", Shape = Enum.PartType.Ball, Size = Vector3.new(0.18, 0.26, 0.08),
 				CFrame = CFrame.new(math.sin(index * 1.7) * 0.55, (index - 3) * 0.28, -0.76),
-				Color = UI.SHARD, Material = Enum.Material.SmoothPlastic,
+				Color = UI.CYAN, Material = Enum.Material.SmoothPlastic,
 				Anchored = true, CanCollide = false, CanTouch = false, CanQuery = false,
 			})
 		end
@@ -201,6 +170,7 @@ function HatchController:KnitStart()
 
 	shade.Activated:Connect(dismiss)
 	close.Activated:Connect(dismiss)
+	headerClose.Activated:Connect(dismiss)
 	UserInputService.InputBegan:Connect(function(input)
 		if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then dismiss() end
 	end)

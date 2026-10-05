@@ -1,6 +1,6 @@
 --!strict
--- Shared look for the Fusion UI: neutral frames, dark cards, chunky headings and
--- clean supporting text. Resource icons use native shapes so they load instantly.
+-- Shared simulator look: charcoal stud menus, colorful headers and outlined
+-- headings. The HUD retains its blue surfaces and colorful navigation tiles.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,34 +21,52 @@ local UI = {}
 UI.FONT = Enum.Font.FredokaOne
 UI.BODY_FONT = Enum.Font.GothamMedium
 UI.WHITE = Color3.fromRGB(255, 255, 255)
-UI.SUBTEXT = Color3.fromRGB(188, 196, 203)
+UI.SUBTEXT = Color3.fromRGB(211, 228, 240)
 UI.ORANGE = Color3.fromRGB(255, 174, 52)
 UI.SHARD = Color3.fromRGB(66, 190, 255)
 UI.RED = Color3.fromRGB(235, 70, 70)
 UI.GREEN = Color3.fromRGB(105, 240, 103)
 UI.CASH = Color3.fromRGB(255, 207, 55)
 UI.BAR = Color3.fromRGB(232, 171, 89)
-UI.OUTLINE = Color3.fromRGB(17, 24, 28)
-UI.PANEL = Color3.fromRGB(28, 34, 40)
+UI.OUTLINE = Color3.fromRGB(12, 18, 25)
+UI.PANEL = Color3.fromRGB(43, 44, 49)
 -- Gradient colors multiply the frame color; keep the top bright enough to read.
 UI.PANEL_TOP = Color3.fromRGB(255, 255, 255)
-UI.PANEL_BOTTOM = Color3.fromRGB(211, 224, 235)
-UI.PANEL_DARK = Color3.fromRGB(21, 25, 29)
-UI.CARD = Color3.fromRGB(36, 43, 49)
+UI.PANEL_BOTTOM = Color3.fromRGB(209, 209, 209)
+UI.PANEL_DARK = Color3.fromRGB(29, 30, 35)
+UI.CARD = Color3.fromRGB(67, 69, 77)
 UI.DISABLED = Color3.fromRGB(73, 83, 94)
 UI.MUTED = UI.DISABLED
 
--- HUD and menu surfaces share the same neutral palette.
-UI.HUD_SURFACE = Color3.fromRGB(21, 25, 29)
-UI.HUD_BORDER = Color3.fromRGB(67, 76, 84)
-UI.HUD_MUTED = Color3.fromRGB(188, 196, 203)
+-- HUD surfaces stay blue independently of the menus' charcoal palette.
+UI.HUD_SURFACE = Color3.fromRGB(28, 72, 105)
+UI.HUD_BORDER = UI.OUTLINE
+UI.HUD_MUTED = UI.SUBTEXT
 UI.HUD_GOLD = Color3.fromRGB(255, 219, 100)
 UI.HUD_MINT = Color3.fromRGB(139, 240, 195)
 
+local STUD_TEXTURE = "rbxassetid://6927295847"
+local STUD_TILE_SIZE = UDim2.fromOffset(128, 128)
+
+-- One tiled image per surface. Texture children stay below sibling labels/icons,
+-- never receive input and retain the parent's fill color and disabled state.
+local function studTexture(scope: Scope, transparency: number, radius: number)
+	return scope:New("ImageLabel")({
+		Name = "StudTexture", Position = UDim2.fromScale(0, 0), Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1, BorderSizePixel = 0,
+		Image = STUD_TEXTURE, ImageColor3 = UI.WHITE, ImageTransparency = transparency,
+		ScaleType = Enum.ScaleType.Tile, TileSize = STUD_TILE_SIZE,
+		ZIndex = 0, Active = false, Selectable = false,
+		[Children] = { UI.corner(scope, radius) },
+	})
+end
+
 function UI.hudFill(scope: Scope)
 	return {
-		UI.corner(scope, 8),
-		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		UI.corner(scope, 12),
+		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		scope:New("UIGradient")({ Rotation = 90, Color = ColorSequence.new(UI.WHITE, UI.PANEL_BOTTOM) }),
+		studTexture(scope, 0.75, 12),
 	}
 end
 
@@ -110,32 +128,56 @@ function UI.body(scope: Scope, props: { [any]: any })
 	return UI.label(scope, base)
 end
 
--- Rounded menu surface with a light edge and subtle neutral shading.
+-- Keep decorations at ZIndex0 so ordinary sibling text and controls draw above
+-- the backing, including when their panel uses a higher ZIndex.
 function UI.panelFill(scope: Scope)
 	return {
-		UI.corner(scope, 16),
-		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-		scope:New("UIGradient")({
-			Rotation = 90,
-			Color = ColorSequence.new(UI.PANEL_TOP, UI.PANEL_BOTTOM),
+		UI.corner(scope, 6),
+		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		scope:New("Frame")({
+			Name = "MenuStudBacking", Position = UDim2.fromScale(0, 0), Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = UI.PANEL, BorderSizePixel = 0,
+			ZIndex = 0, Active = false, Selectable = false, ClipsDescendants = true,
+			[Children] = { UI.corner(scope, 6), studTexture(scope, 0.75, 6) },
 		}),
 	}
 end
 
--- Use with BackgroundColor3 = UI.CARD for the panels' lighter inset cards.
+-- A passive accent strip; both color and height may be static or Fusion states.
+-- Add beside the existing title/close controls, after UI.panelFill(scope).
+function UI.menuHeader(scope: Scope, color: Fusion.UsedAs<Color3>, height: Fusion.UsedAs<number>)
+	return scope:New("Frame")({
+		Name = "MenuHeader", Position = UDim2.fromScale(0, 0),
+		Size = scope:Computed(function(use) return UDim2.new(1, 0, 0, use(height)) end),
+		BackgroundColor3 = color, BorderSizePixel = 0,
+		ZIndex = 0, Active = false, Selectable = false, ClipsDescendants = true,
+		[Children] = {
+			UI.corner(scope, 6),
+			studTexture(scope, 0.65, 6),
+			scope:New("Frame")({
+				Name = "Divider", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1),
+				Size = UDim2.new(1, 0, 0, 4), BackgroundColor3 = UI.OUTLINE, BorderSizePixel = 0,
+				ZIndex = 0, Active = false, Selectable = false,
+			}),
+		},
+	})
+end
+
+-- Simple inset cards with modest corners and a solid black outline.
 function UI.cardFill(scope: Scope)
 	return {
-		UI.corner(scope, 12),
+		UI.corner(scope, 4),
 		scope:New("UIStroke")({
 			Color = UI.HUD_BORDER,
-			Thickness = 1,
-			Transparency = 0.1,
+			Thickness = 3,
+			Transparency = 0,
 			ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
 		}),
 		scope:New("UIGradient")({
 			Rotation = 90,
-			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(211, 224, 235)),
+			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(235, 235, 235)),
 		}),
+		studTexture(scope, 0.75, 4),
 	}
 end
 
@@ -230,14 +272,16 @@ function UI.icon(scope: Scope, kind: string, props: { [any]: any }?)
 	return scope:New("Frame")(base)
 end
 
--- A chunky outlined button. The neutral gradient follows reactive fill colors.
+-- A simple outlined action button. Native shading follows reactive fill colors.
 function UI.button(scope: Scope, props: { [any]: any })
 	local base = {
 		BackgroundColor3 = UI.CASH,
 		AutoButtonColor = true,
 		Font = UI.FONT,
 		TextSize = 20,
-		TextColor3 = UI.OUTLINE,
+		TextColor3 = UI.WHITE,
+		TextStrokeColor3 = UI.OUTLINE,
+		TextStrokeTransparency = 0,
 		BorderSizePixel = 0,
 	}
 	local children = props[Children]
@@ -247,12 +291,13 @@ function UI.button(scope: Scope, props: { [any]: any })
 		end
 	end
 	base[Children] = {
-		UI.corner(scope, 10),
-		scope:New("UIStroke")({ Color = UI.OUTLINE, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		UI.corner(scope, 4),
+		scope:New("UIStroke")({ Color = UI.OUTLINE, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
 		scope:New("UIGradient")({
 			Rotation = 90,
-			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(211, 224, 235)),
+			Color = ColorSequence.new(UI.WHITE, Color3.fromRGB(235, 235, 235)),
 		}),
+		studTexture(scope, 0.75, 4),
 		children,
 	}
 	local button = scope:New("TextButton")(base)
@@ -358,6 +403,8 @@ function UI.hudButton(
 		end
 	end
 	local iconNames = { SHOP = "equipment", INDEX = "index", REBIRTH = "rebirth", STORE = "premium" }
+	local tileColors = { SHOP = UI.ORANGE, INDEX = UI.SHARD, REBIRTH = UI.GREEN, STORE = UI.CASH }
+	local tileColor = tileColors[name] or UI.CARD
 	local hover = scope:Value(false)
 	merged.Text = ""
 	merged.BorderSizePixel = 0
@@ -366,19 +413,23 @@ function UI.hudButton(
 		local color = use(accent)
 		return name ~= "STORE" and color.G > color.R and color.G > color.B
 	end)
-	merged.BackgroundColor3 = UI.HUD_SURFACE
-	merged.BackgroundTransparency = scope:Computed(function(use) return if use(hover) then 0.15 else 1 end)
-	merged.AutoButtonColor = true
+	merged.BackgroundColor3 = scope:Computed(function(use)
+		return if use(hover) then tileColor:Lerp(UI.WHITE, 0.12) else tileColor
+	end)
+	merged.BackgroundTransparency = 0
+	merged.AutoButtonColor = false
 	merged[ Fusion.OnEvent("MouseEnter") ] = function() hover:set(true) end
 	merged[ Fusion.OnEvent("MouseLeave") ] = function() hover:set(false) end
 	merged[ Fusion.OnEvent("SelectionGained") ] = function() hover:set(true) end
 	merged[ Fusion.OnEvent("SelectionLost") ] = function() hover:set(false) end
 	merged[Children] = {
-		UI.corner(scope, 12),
+		UI.corner(scope, 16),
 		scope:New("UIStroke")({
-			Color = accent, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-			Transparency = scope:Computed(function(use) return if use(highlighted) then 0.1 elseif use(hover) then 0.45 else 1 end),
+			Color = UI.OUTLINE, ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+			Thickness = scope:Computed(function(use) return 2 / use(hud).buttonScale end),
 		}),
+		scope:New("UIGradient")({ Rotation = 90, Color = ColorSequence.new(UI.WHITE, UI.PANEL_BOTTOM) }),
+		studTexture(scope, 0.75, 16),
 		scope:New("UIScale")({
 			Scale = scope:Computed(function(use)
 				return use(hud).buttonScale
@@ -388,13 +439,13 @@ function UI.hudButton(
 		UI.hudIcon(scope, iconNames[name], {
 			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.02),
 			Size = UDim2.fromScale(0.74, 0.74),
-			ImageColor3 = if name == "REBIRTH" then Color3.fromRGB(91, 236, 98) else Color3.new(1, 1, 1),
+			ImageColor3 = UI.WHITE,
 		}),
 		UI.hudText(scope, {
 			Name = "Caption", Position = UDim2.fromScale(0, 0.70), Size = UDim2.fromScale(1, 0.30),
-			Text = if name == "SHOP" then "GEAR" else name, Font = Enum.Font.GothamBold,
+			Text = if name == "SHOP" then "GEAR" else name, Font = UI.FONT,
 			TextSize = scope:Computed(function(use) return use(hud).buttonTextSize or math.max(18, 11 / use(hud).buttonScale) end),
-			TextColor3 = UI.WHITE, TextStrokeColor3 = Color3.fromRGB(17, 24, 28), TextStrokeTransparency = 0.25,
+			TextColor3 = UI.WHITE, TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0,
 		}),
 		scope:New("Frame")({
 			Name = "ReadyBadge", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 4),

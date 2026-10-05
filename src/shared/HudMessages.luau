@@ -31,11 +31,28 @@ function Messages.sale(bars: number, cash: number): string
 		.. tint("+" .. string.lower(Format.cash(cash)), Color3.fromRGB(139, 240, 195))
 end
 
+-- Meteor ore and XP can be fractional. Keep small awards visible instead of
+-- flooring them to zero; larger amounts use the normal compact number format.
+local function awardText(amount: number): string
+	if amount ~= amount or amount < 0 or amount >= math.huge then return "0" end
+	if amount >= 1000 then return Format.number(amount) end
+	local text = string.format("%.3f", amount)
+	text = string.gsub(text, "0+$", "")
+	return (string.gsub(text, "%.$", ""))
+end
+
+function Messages.meteorOutcome(cracked: boolean, ore: number): string
+	return (if cracked then "Core cracked!" else "Cooled: core unbroken.") .. " Kept " .. awardText(ore) .. " ore."
+end
+
 -- Results.top is the core-hit podium bonus; overall contribution rank can
 -- include crust-only miners and therefore is not the reward podium placement.
-function Messages.meteorReward(shards: number, topBonus: number, topBonuses: { number }): string
+function Messages.meteorReward(shards: number, topBonus: number, topBonuses: { number }, xp: number?): string
 	local blue = Color3.fromRGB(113, 205, 255)
 	local text = tint(Format.number(shards), blue) .. (if shards == 1 then " shard received" else " shards received")
+	if xp ~= nil then
+		text ..= " · " .. tint("+" .. awardText(xp) .. " XP", Color3.fromRGB(255, 209, 102))
+	end
 	if topBonus <= 0 then return text end
 	local podium = { Color3.fromRGB(255, 209, 102), Color3.fromRGB(204, 214, 224), Color3.fromRGB(212, 146, 97) }
 	for place, bonus in topBonuses do

@@ -19,7 +19,8 @@ local RewardService = Knit.CreateService({
 	Name = "RewardService",
 	Client = {
 		-- To each participant: { cracked, ore, oreType, contribution, rank, hitCore, floor,
-		-- bonus, top, shards, leaders, clearance }. oreType is the meteor's ore id; clearance
+		-- bonus, top, shards, xp, leaders, clearance }. xp includes the actual scholar-adjusted
+		-- hit and crack awards. oreType is the meteor's ore id; clearance
 		-- is the refining speed for it at their level, 0 to 1.
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
@@ -57,6 +58,7 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 	for index, entry in ranked do
 		local reward = rewards[index]
 		local data = PlayerStateService:Get(entry.Player)
+		local awardedShards = 0
 		if data then
 			-- flags.firstMeteor and flags.firstCoreReward are TelemetryService's
 			-- (first validated hit, first shards received; spec §13)
@@ -66,11 +68,13 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			end
 			-- Player level (Shared.Levels): hits already paid XP as they landed; a cracked core adds a bonus
 			if cracked and entry.HitCore then
-				LevelService:AddXp(entry.Player, Levels.crackXp(meteorType.Ore))
+				local awarded = LevelService:AddXp(entry.Player, Levels.crackXp(meteorType.Ore))
+				ContributionService:AddXp(entry.Player, awarded)
 			end
 		end
 		if reward then
 			PlayerStateService:AddShards(entry.Player, reward.Total)
+			if data then awardedShards = reward.Total end
 			Knit.GetService("PetService"):Work(entry.Player, "shards")
 			self.ShardsAwarded:Fire(entry.Player, reward.Total)
 		end
@@ -85,7 +89,8 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			floor = if reward then reward.Floor else 0,
 			bonus = if reward then reward.Bonus else 0,
 			top = if reward then reward.Top else 0,
-			shards = if reward then reward.Total else 0,
+			shards = awardedShards,
+			xp = entry.Xp,
 			leaders = leaders,
 		})
 	end

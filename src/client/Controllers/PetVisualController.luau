@@ -24,6 +24,7 @@ local folder = Instance.new("Folder")
 folder.Name = "LocalPetVisuals"
 local reduced = false
 local hatchReserved = false
+local shopReserved = 0
 local ownCapacityFraction = 0
 local selectionClock = 0
 local OFFSETS = { Vector3.new(-2.5, 0, 3.2), Vector3.new(2.5, 0, 3.2), Vector3.new(-1.7, 1.8, 0.8), Vector3.new(1.7, 1.8, 0.8) }
@@ -117,7 +118,11 @@ end
 
 local function selectFollowers()
 	local camera = workspace.CurrentCamera
-	if not camera then return end
+	if not camera then
+		-- Reservations must still release clones during camera replacement.
+		for id, follower in followers do follower.visual.model:Destroy() followers[id] = nil end
+		return
+	end
 	folder.Parent = workspace
 	local ownRoot = rootOf(player)
 	local center = if ownRoot then ownRoot.Position else camera.CFrame.Position
@@ -135,7 +140,7 @@ local function selectFollowers()
 		end
 	end
 	local desired: { [string]: boolean } = {}
-	local budget = Visuals.Budget - (if hatchReserved then 1 else 0)
+	local budget = Visuals.Budget - shopReserved - (if hatchReserved then 1 else 0)
 	local picked = Visuals.select(candidates, player.UserId, budget)
 	-- Remove before creating, including when an upgraded look replaces the old clone.
 	for _, pick in picked do
@@ -191,6 +196,12 @@ end
 -- The overlay reserves synchronously before creating its preview, including reduced effects.
 function PetVisualController:ReserveHatchPreview(reserved: boolean)
 	hatchReserved = reserved
+	selectFollowers()
+end
+
+-- Reserve before cloning Shop pets; destroy those previews before releasing.
+function PetVisualController:ReserveShopPreviews(count: number)
+	shopReserved = if count == count then math.clamp(math.floor(count), 0, 14) else 0
 	selectFollowers()
 end
 

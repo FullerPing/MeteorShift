@@ -36,4 +36,42 @@ return function(t: any)
 		t.eq(Messages.meteorReward(7, 0, { 10, 6, 3 }), '<font color="#71CDFF">7</font> shards received')
 		t.eq(Messages.meteorReward(1, 0, { 10, 6, 3 }), '<font color="#71CDFF">1</font> shard received')
 	end)
+	t.test("personal meteor outcome explains a crack and the ore kept", function()
+		t.eq(Messages.meteorOutcome(true, 12), "Core cracked! Kept 12 ore.")
+		t.eq(Messages.meteorOutcome(true, 0), "Core cracked! Kept 0 ore.")
+		t.eq(Messages.meteorOutcome(true, 1.375), "Core cracked! Kept 1.375 ore.")
+	end)
+	t.test("a cooled meteor explains the unbroken core and preserves earned ore", function()
+		t.eq(Messages.meteorOutcome(false, 18), "Cooled: core unbroken. Kept 18 ore.")
+		t.eq(Messages.meteorOutcome(false, 0), "Cooled: core unbroken. Kept 0 ore.")
+	end)
+	t.test("personal payout shows awarded shards and fractional XP without a podium", function()
+		t.eq(Messages.meteorReward(7, 0, { 10, 6, 3 }, 2.375),
+			'<font color="#71CDFF">7</font> shards received · <font color="#FFD166">+2.375 XP</font>')
+		t.eq(Messages.meteorReward(0, 0, { 10, 6, 3 }, 0.375),
+			'<font color="#71CDFF">0</font> shards received · <font color="#FFD166">+0.375 XP</font>')
+	end)
+	t.test("XP accompanies the actual shard total without adding the podium bonus again", function()
+		t.eq(Messages.meteorReward(30, 10, { 10, 6, 3 }, 31.5),
+			'<font color="#71CDFF">30</font> shards received · <font color="#FFD166">+31.5 XP</font> (<font color="#FFD166">#1</font> <font color="#71CDFF">+10</font>)')
+	end)
+	t.test("zero and invalid XP never display a non-finite or negative award", function()
+		for _, xp in { 0, -1, math.huge, -math.huge, 0 / 0 } do
+			t.eq(Messages.meteorReward(0, 0, { 10, 6, 3 }, xp),
+				'<font color="#71CDFF">0</font> shards received · <font color="#FFD166">+0 XP</font>')
+		end
+	end)
+	t.test("personal payout uses XP earned through level-ups rather than the remaining XP bar", function()
+		local Levels = require(t.shared.Levels)
+		local Pets = require(t.shared.Pets)
+		local progress = { level = 1, xp = 29 }
+		local hit = Pets.playerXp(Levels.hitXp("iron", "Core"), 0.2)
+		local crack = Pets.playerXp(Levels.crackXp("iron"), 0.2)
+		Levels.addXp(progress, hit)
+		Levels.addXp(progress, crack)
+		t.eq(progress.level, 2)
+		t.near(progress.xp, 29.6, 1e-6)
+		t.eq(Messages.meteorReward(25, 0, { 10, 6, 3 }, hit + crack),
+			'<font color="#71CDFF">25</font> shards received · <font color="#FFD166">+30.6 XP</font>')
+	end)
 end

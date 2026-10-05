@@ -1,18 +1,20 @@
 --!strict
 -- Economy pacing model (spec §7.4, Week 5 balancing; docs/balance.md).
 --
--- Simulates a fresh free player's first sessions from Config alone: no passes, no
--- rebirth, no mineral index. The first meteor comes after Meteor.FirstCountdown, the
--- next ones every full event cycle. Iron meteors only until the player's pickaxe meets
--- Ice's tier; from then on each meteor is worth its expected value (see meteorBarPrice).
--- The player mines the meteor while
--- it is active and debris between meteors, walks home with a full backpack, and
--- sells every Balance.SellInterval seconds.
+-- Simulates a fresh player's first sessions from Config alone: no mineral index or
+-- quantity passes. By default there are no pets; Options.drillbotLevel equips one
+-- fixed-level Drillbot. The first meteor comes after Meteor.FirstCountdown, then one
+-- per full event cycle. Every player mines every type; level determines clearance.
+-- The player mines active meteors and debris between them, walks home with a full
+-- backpack, and sells every Balance.SellInterval seconds.
 --
 --   ore rate     = backpack / (backpack / ore-per-hit x swing / HitsPerMinuteShare + TripSeconds)
 --   ore supply   = time-weighted meteor rate and debris rate (debris pays YieldFraction of a hit)
 --   line rate    = min(conveyor, refinery)    (same as Server.Lib.Refining)
 --   income       = min(ore supply, line rate) x blended bar price (meteor ore and debris iron)
+--   Drillbot     = Yield scales ore, Swift shortens swings, Miner supplies direct-hopper
+--                  ore while filling the backpack, with a target always in reach.
+--                  It is inactive during trips and grants no XP, shards or mineral rolls.
 --
 -- A pickaxe or backpack tier is bought as a bundle (Shared.Gear.bundleCost): the Gate stat's
 -- levels up to the tier cap, then the evolve price. Speed, Reach and Crit levels are the
@@ -24,12 +26,10 @@
 -- if it is out of reach. Hopper and collection post levels are never bought: they only
 -- matter for offline income (spec §6.4), which `offlineCap` covers.
 --
--- Ice and Crystal (expected value, no dice): the schedule picks a type by Weight and a
--- type the crowd can't mine drops to the next one down (Meteor.TypeOrder). The lobby is
--- assumed to be all at the player's own pickaxe tier, so a type is eligible exactly when
--- the player's pickaxe meets its tier. Every meteor then pays the probability-weighted
--- bar price of its ore. Ice's Refreeze twist and HP multiplier are ignored (they cost the
--- crowd time, not the player's ore); Crystal's Resonance likewise.
+-- Ice and Crystal (expected value, no dice): types come up by Weight. Each ore costs
+-- 1 / clearance line units at the player's level and keeps its full bar price. Ice's
+-- Refreeze and HP multiplier are ignored (they cost crowd time, not the player's ore);
+-- Crystal's Resonance likewise. A modeled Drillbot keeps its selected level after rebirth.
 --
 -- Core Shards come from every finished meteor at Balance.ShardsPerMeteor (the floor plus an
 -- average share of the bonus pool, over the meteors that crack).
@@ -45,6 +45,7 @@ local Config = require(script.Parent.Config)
 local Rebirth = require(script.Parent.Rebirth)
 local Gear = require(script.Parent.Gear)
 local Levels = require(script.Parent.Levels)
+local Pets = require(script.Parent.Pets)
 
 local Pacing = {}
 
@@ -69,6 +70,7 @@ export type Purchase = {
 export type Options = {
 	rebirths: number?, -- most rebirths the player takes (default 0)
 	paybackLimit: number?, -- seconds; skip upgrades that take longer than this to pay back
+	drillbotLevel: number?, -- one equipped Drillbot, fixed at this level for the whole run
 }
 
 export type Sample = {
@@ -90,6 +92,7 @@ export type Result = {
 	rebirthTimes: { number }, -- when each rebirth happened
 	cycle: number, -- seconds from one impact to the next
 	firstCycleEnd: number, -- when the first meteor's event cycle is over
+	petBonuses: Pets.Bonuses, -- the fixed pet treatment; all zero in the default free run
 }
 
 local Balance = Config.Balance
@@ -128,13 +131,31 @@ function Pacing.cycleSeconds(): number
 		+ Config.Meteor.Countdown
 end
 
--- Ore per second a player brings home while mining, trips included. `yield` scales ore per hit.
-function Pacing.oreRate(pickaxeTier: number, backpackTier: number, yield: number): number
+local function bonusesFor(drillbotLevel: number?): Pets.Bonuses
+	local saved: Pets.Saved = { owned = {}, equipped = {} }
+	if drillbotLevel then
+		saved.owned.drillbot = { level = drillbotLevel, xp = 0 }
+		table.insert(saved.equipped, "drillbot")
+	end
+	return Pets.bonuses(saved)
+end
+
+local function oreRate(pickaxeTier: number, backpackTier: number, yield: number, bonuses: Pets.Bonuses): number
 	local pickaxe = Config.Pickaxes[pickaxeTier]
 	local capacity = Config.Backpacks[backpackTier].Capacity
-	local perHit = pickaxe.OrePerHit * yield * Iron.YieldMult
-	local fillSeconds = capacity / perHit * pickaxe.Swing / Balance.HitsPerMinuteShare
-	return capacity / (fillSeconds + Balance.TripSeconds)
+	local perHit = Pets.oreYield(pickaxe.OrePerHit * yield * Iron.YieldMult, bonuses.yield)
+	if perHit <= 0 then return 0 end
+	local swing = pickaxe.Swing * (1 - bonuses.swift)
+	local fillSeconds = capacity / perHit * swing / Balance.HitsPerMinuteShare
+	-- Recent validated hits keep the miner active while filling; trips have no target.
+	-- NodeService:PetHit applies Yield to pet ore too, without a backpack detour.
+	local petOre = perHit * bonuses.miner / swing * fillSeconds
+	return (capacity + petOre) / (fillSeconds + Balance.TripSeconds)
+end
+
+-- Ore per second delivered to the hopper, trips included. `yield` scales the ore source.
+function Pacing.oreRate(pickaxeTier: number, backpackTier: number, yield: number, drillbotLevel: number?): number
+	return oreRate(pickaxeTier, backpackTier, yield, bonusesFor(drillbotLevel))
 end
 
 -- Is a meteor active (minable) at this second of the run?
@@ -148,9 +169,9 @@ end
 
 -- Ore per second averaged over a whole cycle, and the blended bar price of that ore
 -- (meteor and debris time weighted).
-local function averageSupply(owned: Owned, cycle: number, level: number): (number, number, number)
-	local meteor = Pacing.oreRate(owned.pickaxe, owned.backpack, 1) * Iron.ActiveDuration
-	local debris = Pacing.oreRate(owned.pickaxe, owned.backpack, Config.Debris.YieldFraction)
+local function averageSupply(owned: Owned, cycle: number, level: number, bonuses: Pets.Bonuses): (number, number, number)
+	local meteor = oreRate(owned.pickaxe, owned.backpack, 1, bonuses) * Iron.ActiveDuration
+	local debris = oreRate(owned.pickaxe, owned.backpack, Config.Debris.YieldFraction, bonuses)
 		* Balance.DebrisActivityShare
 		* (cycle - Iron.ActiveDuration)
 	local meteorPrice, meteorCost = meteorMix(level)
@@ -168,8 +189,8 @@ local function lineRate(owned: Owned): number
 end
 
 -- Cash per second in the long run
-local function income(owned: Owned, cycle: number, level: number, mult: number?): number
-	local supply, price, cost = averageSupply(owned, cycle, level)
+local function income(owned: Owned, cycle: number, level: number, mult: number, bonuses: Pets.Bonuses): number
+	local supply, price, cost = averageSupply(owned, cycle, level, bonuses)
 	return math.min(supply, lineRate(owned) / cost) * price * (mult or 1)
 end
 
@@ -226,6 +247,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 	local total = horizon or Balance.Horizon
 	local maxRebirths = if options and options.rebirths then options.rebirths else 0
 	local paybackLimit = if options and options.paybackLimit then options.paybackLimit else math.huge
+	local petBonuses = bonusesFor(if options then options.drillbotLevel else nil)
 	local rebirths, mult = 0, 1
 	local step = Balance.StepSeconds
 	local cycle = Pacing.cycleSeconds()
@@ -240,6 +262,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 		rebirthTimes = {},
 		cycle = cycle,
 		firstCycleEnd = Config.Meteor.FirstCountdown + cycle,
+		petBonuses = table.clone(petBonuses),
 	}
 	local nextSell, nextSample = Balance.SellInterval, 0
 	local meteorsCounted = 0
@@ -253,7 +276,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 			earned = earned,
 			owned = table.clone(owned),
 			lineRate = lineRate(owned),
-			incomePerMinute = income(owned, cycle, levelAfter(meteorsCounted), mult) * 60,
+			incomePerMinute = income(owned, cycle, levelAfter(meteorsCounted), mult, petBonuses) * 60,
 		})
 	end
 
@@ -272,9 +295,11 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 		local orePrice = if onMeteor then meteorPrice else BarPrice
 		local oreCost = if onMeteor then meteorCost else 1
 		local hopperRoom = (Config.Home.Stations.hopper.Levels[owned.hopper].Capacity :: number) - hopperOre
-		local mined = math.min(Pacing.oreRate(owned.pickaxe, owned.backpack, yield) * step, hopperRoom)
+		local mined = math.min(oreRate(owned.pickaxe, owned.backpack, yield, petBonuses) * step, hopperRoom)
 		hopperOre += mined
 		hopperValue += mined * orePrice
+		-- Preserve the model's historical cost: queued ore keeps clearance from mining time.
+		-- Live refining evaluates current player clearance instead (see docs/balance.md).
 		hopperCost += mined * oreCost
 
 		-- The line: limited by time, hopper stock and room at the collection post
@@ -327,14 +352,14 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 				bought = false
 				local best: Candidate? = nil
 				local bestPayback = math.huge
-				local now = income(owned, cycle, level, mult)
+				local now = income(owned, cycle, level, mult, petBonuses)
 				for _, item in candidates(owned) do
 					if item.shards > shards then
 						continue
 					end
 					local after = table.clone(owned)
 					item.apply(after)
-					local gain = income(after, cycle, level, mult) - now
+					local gain = income(after, cycle, level, mult, petBonuses) - now
 					if gain > 1e-9 and item.cost / gain <= paybackLimit and item.cost / gain < bestPayback then
 						best, bestPayback = item, item.cost / gain
 					end

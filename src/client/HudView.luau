@@ -20,10 +20,10 @@ local WHITE, ORANGE, CYAN = UI.WHITE, Color3.fromRGB(255, 179, 92), Color3.fromR
 local function text(scope: Scope, name: string, value: any, x: number, y: number, w: number, h: number, size: any, color: any?, bold: boolean?, floating: boolean?)
 	return UI.hudText(scope, {
 		Name = name, Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(w, h), Text = value,
-		Font = if bold then Enum.Font.GothamBold else Enum.Font.GothamMedium,
+		Font = if bold then UI.FONT else UI.BODY_FONT,
 		TextSize = size, TextColor3 = color or WHITE, TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		TextStrokeColor3 = Color3.fromRGB(17, 24, 28), TextStrokeTransparency = if floating then 0.4 else 1,
+		TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = if bold then 0.15 elseif floating then 0.4 else 1,
 	})
 end
 local function meter(scope: Scope, name: string, x: number, y: number, w: number, fill: any, color: any, height: number?)
@@ -40,6 +40,13 @@ end
 local function frame(scope: Scope, hud: any, name: string, baseWidth: number, rectFor: (any) -> any, children: { any }, clear: boolean?)
 	return scope:New("Frame")({
 		Name = name, BorderSizePixel = 0, BackgroundColor3 = UI.HUD_SURFACE,
+		Visible = scope:Computed(function(use)
+			local layout = use(hud)
+			if name == "Resources" then return layout.resourcesVisible end
+			if name == "Backpack" then return layout.backpackVisible end
+			if name == "Timer" then return layout.timerVisible end
+			return true
+		end),
 		BackgroundTransparency = if clear then 1 else 0.06,
 		Position = scope:Computed(function(use) local r = rectFor(use(hud)); return UDim2.fromOffset(r.x, r.y) end),
 		Size = scope:Computed(function(use) local r = rectFor(use(hud)); return UDim2.fromOffset(baseWidth, r.h / (r.w / baseWidth)) end),
@@ -147,8 +154,12 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			}),
 		},
 	})
-	local details = scope:New("Frame")({
-		Name = "ExpandedDetails", Size = UDim2.fromOffset(400, 240), BackgroundColor3 = UI.HUD_SURFACE, BorderSizePixel = 0, Visible = expanded, Active = true,
+	local details = scope:New("ScrollingFrame")({
+		Name = "ExpandedDetails", Size = scope:Computed(function(use)
+			return UDim2.fromOffset(400, math.max(0, use(hud).leftCards.Production.h / use(productionScale) - 82))
+		end), BackgroundColor3 = UI.HUD_SURFACE, BorderSizePixel = 0, Visible = expanded, Active = true,
+		CanvasSize = UDim2.fromOffset(400, 240), ScrollingDirection = Enum.ScrollingDirection.Y,
+		ScrollBarThickness = 3, ScrollBarImageColor3 = UI.HUD_MUTED,
 		[Children] = {
 			UI.hudFill(scope), text(scope, "Title", "FOUNDRY", 14, 10, 290, 28, productionFont(18, 13), WHITE, true),
 			scope:New("ImageButton")({ Name = "CloseDetails", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0),
@@ -173,7 +184,7 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			scope:New("TextButton")({
 				Name = "SellAllBars", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(14, 236),
 				Size = scope:Computed(function(use) return UDim2.fromOffset(372, use(saleHeight)) end),
-				BorderSizePixel = 0, Font = Enum.Font.GothamBold, TextSize = productionFont(15, 12),
+				BorderSizePixel = 0, Font = UI.FONT, TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0, TextSize = productionFont(15, 12),
 				Text = scope:Computed(function(use)
 					if use(data.saleBusy) then return "SELLING..." end
 					local s = state(use)
@@ -182,10 +193,10 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 					return "SELL ALL · " .. Format.cash(s.barValue)
 				end),
 				BackgroundColor3 = scope:Computed(function(use) return if use(canSell) then UI.HUD_MINT else UI.HUD_BORDER end),
-				TextColor3 = scope:Computed(function(use) return if use(canSell) then UI.HUD_SURFACE else UI.HUD_MUTED end),
+				TextColor3 = scope:Computed(function(use) return if use(canSell) then WHITE else UI.HUD_MUTED end),
 				AutoButtonColor = canSell, Selectable = canSell, Active = canSell,
 				[OnEvent("Activated")] = function() if Fusion.peek(canSell) then data.sellBars() end end,
-				[Children] = { UI.corner(scope, 7) },
+				[Children] = { UI.hudFill(scope) },
 			}),
 		},
 	})
@@ -205,8 +216,8 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 				local s = state(use); local m = Rebirth.multiplier(if s then s.rebirths else 0)
 				return if m > 1 then "×" .. Format.number(m) .. " sales" else ""
 			end), 146, 101, 100, 15, 12, UI.HUD_MINT, false, true),
-		}, true),
-		frame(scope, hud, "Production", 400, function(l) return l.leftCards.Production end, { details, summary }, true),
+		}, false),
+		frame(scope, hud, "Production", 400, function(l) return l.leftCards.Production end, { details, summary }, false),
 		frame(scope, hud, "Backpack", 230, function(l) return l.backpack end, {
 			UI.hudIcon(scope, "backpack", { Position = UDim2.fromOffset(0, 6), Size = UDim2.fromOffset(61, 68) }),
 			text(scope, "Capacity", scope:Computed(function(use) return Format.number(use(carried)) .. " / " .. Format.number(use(capacity)) end), 76, 15, 152, 49, 40,
@@ -221,7 +232,7 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 					player:SetAttribute("BackpackOpen", not opened)
 				end,
 			}),
-		}, true),
+		}, false),
 		frame(scope, hud, "Timer", 593, function(l) return l.timer end, {
 			meter(scope, "RemainingTime", 0, 0, 593, data.timeProgress, glow, 6),
 			UI.hudIcon(scope, "meteor", { Position = UDim2.fromOffset(0, 26), Size = UDim2.fromOffset(74, 74) }),
@@ -240,80 +251,9 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 	}
 end
 
-function HudView.backpack(scope: Scope, hud: any, playerState: any)
-	local opened = flag(scope, "BackpackOpen", false)
-	local function close() player:SetAttribute("BackpackOpen", false) end
-	local rows = scope:Computed(function(use) return HudResources.ores(use(playerState)) end)
-	local rect = scope:Computed(function(use) return HudLayout.backpackPanel(use(hud), #use(rows)) end)
-	local scrolling = scope:Computed(function(use) return #use(rows) * 28 > use(rect).h - 44 end)
-	local wide = scope:Computed(function(use) return use(rect).w >= 150 end)
-	local ids = scope:Computed(function(use) local result = {}; for i, row in use(rows) do result[i] = row.id end; return result end)
-	local rowViews = scope:ForPairs(ids, function(_use: any, rowScope: Scope, index: number, id: string)
-		local row = rowScope:Computed(function(use)
-			for _, entry in use(rows) do if entry.id == id then return entry end end
-			return { name = id, amount = 0 }
-		end)
-		local tint = if id == "frost" then CYAN elseif id == "crystal" then Color3.fromRGB(221, 161, 255) else UI.HUD_GOLD
-		return index, rowScope:New("Frame")({
-			Name = id .. "Ore", LayoutOrder = index, Size = UDim2.new(1, -4, 0, 28), BackgroundTransparency = 1,
-			[Children] = {
-				UI.hudIcon(rowScope, "ore", { Position = UDim2.fromOffset(0, 4), Size = UDim2.fromOffset(20, 20), ImageColor3 = tint, Visible = wide }),
-				UI.hudText(rowScope, {
-					Name = "Type", Position = rowScope:Computed(function(use) return UDim2.fromOffset(if use(wide) then 26 else 0, 2) end),
-					Size = rowScope:Computed(function(use) return UDim2.new(1, -(if use(wide) then 76 else 38), 0, 24) end),
-					Text = rowScope:Computed(function(use) return use(row).name end), Font = Enum.Font.GothamBold,
-					TextSize = rowScope:Computed(function(use) return if use(wide) then 14 else 12 end),
-					TextColor3 = tint, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
-				}),
-				UI.hudText(rowScope, {
-					Name = "Amount", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 2),
-					Size = rowScope:Computed(function(use) return UDim2.fromOffset(if use(wide) then 44 else 32, 24) end),
-					Text = rowScope:Computed(function(use) return Format.number(use(row).amount) end), Font = Enum.Font.GothamBold,
-					TextSize = rowScope:Computed(function(use) return if use(wide) then 16 else 12 end),
-					TextColor3 = WHITE, TextXAlignment = Enum.TextXAlignment.Right,
-				}),
-			},
-		})
-	end)
-	table.insert(scope, UserInputService.InputBegan:Connect(function(input)
-		if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then close() end
-	end))
-	for _, name in { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen", "RefineryOpen" } do
-		table.insert(scope, player:GetAttributeChangedSignal(name):Connect(function()
-			if player:GetAttribute(name) == true then close() end
-		end))
-	end
-	return scope:New("ScreenGui")({
-		Name = "BackpackMenu", ResetOnSpawn = false, IgnoreGuiInset = true,
-		DisplayOrder = 9, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Enabled = opened, Parent = player.PlayerGui,
-		[Children] = {
-			scope:New("Frame")({
-				Name = "Panel", Position = scope:Computed(function(use) local r = use(rect); return UDim2.fromOffset(r.x, r.y) end),
-				Size = scope:Computed(function(use) local r = use(rect); return UDim2.fromOffset(r.w, r.h) end),
-				BackgroundColor3 = UI.HUD_SURFACE, Active = false, ZIndex = 2,
-				[Children] = {
-					UI.hudFill(scope),
-					UI.hudText(scope, { Name = "Title", Position = UDim2.fromOffset(8, 6), Size = UDim2.new(1, -52, 0, 28),
-						Text = scope:Computed(function(use) return if use(wide) then "BACKPACK" else "BAG" end),
-						Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left }),
-					scope:New("ImageButton")({ Name = "Close", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0),
-						Size = UDim2.fromOffset(44, 44),
-						Image = "", BackgroundTransparency = 1, [OnEvent("Activated")] = close,
-						[Children] = { UI.hudIcon(scope, "close", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20) }) } }),
-					scope:New("ScrollingFrame")({
-						Name = "OreInventory", Position = UDim2.fromOffset(8, 40), Size = UDim2.new(1, -16, 1, -44),
-						Active = scrolling, ScrollingEnabled = scrolling,
-						BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-						ScrollBarThickness = 3, ScrollBarImageColor3 = UI.HUD_MUTED, ScrollingDirection = Enum.ScrollingDirection.Y,
-						[Children] = { scope:New("UIListLayout")({ SortOrder = Enum.SortOrder.LayoutOrder }), rowViews },
-					}),
-					UI.hudText(scope, { Name = "Empty", Position = UDim2.fromOffset(8, 40), Size = UDim2.new(1, -16, 0, 28),
-						Text = "Empty", TextSize = 14, TextColor3 = UI.HUD_MUTED,
-						Visible = scope:Computed(function(use) return #use(rows) == 0 end) }),
-				},
-			}),
-		},
-	})
+-- These menus are authored in StarterGui and bound by NativeHudMenus.start().
+function HudView.backpack(_scope: Scope, _hud: any, _playerState: any): nil
+	return nil
 end
 
 function HudView.objective(scope: Scope, hud: any, data: { [string]: any })
@@ -348,41 +288,7 @@ function HudView.objective(scope: Scope, hud: any, data: { [string]: any })
 	return card
 end
 
-function HudView.settings(scope: Scope, hud: any)
-	local opened, guide, tips = scope:Value(false), flag(scope, "HudShowGuide", true), flag(scope, "HudShowEventTips", true)
-	scope:Observer(opened):onChange(function() player:SetAttribute("SettingsOpen", Fusion.peek(opened)) end)
-	player:SetAttribute("SettingsOpen", false)
-	local fit = scope:Computed(function(use) local l = use(hud); local p = HudLayout.panel(l.viewport, 360, 220, l.inset); p.scale = math.min(p.scale, (l.viewport.X - 24) / 360); return p end)
-	local toggles = {}
-	for i, item in { { "HudShowGuide", "Training guide", guide }, { "HudShowEventTips", "Meteor objective", tips } } do
-		table.insert(toggles, scope:New("TextButton")({
-			Name = item[1], Position = scope:Computed(function(use) local height = HudLayout.closeSize(48, use(fit).scale); return UDim2.fromOffset(16, 64 + (i - 1) * (height + 10)) end),
-			Size = scope:Computed(function(use) return UDim2.fromOffset(328, HudLayout.closeSize(48, use(fit).scale)) end),
-			Text = "", BackgroundColor3 = Color3.fromRGB(36, 43, 49), BorderSizePixel = 0,
-			[OnEvent("Activated")] = function() player:SetAttribute(item[1], not Fusion.peek(item[3])) end,
-			[Children] = { UI.corner(scope, 7),
-				text(scope, "Label", item[2], 12, 10, 228, 28, 17, WHITE, true),
-				text(scope, "State", scope:Computed(function(use) return if use(item[3]) then "ON" else "OFF" end), 260, 10, 58, 28, 17, UI.HUD_MINT, true),
-			},
-		}))
-	end
-	return {
-		frame(scope, hud, "Settings", 44, function(l) return l.settings end, {
-			scope:New("ImageButton")({ Name = "OpenSettings", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.HUD_SURFACE, Image = "", BorderSizePixel = 0,
-				[OnEvent("Activated")] = function() opened:set(not Fusion.peek(opened)) end,
-				[Children] = { UI.hudFill(scope), UI.hudIcon(scope, "settings", { Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(24, 24) }) } }),
-		}, true),
-		scope:New("Frame")({
-			Name = "SettingsPanel", AnchorPoint = Vector2.new(0.5, 0.5), Position = scope:Computed(function(use) local l = use(hud); return UDim2.new(0.5, 0, 0.5, l.inset / 2) end),
-			Size = UDim2.fromOffset(360, 220), BackgroundColor3 = UI.HUD_SURFACE, Visible = opened, ZIndex = 5, Active = true,
-			[Children] = { UI.hudFill(scope), scope:New("UIScale")({ Scale = scope:Computed(function(use) return use(fit).scale end) }),
-				text(scope, "Title", "HUD SETTINGS", 16, 14, 268, 32, 22, WHITE, true),
-				scope:New("ImageButton")({ Name = "Close", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), Size = scope:Computed(function(use) local target = HudLayout.closeSize(48, use(fit).scale); return UDim2.fromOffset(target, target) end), BackgroundTransparency = 1, Image = "",
-					[OnEvent("Activated")] = function() opened:set(false) end,
-					[Children] = { UI.hudIcon(scope, "close", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20) }) } }),
-				toggles, text(scope, "Hint", "Preferences apply during this session.", 16, 185, 328, 24, 13, UI.HUD_MUTED),
-			},
-		}),
-	}
+function HudView.settings(_scope: Scope, _hud: any): nil
+	return nil
 end
 return HudView

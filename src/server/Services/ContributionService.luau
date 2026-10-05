@@ -16,6 +16,7 @@ export type Entry = {
 	Contribution: number,
 	HitCore: boolean,
 	Ore: number,
+	Xp: number, -- awarded meteor XP, independent of the profile's level-up remainder
 }
 
 local ContributionService = Knit.CreateService({
@@ -37,7 +38,7 @@ local lastSent: { [Player]: Sent } = {}
 local function entryFor(player: Player): Entry
 	local entry = entries[player]
 	if not entry then
-		entry = { Player = player, Contribution = 0, HitCore = false, Ore = 0 }
+		entry = { Player = player, Contribution = 0, HitCore = false, Ore = 0, Xp = 0 }
 		entries[player] = entry
 	end
 	return entry
@@ -70,6 +71,15 @@ function ContributionService:AddCore(player: Player, power: number)
 	local entry = entryFor(player)
 	entry.Contribution += power * Config.Meteor.CoreContributionMult
 	entry.HitCore = true
+end
+
+-- Server-only: record validated XP after it was granted. Never creates a participant
+-- or changes their contribution/podium. Stop retains the tally for the crack bonus.
+function ContributionService:AddXp(player: Player, amount: number)
+	local entry = entries[player]
+	if entry and amount == amount and amount > 0 and amount < math.huge then
+		entry.Xp += amount
+	end
 end
 
 -- Everyone who took part this event, highest contribution first.

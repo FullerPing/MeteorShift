@@ -36,6 +36,7 @@ local function spawnPoint(): Vector3?
 end
 
 local function addShake(amount: number)
+	if player:GetAttribute("ReduceCameraShake") == true then return end
 	shakeTrauma = math.min(1, shakeTrauma + amount)
 end
 
@@ -68,6 +69,7 @@ end
 -- The fireball crossing the sky before impact
 function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, color: Color3)
 	self:_clearStreak()
+	if player:GetAttribute("ReduceEffects") == true then return end
 	-- Studio isolation control: disables the approach visuals/audio without changing
 	-- the event schedule, landing, mining rules or effects in published games.
 	if RunService:IsStudio() and ReplicatedStorage:GetAttribute("DevMeteorApproachFX") == false then
@@ -146,6 +148,7 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 end
 
 function MeteorFXController:_shockwave(position: Vector3, color: Color3)
+	if player:GetAttribute("ReduceEffects") == true then return end
 	local folder = workspace.CurrentCamera
 
 	-- Expanding ring on the ground
@@ -253,7 +256,9 @@ local function knockback(position: Vector3)
 end
 
 local function flashScreen(brightness: number, duration: number)
+	if player:GetAttribute("ReduceEffects") == true then return end
 	local correction = Instance.new("ColorCorrectionEffect")
+	correction.Name = "MeteorFlash"
 	correction.Brightness = brightness
 	correction.TintColor = Color3.fromRGB(255, 225, 190)
 	correction.Parent = Lighting
@@ -276,6 +281,7 @@ end
 function MeteorFXController:_onCoreCracked(position: Vector3)
 	flashScreen(0.8, 1.2)
 	addShake(0.3 + distanceScale(position, 200) * 0.5)
+	if player:GetAttribute("ReduceEffects") == true then return end
 
 	local burst = Instance.new("Part")
 	burst.Shape = Enum.PartType.Ball
@@ -315,6 +321,17 @@ end
 
 function MeteorFXController:KnitStart()
 	local MeteorService = Knit.GetService("MeteorService")
+	player:GetAttributeChangedSignal("ReduceCameraShake"):Connect(function()
+		if player:GetAttribute("ReduceCameraShake") == true then shakeTrauma = 0 end
+	end)
+	player:GetAttributeChangedSignal("ReduceEffects"):Connect(function()
+		if player:GetAttribute("ReduceEffects") == true then
+			self:_clearStreak()
+			for _, effect in Lighting:GetChildren() do
+				if effect.Name == "MeteorFlash" then effect:Destroy() end
+			end
+		end
+	end)
 	if RunService:IsStudio() then
 		ReplicatedStorage:GetAttributeChangedSignal("DevMeteorApproachFX"):Connect(function()
 			if ReplicatedStorage:GetAttribute("DevMeteorApproachFX") == false then
@@ -363,6 +380,7 @@ function MeteorFXController:KnitStart()
 	-- Camera shake, applied after the default camera update
 	RunService:BindToRenderStep("MeteorShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
 		shakeTrauma = math.max(0, shakeTrauma - dt * 0.9)
+		if player:GetAttribute("ReduceCameraShake") == true then return end
 		local amount = math.max(shakeTrauma * shakeTrauma, rumbleLevel * rumbleLevel * 0.25)
 		if amount <= 0.001 then
 			return

@@ -24,6 +24,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
 
 local STORE_NAME = "PlayerData_v1"
@@ -219,7 +220,7 @@ end
 
 function DataService:_load(player: Player)
 	if unavailable then
-		player:Kick("Saving is unavailable right now, so your progress would be lost. Please rejoin in a few minutes.")
+		player:Kick(ProfileLoadMessage.message("unavailable"))
 		return
 	end
 	local key = keyFor(player.UserId)
@@ -236,7 +237,7 @@ function DataService:_load(player: Player)
 		end
 	end
 	if reason ~= nil then
-		player:Kick("Your save is still open on another server. Please rejoin in a minute.")
+		player:Kick(ProfileLoadMessage.message(reason))
 		return
 	end
 	if not player.Parent then

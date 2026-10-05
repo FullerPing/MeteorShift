@@ -20,32 +20,39 @@ local LevelService = Knit.CreateService({
 local PlayerStateService
 local NodeService
 local MeteorService
+local ContributionService
 
--- Adds XP to the player's profile. Fires LevelUp for a level gained and replicates State.
-function LevelService:AddXp(player: Player, amount: number)
+-- Adds XP to the player's profile. Returns the validated scholar-adjusted award,
+-- even when a level-up consumes XP from the bar. Fires LevelUp and replicates State.
+function LevelService:AddXp(player: Player, amount: number): number
 	local data = PlayerStateService:Get(player)
 	if not data or amount <= 0 then
-		return
+		return 0
 	end
-	local gained = Levels.addXp(data, Pets.playerXp(amount, PlayerStateService:GetPetBonuses(player).scholar))
+	local awarded = Pets.playerXp(amount, PlayerStateService:GetPetBonuses(player).scholar)
+	if awarded <= 0 then return 0 end
+	local gained = Levels.addXp(data, awarded)
 	Knit.GetService("PetService"):Work(player, "scholar")
 	PlayerStateService:Replicate(player)
 	if gained > 0 then
 		self.Client.LevelUp:Fire(player, data.level)
 	end
+	return awarded
 end
 
 function LevelService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	NodeService = Knit.GetService("NodeService")
 	MeteorService = Knit.GetService("MeteorService")
+	ContributionService = Knit.GetService("ContributionService")
 end
 
 function LevelService:KnitStart()
 	NodeService.Hit:Connect(function(player: Player, kind: string)
 		local meteorType = MeteorService:GetActiveType()
 		if meteorType then
-			self:AddXp(player, Levels.hitXp(meteorType.Ore, kind))
+			local awarded = self:AddXp(player, Levels.hitXp(meteorType.Ore, kind))
+			ContributionService:AddXp(player, awarded)
 		end
 	end)
 end

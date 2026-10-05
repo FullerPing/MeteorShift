@@ -124,4 +124,45 @@ return function(t: any)
 			t.ok(contentWidth - visibleWidth > l.cardWidth * 10, "the full catalogue remains reachable without compressing cards")
 		end
 	end)
+
+	t.test("pet carousel geometry is available", function()
+		t.ok(type(EquipmentShopLayout.petCards) == "function", "eggs and pets share a full card layout")
+	end)
+	if type(EquipmentShopLayout.petCards) ~= "function" then return end
+
+	t.test("eggs and pets share full card heights without changing equipment geometry", function()
+		for _, viewport in viewports do
+			for _, inset in { 36, 58 } do
+				local equipment = layout(viewport, inset)
+				local equipmentHeight = equipment.cardHeight
+				local egg = EquipmentShopLayout.petCards(equipment)
+				local pet = EquipmentShopLayout.petCards(equipment)
+				t.ok(egg.pet and pet.pet, "both use the full pet card composition")
+				t.eq(egg.cardHeight, if equipment.short then 310 else 410, "perks and hatch content retain their full height")
+				t.eq(egg.cardHeight, pet.cardHeight, "the tallest card cannot create blank overscroll for shorter eggs")
+				t.eq(egg.cardWidth, equipment.cardWidth, "responsive horizontal card width is preserved")
+				t.eq(equipment.cardHeight, equipmentHeight, "equipment height is not mutated")
+				t.eq(equipment.pet, nil, "equipment keeps its existing composition")
+			end
+		end
+		local nativeLandscape = layout(Vector2.new(844, 390), 58)
+		t.eq(nativeLandscape.cardHeight, 166, "the original short egg height reproduced the blank-scroll bug")
+		t.eq(EquipmentShopLayout.petCards(nativeLandscape).cardHeight, 310, "the native landscape egg now matches its pet neighbours")
+	end)
+
+	t.test("maximum pet carousel scroll still shows each complete 44 px action", function()
+		for _, viewport in viewports do
+			for _, inset in { 36, 58 } do
+				local cards = EquipmentShopLayout.petCards(layout(viewport, inset))
+				local windowHeight = cards.carouselH - 4 -- Horizontal scrollbar.
+				local canvasHeight = cards.cardHeight + 8 -- Shared top/bottom canvas allowance.
+				local maximumScroll = math.max(0, canvasHeight - windowHeight)
+				local cardBottom = 4 + cards.cardHeight - maximumScroll
+				local actionTop = 4 + cards.cardHeight - 52 - maximumScroll
+				local context = tostring(viewport) .. " inset=" .. inset
+				t.ok(cardBottom > 0, context .. " cannot scroll below the entire egg or pet card")
+				t.ok(actionTop >= 0 and actionTop + 44 <= windowHeight, context .. " hatch/equip action is fully reachable at maximum scroll")
+			end
+		end
+	end)
 end

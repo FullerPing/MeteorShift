@@ -93,4 +93,47 @@ return function(t: any)
 		local long = Pacing.sampleAt(result, 7200).earned
 		t.ok(long > short)
 	end)
+
+	t.test("the optional fixed-level Drillbot reports its three exact level 5 perks", function()
+		local run = Pacing.simulate(0, { drillbotLevel = 5 })
+		t.near(run.petBonuses.miner, 0.25 + 0.15 * 4 / 9, 1e-12)
+		t.near(run.petBonuses.swift, 0.08 + 0.12 * 4 / 9, 1e-12)
+		t.near(run.petBonuses.yield, 0.10 + 0.10 * 4 / 9, 1e-12)
+		for _, role in { "hauler", "pack", "merchant", "sprint", "vault", "crit", "scholar", "shards" } do
+			t.eq(run.petBonuses[role], 0, "Drillbot does not invent a " .. role .. " perk")
+		end
+	end)
+
+	t.test("Drillbot ore includes Swift, Yield and direct-hopper Miner during the fill portion", function()
+		local pickaxe, backpack = Config.Pickaxes[3], Config.Backpacks[2]
+		local swift = 0.08 + 0.12 * 4 / 9
+		local yield = 0.10 + 0.10 * 4 / 9
+		local miner = 0.25 + 0.15 * 4 / 9
+		for _, quantity in { 1, Config.Debris.YieldFraction } do
+			local perHit = pickaxe.OrePerHit * quantity * Config.Meteor.Types.Iron.YieldMult * (1 + yield)
+			local fillSeconds = backpack.Capacity / perHit * pickaxe.Swing * (1 - swift) / Config.Balance.HitsPerMinuteShare
+			local playerRate = backpack.Capacity / (fillSeconds + Config.Balance.TripSeconds)
+			-- During filling, each owner's landed hit corresponds to 1 / hit-share miner swings.
+			local expected = playerRate * (1 + miner / Config.Balance.HitsPerMinuteShare)
+			t.near(Pacing.oreRate(3, 2, quantity, 5), expected, 1e-10)
+			t.ok(Pacing.oreRate(3, 2, quantity, 5) > Pacing.oreRate(3, 2, quantity), "all three perks improve supply")
+		end
+	end)
+
+	t.test("an inactive owner supplies no player or pet ore", function()
+		t.eq(Pacing.oreRate(1, 1, 0, 5), 0)
+		t.eq(Pacing.oreRate(1, 1, 0), 0)
+	end)
+
+	t.test("the optional Drillbot changes first-rebirth time deterministically while the default stays pet-free", function()
+		local free = Pacing.simulate(2 * 3600, { rebirths = 1 })
+		local paid = Pacing.simulate(2 * 3600, { rebirths = 1, drillbotLevel = 5 })
+		local again = Pacing.simulate(2 * 3600, { rebirths = 1, drillbotLevel = 5 })
+		t.ok(free.rebirthTimes[1] and paid.rebirthTimes[1], "both players reach their first rebirth")
+		-- The inherited greedy policy seeks income payback, not minimum rebirth time.
+		t.ok(paid.rebirthTimes[1] ~= free.rebirthTimes[1], "the pet treatment reaches the rebirth simulation")
+		t.eq(again.rebirthTimes[1], paid.rebirthTimes[1], "pet run is deterministic")
+		t.eq(again.samples[#again.samples].earned, paid.samples[#paid.samples].earned)
+		for _, role in Config.Pets.RoleOrder do t.eq(free.petBonuses[role], 0, "default run has no pets") end
+	end)
 end

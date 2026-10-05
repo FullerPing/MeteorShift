@@ -16,6 +16,7 @@ export type Layout = {
 	gap: number,
 	short: boolean,
 	narrow: boolean,
+	pet: boolean?,
 }
 
 local EquipmentShopLayout = {}
@@ -63,6 +64,15 @@ function EquipmentShopLayout.compute(viewport: Vector2, inset: number): Layout
 		short = short,
 		narrow = narrow,
 	}
+end
+
+-- Every card on this carousel must share a height: the tallest pet determines
+-- its vertical canvas, including when the viewer is looking at the first eggs.
+function EquipmentShopLayout.petCards(layout: Layout): Layout
+	local cards = table.clone(layout)
+	cards.pet = true
+	cards.cardHeight = if cards.short then 310 else 410
+	return cards
 end
 
 return EquipmentShopLayout

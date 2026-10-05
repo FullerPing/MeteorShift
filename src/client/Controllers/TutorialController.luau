@@ -278,7 +278,7 @@ function TutorialController:KnitStart()
 					UI.hudText(scope, {
 						Position = UDim2.fromOffset(16, 14), Size = UDim2.fromOffset(168, 18),
 						Text = scope:Computed(function(use) return if use(finished) then "TRAINING COMPLETE" else "MINER TRAINING" end),
-						Font = Enum.Font.GothamBold, TextSize = scope:Computed(function(use) return math.max(13, 10 / use(cardScale)) end), TextColor3 = UI.HUD_GOLD,
+						Font = UI.FONT, TextStrokeTransparency = 0.15, TextSize = scope:Computed(function(use) return math.max(13, 10 / use(cardScale)) end), TextColor3 = UI.HUD_GOLD,
 						TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					UI.hudText(scope, {
@@ -294,7 +294,7 @@ function TutorialController:KnitStart()
 						Text = scope:Computed(function(use)
 							local info = use(current)
 							return if info then info.Text else "You're all set, miner!"
-						end), Font = Enum.Font.GothamBold, TextSize = scope:Computed(function(use) return math.max(18, 13 / use(cardScale)) end),
+						end), Font = UI.FONT, TextStrokeTransparency = 0.15, TextSize = scope:Computed(function(use) return math.max(18, 13 / use(cardScale)) end),
 						TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					UI.hudText(scope, {
