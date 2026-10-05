@@ -1,6 +1,6 @@
 # Map redesign progress
 
-Updated 5 October 2026. Read PLAN.md, this file, Git status and the connected place before continuing.
+Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected place before continuing.
 
 ## Checklist
 
@@ -19,6 +19,7 @@ Updated 5 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Push checkpoint; automatic approval review rejected twice, explicit payload/destination approval pending.
 - [ ] Stage2 geometry/equipment specsRED→GREEN; shared-onlyservices andscaledtemplates.
 - [ ] Stage3 complete Map_Redesign build andstaticQA.
+- [x] Build isolated scene art for all zones;1351authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
 - [ ] Stage4 stagedPlay/gameplay/phone/path/performanceQA.
 - [ ] Stage5 minimum3critique/fix rounds; allcategories4+tworoundsrunning.
 - [ ] Stage6 controlledswap, post-swapQA, deleteMap_Old onlyaftergreen.
@@ -26,7 +27,9 @@ Updated 5 October 2026. Read PLAN.md, this file, Git status and the connected pl
 
 ## Next action
 
-Stage2: write and run failing geometry/equipment/map-selector specs, then implement the helpers. Push c2bb2c1 when the pending explicit GitHub payload/destination approval arrives. Four snapshots are verified on disk. Baseline runner360/360 and39frozen hashes passed after transfer.
+Stage2 remains gated by the pending world-code authorization. Once it arrives, synchronize the three draft specs, obtain actual RED results, implement helpers/controllers/services and update dimensions. Push local checkpoints only after the explicit GitHub payload/destination approval arrives. Staged art has now been built and exported; do not rebuild it from scratch.
+
+Continuation ruling: independent staged scene geometry can proceed while the required world-code and push approvals are pending. Authoring commands create anchored art/collision parts, not Script or ModuleScript instances; they do not work around the rejected script edits. Build only owned groups under Map_Redesign at Z+3000. Runtime integration, new scripts, tests and final swap remain gated. Cost if wrong: rerun the owned geometry stages after Config.World becomes available; retain explicit matching dimensions in static checks.
 
 Three new specs exist on disk: WorldGeometry.spec, WorldEquipment.spec, WorldMap.spec. Rojo is not syncing them into the open place. Automatic approval review rejected the explicit ModuleScript synchronization because it still applies the original building-only no-scripts instruction. A world-code/test authorization question is pending. **No RED test result exists yet. Do not claim the new specs ran.** The approved TutorialController panel suffix hash is recorded in tutorial-panel-baseline.json before any edit.
 
@@ -34,12 +37,27 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 
 ## Evidence and decisions
 
+### Current staged geometry checkpoint
+
+- `Workspace.Map_Redesign` is built at offset(0,0,3000); original Map still2043parts, no swap, Terrain/Lighting/liveAssets unchanged. Six staged spawn pads are disabled until staged runtime selection is ready, preventing accidental spawning into an unconnected town.
+- Authored geometry1351parts,0MeshParts,0Scripts,0unanchoredparts. Refinery134parts,PrimaryPartFoundation,oneUsePoint,SharedRefinerytrue,0prompts/scripts/Humanoids. Visible footprintnearest348; UsePoint343; final refinery pivot(0,0.8,-380), stagedpivot(0,0.8,2620). Hopper/Conveyor/Refinery art reused from pristinePlotStations, stripped of scripts/prompts/liveBillboardGuis.
+- Gear Hall has16Config-generatedtier cards and2current stands, but the18localmodels/liveSurfaceGui states are not connected yet. Hatchery2eggs/2Config-derivedoddsboards; museum6exhibits/12minerals; rebirthmonument; TradingPost.SellPoint+prompt; fourfields48directmineable roots with14-studaisles;24blocktrees;6enabledlights(shadowsfalse),1emitter at4/s,maximum16steadyparticles.
+- Ground CSG collision closed the opening even withPreciseConvexDecomposition. Keep it visual-only;134primitivecollision proxies and40ground-onlyrays now leave the opening clear. FloorY-44, openingR160,4ramps24wide.
+- Mining access236parts:4terraces,96ascentsegments,18wide, maximumslope16.890332°. Core+NodePieces are2x only in unparented scaled clones; originalCore remains28.349998. Seededpreview504parts/36nodes,Core56.699997,box99.553085×97.465607×100.099541. Preview is now detached and retained in `_G.MapRedesignGeometryPreview`; excluded from exports/authorbudgets. It must remain detached before gameplayQA/finalSave.
+- Ruling: raise MeteorSpawn fromY2 toY5.3.3,456slot/piece/yaw combinations had minY-47.247726/maxY52.642014 atY2; newheightkeeps the worst bound above floor-44. Seededpreviewmin/maxY-41.857776/55.607831. Actualvariants, groundcontact and gameplay remain unverified.
+- Candidate reach sampled2330positions: all36seedednodeswithinBasicbounding-box reach12 (worst3.559263), exposedcoreminimum0.428459. These are not walking/aiming results.
+- StaticQA:84/84Editpaths successful from6spawns to3servicepoints, hatchery/rebirth/museum,4fieldentrances and4craterlandings;62jumpwaypoints must receive real walking/jump checks. Sixcharacter-sizedforecourtprobes clear. Initialprobe falselyhitTownAvenue becauseitassumedY0; corrected to raycast actualgroundheight. No assertions weakened.
+- Fresh existingrunner360passed/0failed.39frozenhashes checked; onlyapprovedTutorialControllerlookup differs. Its panel/guide suffixSHA256 remains01424D468C83D06980BD5B9FF751EDEB3407834BD973BE9E76536C3DAF05CF73.
+- Exports in`assets/staging/map-redesign/`:Map_Redesign72794bytes/1351parts;ServerAssets_Redesign73990bytes/119parts;Refinery_Redesign21615bytes/134parts. Engine deserialize, canonicalbase64, binaryheader, diskbytes andSHA256 verified inmanifest.json. Primary finalexports remain unchanged. This is data backup, not placeSave evidence.
+- Relative display offsets now survive final map translation:18clone-and-translation checks passed. Template audit passed for113parts,36attachments,1light and1emitter; noSpecialMeshes/nonzeroPivotOffsets, particle rates/lifetimes unchanged. Runtime impact-clear teleport must raycast destination ground height; the old deep-bowlY+4 can strand a player below outer ground. Source fix remains pending world-code permission.
+- Screenshot requests yielded no image and were terminated. No critique rounds/scores claimed. Later art and tutorial edits still need a confirmed place save; only the baseline save is confirmed.
+
 - Studio ID at discovery:b1f0a7a1-146e-4d11-9832-2a8e2cc1c226, place113476105600560. Last observedEdit after stopping initialPlay.
 - Initial existingPlay was sampledread-only; noprofileQA orDataStoremutationsperformed. EditMap2043parts; runtimesample2543parts.
 - ExistingRender view excludingShadows467188triangles/491draws; p50=27.6725ms,p95=29.1626ms,max=29.5884ms,72frames.
 - Fresharchivebuffers:Map185912,Terrain1073893,ServerAssets96061,Lighting4932bytes. `_G.MapRedesignBackup` retains unparented actualEdit clones. TerrainVoxelcorner(-256,-64,-256); lightingFolderstorespropertiesattrs/effects/clouds.
 - Screenshotrequest BeforeRedesignOverview didnotcomplete; itsfunctions cell375 was terminated afterrepeatedlive waits. No screenshot evidenceclaimed. CheckStudio statebefore retryingcapture; do not restartsceneauthoringbecauseof observationfailure.
-- Ruling: preservecurrentcheckout/branch andisolateworldinMap_Redesign asrequested; sourcefreezemanifestprotectsownerUI. NewsceneatZ+1600 untilswap.
+- Ruling: preserve current checkout/branch and isolate world in Map_Redesign as requested; source freeze manifest protects owner UI. Current staging offset is Z+3000; the earlier +1600 proposal is superseded.
 - Ruling: ownerexplicitlyapproved TutorialControllerworldtargets→sharedUsePoint only. FrozenRefineryController's dormantPlotIdlistenerstays andisreported; noUIexceptioninferred.
 - Save remainsunproven. PriorEditAPIrejectedserver-onlysave; noPlay-snapshot workaround, computeruse orpublishing.
 - Owner subsequently confirmed “yes saved” for this checkpoint and permits computer use for saving only. Other computer use remains prohibited.
@@ -53,4 +71,4 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 
 ## Requirements still unverified
 
-No newmap,2×templates orworldequipmentcontrollerbuilt yet. No pre-swap/post-swapPlayQA, critique rounds, path/reach/exploitproof, stressperformance, newplaceSave, finalexportsorredesignpush. Do not markgoalcomplete fromthe baseline.
+Scene art and isolated2x templates exist. Runtime world controller/helpers/tests/services, authoritative kill plane, plot removal from live code/assets, newgeometryConfig/FX, lighting, pre-swap/post-swapPlayQA, walking/aiming/exploitproof, phones, stressperformance, critique rounds, laterplaceSave, finalfourcontractexports and push remain incomplete. No swap/deleteold/publish. Do not markgoalcomplete from the geometry checkpoint.

@@ -1,6 +1,6 @@
 # MeteorShift handoff
 
-Updated 5 October 2026. Repository: `Z:\final-final-actual-final\MeteorShift`. Branch: `job-for-tomorrow`.
+Updated 6 October 2026. Repository: `Z:\final-final-actual-final\MeteorShift`. Branch: `job-for-tomorrow`.
 
 ## Current handoff — full map redesign supersedes the older UI task
 
@@ -14,7 +14,9 @@ The active objective is the full map redesign described in the owner's pasted br
 - Existing pure runner is green360/360.39GUI baseline hashes were protected; only the approved tutorial lookup differs now. Three new world specs exist on disk but **have not run** and are not yet in Studio. Rojo is not syncing changes into this open place.
 - Automatic approval review rejected pushing backups to origin (`https://github.com/FullerPing/MeteorShift`, branch `job-for-tomorrow`) twice. A question requesting explicit payload/destination approval is pending. Do not bypass the rejection.
 - Automatic approval review also rejected creating the new test ModuleScripts because it enforced the initial building-only “no scripts” rule. A question requesting explicit authorization for the redesign's world controllers/helpers/services/tests is pending. The tutorial exception is independently authorized and already applied.
-- No Map_Redesign has been built, no meteor templates scaled, no plots removed, and no swap or redesign Play QA/polish/final export has occurred. Continue from the first unchecked item; do not claim the full goal is complete.
+- Map_Redesign now contains1351authoredparts atZ+3000: crater/terraces, sixdisabledstagedspawns, sharedrefinery134parts, Gear Hall mounts, hatchery, tradingpost, rebirthmonument, mineralmuseum,48debrisroots/fouryards, boundary and scenery. OriginalMap remains2043parts; liveAssets/Terrain/Lighting unchanged.84Editpathfindingroutes and sixforecourtcollisionprobes passed; actualwalking/gameplay and critique remain pending.
+- Pristine Core/NodePieces are exactly2x in unparented `_G.MapRedesignScaledAssets`; seeded geometry preview504parts/36nodes is now detached in `_G.MapRedesignGeometryPreview`. MeteorSpawnY is5.3 after3,456bounds combinations. Keep preview detached beforegameplayQA/finalSave. Currentstagedspawns aredisabled untilstagedruntimeisready. Gear Hall mount offsets are relative and passed18translation checks. Impact-clear teleport must raycast destination ground height; retaining deep-bowlY+4 would strand players underground.
+- Rerunnable commands are in`tools/map-redesign/` withREADME. Threeverifiedbinarycheckpointmodels are in`assets/staging/map-redesign/` (manifest recordsbytes/SHA/roundtrip); previewexcluded, finalcontractexports unchanged. Read`geometry-checkpoint.json`/draftREPORT forcounts andlimitations. Newart stillneedsplaceSave. No liveplots removed, no swap, no redesignPlayQA, no screenshotcritique orfinaldelivery. Do not claim thefullgoalcomplete.
 
 The sections below record the earlier GUI handoff. Their old save/Git/task constraints are historical where they conflict with the current section above.
 

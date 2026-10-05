@@ -1,0 +1,120 @@
+{
+  "status": "incomplete-staged-art",
+  "date": "2026-10-06",
+  "stageOffset": [
+    0,
+    0,
+    3000
+  ],
+  "staticEditAudit": {
+    "meshParts": 0,
+    "previewParts": 504,
+    "passed": true,
+    "oldMapParts": 2043,
+    "steadyRate": 4,
+    "authoredParts": 1351,
+    "steadyParticles": 16,
+    "pathFailures": [],
+    "lights": 6,
+    "playWalkingStillPending": true,
+    "pathJumpWaypoints": 62,
+    "computedPaths": 84,
+    "refineryParts": 134,
+    "debrisRoots": 48,
+    "unanchored": 0,
+    "stagedSpawnsDisabled": true,
+    "spawns": 6,
+    "frontCollisionFailures": [],
+    "emitters": 1,
+    "editGeometryOnly": true,
+    "scripts": 0
+  },
+  "meteorPreview": {
+    "boxSize": {
+      "1": 99.55308532714844,
+      "2": 97.46560668945312,
+      "3": 100.09954071044922
+    },
+    "coreSize": {
+      "1": 56.69999694824219,
+      "2": 56.69999694824219,
+      "3": 56.69999694824219
+    },
+    "nodes": 36,
+    "maxY": 55.60783100128174,
+    "liveAssetsUnchanged": 28.349998474121094,
+    "minY": -41.85777568817139,
+    "previewOnly": true,
+    "stage": "MeteorPreview",
+    "parts": 504
+  },
+  "miningAccess": {
+    "terraces": 4,
+    "topY": 60,
+    "parts": 236,
+    "maxSlope": 16.890331558362767,
+    "ascentSegments": 96,
+    "stage": "MiningAccess",
+    "clearWidth": 18,
+    "totalParts": 1704
+  },
+  "sourceTests": {
+    "existingPassed": 360,
+    "existingFailed": 0,
+    "newSpecsRun": false
+  },
+  "worldScriptsApproved": false,
+  "pushApproved": false,
+  "placeSaveConfirmedForThisStage": false,
+  "screenshotCritiqueRounds": 0,
+  "previewDetached": true,
+  "relativeMountTranslationChecks": 18,
+  "templateAudit": {
+    "passed": true,
+    "parts": 113,
+    "attachments": 36,
+    "lights": 1,
+    "emitters": 1,
+    "meshes": 0,
+    "nonzeroPivots": 0
+  },
+  "exports": [
+    {
+      "bytes": 72794,
+      "base64Chars": 97060,
+      "roundtripPassed": true,
+      "scripts": 0,
+      "file": "Map_Redesign.rbxm",
+      "pivot": [
+        0,
+        0,
+        3000
+      ],
+      "parts": 1351,
+      "sha256": "5ce7a1e2a159041051681665a4db2964ebd38e85f9e270c8b08d1d5f23b94d5a"
+    },
+    {
+      "bytes": 21615,
+      "base64Chars": 28820,
+      "roundtripPassed": true,
+      "scripts": 0,
+      "file": "Refinery_Redesign.rbxm",
+      "pivot": [
+        0,
+        0.800000011920929,
+        -380
+      ],
+      "parts": 134,
+      "sha256": "4636339c9f636a0afe56fd73a3385ed15a0e375731fff81597997e9b1c163789"
+    },
+    {
+      "bytes": 73990,
+      "base64Chars": 98656,
+      "roundtripPassed": true,
+      "file": "ServerAssets_Redesign.rbxm",
+      "scripts": 0,
+      "parts": 119,
+      "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14"
+    }
+  ]
+}

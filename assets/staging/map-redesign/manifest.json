@@ -1,0 +1,48 @@
+{
+  "stagingOnly": true,
+  "stageOffset": [
+    0,
+    0,
+    3000
+  ],
+  "placeSaveConfirmedForThisStage": false,
+  "files": [
+    {
+      "bytes": 72794,
+      "base64Chars": 97060,
+      "roundtripPassed": true,
+      "scripts": 0,
+      "file": "Map_Redesign.rbxm",
+      "pivot": [
+        0,
+        0,
+        3000
+      ],
+      "parts": 1351,
+      "sha256": "5ce7a1e2a159041051681665a4db2964ebd38e85f9e270c8b08d1d5f23b94d5a"
+    },
+    {
+      "bytes": 21615,
+      "base64Chars": 28820,
+      "roundtripPassed": true,
+      "scripts": 0,
+      "file": "Refinery_Redesign.rbxm",
+      "pivot": [
+        0,
+        0.800000011920929,
+        -380
+      ],
+      "parts": 134,
+      "sha256": "4636339c9f636a0afe56fd73a3385ed15a0e375731fff81597997e9b1c163789"
+    },
+    {
+      "bytes": 73990,
+      "base64Chars": 98656,
+      "roundtripPassed": true,
+      "file": "ServerAssets_Redesign.rbxm",
+      "scripts": 0,
+      "parts": 119,
+      "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14"
+    }
+  ]
+}

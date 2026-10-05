@@ -3,8 +3,8 @@
  <rect x="-510" y="-510" width="1020" height="1020" rx="30" fill="#68d641" stroke="#405169" stroke-width="20"/>
  <g transform="scale(1,-1)">
   <circle r="320" fill="none" stroke="#efdfb7" stroke-width="18"/>
-  <path d="M0,-492V340M-395,0H395" stroke="#efdfb7" stroke-width="24"/>
-  <path d="M-230,-326H230M-155,-380V-326M140,-380V-326M70,-460H0M-360,-160H-280M360,-160H280M-275,270L-235,215M275,270L235,215M-390,55H-314M390,55H314" fill="none" stroke="#efdfb7" stroke-width="18"/>
+  <path d="M0,-320V-160M0,160V320M-320,0H-160M160,0H320M-20,-458L-65,-435V-326" fill="none" stroke="#efdfb7" stroke-width="24"/>
+  <path d="M-230,-326H230M-155,-340V-326M140,-341V-326M-65,-430H70M-325,-160H-277M316,-160H277M-275,224L-233,219M275,224L233,219M-341,55H-314M341,55H314" fill="none" stroke="#efdfb7" stroke-width="18"/>
   <circle r="310" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="9 9" opacity=".6"/>
   <circle r="180" fill="none" stroke="#faaf43" stroke-width="3" stroke-dasharray="9 9"/>
   <circle r="160" fill="#485264" stroke="#fbc931" stroke-width="8"/>
