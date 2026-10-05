@@ -11,7 +11,8 @@
 --             (PlayerStateService, EconomyService)
 --
 -- Pets level on your own validated hits (Config.Pets.XpPerHit), never on a pet's. Pets are
--- never random: the starter pet is free and the rest cost Core Shards.
+-- hatched with earned Core Shards and visible odds/pity. Pass pets are fixed
+-- entitlements; no purchase can roll a pet or change odds.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -29,6 +30,7 @@ local PetService = Knit.CreateService({
 		Leveled = Knit.CreateSignal(), -- (petId, level)
 		Bought = Knit.CreateSignal(), -- (petId) a pass pet arrived
 		Hatched = Knit.CreateSignal(), -- (eggId, petId, duplicate)
+		Working = Knit.CreateSignal(), -- (ownerUserId, role, targetPosition?), presentation only
 	},
 })
 
@@ -45,9 +47,20 @@ local MonetizationService
 local nextSwing: { [Player]: number } = {}
 local haulCarry: { [Player]: number } = {}
 local lastRequest: { [Player]: number } = {}
+local lastWork: { [Player]: { [string]: number } } = {}
 
-local function slotsFree(data: any): boolean
-	return #data.pets.equipped < Pets.slots(data.rebirths)
+local function slotsFree(player: Player, data: any): boolean
+	return #data.pets.equipped < Pets.slots(data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"))
+end
+
+function PetService:Work(player: Player, role: string, targetPosition: Vector3?)
+	if (PlayerStateService:GetPetBonuses(player)[role] or 0) <= 0 then return end
+	local times = lastWork[player] or {}
+	lastWork[player] = times
+	local now = os.clock()
+	if now - (times[role] or 0) < .25 then return end
+	times[role] = now
+	self.Client.Working:FireAll(player.UserId, role, targetPosition)
 end
 
 function PetService:Equip(player: Player, petId: string): boolean
@@ -59,8 +72,8 @@ function PetService:Equip(player: Player, petId: string): boolean
 	if table.find(data.pets.equipped, petId) then
 		return false
 	end
-	if not slotsFree(data) then
-		self.Client.Notice:Fire(player, string.format("All %d pet slots are in use. Unequip a pet first. Rebirths open more.", Pets.slots(data.rebirths)))
+	if not slotsFree(player, data) then
+		self.Client.Notice:Fire(player, string.format("All %d pet slots are in use. Unequip a pet first. Rebirths and Extra Pet Slot open more.", Pets.slots(data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"))))
 		return false
 	end
 	table.insert(data.pets.equipped, petId)
@@ -105,7 +118,7 @@ function PetService:Hatch(player: Player, eggId: string): string?
 		Pets.addXp(entry, Config.Pets.DuplicateXp)
 	else
 		data.pets.owned[petId] = { level = 1, xp = 0 }
-		if slotsFree(data) then
+		if slotsFree(player, data) then
 			table.insert(data.pets.equipped, petId)
 		end
 		self.PetBought:Fire(player, petId)
@@ -122,10 +135,13 @@ function PetService:SyncPassPets(player: Player)
 	if not data then
 		return
 	end
+	if MonetizationService:PassesResolved(player) then
+		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"))
+	end
 	for _, def in Config.Pets.List do
 		if def.Pass and not data.pets.owned[def.Id] and MonetizationService:HasPass(player, def.Pass) then
 			data.pets.owned[def.Id] = { level = 1, xp = 0 }
-			if slotsFree(data) then
+			if slotsFree(player, data) then
 				table.insert(data.pets.equipped, def.Id)
 			end
 			PlayerStateService:ReplicateNow(player)
@@ -133,6 +149,7 @@ function PetService:SyncPassPets(player: Player)
 			self.PetBought:Fire(player, def.Id)
 		end
 	end
+	PlayerStateService:ReplicateNow(player)
 end
 
 -- Every equipped pet earns XP from one validated hit of the owner's.
@@ -142,7 +159,7 @@ function PetService:_award(player: Player, kind: string)
 	if not xp or not data then
 		return
 	end
-	for _, petId in data.pets.equipped do
+	for _, petId in PlayerStateService:GetActivePets(player) do
 		local entry = data.pets.owned[petId]
 		if entry then
 			local gained = Pets.addXp(entry, xp)
@@ -177,6 +194,7 @@ function PetService:_tickPlayer(player: Player, now: number, dt: number)
 		local whole = math.floor(carry)
 		if whole >= 1 then
 			local moved = PlayerStateService:MoveBackpackToHopper(player, whole)
+			if moved > 0 then self:Work(player, "hauler") end
 			carry = if moved < whole then 0 else carry - whole -- nothing to carry: don't bank it
 		end
 		haulCarry[player] = carry
@@ -186,9 +204,11 @@ function PetService:_tickPlayer(player: Player, now: number, dt: number)
 	if bonuses.miner > 0 and now >= (nextSwing[player] or 0) then
 		local pickaxe = PlayerStateService:GetPickaxe(player)
 		local root = rootOf(player)
-		local mining = now - NodeService:GetLastSwing(player) <= Config.Pets.MinerWindow
+		local mining = Pets.minerActive(NodeService:GetLastSwing(player), now)
 		local id = if root and mining then NodeService:NearestTarget(root.Position, pickaxe.Reach, player) else nil
+		local targetPosition = if id then NodeService:TargetPosition(id) else nil
 		if id and NodeService:PetHit(player, id, bonuses.miner) then
+			self:Work(player, "miner", targetPosition)
 			nextSwing[player] = now + pickaxe.Swing
 		else
 			nextSwing[player] = now + IDLE_RETRY
@@ -249,14 +269,20 @@ function PetService:KnitStart()
 	MonetizationService.PassBought:Connect(function(player: Player)
 		self:SyncPassPets(player)
 	end)
-	NodeService.Hit:Connect(function(player: Player, kind: string)
+	MonetizationService.PassesReady:Connect(function(player: Player) self:SyncPassPets(player) end)
+	NodeService.Hit:Connect(function(player: Player, kind: string, part: BasePart)
 		self:_award(player, kind)
+		for _, role in { "yield", "swift", "pack" } do self:Work(player, role, part.Position) end
 	end)
+	Knit.GetService("EconomyService").BarsSold:Connect(function(player) self:Work(player, "merchant") end)
+	Knit.GetService("RefineryService").OreDeposited:Connect(function(player) self:Work(player, "vault") end)
+	Knit.GetService("RefineryService").BarsCollected:Connect(function(player) self:Work(player, "vault") end)
 
 	Players.PlayerRemoving:Connect(function(player)
 		nextSwing[player] = nil
 		haulCarry[player] = nil
 		lastRequest[player] = nil
+		lastWork[player] = nil
 	end)
 
 	task.spawn(function()

@@ -16,6 +16,7 @@ local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -111,8 +112,10 @@ local function migrate(data: { [any]: any }): { [any]: any }
 	data.backpackTier = math.clamp(math.floor(data.backpackTier or 1), 1, #Config.Backpacks)
 	data.pickaxeStats = Gear.cleanPickaxeStats(data.pickaxeTier, data.pickaxeStats)
 	data.backpackStats = Gear.cleanBackpackStats(data.backpackTier, data.backpackStats)
-	-- v3 -> v4: pets. Everyone gets the Drillbot, equipped; Pets.clean also repairs any saved table.
-	data.pets = Pets.clean(data.pets, data.rebirths)
+	-- Preserve a possible fourth slot until the server resolves the pass entitlement.
+	data.pets = Pets.clean(data.pets, data.rebirths, true)
+	local oreBoost = data.oreBoostLeft
+	data.oreBoostLeft = if type(oreBoost) == "number" and oreBoost == oreBoost and oreBoost < math.huge then math.max(oreBoost, 0) else 0
 	-- v4 -> v5: player level and XP (everyone starts at level 1)
 	local progress = Levels.clean(data.level, data.xp)
 	data.level, data.xp = progress.level, progress.xp
@@ -278,6 +281,10 @@ function DataService:_release(player: Player)
 end
 
 function DataService:KnitInit()
+	-- Explicit, temporary Studio opt-in lets acceptance checks avoid every live DataStore.
+	if RunService:IsStudio() and ServerStorage:GetAttribute("DevMemoryStore") == true then
+		return
+	end
 	-- Probe: unpublished places throw here. A live server tries a few times before giving up.
 	local attempts = if RunService:IsStudio() then 1 else 4
 	local ok: boolean, result: any = false, nil

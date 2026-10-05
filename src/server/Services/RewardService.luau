@@ -12,6 +12,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
 local RewardService = Knit.CreateService({
@@ -41,6 +42,9 @@ end
 function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, poolMult: number)
 	local ranked = ContributionService:GetRanked()
 	local rewards = if cracked then Rewards.compute(ranked, poolMult) else {}
+	for index, reward in rewards do
+		reward.Total = Pets.coreShards(reward.Total, PlayerStateService:GetPetBonuses(ranked[index].Player).shards)
+	end
 
 	local leaders = {}
 	for index, entry in ranked do
@@ -67,6 +71,7 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 		end
 		if reward then
 			PlayerStateService:AddShards(entry.Player, reward.Total)
+			Knit.GetService("PetService"):Work(entry.Player, "shards")
 			self.ShardsAwarded:Fire(entry.Player, reward.Total)
 		end
 		self.Client.Results:Fire(entry.Player, {

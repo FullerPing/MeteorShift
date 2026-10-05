@@ -23,6 +23,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Price = require(ReplicatedStorage.Shared.Price)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -49,9 +50,23 @@ local MonetizationService
 
 local touchCooldown: { [Player]: { [string]: number } } = {}
 local blockedBy: { [Player]: Refining.Blocked } = {}
-local priorityCooldown: { [Player]: number } = {}
+local remoteTimes: { [Player]: { [string]: number } } = {}
+local lastVault: { [Player]: number } = {}
 
 local sum = Refining.sum
+
+-- This gate belongs to client handlers only. Physical touches and internal grants
+-- keep their existing rules and never consume the remote allowance.
+local function remoteReady(player: Player, action: string, cooldown: number): boolean
+	local times = remoteTimes[player]
+	if not times then
+		times = {}
+		remoteTimes[player] = times
+	end
+	local allowed, stamp = RequestGate.check(times[action], os.clock(), cooldown)
+	times[action] = stamp
+	return allowed
+end
 
 local function formatRate(rate: number): string
 	return if rate < 100 then string.format("%g", rate) else Format.number(rate)
@@ -137,7 +152,7 @@ function RefineryService:RefreshPlot(player: Player)
 		"Hopper · Lv %d\n%s / %s ore",
 		s.hopper,
 		Format.number(sum(data.hopper)),
-		Format.number(Refining.hopperCapacity(data))
+		Format.number(Refining.hopperCapacity(data, PlayerStateService:GetVaultMultiplier(player)))
 	))
 	setDisplay(conveyor, string.format("Conveyor · Lv %d\n%s ore/s", s.conveyor, formatRate(Refining.conveyorRate(data))))
 	local speedMult = MonetizationService:RefinerySpeedMult(data)
@@ -150,7 +165,7 @@ function RefineryService:RefreshPlot(player: Player)
 		"Collection Post · Lv %d\n%s / %s bars",
 		s.collector,
 		Format.number(sum(data.bin)),
-		Format.number(Refining.collectorCapacity(data))
+		Format.number(Refining.collectorCapacity(data, PlayerStateService:GetVaultMultiplier(player)))
 	)
 	if blockedBy[player] == "collector" then
 		binText ..= "\nFULL - collect!"
@@ -193,7 +208,6 @@ end
 function RefineryService:ResetAfterRebirth(player: Player)
 	blockedBy[player] = nil
 	touchCooldown[player] = nil
-	priorityCooldown[player] = nil
 	self:RefreshPlot(player)
 end
 
@@ -232,7 +246,7 @@ function RefineryService:Deposit(player: Player): number
 	if not data then
 		return 0
 	end
-	local space = Refining.hopperCapacity(data) - sum(data.hopper)
+	local space = Refining.hopperCapacity(data, PlayerStateService:GetVaultMultiplier(player)) - sum(data.hopper)
 	local moved = 0
 	for oreType, amount in data.backpack do
 		local n = math.min(amount, space - moved)
@@ -289,7 +303,7 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	end
 	local cap = MonetizationService:OfflineCap(player) -- Offline Hours+ raises it
 	local seconds = math.min(awaySeconds, cap)
-	local made, bars, blocked = Refining.run(data, seconds)
+	local made, bars, blocked = Refining.run(data, seconds, nil, PlayerStateService:GetVaultMultiplier(player))
 	blockedBy[player] = blocked
 	-- What the bars sell for at the Trading Post, sale multipliers included
 	local value = math.floor(PlayerStateService:BarValue(made) * EconomyService:SaleMultiplier(player))
@@ -438,39 +452,34 @@ function RefineryService:CanUseMenu(player: Player): boolean
 end
 
 function RefineryService.Client:Deposit(player: Player): number
+	if not remoteReady(player, "deposit", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
 		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to deposit ore.")
 		return 0
 	end
-	if not touchReady(player, "menuDeposit") then return 0 end
 	return self.Server:Deposit(player)
 end
 
 function RefineryService.Client:Claim(player: Player): number
+	if not remoteReady(player, "claim", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
 		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to claim bars.")
 		return 0
 	end
-	if not touchReady(player, "menuClaim") then return 0 end
 	return self.Server:Collect(player)
 end
 
 function RefineryService.Client:SetPriority(player: Player, requested: any): boolean
-	local now = os.clock()
-	local previous = priorityCooldown[player]
-	if previous and now - previous < 0.15 then
-		return false
-	end
-	priorityCooldown[player] = now
+	if not remoteReady(player, "priority", 0.15) or typeof(requested) ~= "table" then return false end
 	return self.Server:SetPriority(player, requested)
 end
 
 -- Studio-only: pretend the player was away, to test offline income.
 function RefineryService.Client:DevSimulateAway(player: Player, seconds: number)
-	if RunService:IsStudio() and typeof(seconds) == "number" then
-		self.Server:CatchUp(player, math.clamp(seconds, 0, 24 * 3600))
-		self.Server:Refresh(player, true)
-	end
+	if not remoteReady(player, "simulateAway", 1) then return end
+	if not RunService:IsStudio() or typeof(seconds) ~= "number" or seconds ~= seconds or math.abs(seconds) == math.huge then return end
+	self.Server:CatchUp(player, math.clamp(seconds, 0, 24 * 3600))
+	self.Server:Refresh(player, true)
 end
 
 function RefineryService:KnitInit()
@@ -514,8 +523,9 @@ function RefineryService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		touchCooldown[player] = nil
 		blockedBy[player] = nil
-		priorityCooldown[player] = nil
+		remoteTimes[player] = nil
 		sharedCooldown[player] = nil
+		lastVault[player] = nil
 	end)
 
 	-- Online tick
@@ -532,17 +542,23 @@ function RefineryService:KnitStart()
 					local before = blockedBy[player]
 					local progressBefore = data.progress
 					local speedMult = MonetizationService:RefinerySpeedMult(data)
-					local _, made, blocked = Refining.run(data, dt, speedMult)
+					local vaultMult = PlayerStateService:GetVaultMultiplier(player)
+					local vaultChanged = lastVault[player] ~= vaultMult
+					lastVault[player] = vaultMult
+					local _, made, blocked = Refining.run(data, dt, speedMult, PlayerStateService:GetVaultMultiplier(player))
 					blockedBy[player] = blocked
 					-- Refinery Overclock only counts down while the player is online
+					local oreBoostBefore = data.oreBoostLeft or 0
+					data.oreBoostLeft = math.max(oreBoostBefore - dt, 0)
+					local oreBoostEnded = oreBoostBefore > 0 and data.oreBoostLeft <= 0
 					local overclockEnded = false
 					if speedMult > 1 then
 						data.overclockLeft = math.max((data.overclockLeft or 0) - dt, 0)
 						overclockEnded = data.overclockLeft <= 0
 					end
-					if made > 0 or blocked ~= before or overclockEnded then
+					if made > 0 or blocked ~= before or overclockEnded or oreBoostEnded or vaultChanged then
 						self:Refresh(player)
-					elseif data.progress ~= progressBefore then
+					elseif data.progress ~= progressBefore or oreBoostBefore > 0 then
 						PlayerStateService:Replicate(player)
 					end
 				end

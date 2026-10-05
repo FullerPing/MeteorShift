@@ -10,12 +10,14 @@
 -- multiplier (Shared.Rebirth.multiplier, read by EconomyService:SaleMultiplier).
 -- The server hears about it: "<name> relocated the colony! (Rebirth N, ×M cash)".
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local RebirthReset = require(script.Parent.Parent.Lib.RebirthReset)
 
 local RebirthService = Knit.CreateService({
@@ -31,6 +33,7 @@ local PlayerStateService
 local ShopService
 local RewardService
 local RefineryService
+local lastRebirthRequest: { [Player]: number } = {}
 
 -- Rebirths the player if they can pay for it. Returns true when it went through.
 function RebirthService:Rebirth(player: Player): boolean
@@ -68,6 +71,9 @@ function RebirthService:Rebirth(player: Player): boolean
 end
 
 function RebirthService.Client:Rebirth(player: Player): boolean
+	local allowed, stamp = RequestGate.check(lastRebirthRequest[player], os.clock(), 1)
+	lastRebirthRequest[player] = stamp
+	if not allowed then return false end
 	return self.Server:Rebirth(player)
 end
 
@@ -76,6 +82,12 @@ function RebirthService:KnitInit()
 	ShopService = Knit.GetService("ShopService")
 	RewardService = Knit.GetService("RewardService")
 	RefineryService = Knit.GetService("RefineryService")
+end
+
+function RebirthService:KnitStart()
+	Players.PlayerRemoving:Connect(function(player)
+		lastRebirthRequest[player] = nil
+	end)
 end
 
 return RebirthService

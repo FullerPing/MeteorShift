@@ -45,8 +45,9 @@ return {
 	credits = {
 		callMeteor = 0, -- Call a Meteor purchases that couldn't run yet, usable later
 	},
-	receipts = {}, -- the last Config.Monetization.ReceiptHistory processed PurchaseIds
+	receipts = {}, -- all processed PurchaseIds; do not trim paid-grant idempotency history
 	overclockLeft = 0, -- seconds of Refinery Overclock left, counted down while online
+	oreBoostLeft = 0, -- Ore Rush seconds; online only, uses the larger ore multiplier
 	stats = {
 		meteorsJoined = 0,
 		coresCracked = 0,

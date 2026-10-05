@@ -11,8 +11,7 @@
 -- call can be spent from the same card. The server grants everything
 -- (MonetizationService); this is presentation only.
 --
--- VIP chat tag: players whose VIP attribute is set get Config.Monetization.VIPTag in
--- front of their name in TextChatService chat.
+-- VIP and session Supporter attributes add their tags in TextChatService chat.
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -53,6 +52,14 @@ local ITEM_ICONS: { [string]: string } = {
 	VIP = "premium",
 	CallMeteor = "meteor",
 	Overclock = "foundry",
+	TipJar = "premium",
+	PocketChange = "coin",
+	PetTreat = "premium",
+	MiniOverclock = "foundry",
+	OreRush = "ore",
+	PetFeast = "premium",
+	CashBundle = "coin",
+	ExtraPetSlot = "plus",
 }
 local ITEM_ACCENTS: { [string]: Color3 } = {
 	TwoXOre = UI.HUD_GOLD,
@@ -62,6 +69,14 @@ local ITEM_ACCENTS: { [string]: Color3 } = {
 	VIP = UI.HUD_GOLD,
 	CallMeteor = UI.ORANGE,
 	Overclock = UI.SHARD,
+	TipJar = UI.HUD_MINT,
+	PocketChange = UI.HUD_GOLD,
+	PetTreat = UI.SHARD,
+	MiniOverclock = UI.SHARD,
+	OreRush = UI.HUD_GOLD,
+	PetFeast = UI.ORANGE,
+	CashBundle = UI.HUD_GOLD,
+	ExtraPetSlot = UI.HUD_MINT,
 }
 
 local BUTTON_TEXT: { [ButtonState]: string } = {
@@ -73,8 +88,8 @@ local BUTTON_TEXT: { [ButtonState]: string } = {
 	loading = "LOADING",
 }
 
--- Adds the VIP tag to chat messages from VIP players (TextChatService only).
-local function setUpVipTag()
+-- Attributes are session state, so a thank-you tag grants no gameplay benefit.
+local function setUpChatTags()
 	if TextChatService.ChatVersion ~= Enum.ChatVersion.TextChatService then
 		return
 	end
@@ -82,21 +97,24 @@ local function setUpVipTag()
 		TextChatService.OnIncomingMessage = function(message: TextChatMessage): TextChatMessageProperties?
 			local source = message.TextSource
 			local speaker = if source then Players:GetPlayerByUserId(source.UserId) else nil
-			if not speaker or speaker:GetAttribute("VIP") ~= true then
+			if not speaker then
 				return nil
 			end
+			local tags = {}
+			if speaker:GetAttribute("VIP") == true then
+				table.insert(tags, string.format('<font color="%s">%s</font>', Monetization.VIPTagColor, Monetization.VIPTag))
+			end
+			if speaker:GetAttribute("Supporter") == true then
+				table.insert(tags, string.format('<font color="%s">%s</font>', Monetization.SupporterTagColor, Monetization.SupporterTag))
+			end
+			if #tags == 0 then return nil end
 			local properties = Instance.new("TextChatMessageProperties")
-			properties.PrefixText = string.format(
-				'<font color="%s">%s</font> %s',
-				Monetization.VIPTagColor,
-				Monetization.VIPTag,
-				message.PrefixText
-			)
+			properties.PrefixText = table.concat(tags, " ") .. " " .. message.PrefixText
 			return properties
 		end
 	end)
 	if not ok then
-		warn("[StoreController] VIP chat tag unavailable:", err)
+		warn("[StoreController] chat tags unavailable:", err)
 	end
 end
 
@@ -118,8 +136,8 @@ end
 
 -- Zero-config entries never request Marketplace metadata. Live prices are read
 -- on the client so the displayed amount also follows Roblox's regional pricing.
-local function productDetails(scope: Scope, kind: "pass" | "product", id: number)
-	local details = scope:Value({ loading = id ~= 0, forSale = if id == 0 then false else nil } :: ProductDetails)
+local function productDetails(scope: Scope, kind: "pass" | "product", id: number, intendedPrice: number?)
+	local details = scope:Value({ loading = id ~= 0, forSale = if id == 0 then false else nil, price = if id == 0 then intendedPrice else nil } :: ProductDetails)
 	local function load()
 		if id == 0 then return end
 		details:set({ loading = true })
@@ -198,7 +216,7 @@ local function itemCard(
 				Name = "Kind",
 				Position = UDim2.fromOffset(4, 8),
 				Size = UDim2.new(1, -8, 0, 14),
-				Text = if props.Kind == "pass" then "GAME PASS" else "BOOST",
+				Text = if props.Kind == "pass" then "GAME PASS" else "PRODUCT",
 				Font = Enum.Font.GothamBold,
 				TextSize = 10,
 				TextColor3 = accent,
@@ -331,7 +349,7 @@ function StoreController:KnitStart()
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local HUDController = Knit.GetController("HUDController")
 
-	setUpVipTag()
+	setUpChatTags()
 
 	local scope = Fusion.scoped(Fusion)
 	local open = scope:Value(false)
@@ -414,6 +432,10 @@ function StoreController:KnitStart()
 		local s = use(playerState)
 		return if s and s.overclockLeft then s.overclockLeft else 0
 	end)
+	local oreBoostLeft = scope:Computed(function(use): number
+		local s = use(playerState)
+		return if s then s.oreBoostLeft or 0 else 0
+	end)
 	MonetizationService.Notice:Connect(function(text: string)
 		HUDController:Toast(text)
 	end)
@@ -428,7 +450,7 @@ function StoreController:KnitStart()
 	local retryPrices: { () -> () } = {}
 	for order, key in Monetization.PassOrder do
 		local pass = Monetization.Passes[key]
-		local details, retryPrice = productDetails(scope, "pass", pass.Id)
+		local details, retryPrice = productDetails(scope, "pass", pass.Id, pass.Robux)
 		table.insert(retryPrices, retryPrice)
 		local state = scope:Computed(function(use): ButtonState
 			if use(ownedPasses)[key] then
@@ -464,9 +486,10 @@ function StoreController:KnitStart()
 	local passCount = #Monetization.PassOrder
 	for index, key in Monetization.ProductOrder do
 		local product = Monetization.Products[key]
-		local details, retryPrice = productDetails(scope, "product", product.Id)
+		local details, retryPrice = productDetails(scope, "product", product.Id, product.Robux)
 		table.insert(retryPrices, retryPrice)
 		local state = scope:Computed(function(use): ButtonState
+			if key == "OreRush" and use(ownedPasses).TwoXOre then return "unavailable" end
 			if key == "CallMeteor" then
 				local availability = use(callMeteor)
 				if use(credits) > 0 and availability.available then
@@ -495,8 +518,12 @@ function StoreController:KnitStart()
 					table.insert(parts, "Credits: " .. Format.number(n))
 				end
 				return table.concat(parts, "  ·  ")
-			elseif key == "Overclock" then
+			elseif key == "Overclock" or key == "MiniOverclock" then
 				local left = use(overclockLeft)
+				return if left > 0 then "Active: " .. Format.number(math.ceil(left / 60)) .. " min left" else ""
+			elseif key == "OreRush" then
+				if use(ownedPasses).TwoXOre then return "You own 2x Ore" end
+				local left = use(oreBoostLeft)
 				return if left > 0 then "Active: " .. Format.number(math.ceil(left / 60)) .. " min left" else ""
 			end
 			return ""
@@ -513,6 +540,7 @@ function StoreController:KnitStart()
 			Kind = "product",
 			ButtonText = scope:Computed(function(use)
 				local current = use(state)
+				if key == "OreRush" and use(ownedPasses).TwoXOre then return "You own 2x Ore" end
 				if current == "credit" then
 					return BUTTON_TEXT.credit .. " (" .. Format.number(use(credits)) .. ")"
 				end

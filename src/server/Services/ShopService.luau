@@ -21,6 +21,7 @@ local Price = require(ReplicatedStorage.Shared.Price)
 local EquipmentModels = require(ReplicatedStorage.Shared.EquipmentModels)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local ShopService = Knit.CreateService({
 	Name = "ShopService",
@@ -45,6 +46,8 @@ local CATALOG: { [string]: { List: { Item }, Key: string } } = {
 }
 
 local PlayerStateService
+local lastUpgradeRequest: { [Player]: number } = {}
+local lastEvolveRequest: { [Player]: number } = {}
 
 local function styleTool(tool: Tool, pickaxe: typeof(Config.Pickaxes[1]))
 	tool.Name = pickaxe.Name
@@ -159,6 +162,9 @@ function ShopService:UpgradeStat(player: Player, kind: Kind, stat: string): bool
 end
 
 function ShopService.Client:Evolve(player: Player, kind: Kind): boolean
+	local allowed, stamp = RequestGate.check(lastEvolveRequest[player], os.clock(), 0.15)
+	lastEvolveRequest[player] = stamp
+	if not allowed then return false end
 	if typeof(kind) ~= "string" or not CATALOG[kind] then
 		return false
 	end
@@ -166,6 +172,10 @@ function ShopService.Client:Evolve(player: Player, kind: Kind): boolean
 end
 
 function ShopService.Client:Upgrade(player: Player, kind: Kind, stat: string): boolean
+	-- The shop's +10 sends sequential single-level requests, so keep this gate short.
+	local allowed, stamp = RequestGate.check(lastUpgradeRequest[player], os.clock(), 0.02)
+	lastUpgradeRequest[player] = stamp
+	if not allowed then return false end
 	if typeof(kind) ~= "string" or not CATALOG[kind] or typeof(stat) ~= "string" then
 		return false
 	end
@@ -204,6 +214,10 @@ end
 
 function ShopService:KnitStart()
 	local DataService = Knit.GetService("DataService")
+	Players.PlayerRemoving:Connect(function(player)
+		lastUpgradeRequest[player] = nil
+		lastEvolveRequest[player] = nil
+	end)
 
 	-- StarterPack hands out a fresh Basic Pickaxe on every spawn; restyle it
 	local function watch(player: Player)

@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local Steps = Config.Tutorial.Steps
 
@@ -26,6 +27,7 @@ local TutorialService = Knit.CreateService({
 local PlayerStateService
 local MeteorService
 local TelemetryService
+local lastSkipRequest: { [Player]: number } = {}
 
 local indexOf: { [string]: number } = {}
 for index, step in Steps do
@@ -68,6 +70,9 @@ function TutorialService:Did(player: Player, stepId: string)
 end
 
 function TutorialService.Client:Skip(player: Player)
+	local allowed, stamp = RequestGate.check(lastSkipRequest[player], os.clock(), 1)
+	lastSkipRequest[player] = stamp
+	if not allowed then return end
 	local data = PlayerStateService:Get(player)
 	if data and not data.flags.tutorialDone then
 		data.flags.tutorialDone = true
@@ -105,6 +110,9 @@ function TutorialService:KnitInit()
 end
 
 function TutorialService:KnitStart()
+	Players.PlayerRemoving:Connect(function(player)
+		lastSkipRequest[player] = nil
+	end)
 	local DataService = Knit.GetService("DataService")
 	local NodeService = Knit.GetService("NodeService")
 	local RewardService = Knit.GetService("RewardService")

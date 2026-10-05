@@ -9,6 +9,7 @@
 -- Shared.MineralIndex.cashBonus). The VIP pass adds Config.Monetization.VIPBarBonus
 -- (+10%, spec §9.1) as its own factor (MonetizationService:VIPMult).
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
@@ -16,6 +17,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local EconomyService = Knit.CreateService({
 	Name = "EconomyService",
@@ -29,6 +31,7 @@ EconomyService.BarsSold = Signal.new() -- (player, bars, cash)
 
 local PlayerStateService
 local MonetizationService
+local lastSellRequest: { [Player]: number } = {}
 
 function EconomyService:SaleMultiplier(player: Player): number
 	local data = PlayerStateService:Get(player)
@@ -38,7 +41,7 @@ function EconomyService:SaleMultiplier(player: Player): number
 	local rebirth = Rebirth.multiplier(data.rebirths)
 	local index = MineralIndex.cashBonus(data.index)
 	local vip = MonetizationService:VIPMult(player)
-	local merchant = 1 + Pets.bonuses(data.pets).merchant -- a Merchant pet
+	local merchant = 1 + PlayerStateService:GetPetBonuses(player).merchant
 	return rebirth * index * vip * merchant
 end
 
@@ -68,6 +71,9 @@ end
 -- The foundry menu sells only this caller's carried bars. Quantities and value
 -- come from the saved server profile, using the Trading Post's existing rules.
 function EconomyService.Client:SellAll(player: Player): number
+	local allowed, stamp = RequestGate.check(lastSellRequest[player], os.clock(), 0.50)
+	lastSellRequest[player] = stamp
+	if not allowed then return 0 end
 	return self.Server:SellAll(player)
 end
 
@@ -79,6 +85,9 @@ end
 -- Bars sell from the HUD. A Trading Post saved in the town square sells them too
 -- (TownSquare.TradingPost.SellPoint's ProximityPrompt); the current map has none.
 function EconomyService:KnitStart()
+	Players.PlayerRemoving:Connect(function(player)
+		lastSellRequest[player] = nil
+	end)
 	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
 	local tradingPost = if townSquare then townSquare:FindFirstChild("TradingPost") else nil
 	if not tradingPost then

@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 
 local LevelService = Knit.CreateService({
 	Name = "LevelService",
@@ -26,7 +27,8 @@ function LevelService:AddXp(player: Player, amount: number)
 	if not data or amount <= 0 then
 		return
 	end
-	local gained = Levels.addXp(data, amount)
+	local gained = Levels.addXp(data, Pets.playerXp(amount, PlayerStateService:GetPetBonuses(player).scholar))
+	Knit.GetService("PetService"):Work(player, "scholar")
 	PlayerStateService:Replicate(player)
 	if gained > 0 then
 		self.Client.LevelUp:Fire(player, data.level)

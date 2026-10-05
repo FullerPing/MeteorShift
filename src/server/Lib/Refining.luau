@@ -35,12 +35,12 @@ local function level(stationId: string, lvl: number): Config.Level
 	return levels[math.clamp(lvl, 1, #levels)]
 end
 
-function Refining.hopperCapacity(data: HomeData): number
-	return level("hopper", data.stations.hopper).Capacity :: number
+function Refining.hopperCapacity(data: HomeData, capacityMult: number?): number
+	return (level("hopper", data.stations.hopper).Capacity :: number) * (capacityMult or 1)
 end
 
-function Refining.collectorCapacity(data: HomeData): number
-	return level("collector", data.stations.collector).Capacity :: number
+function Refining.collectorCapacity(data: HomeData, capacityMult: number?): number
+	return (level("collector", data.stations.collector).Capacity :: number) * (capacityMult or 1)
 end
 
 function Refining.conveyorRate(data: HomeData): number
@@ -98,9 +98,9 @@ export type Blocked = "hopper" | "collector" | nil
 
 -- Runs the line for `seconds`. Mutates data. Returns bars made per ore type,
 -- the total, and what limited it (empty hopper or full collection post).
-function Refining.run(data: HomeData, seconds: number, speedMult: number?): ({ [string]: number }, number, Blocked)
+function Refining.run(data: HomeData, seconds: number, speedMult: number?, capacityMult: number?): ({ [string]: number }, number, Blocked)
 	local capacity = Refining.lineRate(data, speedMult) * seconds + (data.progress or 0)
-	local room = math.max(Refining.collectorCapacity(data) - sum(data.bin), 0)
+	local room = math.max(Refining.collectorCapacity(data, capacityMult) - sum(data.bin), 0)
 	local stock = sum(data.hopper)
 
 	local made, left = takeOre(data.hopper, room, capacity, data.refinePriority, data.level)

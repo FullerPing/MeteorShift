@@ -4,12 +4,14 @@
 -- ownership, price and max level. The shop's Plot tab buys the same upgrades
 -- from anywhere; pickaxes and backpacks are ShopService.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local UpgradeService = Knit.CreateService({
 	Name = "UpgradeService",
@@ -24,6 +26,7 @@ UpgradeService.StationUpgraded = Signal.new() -- (player, stationId, newLevel)
 local PlayerStateService
 local PlotService
 local RefineryService
+local lastBuyRequest: { [Player]: number } = {}
 
 -- Returns true when the upgrade went through.
 function UpgradeService:BuyStation(player: Player, stationId: string): boolean
@@ -57,11 +60,14 @@ end
 
 -- The shop's Production tab. Needs a plot or the shared refinery in town.
 function UpgradeService.Client:BuyStation(player: Player, stationId: string): boolean
+	local allowed, stamp = RequestGate.check(lastBuyRequest[player], os.clock(), 0.15)
+	lastBuyRequest[player] = stamp
+	if not allowed then return false end
 	if typeof(stationId) ~= "string" or not Config.Home.Stations[stationId] then
 		return false
 	end
 	if not (PlotService:GetStations(player) or PlotService:HasSharedRefinery()) then
-		self.Notice:Fire(player, "You need a plot first.")
+		self.Server.Client.Notice:Fire(player, "You need a plot first.")
 		return false
 	end
 	return self.Server:BuyStation(player, stationId)
@@ -90,6 +96,9 @@ function UpgradeService:KnitInit()
 end
 
 function UpgradeService:KnitStart()
+	Players.PlayerRemoving:Connect(function(player)
+		lastBuyRequest[player] = nil
+	end)
 	PlotService.PlotAssigned:Connect(function(player, _plot)
 		local stations = PlotService:GetStations(player)
 		if stations then

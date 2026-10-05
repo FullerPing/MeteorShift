@@ -1,3 +1,4 @@
+--!strict
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -158,7 +159,7 @@ Knit.Start()
 					return nil
 				end
 				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0 }
-				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < Pets.slots(data.rebirths) then
+				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < Pets.slots(data.rebirths, Knit.GetService("MonetizationService"):HasPass(player, "ExtraPetSlot")) then
 					table.insert(data.pets.equipped, petId)
 				end
 				PlayerStateService:ReplicateNow(player)

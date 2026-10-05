@@ -15,9 +15,9 @@
 --   VIP             EconomyService adds VIPBarBonus to bar sales (VIPMult); the
 --                   player's VIP attribute lets clients add a chat tag
 --
--- Products (ProcessReceipt): processed PurchaseIds are kept in the profile (the last
--- Config.Monetization.ReceiptHistory) so a receipt is only granted once, and the
--- profile is saved before Roblox hears PurchaseGranted. No profile yet, or a failed
+-- Products (ProcessReceipt): processed PurchaseIds are kept permanently in the
+-- profile so a receipt is only granted once. The profile is saved before Roblox
+-- hears PurchaseGranted. No profile yet, or a failed
 -- save, returns NotProcessedYet and Roblox retries.
 --   Call a Meteor   re-checks MeteorService:CanCallMeteor. If the meteor can no
 --                   longer be called, the buyer gets a grant of equal value instead
@@ -25,6 +25,8 @@
 --                   from the store once calling is available again
 --   Overclock       adds Overclock.Duration seconds of ×SpeedMult refinery speed,
 --                   counted down by RefineryService's online tick only
+--   Micro-purchases fixed cash, equipped-pet XP, online boost time, or session-only
+--                   Tip Jar cosmetics (Shared.Purchases); never shards or randomness
 --
 -- Call a Meteor availability is published to every client (the CallMeteor property)
 -- so the store can disable the button with the reason, and nobody pays for nothing.
@@ -39,6 +41,9 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Purchases = require(ReplicatedStorage.Shared.Purchases)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local Refining = require(script.Parent.Parent.Lib.Refining)
 
 local Monetization = Config.Monetization
 
@@ -48,10 +53,12 @@ local MonetizationService = Knit.CreateService({
 		Owned = Knit.CreateProperty(nil), -- per player: { [passKey]: true }
 		CallMeteor = Knit.CreateProperty({ available = false, reason = "" }), -- { available, reason }
 		Notice = Knit.CreateSignal(), -- (text)
+		Supporter = Knit.CreateSignal(), -- session-only Tip Jar confetti and thank-you toast
 	},
 })
 
 MonetizationService.PassBought = Signal.new() -- (player, passKey) after an in-game pass purchase
+MonetizationService.PassesReady = Signal.new() -- (player) after ownership is available or changes in Studio
 -- (player, productKey, outcome) after a product receipt is granted; outcome is
 -- "called" or "credited" for Call a Meteor, "granted" for the others
 MonetizationService.ProductBought = Signal.new()
@@ -59,11 +66,17 @@ MonetizationService.ProductBought = Signal.new()
 local DataService
 local PlayerStateService
 local MeteorService
+local EconomyService
+local PetService
 
 local owned: { [Player]: { [string]: boolean } } = {}
 local resolved: { [Player]: boolean } = {}
 local passById: { [number]: string } = {}
 local productById: { [number]: string } = {}
+local processing: { [Player]: boolean } = {}
+type ProductEffect = { key: string, outcome: string, notice: string? }
+local pendingEffects: { [Player]: { [string]: ProductEffect } } = {}
+local lastCreditRequest: { [Player]: number } = {}
 
 -- Passes granted by the Studio-only DevPasses attribute, e.g. "TwoXOre,VIP".
 local function devPasses(): { string }
@@ -85,17 +98,26 @@ function MonetizationService:HasPass(player: Player, key: string): boolean
 	return set ~= nil and set[key] == true
 end
 
--- Waits (up to `timeout` seconds) until the player's pass ownership has been looked
--- up, e.g. before offline catch-up reads the Offline Hours+ cap.
+-- By default wait for ownership or departure, so slow lookups cannot discard an
+-- extra slot or shorten offline catch-up. Callers may request a bounded timeout.
 function MonetizationService:WaitForPasses(player: Player, timeout: number?)
-	local deadline = os.clock() + (timeout or 10)
+	local deadline = if timeout then os.clock() + math.max(timeout, 0) else math.huge
 	while player.Parent and not resolved[player] and os.clock() < deadline do
 		task.wait(0.1)
 	end
 end
 
+function MonetizationService:PassesResolved(player: Player): boolean
+	return resolved[player] == true
+end
+
 function MonetizationService:OreMult(player: Player): number
-	return if self:HasPass(player, "TwoXOre") then Monetization.OreMult else 1
+	local data = PlayerStateService:Get(player)
+	return Purchases.oreMultiplier(self:HasPass(player, "TwoXOre"), if data then data.oreBoostLeft else nil)
+end
+
+function MonetizationService:ExtraPetSlots(player: Player): number
+	return if self:HasPass(player, "ExtraPetSlot") then 1 else 0
 end
 
 function MonetizationService:BackpackMult(player: Player): number
@@ -140,6 +162,7 @@ function MonetizationService:_grantPasses(player: Player, keys: { string })
 		set[key] = true
 	end
 	self:_apply(player)
+	self.PassesReady:Fire(player)
 end
 
 function MonetizationService:_resolve(player: Player)
@@ -164,47 +187,76 @@ function MonetizationService:_resolve(player: Player)
 	self:_grantPasses(player, found)
 end
 
-function MonetizationService:_grantProduct(player: Player, data: any, key: string)
-	local outcome = "granted"
+function MonetizationService:_grantProduct(player: Player, data: any, key: string): ProductEffect?
+	local pack = Monetization.CashPacks[key]
+	local cash = if pack then Purchases.cashGrant(
+		pack.Minutes,
+		Refining.lineRate(data, self:RefinerySpeedMult(data)),
+		Purchases.averageBarPrice(data.level or 1),
+		EconomyService:SaleMultiplier(player),
+		pack.Floor,
+		Rebirth.cost(data.rebirths) * pack.CeilingShare
+	) else nil
+	local grant = Purchases.grant(data, key, cash)
+	if not grant then
+		return nil
+	end
+	local effect: ProductEffect = { key = key, outcome = "granted", notice = nil }
 	if key == "CallMeteor" then
-		local ok, reason = MeteorService:CallMeteor(player)
-		if ok then
-			outcome = "called"
+		local worked, called, reason = pcall(function()
+			return MeteorService:CallMeteor(player)
+		end)
+		if worked and called then
+			data.credits.callMeteor -= 1 -- spend the credit the pure grant just added
+			effect.outcome = "called"
 		else
-			outcome = "credited"
-			data.credits.callMeteor = (data.credits.callMeteor or 0) + 1
-			self.Client.Notice:Fire(
-				player,
-				(reason or "The meteor can't be called right now.")
-					.. " You got a Call a Meteor credit instead: use it from the STORE later."
-			)
+			if not worked then warn("[MonetizationService] meteor call failed:", called) end
+			effect.outcome = "credited"
+			local message = (if worked then reason else nil) or "The meteor can't be called right now."
+			effect.notice = message .. " You got a Call a Meteor credit instead: use it from the STORE later."
 		end
-	elseif key == "Overclock" then
-		data.overclockLeft = (data.overclockLeft or 0) + Monetization.Overclock.Duration
-		self.Client.Notice:Fire(
-			player,
-			"Refinery Overclock! ×"
-				.. Format.number(Monetization.Overclock.SpeedMult)
-				.. " refinery speed for "
-				.. Format.number(math.ceil(data.overclockLeft / 60))
-				.. " min."
-		)
+	elseif key == "Overclock" or key == "MiniOverclock" then
+		effect.notice = "Refinery Overclock! ×" .. Format.number(Monetization.Overclock.SpeedMult)
+			.. " refinery speed for " .. Format.number(math.ceil(data.overclockLeft / 60)) .. " min."
+	elseif key == "OreRush" then
+		effect.notice = "Ore Rush! ×2 ore per hit for " .. Format.number(math.ceil(data.oreBoostLeft / 60)) .. " min."
+	elseif grant.cash > 0 then
+		effect.notice = "+$" .. Format.number(grant.cash) .. " from " .. Monetization.Products[key].Name .. "."
+	elseif key == "PetTreat" or key == "PetFeast" then
+		effect.notice = Format.number(Monetization.PetXp[key]) .. " XP given to each equipped pet!"
 	end
 	-- The state change is done; a throw in the trailing effects must not make the
 	-- receipt retry (and call the meteor again)
 	local sideOk, sideErr = pcall(function()
 		PlayerStateService:ReplicateNow(player)
-		self.ProductBought:Fire(player, key, outcome)
+		for petId, level in grant.leveled do
+			PetService.Client.Leveled:Fire(player, petId, level)
+		end
 	end)
 	if not sideOk then
 		warn("[MonetizationService] side effects failed after granting", key, sideErr)
 	end
+	return effect
+end
+
+-- Cosmetic purchase effects happen only once the grant and receipt are saved.
+function MonetizationService:_finishProduct(player: Player, effect: ProductEffect)
+	local ok, err = pcall(function()
+		if effect.key == "TipJar" then
+			player:SetAttribute("Supporter", true)
+			self.Client.Supporter:Fire(player)
+		elseif effect.notice then
+			self.Client.Notice:Fire(player, effect.notice)
+		end
+		self.ProductBought:Fire(player, effect.key, effect.outcome)
+	end)
+	if not ok then warn("[MonetizationService] saved product effects failed:", err) end
 end
 
 function MonetizationService:_processReceipt(receipt: { [string]: any }): Enum.ProductPurchaseDecision
 	local player = Players:GetPlayerByUserId(receipt.PlayerId)
 	local data = if player then PlayerStateService:Get(player) else nil
-	if not player or not data then
+	if not player or not data or not DataService:GetProfile(player) then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	local key = productById[receipt.ProductId]
@@ -212,20 +264,54 @@ function MonetizationService:_processReceipt(receipt: { [string]: any }): Enum.P
 		warn("[MonetizationService] receipt for an unknown product", receipt.ProductId)
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-
-	local purchaseId = tostring(receipt.PurchaseId)
-	if not table.find(data.receipts, purchaseId) then
-		self:_grantProduct(player, data, key)
-		table.insert(data.receipts, purchaseId)
-		while #data.receipts > Monetization.ReceiptHistory do
-			table.remove(data.receipts, 1)
-		end
+	if receipt.PurchaseId == nil or processing[player] then
+		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	-- Already granted receipts land here too: they are only confirmed once saved
-	if DataService:Save(player) then
+	local purchaseId = tostring(receipt.PurchaseId)
+	local effects = pendingEffects[player] or {}
+	pendingEffects[player] = effects
+	processing[player] = true
+	local ok, saved = pcall(function()
+		return Purchases.receipt(data, purchaseId, function(): boolean
+			local effect = self:_grantProduct(player, data, key)
+			if not effect then return false end
+			effects[purchaseId] = effect
+			return true
+		end, function(): boolean
+			return DataService:Save(player)
+		end)
+	end)
+	processing[player] = nil
+	if ok and saved then
+		local effect = effects[purchaseId]
+		effects[purchaseId] = nil
+		if effect then self:_finishProduct(player, effect) end
 		return Enum.ProductPurchaseDecision.PurchaseGranted
 	end
+	if not ok then warn("[MonetizationService] receipt transaction failed:", saved) end
 	return Enum.ProductPurchaseDecision.NotProcessedYet
+end
+
+-- Studio command-bar testing follows the real grant and save path, without
+-- inventing a paid receipt or touching MarketplaceService.
+function MonetizationService:DevProduct(player: Player, key: string): (boolean, string?)
+	if not RunService:IsStudio() then return false, "DevProduct only works in Studio." end
+	if typeof(player) ~= "Instance" or not player:IsA("Player") or typeof(key) ~= "string" or not Monetization.Products[key] then
+		return false, "Choose a player and a configured product key."
+	end
+	local data = PlayerStateService:Get(player)
+	if not data or not DataService:GetProfile(player) or processing[player] then return false, "The profile is not ready." end
+	processing[player] = true
+	local ok, effect, saved = pcall(function()
+		local grant = self:_grantProduct(player, data, key)
+		return grant, if grant then DataService:Save(player) else false
+	end)
+	processing[player] = nil
+	if not ok then return false, tostring(effect) end
+	if not effect then return false, "The product could not be granted." end
+	if not saved then return false, "The grant is in memory, but its save failed." end
+	self:_finishProduct(player, effect)
+	return true, nil
 end
 
 -- Spends one Call a Meteor credit, if calling is available now.
@@ -247,6 +333,9 @@ function MonetizationService:UseCallMeteorCredit(player: Player): (boolean, stri
 end
 
 function MonetizationService.Client:UseCallMeteorCredit(player: Player): (boolean, string?)
+	local now = os.clock()
+	if now - (lastCreditRequest[player] or 0) < 0.5 then return false, "Please wait before calling again." end
+	lastCreditRequest[player] = now
 	return self.Server:UseCallMeteorCredit(player)
 end
 
@@ -263,6 +352,8 @@ function MonetizationService:KnitInit()
 	DataService = Knit.GetService("DataService")
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	MeteorService = Knit.GetService("MeteorService")
+	EconomyService = Knit.GetService("EconomyService")
+	PetService = Knit.GetService("PetService")
 	for key, pass in Monetization.Passes do
 		if pass.Id ~= 0 then
 			passById[pass.Id] = key
@@ -285,6 +376,8 @@ function MonetizationService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		owned[player] = nil
 		resolved[player] = nil
+		pendingEffects[player] = nil
+		lastCreditRequest[player] = nil
 	end)
 	-- The profile may load after the passes resolved; send State with the right capacity
 	DataService.ProfileLoaded:Connect(function(player)
@@ -309,6 +402,12 @@ function MonetizationService:KnitStart()
 	end
 
 	if RunService:IsStudio() then
+		local hook = Instance.new("BindableFunction")
+		hook.Name = "DevProduct"
+		hook.OnInvoke = function(player: Player, key: string)
+			return self:DevProduct(player, key)
+		end
+		hook.Parent = ServerStorage
 		ServerStorage:GetAttributeChangedSignal("DevPasses"):Connect(function()
 			for _, player in Players:GetPlayers() do
 				self:_grantPasses(player, devPasses())

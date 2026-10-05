@@ -26,6 +26,8 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local Pets = require(ReplicatedStorage.Shared.Pets)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
 export type TargetKind = "Crust" | "Core" | "Debris"
@@ -74,6 +76,8 @@ local MonetizationService
 local targets: { [number]: Target } = {}
 local nextId = 0
 local lastSwing: { [Player]: number } = {}
+local lastSwingRequest: { [Player]: number } = {}
+local SWING_REQUEST_INTERVAL = 0.10 -- below the fastest legal swing, including Swift and tolerance
 
 function NodeService:Register(part: BasePart, def: TargetDef): number
 	nextId += 1
@@ -158,9 +162,14 @@ function NodeService:GetIdleSeconds(id: number): number
 	return if target then os.clock() - target.LastHit else 0
 end
 
--- os.clock() of the player's last validated swing (0 if none yet)
+-- os.clock() of the player's last validated swing (-infinity if none yet)
 function NodeService:GetLastSwing(player: Player): number
-	return lastSwing[player] or 0
+	return lastSwing[player] or -math.huge
+end
+
+function NodeService:TargetPosition(id: number): Vector3?
+	local target = targets[id]
+	return if target and target.Part.Parent then target.Part.Position else nil
 end
 
 -- Distance from a point to the closest point on the part's bounding box.
@@ -235,7 +244,7 @@ function NodeService:PetHit(player: Player, id: number, efficiency: number): boo
 		oreType, oreMult = def.OreFor(player)
 	end
 	if oreType then
-		PlayerStateService:AddOreToHopper(player, oreType, pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player) * efficiency)
+		PlayerStateService:AddOreToHopper(player, oreType, Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player) * efficiency, PlayerStateService:GetPetBonuses(player).yield))
 	end
 
 	if target.Hp == 0 then
@@ -318,7 +327,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 	end
 	local ore = 0
 	if oreType then
-		local quantity = pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player)
+		local quantity = Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player), PlayerStateService:GetPetBonuses(player).yield)
 		ore = PlayerStateService:AddOre(player, oreType, quantity)
 		if ore > 0 then
 			self.Client.OreGained:Fire(player, id, oreType, ore)
@@ -329,6 +338,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 		def.OnHit(player, power, ore)
 	end
 	self.Hit:Fire(player, def.Kind, target.Part)
+	if crit then Knit.GetService("PetService"):Work(player, "crit", target.Part.Position) end
 
 	if target.Hp == 0 then
 		target.Part:SetAttribute("Hp", 0)
@@ -343,6 +353,11 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 end
 
 function NodeService.Client:Swing(player: Player, id: number): (boolean, number?, boolean?)
+	local allowed, stamp = RequestGate.check(lastSwingRequest[player], os.clock(), SWING_REQUEST_INTERVAL)
+	lastSwingRequest[player] = stamp
+	if not allowed or typeof(id) ~= "number" or id < 1 or id % 1 ~= 0 then
+		return false
+	end
 	return self.Server:Swing(player, id)
 end
 
@@ -370,6 +385,7 @@ function NodeService:KnitStart()
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastSwing[player] = nil
+		lastSwingRequest[player] = nil
 	end)
 end
 

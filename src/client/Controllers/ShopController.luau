@@ -49,6 +49,18 @@ end
 -- All card coordinates are screen pixels, including on phones.
 local function cardBox(g: any, name: string)
 	local w, h = g.cardWidth, g.cardHeight
+	if g.pet then
+		local boxes = if g.short then {
+			preview = { 12, 38, 128, h - 52 }, title = { 154, 38, w - 168, 28 },
+			stats = { 154, 72, w - 168, h - 162 }, price = { 154, h - 78, w - 168, 22 },
+			buy = { 154, h - 52, w - 168, 44 }, tier = { 12, 10, w - 24, 18 }, state = { 12, 10, w - 24, 18 },
+		} else {
+			preview = { 12, 36, w - 24, 88 }, title = { 12, 132, w - 24, 28 },
+			stats = { 12, 166, w - 24, h - 252 }, price = { 12, h - 78, w - 24, 22 },
+			buy = { 12, h - 52, w - 24, 44 }, tier = { 12, 10, w - 24, 18 }, state = { 12, 10, w - 24, 18 },
+		}
+		return boxes[name]
+	end
 	if g.short then
 		local boxes = {
 			preview = { 12, 40, 128, h - 52 },
@@ -135,7 +147,7 @@ local function itemCard(scope: Scope, geometry: any, props: any)
 		return use(state) == "next" and use(affordable) and use(props.Loaded) and use(props.BusyId) == nil
 	end)
 	local buyingThis = scope:Computed(function(use) return use(props.BusyId) == props.Id end)
-	local accent = scope:Computed(function(use) return stateAccent(use(state)) end)
+	local accent = scope:Computed(function(use) return props.Accent or stateAccent(use(state)) end)
 	return scope:New("Frame")({
 		Name = props.Id, LayoutOrder = props.Order,
 		Size = scope:Computed(function(use) local g = use(geometry) return UDim2.fromOffset(g.cardWidth, g.cardHeight) end),
@@ -285,9 +297,10 @@ function ShopController:KnitStart()
 			Size = scope:Computed(function(use) local g = use(geometry) return UDim2.fromOffset(g.panel.w - 2 * g.padding, g.carouselH) end),
 			BackgroundTransparency = 1, BorderSizePixel = 0,
 			CanvasSize = scope:Computed(function(use) local g = use(geometry) return UDim2.fromOffset(#cards * (g.cardWidth + g.gap) - g.gap + 8, g.cardHeight + 8) end),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
 			ScrollingDirection = scope:Computed(function(use)
 				local g = use(geometry)
-				return if g.cardHeight + 8 > g.carouselH - 4 then Enum.ScrollingDirection.XY else Enum.ScrollingDirection.X
+				return if kind == "pets" or g.cardHeight + 8 > g.carouselH - 4 then Enum.ScrollingDirection.XY else Enum.ScrollingDirection.X
 			end),
 			ScrollBarThickness = 4, ScrollBarImageColor3 = UI.HUD_GOLD,
 			ElasticBehavior = Enum.ElasticBehavior.WhenScrollable, Visible = scope:Computed(function(use) return use(tab) == kind end),
@@ -379,8 +392,10 @@ function ShopController:KnitStart()
 						local wanted = Fusion.peek(count)
 						purchase(id, settings.Names[stat] .. " upgraded.", function()
 							local any = false
-							for _ = 1, wanted do
+							for i = 1, wanted do
 								if not ShopService:Upgrade(kind, stat) then break end
+								-- Keep bulk purchases below the server request limit even on a local connection.
+								if i < wanted then task.wait(.025) end
 								any = true
 							end
 							return any
@@ -556,7 +571,13 @@ function ShopController:KnitStart()
 	gearScreen("pickaxe")
 	gearScreen("backpack")
 	-- Pets: owned ones can be put out or away, the rest cost Core Shards (Shared.Pets)
-	local petIcons = { miner = "equipment", hauler = "ore", pack = "backpack", swift = "chevron", merchant = "coin" }
+	local petIcons = { miner = "equipment", hauler = "ore", pack = "backpack", swift = "chevron", merchant = "coin", yield = "ore", scholar = "crystal", crit = "equipment", vault = "foundry", shards = "crystal", sprint = "chevron" }
+	local petGeometry = scope:Computed(function(use)
+		local g = table.clone(use(geometry))
+		g.pet = true
+		g.cardHeight = if g.short then 310 else 410
+		return g
+	end)
 	local petCards = {}
 	local function petEntry(petId: string)
 		return scope:Computed(function(use)
@@ -571,7 +592,7 @@ function ShopController:KnitStart()
 		end)
 	end
 	local function percent(value: number): string
-		return string.format("%g%%", math.floor(value * 1000 + 0.5) / 10)
+		return string.format("%g%%", math.floor(value * 10000 + 0.5) / 100)
 	end
 	-- Eggs come first: hatch with Core Shards, odds shown on the card, pity counted
 	local eggCount = #Config.Pets.Eggs
@@ -608,14 +629,15 @@ function ShopController:KnitStart()
 	end
 	for order, def in Config.Pets.List do
 		local entry, equipped = petEntry(def.Id), petEquipped(def.Id)
-		local role = Config.Pets.Roles[def.Role]
+		local mainRole = def.Perks[1].Role
 		local id = "pet_" .. def.Id
 		-- A pass pet is bought with Robux through its game pass; Id 0 means not on sale yet
 		local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
 		local onSale = pass ~= nil and pass.Id ~= 0
-		petCards[eggCount + order] = itemCard(scope, geometry, {
+		petCards[eggCount + order] = itemCard(scope, petGeometry, {
 			Id = id, Order = eggCount + order, Title = def.Name, TitleName = "PetName",
-			LevelText = string.upper(Config.Pets.Rarities[def.Rarity].Name .. " " .. role.Name) .. " PET",
+			Accent = Config.Pets.Rarities[def.Rarity].Color,
+			LevelText = string.upper(Config.Pets.Rarities[def.Rarity].Name) .. " PET",
 			State = scope:Computed(function(use): RowState
 				if use(equipped) then return "equipped" end
 				return if use(entry) then "owned" else "next"
@@ -638,24 +660,25 @@ function ShopController:KnitStart()
 				return "Hatch it from a " .. (if def.Rarity == "common" or def.Rarity == "uncommon" then "Meteor" else "Meteor or Crystal") .. " Egg"
 			end),
 			ReadyText = "BUY",
-			Preview = UI.hudIcon(scope, petIcons[def.Role] or "equipment", {
+			Preview = UI.hudIcon(scope, petIcons[mainRole] or "equipment", {
 				AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 				Size = UDim2.fromScale(0.55, 0.75), ImageColor3 = def.Color,
 			}),
 			Stats = {
-				statCell(scope, geometry, 1, 3, "LEVEL", scope:Computed(function(use)
-					local e = use(entry)
-					return (if e then e.level else 1) .. " / " .. Config.Pets.MaxLevel
-				end), UI.WHITE),
-				statCell(scope, geometry, 2, 3, string.upper(role.Name), scope:Computed(function(use)
-					local e = use(entry)
-					return percent(Pets.petPerk(def, if e then e.level else 1))
-				end), UI.HUD_GOLD),
-				statCell(scope, geometry, 3, 3, "NEXT LEVEL", scope:Computed(function(use)
-					local e = use(entry)
-					local needed = if e then Pets.xpToNext(e.level) else nil
-					return if not e then "-" elseif needed then Format.number(math.floor(e.xp)) .. " / " .. Format.number(needed) else "MAX"
-				end), UI.HUD_MINT),
+				UI.body(scope, {
+					Name = "Perks", Size = UDim2.fromScale(1, 1), TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, RichText = true,
+					Text = scope:Computed(function(use)
+						local e = use(entry)
+						local lv = if e then e.level else 1
+						local needed = Pets.xpToNext(lv)
+						local lines = { string.format("LEVEL %d / %d%s", lv, Config.Pets.MaxLevel, if e and needed then "  ·  " .. Format.number(math.floor(e.xp)) .. "/" .. Format.number(needed) .. " XP" else "") }
+						for _, perk in Pets.perksOf(def, lv) do
+							local role = Config.Pets.Roles[perk.role]
+							table.insert(lines, string.format('<font color="#%s">%s</font>: %s', Config.Pets.Rarities[def.Rarity].Color:ToHex(), role.Name, string.format(role.Text, percent(perk.value))))
+						end
+						return table.concat(lines, "\n\n")
+					end),
+				}),
 			},
 			OnBuy = function()
 				if Fusion.peek(entry) == nil then
@@ -814,7 +837,7 @@ function ShopController:KnitStart()
 							if kind == "pets" then
 								local s = use(playerState)
 								if s and s.pets then
-									return string.format("%d / %d pets out. Rebirths open more slots.   %d / %d", #s.pets.equipped, s.pets.slots, first, count)
+									return string.format("%d/%d pets out. %d/%d\nRebirth cap 3; Extra Pet Slot +1", #s.pets.equipped, s.pets.slots, first, count)
 								end
 							end
 							local s = use(playerState)

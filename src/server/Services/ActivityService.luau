@@ -14,6 +14,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local ActivityService = Knit.CreateService({
 	Name = "ActivityService",
@@ -21,6 +22,7 @@ local ActivityService = Knit.CreateService({
 })
 
 local lastInput: { [Player]: number } = {}
+local lastPingRequest: { [Player]: number } = {}
 
 function ActivityService:Touch(player: Player)
 	lastInput[player] = os.clock()
@@ -70,6 +72,9 @@ function ActivityService:GetActiveRates(): { number }
 end
 
 function ActivityService.Client:Ping(player: Player)
+	local allowed, stamp = RequestGate.check(lastPingRequest[player], os.clock(), 1)
+	lastPingRequest[player] = stamp
+	if not allowed then return end
 	self.Server:Touch(player)
 end
 
@@ -82,6 +87,7 @@ function ActivityService:KnitStart()
 	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastInput[player] = nil
+		lastPingRequest[player] = nil
 	end)
 end
 

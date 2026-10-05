@@ -27,6 +27,7 @@ local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local CallMeteor = require(ReplicatedStorage.Shared.CallMeteor)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local MeteorConfig = Config.Meteor
 
@@ -96,6 +97,7 @@ local callTimes: { number } = {}
 -- Studio only (DevSpawn): the meteor type asked for from the command bar or chat. It
 -- ends a meteor that is still down and comes in StreakLeadTime seconds into its countdown.
 local devNext: Config.MeteorType? = nil
+local lastDevSkipRequest: { [Player]: number } = {}
 
 local function now(): number
 	return workspace:GetServerTimeNow()
@@ -634,10 +636,11 @@ function MeteorService:DevSpawn(typeId: string): string
 end
 
 -- Studio-only shortcut for playtesting: jump to the last few seconds of the countdown.
-function MeteorService.Client:DevSkipCountdown(_player: Player)
-	if RunService:IsStudio() then
-		self.Server:SetCountdownRemaining(MeteorConfig.StreakLeadTime)
-	end
+function MeteorService.Client:DevSkipCountdown(player: Player)
+	local allowed, stamp = RequestGate.check(lastDevSkipRequest[player], os.clock(), 1)
+	lastDevSkipRequest[player] = stamp
+	if not allowed or not RunService:IsStudio() then return end
+	self.Server:SetCountdownRemaining(MeteorConfig.StreakLeadTime)
 end
 
 function MeteorService:KnitInit()
@@ -649,6 +652,9 @@ function MeteorService:KnitInit()
 end
 
 function MeteorService:KnitStart()
+	Players.PlayerRemoving:Connect(function(player)
+		lastDevSkipRequest[player] = nil
+	end)
 	task.spawn(self._loop, self)
 end
 
