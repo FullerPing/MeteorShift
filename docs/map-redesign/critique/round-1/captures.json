@@ -100,5 +100,122 @@
       2620
     ],
     "scope": "Saved after-fix art; original 17.2 lighting, no static previews"
+  },
+  {
+    "name": "spawn-before-crest-contrast",
+    "file": "spawn-before-crest-contrast.jpg",
+    "camera": [
+      -85,
+      35,
+      2600
+    ],
+    "target": [
+      -20,
+      10,
+      2542
+    ],
+    "scope": "Edit, original17.2 lighting; no static previews; before final crest/odds-type corrections",
+    "bytes": 173402,
+    "sha256": "1ad469cec38fc606af966c265cc846be96abc98b6d88ab07eb4f66037e3f4ee5",
+    "usableCamera": true
+  },
+  {
+    "name": "gear-after-original-lighting",
+    "camera": [
+      140,
+      14,
+      2684
+    ],
+    "target": [
+      140,
+      24,
+      2595
+    ],
+    "file": "gear-after-original-lighting.jpg",
+    "scope": "Edit, original17.2 lighting; no static previews; before final crest/odds-type corrections",
+    "bytes": 158004,
+    "sha256": "931207464559c61558466a6cc70b3874cb5f34fa0f76e7648110b94f1b37923b",
+    "usableCamera": true
+  },
+  {
+    "name": "hatchery-after-original-lighting",
+    "camera": [
+      -155,
+      18,
+      2676
+    ],
+    "target": [
+      -155,
+      19,
+      2618
+    ],
+    "file": "hatchery-after-original-lighting.jpg",
+    "scope": "Edit, original17.2 lighting; no static previews; before final crest/odds-type corrections",
+    "bytes": 128085,
+    "sha256": "55a73532a56ef9e8217665a71f39a76c0e71e89514862e85b141207591bce5e8",
+    "usableCamera": true
+  },
+  {
+    "name": "trading-post-clear-original-lighting",
+    "camera": [
+      110,
+      24,
+      2600
+    ],
+    "target": [
+      70,
+      14,
+      2540
+    ],
+    "file": "trading-post-clear-original-lighting.jpg",
+    "scope": "Edit, original17.2 lighting; no static previews; before final crest/odds-type corrections",
+    "bytes": 104839,
+    "sha256": "0855eff9355c8dfe00c7eae8433f60007439bdee019a24a3900e71b8c7811e81",
+    "usableCamera": false
+  },
+  {
+    "name": "trading-post-corrected",
+    "file": "trading-post-corrected.jpg",
+    "camera": [
+      70,
+      24,
+      2600
+    ],
+    "target": [
+      70,
+      14,
+      2540
+    ],
+    "scope": "Edit, original17.2 lighting; no static previews; before final crest/odds-type corrections",
+    "bytes": 155474,
+    "sha256": "5fad0aca61c17f0f5f2be90bd12bc95c520f036f9946431f2a9075bfd3390f23",
+    "usableCamera": true
+  },
+  {
+    "name": "hatchery-odds44-original-lighting",
+    "file": "hatchery-odds44-original-lighting.jpg",
+    "camera": [
+      -155,
+      18,
+      2676
+    ],
+    "target": [
+      -155,
+      19,
+      2618
+    ],
+    "scope": "Saved44px odds type; original17.2 lighting; no static previews; both text blocks visible",
+    "usableCamera": true,
+    "bytes": 171127,
+    "sha256": "73d27eb230aa04bc8434e59f82db29f9c5f4569c7ef1d195dabd47243b5af43b"
+  },
+  {
+    "name": "overview-before-previews",
+    "file": "overview-before-previews.jpg",
+    "bytes": 192256,
+    "sha256": "0ac7c9191e36f11bfadd3d1aef4381539ad54dc0d919def93db8a74f68d24fe0",
+    "camera": null,
+    "target": null,
+    "scope": "Native daylight overview before static previews; original camera metadata unavailable"
   }
 ]

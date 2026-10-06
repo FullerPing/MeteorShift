@@ -8,8 +8,8 @@
   "placeSaveConfirmedForThisStage": true,
   "files": [
     {
-      "bytes": 84811,
-      "base64Chars": 113084,
+      "bytes": 85876,
+      "base64Chars": 114504,
       "roundtripPassed": true,
       "scripts": 0,
       "file": "Map_Redesign.rbxm",
@@ -18,8 +18,8 @@
         0,
         3000
       ],
-      "parts": 1370,
-      "sha256": "72cff0efab6c76078bad2ba359bccd0f7d7cb8e24c60534b4cabbd7203fcc876"
+      "parts": 1417,
+      "sha256": "6d28ccf9656faa1a41ad685e1fd255f824434c8ba046230dfab7092b4b5f706e"
     },
     {
       "bytes": 73990,
@@ -56,7 +56,7 @@
   ],
   "previousPlaceSaveEvidence": {
     "date": "2026-10-06",
-    "studioOutputTime": "07:50:01.309",
+    "studioOutputTime": "07:58:13.871",
     "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
     "action": "File > Save to Roblox",
     "mode": "Edit",
@@ -64,7 +64,8 @@
     "unparentedScaledAssetsPersistedInPlace": false,
     "inactiveLightingProfileSaved": true,
     "temporaryPreviewsRemoved": true,
-    "originalLightingRestored": true
+    "originalLightingRestored": true,
+    "cleanupAfterTemporaryVisualPreview": true
   },
   "lightingProfile": {
     "inactive": true,
@@ -81,7 +82,7 @@
   },
   "placeSaveEvidence": {
     "date": "2026-10-06",
-    "studioOutputTime": "07:58:13.871",
+    "studioOutputTime": "08:29:19.492",
     "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
     "action": "File > Save to Roblox",
     "mode": "Edit",
@@ -90,6 +91,8 @@
     "inactiveLightingProfileSaved": true,
     "temporaryPreviewsRemoved": true,
     "originalLightingRestored": true,
-    "cleanupAfterTemporaryVisualPreview": true
+    "cleanupAfterTemporaryVisualPreview": true,
+    "spawnPolishSaved": true,
+    "oddsTypeSize": 44
   }
 }

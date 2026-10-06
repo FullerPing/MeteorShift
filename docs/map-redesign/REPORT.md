@@ -8,7 +8,7 @@ The original town remains active. Workspace.Map_Redesign contains the new world 
 
 | Item | Current evidence |
 |---|---|
-| Authored staged map | 1,370 parts; no MeshParts or Scripts; all anchored |
+| Authored staged map | 1,417 parts; no MeshParts or Scripts; all anchored |
 | Refinery | 145 parts; PrimaryPart Foundation; one UsePoint; SharedRefinery true; no Scripts, prompts or Humanoids |
 | Refinery pivot | Staged (0, 0.800000012, 2620); intended final (0, 0.800000012, -380) |
 | Horizontal crater distances | Pivot 380; nearest visible footprint 348; UsePoint 343 |
@@ -38,11 +38,11 @@ The template audit verified 113 parts, 36 attachments, one light and one emitter
 
 Large concave CSG collision closed the crater opening. The union is now visual-only; 134 invisible primitive proxies provide ground collision. Initial forecourt probes assumed Y 0 and falsely intersected the raised avenue; they now use raycast surface heights. Assertions were preserved.
 
-Seven native JPEGs now cover a partial first visual review; see critique/round-1/REVIEW.md for provisional image scores. Trading Post is obscured and multiple zones/full daylight after-fix views are missing, so zero complete rounds are claimed. Rebirth capture failed; the after-fix refinery request stalled and was terminated. First repairs include a furnace mouth, exposed conveyor, lower Gear Hall boards, corrected signs/cards, two fill lights and a128×72Hatchery with eggs beside unchanged Config odds. The conveyor initially violated the footprint by1.74studs; world-space corner measurement fixed it without relaxing the assertion. Final refineryfrontZ−348, conveyor−348.4, hatchery/spinegap14. The existing impact-clear teleport also needs a destination-ground raycast: retaining the player's deep-bowl Y plus four studs could strand them beneath outer ground. That source fix remains pending authorization.
+Thirteen native JPEGs now cover a partial first visual review; see critique/round-1/REVIEW.md for provisional image scores. Trading Post is obscured and multiple zones/full daylight after-fix views are missing, so zero complete rounds are claimed. Rebirth capture failed; the after-fix refinery request stalled and was terminated. First repairs include a furnace mouth, exposed conveyor, lower Gear Hall boards, corrected signs/cards, two fill lights and a128×72Hatchery with eggs beside unchanged Config odds. The conveyor initially violated the footprint by1.74studs; world-space corner measurement fixed it without relaxing the assertion. Final refineryfrontZ−348, conveyor−348.4, hatchery/spinegap14. The existing impact-clear teleport also needs a destination-ground raycast: retaining the player's deep-bowl Y plus four studs could strand them beneath outer ground. That source fix remains pending authorization.
 
 ## Checkpoint and remaining work
 
-Four staging exports passed engine deserialize, root-attribute comparison, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 84,811 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 23,070 bytes; Lighting_Redesign is 4,703 bytes. Final contract exports remain untouched. Staged art, the inactive lighting profile and approved tutorial lookup are saved: Studio reported `07:58:13.871 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
+Four staging exports passed engine deserialize, root-attribute comparison, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 85,876 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 23,070 bytes; Lighting_Redesign is 4,703 bytes. Final contract exports remain untouched. Staged art, the inactive lighting profile and approved tutorial lookup are saved: Studio reported `08:29:19.492 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
 
 After temporary preview, all15liveLightingproperties and the actual6originaleffects/1TerrainClouds were restored. Static equipment preview was destroyed and meteor preview detached before the save. All39frozenGUIhashes were rechecked; onlyapprovedTutoriallookup differs, with unchanged panel suffix. An initial Clouds clone under the staged Workspace profile produced two Edit warnings; it was replaced with a CloudSettings data Folder. Fresh checks found zero staged Clouds and exactly one original Clouds directly under Terrain. Visual quality and performance of the candidate remain unverified.
 
@@ -60,3 +60,5 @@ Automatic approval review rejected creating world test ModuleScripts under the i
 ## What to inspect first
 
 Inspect the staged town near Z 2660: orange Refinery in the centre, violet Hatchery to the west and blue Gear Hall to the east. Check the crater ascent around Z 3000 next, then west Rebirth, east Museum and the four debris yards. Keep staging pads disabled until runtime selection is connected.
+
+Latest spawn polish:47decorativeparts/30oversizedstuds within existing bounds; rerun preserved all six spawn CFrames. Crest contrast changed to orange; final colour review pending. Odds text44fits engine bounds496×396/485×352 within586.56×443.52, unchanged Config strings. A final image shows both boards; phone/daylight readability still unverified. Corrected Trading Post view is clear; earlier wrong-camera captures are not accepted evidence. No completed critique rounds or new runtime/profile tests.

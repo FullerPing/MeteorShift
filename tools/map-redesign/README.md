@@ -15,8 +15,9 @@ Order:
    For temporary Edit review, run PreviewLighting.luau alone and optionally Common.luau plus PreviewEquipment.luau. Equipment shows18staticmodels/317parts, without player state. RestoreLightingPreview.luau restores15properties and the actual original effects/Clouds; remove or detach all PreviewOnly geometry before save/export/Play or closing Studio.
    Common.luau plus PolishPass1.luau applies furnace/conveyor, current-board, tier-card, fill-light and world-sign repairs. Hatchery/Scenery contain the wider floor and side-by-side eggs/odds; rerun those owned stages before polishing when rebuilding. Conveyor placement measures world-space part corners, including rotation.
 
-7. `StaticQA.luau` alone: contracts, budgets, 84 Edit pathfinding routes and forecourt collision probes. Its result explicitly leaves real walking/gameplay pending.
-8. `ExportCheckpoint.luau` alone: serializes four unparented clones and verifies engine deserialize round-trips, including root attributes. Read chunked base64 from `_G.MapRedesignStageExportStrings`; validate length, canonical base64, binary header, disk bytes and SHA256 before writing the manifest.
+7. Common.luau plus SpawnPolish.luau:47noncollidingparts/30oversizedstuds inside the spawn footprint. Does not move or enable spawn pads. Run after Routes; rerun verifies the same1417totalparts. Hatchery.luau uses44px Config odds type with engine-fit assertions.
+8. `StaticQA.luau` alone: contracts, budgets, 84 Edit pathfinding routes and forecourt collision probes. Its result explicitly leaves real walking/gameplay pending.
+9. `ExportCheckpoint.luau` alone: serializes four unparented clones and verifies engine deserialize round-trips, including root attributes. Read chunked base64 from `_G.MapRedesignStageExportStrings`; validate length, canonical base64, binary header, disk bytes and SHA256 before writing the manifest.
 
 Every stage owns only its named groups under `Workspace.Map_Redesign`, with offset `(0,0,3000)`. It refuses unowned replacements. `Routes` leaves staged spawns disabled. Nothing here swaps or deletes the original Map/Terrain/Lighting/Assets. Activate staged pads only when staged runtime selection is ready, and enable them during the final approved swap.
 

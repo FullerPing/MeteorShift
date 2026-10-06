@@ -19,13 +19,25 @@ Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Push checkpoint; automatic approval review rejected twice, explicit payload/destination approval pending.
 - [ ] Stage2 geometry/equipment specsRED→GREEN; shared-onlyservices andscaledtemplates.
 - [ ] Stage3 complete Map_Redesign build andstaticQA.
-- [x] Build isolated scene art for all zones;1370authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
+- [x] Build isolated scene art for all zones;1417authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
 - [x] Commit staged geometry checkpoint a31aeb1 and save the current Edit place through File > Save to Roblox; fresh Output confirmed at00:29:55.808 on6October. No publishing.
 - [x] Prepare inactive daylight LightingProfile; verify15liveproperties unchanged; regenerate four staging exports; save confirmed at00:42:40.976. Visual QA remains pending.
 - [ ] Stage4 stagedPlay/gameplay/phone/path/performanceQA.
 - [ ] Stage5 minimum3critique/fix rounds; allcategories4+tworoundsrunning.
 - [ ] Stage6 controlledswap, post-swapQA, deleteMap_Old onlyaftergreen.
 - [ ] Stage7 save/finalfourexports/README/tools/REPORT/finalcommitpush/completionaudit.
+
+## Spawn polish checkpoint — 08:29 save
+
+The previous goal turn made concrete progress (saved refinery/town repairs and native images). This continuation re-read the full objective/plan, current Git and Studio. World-code/push/foreground permissions remain pending; no required answer has arrived and no rejected action was retried.
+
+SpawnPolish.luau adds47anchored, noncolliding/nonquerying decorative parts: pad frames,30oversized studs, floor/sign trim and a bevelled meteor crest. Its measured bounds stay inside X−68..28/Z−499..−426; all six spawn transforms and disabled states are unchanged. A second run held totalparts1417and all spawn CFrames equal. The crest was recoloured orange after a real image showed its grey body blending into the wall; the final colour still needs visual review.
+
+Native capture intermittently recovered after saving. Five additional views were saved, plus the final odds44image: current count13JPEGs. The Trading Post camera at(110,24,2600) was inside Gear Hall and is unusable; a corrected camera(70,24,2600) gives a clear booth view. Gear boards and side-by-side hatchery eggs are visible. One Meteor Egg board initially rendered blank despite enabled/visible text; a later saved image shows both text blocks. Odds type increased28→44 with unchanged Config text. Engine bounds496×396/485×352 fit586.56×443.52. Phone readability and full daylight coverage remain unverified; zero completed critique rounds.
+
+StaticQA passed84Editpaths/sixforecourtprobes,74jumpwaypoints pending real walking. Current1417authoredparts,145Refineryparts,8lights,0scripts/meshes/unanchoredparts, no previews. OriginalMap2043/liveAssets/Terrain/Lighting unchanged. Latest save **08:29:19.492** on6October2026. Map export85876bytes/SHA6d28ccf9656faa1a41ad685e1fd255f824434c8ba046230dfab7092b4b5f706e; other three staging binaries unchanged. No publishing.
+
+Capture handles574,583and587were cancelled after stalls, including a no-camera-override diagnostic. No live capture/process is being awaited. Do not repeatedly restart the same request. The root cause is unproven; foreground-only computer use remains a pending question, separate from the existing save permission.
 
 ## Latest resumed checkpoint — 07:58 cleanup save
 
@@ -55,7 +67,7 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 
 ## Evidence and decisions
 
-### Current staged geometry checkpoint
+### Earlier staged geometry checkpoint — before the latest polish
 
 - `Workspace.Map_Redesign` is built at offset(0,0,3000); original Map still2043parts, no swap, Terrain/Lighting/liveAssets unchanged. Six staged spawn pads are disabled until staged runtime selection is ready, preventing accidental spawning into an unconnected town.
 - Authored geometry1351parts,0MeshParts,0Scripts,0unanchoredparts. Refinery134parts,PrimaryPartFoundation,oneUsePoint,SharedRefinerytrue,0prompts/scripts/Humanoids. Visible footprintnearest348; UsePoint343; final refinery pivot(0,0.8,-380), stagedpivot(0,0.8,2620). Hopper/Conveyor/Refinery art reused from pristinePlotStations, stripped of scripts/prompts/liveBillboardGuis.

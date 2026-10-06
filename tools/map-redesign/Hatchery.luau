@@ -53,7 +53,12 @@ for i,egg in Config.Pets.Eggs do
 	label.Font=Enum.Font.GothamBold
 	label.TextWrapped=true
 	label.TextScaled=false
-	label.TextSize=28
+	label.TextSize=44
+	local canvas=backing.Lettering.CanvasSize
+	local available=Vector2.new(canvas.X*.94,canvas.Y*.88)
+	local bounds=game:GetService("TextService"):GetTextSize(label.Text,label.TextSize,label.Font,
+		Vector2.new(available.X,10000))
+	assert(bounds.Y<=available.Y,"Config odds text exceeds the board")
 	for _,side in {-1,1} do
 		A.part(pedestal,"BoardPost",Vector3.new(2,12,2),A.cf(boardX+side*10,7.2,-378.7),C.cream,nil,false)
 	end
