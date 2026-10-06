@@ -128,13 +128,15 @@
   ],
   "previousPlaceSaveEvidence": {
     "date": "2026-10-06",
-    "studioOutputTime": "00:42:40.976",
+    "studioOutputTime": "07:50:01.309",
     "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
     "action": "File > Save to Roblox",
     "mode": "Edit",
     "published": false,
     "unparentedScaledAssetsPersistedInPlace": false,
-    "inactiveLightingProfileSaved": true
+    "inactiveLightingProfileSaved": true,
+    "temporaryPreviewsRemoved": true,
+    "originalLightingRestored": true
   },
   "lightingProfile": {
     "inactive": true,
@@ -151,7 +153,7 @@
   },
   "placeSaveEvidence": {
     "date": "2026-10-06",
-    "studioOutputTime": "07:50:01.309",
+    "studioOutputTime": "07:58:13.871",
     "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
     "action": "File > Save to Roblox",
     "mode": "Edit",
@@ -159,7 +161,8 @@
     "unparentedScaledAssetsPersistedInPlace": false,
     "inactiveLightingProfileSaved": true,
     "temporaryPreviewsRemoved": true,
-    "originalLightingRestored": true
+    "originalLightingRestored": true,
+    "cleanupAfterTemporaryVisualPreview": true
   },
   "studioId": "855dc0ff-1333-4ce9-bced-616b9099ef09",
   "clearance": {
@@ -170,14 +173,19 @@
     "measuredAfterFix": true
   },
   "partialCritique": {
-    "nativeImages": 6,
+    "nativeImages": 7,
     "review": "critique/round-1/REVIEW.md",
-    "afterFixImages": false
+    "afterFixImages": "one cropped original-lighting refinery view; full daylight views pending"
   },
   "temporaryLightingRestore": {
     "properties": 15,
     "originalEffects": 6,
     "originalTerrainClouds": 1,
     "passed": true
+  },
+  "lastCapture": {
+    "cell": 561,
+    "status": "cancelled",
+    "foregroundPermissionPending": true
   }
 }

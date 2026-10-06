@@ -27,9 +27,9 @@ Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Stage6 controlledswap, post-swapQA, deleteMap_Old onlyaftergreen.
 - [ ] Stage7 save/finalfourexports/README/tools/REPORT/finalcommitpush/completionaudit.
 
-## Latest resumed checkpoint — 07:50 save
+## Latest resumed checkpoint — 07:58 cleanup save
 
-A new Studio connection (`855dc0ff-1333-4ce9-bced-616b9099ef09`) confirmed the previous saved map persisted. Six actual native JPEGs were captured with temporary daylight lighting; their partial review is in `critique/round-1/REVIEW.md`. This is zero complete rounds: Trading Post is obscured, several zones are missing and after-fix images are unavailable. Rebirth capture failed; the after-fix refinery request stalled and was terminated. No capture job remains live.
+A new Studio connection (`855dc0ff-1333-4ce9-bced-616b9099ef09`) confirmed the previous saved map persisted. Six actual native JPEGs were captured with temporary daylight lighting; their partial review is in `critique/round-1/REVIEW.md`. This is zero complete rounds: Trading Post is obscured, several zones are missing and full daylight after-fix images are unavailable. Rebirth capture failed; the after-fix refinery request stalled and was terminated. No capture job remains live. One cropped original-lighting refinery after-fix image then succeeded immediately after saving brought Studio forward, but the next daylight batch stalled and was cancelled(cell561). Previews were restored/removed again. Foreground-only computer-use permission for MCP screenshots is now pending.
 
 The first repairs now exist in the saved staged scene: furnace mouth/exposed conveyor, lower current-equipment boards, narrower tier cards, sign canvases matching physical faces, two fill lights, and a128×72Hatchery with side-by-side eggs/Config odds. Current totals are1370authoredparts/145Refineryparts,8lights,0scripts/meshes/unanchoredparts. OriginalMap2043parts and liveAssets/Terrain/Lighting remain unchanged.
 
@@ -37,7 +37,7 @@ A separate clearance assertion caught the conveyor front atZ−346.66064453125. 
 
 Before saving, all15Lightingproperties and the actual6originaleffects/1TerrainClouds were restored; meteor preview detached and317-part equipment preview destroyed. File > Save to Roblox completed at **07:50:01.309** on6October2026. No publishing. Four staging exports verified:Map84811,Assets73990,Refinery23070,Lighting4703bytes. See manifest/geometry-checkpoint.json. All39frozenGUIhashes were rechecked; onlyapprovedTutoriallookup differs and its panel suffix remains unchanged.
 
-World-code and push approvals are still pending; no new Source, runtime/profile fixtures or push occurred. The previous blocked audit below is historical. This resumed run made independent progress and starts a fresh blocked audit. Next permitted work is art/visual review if native capture recovers; Stage2runtime integration/newtests and finalswap remain gated.
+Polish checkpoint2cc6e5d is committed locally. World-code and push approvals are still pending; no new Source, runtime/profile fixtures or push occurred. The previous blocked audit below is historical. This resumed run made independent progress and starts a fresh blocked audit. Next permitted work is art/visual review if native capture recovers; Stage2runtime integration/newtests and finalswap remain gated.
 
 ## Next action
 
@@ -92,3 +92,5 @@ The separately approved TutorialController Deposit/Collect lookup is now changed
 ## Requirements still unverified
 
 Scene art, an inactive lighting profile and isolated2x templates exist. Runtime world controller/helpers/tests/services, authoritative kill plane, plot removal from live code/assets, newgeometryConfig/FX, lightingpreview/QA, pre-swap/post-swapPlayQA, walking/aiming/exploitproof, phones, stressperformance, critique rounds, finalfourcontractexports and push remain incomplete. Later runtime/final edits will need another save. No swap/deleteold/publish. Do not markgoalcomplete from the geometry checkpoint.
+
+Cleanup save completed at07:58:13.871 after restoring/removing previews again. Native original-lighting refinery image is recorded separately; foreground-only computer-use authorization remains pending. The saved1370-part map and verified binary hashes are unchanged by these temporary reviews.
