@@ -1,5 +1,6 @@
 -- Serializes staging data only. Does not save/publish or replace final asset files.
 assert(not game:GetService("RunService"):IsRunning(),"Edit mode required")
+assert(not _G.MapRedesignLightingPreview,"Restore temporary lighting before checkpoint export/save")
 local map=assert(workspace:FindFirstChild("Map_Redesign"))
 assert(map:GetAttribute("MapRedesignOwned"),"Unowned staged map")
 local scaled=assert(_G.MapRedesignScaledAssets,"Run MeteorPreview first")

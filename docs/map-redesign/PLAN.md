@@ -30,7 +30,7 @@ All coordinates below are final local world coordinates, X east / Z north-south.
 | Outer path loop | 0,0 | Radius 320, at least 18 wide; four cardinal approaches and zone connectors |
 | Shared Refinery | 0,-380 | 76 × 64; front faces +Z toward crater, UsePoint at (0,3,-343), 18-stud clear forecourt |
 | Gear Hall | 140,-380 | 100 × 72; crater-facing open entrance centred (140,-341); PickaxeShop counter inside, two live stands and two eight-tier walls |
-| Hatchery | -155,-380 | 100 × 72; entrance (-155,-340); Config-generated decorative egg/odds pedestals |
+| Hatchery | -155,-380 | 128 × 72; entrance (-155,-340); eggs beside their Config odds boards;14-stud gap to the spawn spine |
 | Trading Post | 70,-460 | 56 × 40; entrance (70,-434), SellPoint near the front |
 | Spawn plaza | -20,-458 | 96 × 64 with six 12 × 12 spawn pads and 24-wide avenue; no compulsory choke point |
 | Rebirth monument | -360,-160 | 72 × 72; entrance (-325,-160), via west loop |

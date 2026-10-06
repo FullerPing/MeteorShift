@@ -19,7 +19,7 @@ Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Push checkpoint; automatic approval review rejected twice, explicit payload/destination approval pending.
 - [ ] Stage2 geometry/equipment specsRED→GREEN; shared-onlyservices andscaledtemplates.
 - [ ] Stage3 complete Map_Redesign build andstaticQA.
-- [x] Build isolated scene art for all zones;1351authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
+- [x] Build isolated scene art for all zones;1370authoredparts,84Editroutes successful, exported/hash-verified checkpoint. Runtime features and visual QA still pending.
 - [x] Commit staged geometry checkpoint a31aeb1 and save the current Edit place through File > Save to Roblox; fresh Output confirmed at00:29:55.808 on6October. No publishing.
 - [x] Prepare inactive daylight LightingProfile; verify15liveproperties unchanged; regenerate four staging exports; save confirmed at00:42:40.976. Visual QA remains pending.
 - [ ] Stage4 stagedPlay/gameplay/phone/path/performanceQA.
@@ -27,11 +27,23 @@ Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected pl
 - [ ] Stage6 controlledswap, post-swapQA, deleteMap_Old onlyaftergreen.
 - [ ] Stage7 save/finalfourexports/README/tools/REPORT/finalcommitpush/completionaudit.
 
+## Latest resumed checkpoint — 07:50 save
+
+A new Studio connection (`855dc0ff-1333-4ce9-bced-616b9099ef09`) confirmed the previous saved map persisted. Six actual native JPEGs were captured with temporary daylight lighting; their partial review is in `critique/round-1/REVIEW.md`. This is zero complete rounds: Trading Post is obscured, several zones are missing and after-fix images are unavailable. Rebirth capture failed; the after-fix refinery request stalled and was terminated. No capture job remains live.
+
+The first repairs now exist in the saved staged scene: furnace mouth/exposed conveyor, lower current-equipment boards, narrower tier cards, sign canvases matching physical faces, two fill lights, and a128×72Hatchery with side-by-side eggs/Config odds. Current totals are1370authoredparts/145Refineryparts,8lights,0scripts/meshes/unanchoredparts. OriginalMap2043parts and liveAssets/Terrain/Lighting remain unchanged.
+
+A separate clearance assertion caught the conveyor front atZ−346.66064453125. Its rotated bounding box had been treated as axis-aligned. World-space part corners now determine placement: conveyorZ−348.4, entire visibleRefinerymaxZ−348; assertion passes. Hatchery-to-spawn-spinegap14. Final StaticQA passed84paths/sixfrontprobes;74jumpwaypoints and realwalking remain pending. No assertion was relaxed.
+
+Before saving, all15Lightingproperties and the actual6originaleffects/1TerrainClouds were restored; meteor preview detached and317-part equipment preview destroyed. File > Save to Roblox completed at **07:50:01.309** on6October2026. No publishing. Four staging exports verified:Map84811,Assets73990,Refinery23070,Lighting4703bytes. See manifest/geometry-checkpoint.json. All39frozenGUIhashes were rechecked; onlyapprovedTutoriallookup differs and its panel suffix remains unchanged.
+
+World-code and push approvals are still pending; no new Source, runtime/profile fixtures or push occurred. The previous blocked audit below is historical. This resumed run made independent progress and starts a fresh blocked audit. Next permitted work is art/visual review if native capture recovers; Stage2runtime integration/newtests and finalswap remain gated.
+
 ## Next action
 
 Stage2 remains gated by the pending world-code authorization. Once it arrives, synchronize the three draft specs, obtain actual RED results, implement helpers/controllers/services and update dimensions. Push local checkpoints only after the explicit GitHub payload/destination approval arrives. Staged art has now been built and exported; do not rebuild it from scratch.
 
-### Blocked audit — threshold met
+### Historical blocked audit — previous run
 
 The same world-code authorization and backup-push rejection remain unresolved across three consecutive goal turns: `01a10d5c-e5cb-7c72-b02d-9b40343b9abb` (baseline/tutorial), `01a10d92-afc3-7e71-b947-2f3e1339e361` (scene geometry/save), and `01a10dfb-6801-7be2-946d-dc2dfbe24390` (lighting). Authoritative recent turn records confirm the pending questions and automatic approval rejections. Independent scene/data work is now built, exported, saved and committed (`5a8f36d`); no runtime integration, full QA or swap can proceed within the currently approved boundary. The screenshot tool also produced no image on three attempts, with all request handles explicitly terminated; native computer use is allowed only for saving. No process is being awaited. Set the goal blocked after this checkpoint; completion remains unproven. Resume only when the world-code/push authorization or relevant external tool state changes, preserving the full objective.
 

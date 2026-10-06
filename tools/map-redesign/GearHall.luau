@@ -20,12 +20,12 @@ local walls=A.group(hall,"TierWalls")
 local rowPositions={12,28}
 for _,kind in {"pickaxe","backpack"} do
 	local catalog=if kind=="pickaxe" then Config.Pickaxes else Config.Backpacks
-	local firstX=if kind=="pickaxe" then 98 else 146
+	local firstX=if kind=="pickaxe" then 100 else 146
 	assert(#catalog==8,"Tier wall requires all eight Config tiers")
 	for tier,item in catalog do
 		local row=math.floor((tier-1)/4)+1
-		local x=firstX+((tier-1)%4)*12
-		local card=A.part(walls,kind..tier,Vector3.new(11,14.5,.6),
+		local x=firstX+((tier-1)%4)*11
+		local card=A.part(walls,kind..tier,Vector3.new(10.5,14.5,.6),
 			A.cf(x,rowPositions[row],-411.6),C.navy,nil,false)
 		card:SetAttribute("EquipmentKind",kind)
 		card:SetAttribute("EquipmentTier",tier)
@@ -74,8 +74,8 @@ for _,data in {{"pickaxe",116,C.gold},{"backpack",164,C.violet}} do
 	stand:SetAttribute("DisplayBottomOffset",stand:GetPivot():PointToObjectSpace(A.cf(data[2],6,-365).Position))
 	A.cylinder(stand,"Pedestal",12,3,A.cf(data[2],3.7,-365),C.navy)
 	A.cylinder(stand,"Top",14,.8,A.cf(data[2],5.6,-365),data[3])
-	local _,label=A.sign(stand,"StatsBoard","YOUR "..string.upper(data[1]),Vector3.new(18,6,.6),
-		A.cf(data[2],7,-356.5)*CFrame.Angles(0,math.pi,0),C.navy)
+	local _,label=A.sign(stand,"StatsBoard","YOUR "..string.upper(data[1]),Vector3.new(18,4,.6),
+		A.cf(data[2],2.9,-356.5)*CFrame.Angles(0,math.pi,0),C.navy)
 	label.Name="Stats"
 	label.TextWrapped=true
 end

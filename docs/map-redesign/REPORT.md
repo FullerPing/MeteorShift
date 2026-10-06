@@ -8,8 +8,8 @@ The original town remains active. Workspace.Map_Redesign contains the new world 
 
 | Item | Current evidence |
 |---|---|
-| Authored staged map | 1,351 parts; no MeshParts or Scripts; all anchored |
-| Refinery | 134 parts; PrimaryPart Foundation; one UsePoint; SharedRefinery true; no Scripts, prompts or Humanoids |
+| Authored staged map | 1,370 parts; no MeshParts or Scripts; all anchored |
+| Refinery | 145 parts; PrimaryPart Foundation; one UsePoint; SharedRefinery true; no Scripts, prompts or Humanoids |
 | Refinery pivot | Staged (0, 0.800000012, 2620); intended final (0, 0.800000012, -380) |
 | Horizontal crater distances | Pivot 380; nearest visible footprint 348; UsePoint 343 |
 | Reused refinery art | Hopper, Conveyor and Refinery from pristine PlotStations; scripts, prompts and live BillboardGuis stripped |
@@ -21,7 +21,7 @@ The original town remains active. Workspace.Map_Redesign contains the new world 
 | Hatchery and museum | Two decorative eggs with Config odds boards; six exhibits showing all 12 minerals |
 | Debris | Four yards, 48 mineable roots, 14-stud aisles; nearest pad distance 317.491732 |
 | Spawn and boundary | Six isolated staging pads; 80-stud sealed wall geometry; kill-plane marker at Y -70, authority pending |
-| Decoration | 24 trees; six lights with shadows off; one emitter at 4/s, at most 16 steady particles |
+| Decoration | 24 trees; eight lights with shadows off; one emitter at 4/s, at most 16 steady particles |
 | Lighting candidate | Inactive profile; 14:00 daylight, brightness 2.5, atmosphere density 0.17; six effects and CloudSettings data; visual QA pending |
 
 The 504-part geometry preview is now detached and retained only in memory. Checkpoint exports exclude it. Staging spawn pads remain disabled until the staged runtime is connected.
@@ -30,7 +30,7 @@ The 504-part geometry preview is now detached and retained only in memory. Check
 
 The existing Edit runner passed 360/360. The three new world specs have not run because synchronization was rejected; this result does not include them. Of 39 frozen GUI file hashes, only the approved TutorialController world lookup differs. Its panel and guide suffix hash is unchanged.
 
-All 84 Edit pathfinding routes succeeded from six staging pads to service points, zone entrances and crater landings. Their 62 jump waypoints still need real walking and jump checks. Six character-sized probes found no blocked refinery forecourt positions.
+All 84 Edit pathfinding routes succeeded from six staging pads to service points, zone entrances and crater landings. Their 74 jump waypoints still need real walking and jump checks. Six character-sized probes found no blocked refinery forecourt positions.
 
 Among 2,330 candidate standing positions, all 36 seeded crust nodes have positions within the Basic Pickaxe's 12-stud bounding-box range. The worst minimum distance was 3.559263. This does not prove collision-free standing, aiming or reach across live variants.
 
@@ -38,15 +38,15 @@ The template audit verified 113 parts, 36 attachments, one light and one emitter
 
 Large concave CSG collision closed the crater opening. The union is now visual-only; 134 invisible primitive proxies provide ground collision. Initial forecourt probes assumed Y 0 and falsely intersected the raised avenue; they now use raycast surface heights. Assertions were preserved.
 
-Screenshot requests produced no image before termination. No screenshot critique scores or completed rounds are claimed. The existing impact-clear teleport also needs a destination-ground raycast: retaining the player's deep-bowl Y plus four studs could strand them beneath outer ground. That source fix remains pending authorization.
+Six native JPEGs now cover a partial first visual review; see critique/round-1/REVIEW.md for provisional image scores. Trading Post is obscured and multiple zones/after-fix views are missing, so zero complete rounds are claimed. Rebirth capture failed; the after-fix refinery request stalled and was terminated. First repairs include a furnace mouth, exposed conveyor, lower Gear Hall boards, corrected signs/cards, two fill lights and a128×72Hatchery with eggs beside unchanged Config odds. The conveyor initially violated the footprint by1.74studs; world-space corner measurement fixed it without relaxing the assertion. Final refineryfrontZ−348, conveyor−348.4, hatchery/spinegap14. The existing impact-clear teleport also needs a destination-ground raycast: retaining the player's deep-bowl Y plus four studs could strand them beneath outer ground. That source fix remains pending authorization.
 
 ## Checkpoint and remaining work
 
-Four staging exports passed engine deserialize, root-attribute comparison, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 76,970 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 21,615 bytes; Lighting_Redesign is 4,703 bytes. Final contract exports remain untouched. Staged art, the inactive lighting profile and approved tutorial lookup are saved: Studio reported `00:42:40.976 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
+Four staging exports passed engine deserialize, root-attribute comparison, byte count, canonical base64, binary header, disk readback and SHA256 checks. See assets/staging/map-redesign/manifest.json. Map_Redesign is 84,811 bytes; ServerAssets_Redesign is 73,990 bytes; Refinery_Redesign is 23,070 bytes; Lighting_Redesign is 4,703 bytes. Final contract exports remain untouched. Staged art, the inactive lighting profile and approved tutorial lookup are saved: Studio reported `07:50:01.309 Saved new changes in "Craterworks: Meteor Mining" to Roblox.` on6October2026. Unparented scaled Assets remain memory-only and are preserved in the binary export.
 
-All 15 live Lighting properties still match the pristine baseline. An initial Clouds clone under the staged Workspace profile produced two Edit warnings; it was replaced with a CloudSettings data Folder. Fresh checks found zero staged Clouds and exactly one original Clouds directly under Terrain. Visual quality and performance of the candidate remain unverified.
+After temporary preview, all15liveLightingproperties and the actual6originaleffects/1TerrainClouds were restored. Static equipment preview was destroyed and meteor preview detached before the save. All39frozenGUIhashes were rechecked; onlyapprovedTutoriallookup differs, with unchanged panel suffix. An initial Clouds clone under the staged Workspace profile produced two Edit warnings; it was replaced with a CloudSettings data Folder. Fresh checks found zero staged Clouds and exactly one original Clouds directly under Terrain. Visual quality and performance of the candidate remain unverified.
 
-Remaining work: implement and test world helpers/controllers/services, connect equipment and boundary authority, update geometry Config and FX/sound/shake, remove plot runtime, preview and verify lighting, complete staged Play/phone/variant/gameplay/rejoin/exploit/performance QA, and perform at least three screenshot critique rounds. Only then swap, repeat QA, delete the old map, save and export the final four assets.
+Remaining work: implement and test world helpers/controllers/services, connect equipment and boundary authority, update geometry Config and FX/sound/shake, remove plot runtime, finish visual verification of lighting, complete staged Play/phone/variant/gameplay/rejoin/exploit/performance QA, and perform at least three screenshot critique rounds. Only then swap, repeat QA, delete the old map, save and export the final four assets.
 
 Automatic approval review rejected creating world test ModuleScripts under the initial no-scripts rule, and rejected pushing backups to the configured GitHub destination. Explicit world-code and push questions remain pending. No workaround was attempted. The owner permits computer use only for saving. The separate computer-use skill's @oai/sky path completed the Edit save without publishing; save observations do not constitute scene critique or gameplay QA.
 

@@ -86,7 +86,8 @@ function A.sign(parent, name, text, size, frame, color)
 	local gui = Instance.new("SurfaceGui")
 	gui.Name = "Lettering"
 	gui.Face = Enum.NormalId.Front
-	gui.CanvasSize = Vector2.new(1000,240)
+	-- Match the physical face ratio and keep TextScaled below its font-size cap.
+	gui.CanvasSize = Vector2.new(math.max(120,math.round(size.X*10)),math.max(40,math.round(size.Y*10)))
 	gui.LightInfluence = 0
 	gui.Parent = p
 	local label = Instance.new("TextLabel")

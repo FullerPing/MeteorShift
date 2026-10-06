@@ -1,0 +1,104 @@
+[
+  {
+    "name": "refinery",
+    "file": "refinery.jpg",
+    "bytes": 187809,
+    "sha256": "f7c8657c8c8b1b6349ff009f9144b6fbcd29b8d15ca74f86dfdd2c781d092b8a",
+    "camera": [
+      -48,
+      27,
+      2695
+    ],
+    "target": [
+      0,
+      24,
+      2634
+    ],
+    "scope": "Edit static art; temporary daylight/meteor/equipment previews"
+  },
+  {
+    "name": "gear-hall",
+    "file": "gear-hall.jpg",
+    "bytes": 149671,
+    "sha256": "ece0b052aa01b54c7665c6768ddb2ca779d445aca22805e8b7396129a3b53a9f",
+    "camera": [
+      140,
+      13,
+      2670
+    ],
+    "target": [
+      140,
+      23,
+      2594
+    ],
+    "scope": "Edit static art; temporary daylight/meteor/equipment previews"
+  },
+  {
+    "name": "hatchery",
+    "file": "hatchery.jpg",
+    "bytes": 149553,
+    "sha256": "106585ea90dd810e5538233a26af4a6416deea6def0c4e6bc1cd730f00870b85",
+    "camera": [
+      -155,
+      18,
+      2676
+    ],
+    "target": [
+      -155,
+      17,
+      2617
+    ],
+    "scope": "Edit static art; temporary daylight/meteor/equipment previews"
+  },
+  {
+    "name": "spawn-plaza",
+    "file": "spawn-plaza.jpg",
+    "bytes": 164455,
+    "sha256": "3ae4eb3bd989272daf328cc40457a47bed22a5c61447e9ebc38f1afac3697a47",
+    "camera": [
+      -85,
+      35,
+      2600
+    ],
+    "target": [
+      -20,
+      8,
+      2542
+    ],
+    "scope": "Edit static art; temporary daylight/meteor/equipment previews"
+  },
+  {
+    "name": "trading-post",
+    "file": "trading-post.jpg",
+    "bytes": 142857,
+    "sha256": "3f46ebf688af612851b3a9eae4dc87e518ba4cba2957d6a92874797287b9bfc6",
+    "camera": [
+      20,
+      25,
+      2600
+    ],
+    "target": [
+      70,
+      14,
+      2540
+    ],
+    "scope": "Edit static art; temporary daylight/meteor/equipment previews"
+  },
+  {
+    "name": "refinery-after-original-lighting",
+    "file": "refinery-after-original-lighting.jpg",
+    "bytes": 174161,
+    "sha256": "cbbf1cad8ca2310215f978538b247aff204f16b3f791da1200d273e3c71a2ae4",
+    "camera": [
+      0,
+      28,
+      2684
+    ],
+    "target": [
+      0,
+      22,
+      2620
+    ],
+    "scope": "Saved after-fix art; original 17.2 lighting, no static previews"
+  }
+]
