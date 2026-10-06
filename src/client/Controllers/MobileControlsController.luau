@@ -18,6 +18,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
+local Cartoon = require(script.Parent.Parent.Cartoon)
 
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
 local player = Players.LocalPlayer
@@ -118,15 +119,21 @@ function MobileControlsController:KnitStart()
 					local rect = use(hud).mine
 					return if rect then UDim2.fromOffset(rect.w, rect.h) else UDim2.new()
 				end),
-				Text = "MINE",
-				TextSize = 24,
-				BackgroundColor3 = UI.ORANGE,
+				Text = "",
+				BackgroundTransparency = 1,
 				AutoButtonColor = false,
 				Visible = visible,
 				[Children] = {
-					-- Fully round, with the same outline as the other buttons
-					scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }),
-					UI.stroke(scope),
+					-- A round glossy cartoon button with a chunky outlined label
+					Cartoon.surface("orange", { round = true, edge = 4, lip = 5, studs = 0.84, studSize = 26 }),
+					UI.label(scope, {
+						Name = "Label", Size = UDim2.fromScale(1, 1), Text = "MINE", ZIndex = 2,
+						TextScaled = true, TextColor3 = UI.WHITE,
+						[Children] = {
+							scope:New("UIPadding")({ PaddingLeft = UDim.new(0.16, 0), PaddingRight = UDim.new(0.16, 0),
+								PaddingTop = UDim.new(0.3, 0), PaddingBottom = UDim.new(0.3, 0) }),
+						},
+					}),
 				},
 				-- Held, not tapped: Activated only fires on release
 				[OnEvent("InputBegan")] = function(input: InputObject)

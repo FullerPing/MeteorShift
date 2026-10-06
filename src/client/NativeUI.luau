@@ -6,6 +6,7 @@ local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local Sfx = require(script.Parent.Sfx)
+local MenuSkin = require(script.Parent.MenuSkin)
 local NativeUI = {}
 NativeUI.FONT = Enum.Font.FredokaOne
 NativeUI.WHITE = Color3.new(1, 1, 1)
@@ -81,6 +82,7 @@ function NativeUI.get(name: string): ScreenGui
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local gui = playerGui:WaitForChild(name, 15)
 	assert(gui and gui:IsA("ScreenGui"), "Missing StarterGui prefab: " .. name .. ". Run tools/build-native-ui.luau in Edit mode.")
+	MenuSkin.apply(gui :: ScreenGui)
 	for _, node in gui:GetDescendants() do
 		if node:IsA("GuiButton") then
 			node.Activated:Connect(function() if node.Active then Sfx.play("Click") end end)

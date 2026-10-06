@@ -1,6 +1,6 @@
 --!strict
--- Shared simulator look: charcoal stud menus, colorful headers and outlined
--- headings. The HUD retains its blue surfaces and colorful navigation tiles.
+-- Shared simulator look: glossy cartoon HUD cards (Client.Cartoon), chunky
+-- outlined text and colour-coded navigation tiles.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -11,7 +11,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local Sfx = require(script.Parent.Sfx)
-local StudSurface = require(script.Parent.StudSurface)
+local Cartoon = require(script.Parent.Cartoon)
 
 local Children = Fusion.Children
 
@@ -62,54 +62,17 @@ local function studTexture(scope: Scope, transparency: number, radius: number)
 	})
 end
 
-function UI.hudFill(scope: Scope)
-	return {
-		UI.corner(scope, 12),
-		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-		-- Use the authored navigation's stud image and cyan overlay. Tiling keeps
-		-- the studs the same size on wide cards as on the square Gear button.
-		scope:New("ImageLabel")({
-			Name = "StudFace", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.WHITE, BackgroundTransparency = 0,
-			BorderSizePixel = 0, Image = STUD_TEXTURE, ImageColor3 = UI.WHITE,
-			ScaleType = Enum.ScaleType.Tile, TileSize = UDim2.fromOffset(80, 80),
-			ZIndex = 0, Active = false, Selectable = false,
-			[Children] = { UI.corner(scope, 12) },
-		}),
-		scope:New("Frame")({
-			Name = "ColorOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.HUD_SURFACE,
-			BorderSizePixel = 0, ZIndex = 0, Active = false, Selectable = false,
-			[Children] = {
-				UI.corner(scope, 12),
-				scope:New("UIGradient")({ Rotation = 90,
-					Color = ColorSequence.new({
-						ColorSequenceKeypoint.new(0, UI.WHITE),
-						ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 166, 255)),
-						ColorSequenceKeypoint.new(1, UI.WHITE),
-					}),
-					Transparency = NumberSequence.new({
-						NumberSequenceKeypoint.new(0, 0.50625),
-						NumberSequenceKeypoint.new(0.501366, 0.24375),
-						NumberSequenceKeypoint.new(1, 0.49375),
-					}),
-				}),
-			},
-		}),
-		-- The authored second stud layer adds raised edges above the cyan tint.
-		scope:New("ImageLabel")({
-			Name = "StudShadow", Size = UDim2.fromScale(1, 1),
-			BackgroundColor3 = Color3.fromRGB(79, 149, 255), BackgroundTransparency = 0.75,
-			BorderSizePixel = 0, Image = STUD_TEXTURE, ImageColor3 = UI.WHITE,
-			ScaleType = Enum.ScaleType.Tile, TileSize = UDim2.fromOffset(80, 80),
-			ZIndex = 0, Active = false, Selectable = false,
-			[Children] = { UI.corner(scope, 12), scope:New("UIStroke")({ Color = UI.OUTLINE,
-				Thickness = 4.11, Transparency = 0.54, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) },
-		}),
-		StudSurface.blur(nil, 80, 12, 0),
-	}
+-- Glossy cartoon card (Client.Cartoon): saturated gradient, thick ink outline,
+-- a darker lip, gloss stripes and a faint stud texture. The parent must keep a
+-- transparent background; content at ZIndex 1+ draws above the surface.
+function UI.hudFill(_scope: Scope, kind: string?, options: Cartoon.SurfaceOptions?)
+	local merged: Cartoon.SurfaceOptions = { studs = 0.88, studSize = 36 }
+	if options then for key, value in options :: any do (merged :: any)[key] = value end end
+	return { Cartoon.surface(kind or "blue", merged) }
 end
 
 function UI.hudText(scope: Scope, props: { [any]: any })
-	local merged: { [any]: any } = { Font = Enum.Font.GothamMedium, TextStrokeTransparency = 1 }
+	local merged: { [any]: any } = { Font = UI.FONT, TextStrokeTransparency = 0 }
 	for key, value in props do merged[key] = value end
 	return UI.label(scope, merged)
 end
@@ -137,8 +100,10 @@ function UI.stroke(scope: Scope, transparency: number?)
 	})
 end
 
+-- Text gets the chunky cartoon outline: a rounded UIStroke replaces the thin
+-- engine text stroke whenever the stroke is a static value.
 function UI.label(scope: Scope, props: { [any]: any })
-	local base = {
+	local base: { [any]: any } = {
 		BackgroundTransparency = 1,
 		Font = UI.FONT,
 		TextColor3 = UI.WHITE,
@@ -147,8 +112,18 @@ function UI.label(scope: Scope, props: { [any]: any })
 		TextScaled = false,
 	}
 	for key, value in props do
-		base[key] = value
+		if key ~= Children then base[key] = value end
 	end
+	local outline: Instance? = nil
+	local strokeTransparency = base.TextStrokeTransparency
+	if typeof(strokeTransparency) == "number" and strokeTransparency < 1 then
+		local size = if typeof(base.TextSize) == "number" then base.TextSize else 22
+		local color = if typeof(base.TextStrokeColor3) == "Color3" then base.TextStrokeColor3 else Cartoon.INK
+		if color == UI.OUTLINE then color = Cartoon.INK end
+		outline = Cartoon.textStroke(if base.TextScaled == true then 2.5 else Cartoon.strokeFor(size), color)
+		base.TextStrokeTransparency = 1
+	end
+	base[Children] = { props[Children], outline }
 	return scope:New("TextLabel")(base)
 end
 

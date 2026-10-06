@@ -1,5 +1,15 @@
 # MeteorShift handoff
 
+## Cartoon HUD restyle — 6 October 2026 (branch `hud-cartoon-restyle`)
+
+The owner rejected the blue stud HUD and supplied style references (bright glossy simulator UI: thick ink outlines, saturated gradients, white inner panels, tilted ribbon headers, red X close, colour-coded side buttons). Implemented:
+
+- `src/client/Cartoon.luau`: shared surface builder (gradient body, ink outline, darker lip, shine, gloss stripes, rim, faint studs) and chunky text outlines. Plain Instances, usable from Fusion and native code.
+- HUD (`HudView`, `UI.hudFill`/`UI.label`, `TutorialController`, `MobileControlsController`): cartoon cards, white icon sockets, pill meters, purple plot pill, white tutorial card with a blue ribbon, round orange MINE button. All names, bindings and layout rects are unchanged.
+- Nav tiles (`ExactNavButton.bind`): colour-coded cartoon tiles (Gear orange, Rebirth purple, Store green, Index blue) built from the authored Design's icon and caption; the Design stays inside the button, hidden.
+- Native menus (`MenuSkin.luau`, applied in `NativeUI.get`): runtime skin over the StarterGui prefabs — white panel with blue border, header turned into a tilted ribbon, glossy buttons with mirrored labels, light-blue tiles, pill bars, all text outlined. Old charcoal colours that controllers assign later are remapped as they change. The rbxmx prefabs on disk are unchanged, so Studio edit mode still shows the old look; the skin only applies in play.
+- Studio's Rojo plugin applied file changes with a long delay this session; sources were checked against the Rojo server (`/api/read`) and pushed via MCP when needed. rojo serve was not restarted. Edit-mode suite: 413 passed, 0 failed. `StudSurface.luau` is now unused.
+
 ## Current state — original map in Play at owner request
 
 On6October2026 the owner requested “for now return play mode to original map.” Studio connectiond43c85b7-4d75-4eaf-9e8a-d47c28b16436 is now PLAYING Workspace.Map with ServerStorage.Assets, original28.349998Core, originalMeteorSpawn(0,-1.25,0), originalspawn enabled and six stagedspawns disabled. QA attributes/global restoration ledgers are cleared; simulator default/landscape right/FitToWindow. Preserve this mode until the owner asks to resume staged work. Map_Redesign1417parts and Assets_Redesign119parts remain untouched; no swap or publishing.

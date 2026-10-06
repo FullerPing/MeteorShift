@@ -59,19 +59,60 @@ function ExactNavButton.author(parent: Instance, name: string, label: string, ic
 	return button
 end
 
-function ExactNavButton.bind(button: TextButton)
-	local StudSurface = require(script.Parent.StudSurface)
-	local design = button:WaitForChild("Design") :: Frame
-	for _, name in { "StudFace", "Shadow", "ColorOverlay" } do
-		local layer = design:FindFirstChild(name)
-		if layer and layer:IsA("GuiObject") and not layer:FindFirstChildOfClass("UICorner") then
-			local corner = Instance.new("UICorner")
-			corner.CornerRadius, corner.Parent = UDim.new(0, 12), layer
-		end
+-- Colour-coded cartoon tiles, like the side buttons in the style references:
+-- glossy face, thick ink outline, icon with a drop shadow, caption over the
+-- bottom edge. The authored Design stays inside the button (hidden) so its
+-- icon and caption remain the source of truth and Studio edits still apply.
+local TILE_KINDS = { ShopButton = "orange", RebirthButton = "purple", StoreButton = "green", IndexButton = "blue" }
+
+local function cartoonTile(button: TextButton, design: Frame)
+	local Cartoon = require(script.Parent.Cartoon)
+	local caption = design:FindFirstChild("Caption") :: TextLabel?
+	local source = design:FindFirstChild("Icon") :: ImageLabel?
+	local tile = Instance.new("Frame")
+	tile.Name, tile.Size, tile.BackgroundTransparency, tile.ZIndex = "CartoonTile", UDim2.fromOffset(80, 80), 1, 1
+	tile.Active = false
+	Cartoon.surface(TILE_KINDS[button.Name] or "blue", { radius = 16, edge = 3, lip = 5, studs = 0.84, studSize = 27 }).Parent = tile
+	local image = if source then source.Image else ""
+	for index, offset in { Vector2.new(0, 3), Vector2.zero } do
+		local glyph = Instance.new("ImageLabel")
+		glyph.Name = if index == 1 then "IconShadow" else "Icon"
+		glyph.AnchorPoint, glyph.Position = Vector2.new(0.5, 0.5), UDim2.new(0.5, offset.X, 0.42, offset.Y - 4)
+		glyph.Size, glyph.BackgroundTransparency, glyph.ScaleType = UDim2.fromOffset(56, 56), 1, Enum.ScaleType.Fit
+		glyph.Image, glyph.ZIndex = image, 2 + index
+		glyph.ImageColor3 = if index == 1 then Cartoon.INK else Color3.new(1, 1, 1)
+		glyph.ImageTransparency = if index == 1 then 0.55 else 0
+		glyph.Parent = tile
 	end
-	if not design:FindFirstChild("StudBlur") then
-		local blur = StudSurface.blur(design, 80, 12, 4)
-		blur.Name = "StudBlur"
+	local label = Instance.new("TextLabel")
+	label.Name, label.BackgroundTransparency = "Caption", 1
+	label.AnchorPoint, label.Position, label.Size = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 52), UDim2.fromOffset(110, 30)
+	label.Font, label.TextSize, label.TextColor3 = Cartoon.FONT, 23, Color3.new(1, 1, 1)
+	label.Text, label.ZIndex = if caption then caption.Text else button.Name, 5
+	Cartoon.textStroke(3).Parent = label
+	label.Parent = tile
+	design.Visible = false
+	tile.Parent = button
+end
+
+function ExactNavButton.bind(button: TextButton)
+	local design = button:WaitForChild("Design") :: Frame
+	if not button:FindFirstChild("CartoonTile") then cartoonTile(button, design) end
+	local badge = button:WaitForChild("ReadyBadge") :: Frame
+	if not badge:FindFirstChildOfClass("UIStroke") then
+		local round = Instance.new("UICorner"); round.CornerRadius, round.Parent = UDim.new(0.5, 0), badge
+		local ink = Instance.new("UIStroke"); ink.Color, ink.Thickness, ink.Parent = Color3.fromRGB(14, 24, 52), 2, badge
+		badge.Size, badge.Position = UDim2.fromOffset(16, 16), UDim2.new(1, 4, 0, -6)
+		badge.BackgroundColor3 = Color3.fromRGB(255, 60, 80)
+	end
+	local tooltip = button:WaitForChild("Tooltip") :: TextLabel
+	if not tooltip:FindFirstChild("TextOutline") then
+		local Cartoon = require(script.Parent.Cartoon)
+		tooltip.BackgroundColor3, tooltip.TextSize = Color3.fromRGB(30, 104, 232), 16
+		local round = Instance.new("UICorner"); round.CornerRadius, round.Parent = UDim.new(0, 10), tooltip
+		local edge = Instance.new("UIStroke"); edge.Color, edge.Thickness = Cartoon.INK, 3
+		edge.ApplyStrokeMode, edge.Parent = Enum.ApplyStrokeMode.Border, tooltip
+		Cartoon.outlineLabel(tooltip, 2)
 	end
 	return {
 		caption = design:WaitForChild("Caption") :: TextLabel,

@@ -14,6 +14,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
+local Cartoon = require(script.Parent.Parent.Cartoon)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -254,60 +255,86 @@ function TutorialController:KnitStart()
 					local rect = use(hud).tutorial
 					return UDim2.fromOffset(rect.x, rect.y)
 				end),
-				BackgroundColor3 = UI.HUD_SURFACE,
+				BackgroundTransparency = 1,
 				Visible = scope:Computed(function(use)
 					return use(shown) and use(showGuide) and use(hud).tutorialVisible
 				end),
 				[Children] = {
-					scope:New("UIScale")({ Scale = cardScale }), UI.hudFill(scope),
-					UI.hudText(scope, {
-						Position = UDim2.fromOffset(16, 14), Size = UDim2.fromOffset(168, 18),
-						Text = scope:Computed(function(use) return if use(finished) then "TRAINING COMPLETE" else "MINER TRAINING" end),
-						Font = UI.FONT, TextStrokeTransparency = 0.15, TextSize = scope:Computed(function(use) return math.max(13, 10 / use(cardScale)) end), TextColor3 = UI.HUD_GOLD,
-						TextXAlignment = Enum.TextXAlignment.Left,
+					-- White quest card with a tilted blue ribbon, as in the style references.
+					scope:New("UIScale")({ Scale = cardScale }),
+					UI.hudFill(scope, "white", { studs = false :: any, stripes = false, radius = 16 }),
+					scope:New("Frame")({
+						Name = "Ribbon", Position = UDim2.fromOffset(-10, -16), Size = UDim2.fromOffset(196, 34),
+						Rotation = -3, BackgroundTransparency = 1, ZIndex = 3,
+						[Children] = {
+							Cartoon.surface("blue", { radius = 10, edge = 3, lip = 4, zIndex = 3 }),
+							UI.hudText(scope, {
+								Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 4,
+								Text = scope:Computed(function(use) return if use(finished) then "TRAINING COMPLETE" else "MINER TRAINING" end),
+								TextSize = scope:Computed(function(use) return math.max(18, 12 / use(cardScale)) end),
+								TextXAlignment = Enum.TextXAlignment.Left,
+							}),
+						},
 					}),
 					UI.hudText(scope, {
-						Position = UDim2.fromOffset(196, 14), Size = UDim2.fromOffset(54, 18),
+						Position = UDim2.fromOffset(200, 12), Size = UDim2.fromOffset(56, 20),
 						Text = scope:Computed(function(use)
 							local value = use(step)
 							return if value then value.index .. " / " .. value.total else ""
-						end), TextSize = scope:Computed(function(use) return math.max(13, 10 / use(cardScale)) end), TextColor3 = UI.HUD_MUTED,
+						end), TextSize = scope:Computed(function(use) return math.max(16, 11 / use(cardScale)) end),
+						TextColor3 = Cartoon.INK_BLUE, TextStrokeTransparency = 1,
 					}),
-					UI.hudIcon(scope, "equipment", { Position = UDim2.fromOffset(16, 43), Size = UDim2.fromOffset(32, 32) }),
+					scope:New("Frame")({
+						Name = "StepSocket", Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1,
+						[Children] = {
+							Cartoon.surface("orange", { radius = 10, edge = 2.5, lip = 3 }),
+							UI.hudIcon(scope, "equipment", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(30, 30), ZIndex = 2 }),
+						},
+					}),
 					UI.hudText(scope, {
-						Position = UDim2.fromOffset(58, 43), Size = UDim2.fromOffset(258, 28),
+						Position = UDim2.fromOffset(64, 38), Size = UDim2.fromOffset(254, 30),
 						Text = scope:Computed(function(use)
 							local info = use(current)
 							return if info then info.Text else "You're all set, miner!"
-						end), Font = UI.FONT, TextStrokeTransparency = 0.15, TextSize = scope:Computed(function(use) return math.max(18, 13 / use(cardScale)) end),
+						end), TextSize = scope:Computed(function(use) return math.max(21, 14 / use(cardScale)) end),
+						TextColor3 = Cartoon.INK_BLUE, TextStrokeTransparency = 1,
 						TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					UI.hudText(scope, {
-						Position = UDim2.fromOffset(58, 70), Size = UDim2.fromOffset(258, 42),
-						Text = hint, TextSize = scope:Computed(function(use) return math.max(13, 11 / use(cardScale)) end), TextColor3 = UI.HUD_MUTED, TextWrapped = true,
+						Position = UDim2.fromOffset(64, 68), Size = UDim2.fromOffset(254, 38),
+						Text = hint, TextSize = scope:Computed(function(use) return math.max(14, 11 / use(cardScale)) end),
+						TextColor3 = Cartoon.INK_SOFT, TextStrokeTransparency = 1, TextWrapped = true,
 						TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
 					}),
 					scope:New("ImageButton")({
-						Name = "SkipTraining", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -5, 0, 0),
+						Name = "SkipTraining", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 6),
 						Size = scope:Computed(function(use)
-							local size = HudLayout.closeSize(34, use(cardScale))
+							local size = HudLayout.closeSize(30, use(cardScale))
 							return UDim2.fromOffset(size, size)
 						end), Image = "", BackgroundTransparency = 1,
 						Visible = scope:Computed(function(use) return use(step) ~= nil end),
 						[OnEvent("Activated")] = function() task.spawn(function() TutorialService:Skip() end) end,
-						[Children] = { UI.hudIcon(scope, "skip", {
-							AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(18, 18),
-						}) },
+						[Children] = {
+							Cartoon.surface("blue", { radius = 9, edge = 2.5, lip = 3 }),
+							UI.hudIcon(scope, "skip", {
+								AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.55, 0.55), ZIndex = 2,
+							}),
+						},
 					}),
 					scope:New("Frame")({
-						Position = UDim2.fromOffset(16, 113), Size = UDim2.fromOffset(300, 4), BorderSizePixel = 0,
-						BackgroundColor3 = UI.HUD_BORDER,
-						[Children] = { UI.corner(scope, 2), scope:New("Frame")({
-							Size = scope:Computed(function(use)
-								local value = use(step)
-								return UDim2.fromScale(if value then (value.index - 1) / math.max(value.total, 1) else 1, 1)
-							end), BorderSizePixel = 0, BackgroundColor3 = UI.HUD_GOLD, [Children] = { UI.corner(scope, 2) },
-						}) },
+						Position = UDim2.fromOffset(16, 108), Size = UDim2.fromOffset(300, 10), BorderSizePixel = 0,
+						BackgroundColor3 = Color3.fromRGB(196, 214, 240),
+						[Children] = {
+							scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }),
+							scope:New("UIStroke")({ Color = Cartoon.INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+							scope:New("Frame")({
+								Size = scope:Computed(function(use)
+									local value = use(step)
+									return UDim2.fromScale(if value then (value.index - 1) / math.max(value.total, 1) else 1, 1)
+								end), BorderSizePixel = 0, BackgroundColor3 = Color3.fromRGB(80, 210, 40),
+								[Children] = { scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }) },
+							}),
+						},
 					}),
 				},
 			}),
