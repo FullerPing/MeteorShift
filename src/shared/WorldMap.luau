@@ -7,6 +7,14 @@ function WorldMap.name(studio: boolean, override: any): string
 	return if studio and override == "Map_Redesign" then "Map_Redesign" else "Map"
 end
 
+function WorldMap.assetName(studio: boolean, override: any): string
+	return if WorldMap.name(studio, override) == "Map_Redesign" then "Assets_Redesign" else "Assets"
+end
+
+function WorldMap.assets(): Instance
+	return game:GetService("ServerStorage"):WaitForChild(WorldMap.assetName(RunService:IsStudio(), workspace:GetAttribute("DevWorldMap")))
+end
+
 function WorldMap.find(): Instance?
 	return workspace:FindFirstChild(WorldMap.name(RunService:IsStudio(), workspace:GetAttribute("DevWorldMap")))
 end

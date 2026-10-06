@@ -17,7 +17,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local ServerStorage = game:GetService("ServerStorage")
 
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local WorldImpact = require(ReplicatedStorage.Shared.WorldImpact)
@@ -293,7 +292,7 @@ function MeteorService:_unlockCore(meteor: Meteor)
 end
 
 function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
-	local assets = ServerStorage:WaitForChild("Assets")
+	local assets = WorldMap.assets()
 	local spawnPoint = WorldMap.wait():WaitForChild("Crater"):WaitForChild("MeteorSpawn") :: BasePart
 	local pieces = assets:WaitForChild("NodePieces"):GetChildren()
 

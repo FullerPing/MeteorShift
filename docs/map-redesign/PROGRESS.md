@@ -1,5 +1,11 @@
 # Map redesign progress
 
+## Isolated template checkpoint — 6 October 2026
+
+Restored the verified73990-byte staging asset binary into ServerStorage.Assets_Redesign:119parts, zero scripts, Core56.699997 on all axes. Original Assets/Core28.349998 and Map remain unchanged. MeteorService now selects isolated templates only when Studio opts into DevWorldMap=Map_Redesign; production always selects Assets. New selector test failed6passed/1failed before implementation; full suite now397passed/0failed. WorldMap/MeteorService/spec syntax checks pass. Native Edit save confirmed17:58:56.929, no publishing. The staging map is not selected yet and its six spawns remain disabled; do not start Play against the original map with enlarged geometry config.
+
+Next: staged Play setup must temporarily select Map_Redesign, enable its spawns/disable original spawns and use existing DevMemoryStore, then restore every QA-only attribute/spawn/lighting state before saving. No progression-fixture Scripts. Complete runtime, phone/performance and three full critique rounds before any final swap. Shared runtime checkpoint commit2cbb72a is saved; push remains pending earlier approval.
+
 ## Shared runtime checkpoint — 6 October 2026
 
 Verified the new Studio session in Edit: same place113476105600560,1417 staged parts, original Map intact. Shared-only RefineryService/UpgradeService now require the exact UsePoint and a living character within18studs for menu transactions/priority/upgrades/open; prompt remains14studs/E. Deposit/collect, upgrade costs, refining and multipliers are unchanged. World state exposes only aggregate Running. PlotService/HomeController and State.plotId are retired. PlotPresentation/spec were renamed ProductionPresentation with every test retained. Ten non-frozen world consumers select the Studio staging root. The frozen RefineryController's dormant PlotId listener and HUD/tutorial Map lookups remain reported follow-ups for runtime QA.

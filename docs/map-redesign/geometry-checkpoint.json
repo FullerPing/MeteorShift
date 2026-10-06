@@ -62,7 +62,7 @@
     "existingPassed": 360,
     "existingFailed": 0,
     "newSpecsRun": true,
-    "latestPassed": 396,
+    "latestPassed": 397,
     "latestFailed": 0,
     "latestMode": "Edit"
   },
@@ -81,7 +81,7 @@
     ],
     "controller": "GearHallController",
     "newSpecsInstalled": 6,
-    "passed": 396,
+    "passed": 397,
     "failed": 0,
     "comparedModuleSources": 22,
     "runtimeQaComplete": false,
@@ -89,10 +89,12 @@
     "boundaryAuthorityInstalled": true,
     "liveTemplatesScaled": false,
     "geometryConfigUpdated": true,
-    "nativeEditSaveOutputTime": "17:54:14.714",
+    "nativeEditSaveOutputTime": "17:58:56.929",
     "savedWithoutPublishing": true,
     "sharedPlotRuntimeRetired": true,
-    "impactGroundRaycastInstalled": true
+    "impactGroundRaycastInstalled": true,
+    "isolatedScaledAssetsRestored": true,
+    "studioTemplateSelectorInstalled": true
   },
   "pushApproved": false,
   "placeSaveConfirmedForThisStage": true,
@@ -284,5 +286,16 @@
     "minRootY": 3.5000061988830566,
     "maxRootY": 17.112648010253906,
     "realCharacterWalkingVerified": false
+  },
+  "stagedAssetsInServerStorage": {
+    "name": "Assets_Redesign",
+    "parts": 119,
+    "coreSize": [
+      56.69999694824219,
+      56.69999694824219,
+      56.69999694824219
+    ],
+    "scripts": 0,
+    "selectedForPlay": false
   }
 }

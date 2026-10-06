@@ -4,6 +4,12 @@ return function(t: any)
 	t.test("world root selection exists", function() t.ok(module, "WorldMap missing") end)
 	if not module then return end
 	local WorldMap = require(module)
+	t.test("staged meteors select isolated templates only in Studio", function()
+		t.eq(WorldMap.assetName(true, "Map_Redesign"), "Assets_Redesign")
+		t.eq(WorldMap.assetName(false, "Map_Redesign"), "Assets")
+		t.eq(WorldMap.assetName(true, nil), "Assets")
+		t.eq(WorldMap.assetName(true, "Assets_Redesign"), "Assets")
+	end)
 	local function fixture()
 		local map = Instance.new("Folder")
 		local town = Instance.new("Folder"); town.Name = "TownSquare"; town.Parent = map
