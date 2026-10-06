@@ -9,6 +9,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
@@ -29,7 +30,7 @@ local streakTween: Tween? = nil
 local rumble: Sound? = nil
 
 local function spawnPoint(): Vector3?
-	local map = workspace:FindFirstChild("Map")
+	local map = WorldMap.find()
 	local crater = map and map:FindFirstChild("Crater")
 	local spawn = crater and crater:FindFirstChild("MeteorSpawn")
 	return if spawn and spawn:IsA("BasePart") then spawn.Position else nil

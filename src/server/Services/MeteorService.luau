@@ -8,7 +8,7 @@
 -- a clone of one of the ServerStorage.Assets.NodePieces rocks, recoloured per type.
 -- A few of those crust nodes are rich (spec §8.2): they sparkle, and only they can
 -- drop the mineral index's rarest minerals (IndexService).
--- The map itself (crater, town, debris, plots) is saved in Workspace.Map.
+-- The map itself (crater, town and debris) is saved in Workspace.Map.
 --
 -- Call a Meteor (spec §9.2): CanCallMeteor applies Shared.CallMeteor's rules to the
 -- live schedule and CallMeteor(player) jumps the countdown and announces the buyer.
@@ -19,6 +19,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local ServerStorage = game:GetService("ServerStorage")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
+local WorldImpact = require(ReplicatedStorage.Shared.WorldImpact)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
@@ -292,7 +294,7 @@ end
 
 function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	local assets = ServerStorage:WaitForChild("Assets")
-	local spawnPoint = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("MeteorSpawn") :: BasePart
+	local spawnPoint = WorldMap.wait():WaitForChild("Crater"):WaitForChild("MeteorSpawn") :: BasePart
 	local pieces = assets:WaitForChild("NodePieces"):GetChildren()
 
 	local model = Instance.new("Model")
@@ -418,7 +420,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		end,
 	})
 
-	model.Parent = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("ActiveMeteor")
+	model.Parent = WorldMap.wait():WaitForChild("Crater"):WaitForChild("ActiveMeteor")
 	return meteor
 end
 
@@ -447,17 +449,15 @@ end
 
 -- Push anyone standing where the meteor lands out of the way (clients also get knockback).
 function MeteorService:_clearImpactZone(position: Vector3)
+	local map = WorldMap.find()
+	if not map then return end
 	for _, player in Players:GetPlayers() do
 		local character = player.Character
 		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-		if root then
-			local offset = root.Position - position
-			local flat = Vector3.new(offset.X, 0, offset.Z)
-			if flat.Magnitude < 26 then
-				local direction = if flat.Magnitude > 0.1 then flat.Unit else Vector3.xAxis
-				local target = position + direction * 30
-				root.CFrame = CFrame.new(target.X, root.Position.Y + 4, target.Z)
-			end
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if root and humanoid and humanoid.Health > 0 then
+			local target = WorldImpact.destination(map, position, root.Position, humanoid.HipHeight + root.Size.Y / 2 + 0.5)
+			if target then root.CFrame = CFrame.new(target) end
 		end
 	end
 end

@@ -1,0 +1,40 @@
+--!strict
+return function(t: any)
+	local module = t.shared:FindFirstChild("WorldBoundary")
+	t.test("authoritative world boundary exists", function() t.ok(module, "WorldBoundary missing") end)
+	if not module then return end
+	local Boundary = require(module)
+	local function fixture()
+		local map = Instance.new("Model"); map:SetAttribute("MapRedesignOwned", true); map:PivotTo(CFrame.new(0, 0, 3000))
+		local character = Instance.new("Model")
+		local root = Instance.new("Part"); root.Name = "HumanoidRootPart"; root.Parent = character
+		local humanoid = Instance.new("Humanoid"); humanoid.Parent = character
+		return map, character, root, humanoid
+	end
+	t.test("boundary allows the stage's translated play area", function()
+		local map, character, root, humanoid = fixture()
+		root.Position = Vector3.new(510, -70, 3510)
+		t.eq(Boundary.enforce(map, character), false)
+		t.eq(humanoid.Health, 100)
+		map:Destroy(); character:Destroy()
+	end)
+	t.test("boundary kills outside characters and below the kill plane", function()
+		for _, position in { Vector3.new(511, 3, 3000), Vector3.new(0, 3, 2489), Vector3.new(0, -70.1, 3000) } do
+			local map, character, root, humanoid = fixture()
+			root.Position = position
+			t.eq(Boundary.enforce(map, character), true)
+			t.eq(humanoid.Health, 0)
+			t.eq(Boundary.enforce(map, character), false)
+			map:Destroy(); character:Destroy()
+		end
+	end)
+	t.test("boundary stays inactive for the archived world and absent characters", function()
+		local map, character, root, humanoid = fixture()
+		root.Position = Vector3.new(600, -80, 0); map:SetAttribute("MapRedesignOwned", nil)
+		t.eq(Boundary.enforce(map, character), false)
+		t.eq(humanoid.Health, 100)
+		t.eq(Boundary.enforce(nil, character), false)
+		t.eq(Boundary.enforce(map, nil), false)
+		map:Destroy(); character:Destroy()
+	end)
+end

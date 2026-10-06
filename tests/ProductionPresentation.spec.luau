@@ -2,7 +2,7 @@
 -- Workshop stock and upgrade presentation never change gameplay quantities.
 
 return function(t: any)
-	local module = t.shared:FindFirstChild("PlotPresentation")
+	local module = t.shared:FindFirstChild("ProductionPresentation")
 	t.test("workshop presentation can render actual station stock", function()
 		t.ok(module, "plot presentation module missing")
 	end)

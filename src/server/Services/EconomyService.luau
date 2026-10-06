@@ -12,6 +12,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
@@ -88,7 +89,7 @@ function EconomyService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastSellRequest[player] = nil
 	end)
-	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
+	local townSquare = WorldMap.wait():FindFirstChild("TownSquare")
 	local tradingPost = if townSquare then townSquare:FindFirstChild("TradingPost") else nil
 	if not tradingPost then
 		return

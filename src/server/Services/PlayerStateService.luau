@@ -259,7 +259,6 @@ function PlayerStateService:_sendState(player: Player)
 		credits = data.credits, -- unused Call a Meteor credits (spec §9.2)
 		overclockLeft = data.overclockLeft, -- seconds of Refinery Overclock left
 		oreBoostLeft = data.oreBoostLeft,
-		plotId = player:GetAttribute("PlotId"),
 	})
 end
 

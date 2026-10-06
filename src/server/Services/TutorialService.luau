@@ -9,6 +9,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
@@ -82,7 +83,7 @@ end
 
 -- "Run to the crater" completes on arrival, so check who is close during an event.
 function TutorialService:_watchCrater()
-	local spawn = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("MeteorSpawn") :: BasePart
+	local spawn = WorldMap.wait():WaitForChild("Crater"):WaitForChild("MeteorSpawn") :: BasePart
 	local radius = Config.Tutorial.CraterRadius
 	while true do
 		task.wait(0.5)

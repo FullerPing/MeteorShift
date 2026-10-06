@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
@@ -89,7 +90,7 @@ end
 
 local function candidates(): { BasePart }
 	local list = {}
-	local map = workspace:FindFirstChild("Map")
+	local map = WorldMap.find()
 	if not map then
 		return list
 	end

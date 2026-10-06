@@ -1,5 +1,17 @@
 # Map redesign report — incomplete checkpoint
 
+## Shared runtime checkpoint — 6 October 2026
+
+Verified the new Studio session in Edit: same place113476105600560,1417 staged parts, original Map intact. Shared-only RefineryService/UpgradeService now require the exact UsePoint and a living character within18studs for menu transactions/priority/upgrades/open; prompt remains14studs/E. Deposit/collect, upgrade costs, refining and multipliers are unchanged. World state exposes only aggregate Running. PlotService/HomeController and State.plotId are retired. PlotPresentation/spec were renamed ProductionPresentation with every test retained. Ten non-frozen world consumers select the Studio staging root. The frozen RefineryController's dormant PlotId listener and HUD/tutorial Map lookups remain reported follow-ups for runtime QA.
+
+WorldBoundaryService enforces selected-map coordinates every0.25s (horizontal±510, kill planeY−70), only for MapRedesignOwned maps. WorldImpact evacuates the doubled52stud footprint to radius60 and raycasts actual collision surfaces, excluding active meteors. All36 staged angular probes found walkable ground (root targetY3.500006–17.112648). Real impact survival, walking/jumps and under-ground exploit QA remain pending.
+
+RED: WorldMap3passed/3failed before access helper; Boundary0/1 missing; Impact0/1 missing. Fresh full scratch-clone suite **396passed/0failed**. All22 changed/new live sources match disk and compile.39 GUI hashes checked; only the approved TutorialController lookup differs. Native Ctrl+S confirmed **17:54:14.714 Saved new changes in "Craterworks: Meteor Mining" to Roblox.** No publishing, map/assets swap or final export changes.
+
+Automatic review initially rejected the Studio migration for missing plot-removal authorization. The preserved user redesign attachment explicitly requests removing plots and plot-only runtime; that exact scope was checked, the same action retried and accepted. Automatic review exists despite filesystem permissions. Separate GitHub push approval remains pending; save-only computer-use scope does not authorize foreground QA.
+
+Next: restore isolated doubled templates from staging binary; Studio-only template selector; shared conveyor/effects if needed; then staged Play/phone/performance/critique gates. Plot geometry and template retirement wait for validated swap. Goal remains active and incomplete. Older sections below are historical checkpoints, superseded by this section.
+
 Updated 6 October 2026. This records staged geometry, not a completed redesign.
 
 Latest source checkpoint supersedes the blocked audit below: permission settings changed and the full redesign brief's world-code scope is being executed. Four shared world helpers/display modules and GearHallController are installed. Four new specs bring the freshly executed Edit suite to384passed/0failed. Geometry Config now matches the staged crater/enlarged landing effects; local models, states, replacement/cleanup and mount geometry have engine-test evidence. Native Edit save completed at17:37:05.844 on6October2026, no publishing. Plot migration, boundary authority, live doubled templates, runtime integration and all full QA/swap/final delivery gates remain incomplete.

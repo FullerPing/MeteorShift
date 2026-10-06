@@ -1,9 +1,5 @@
 --!strict
--- Upgrades for the four plot stations (hopper, conveyor, refinery, collection
--- post). Each station carries an "Upgrade" ProximityPrompt; the server checks
--- ownership, price and max level. The shop's Plot tab buys the same upgrades
--- from anywhere; pickaxes and backpacks are ShopService.
-
+-- Personal production upgrades purchased at the shared refinery.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -24,7 +20,6 @@ local UpgradeService = Knit.CreateService({
 UpgradeService.StationUpgraded = Signal.new() -- (player, stationId, newLevel)
 
 local PlayerStateService
-local PlotService
 local RefineryService
 local lastBuyRequest: { [Player]: number } = {}
 
@@ -58,7 +53,7 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 	return true
 end
 
--- The shop's Production tab. Needs a plot or the shared refinery in town.
+-- Production menu purchases require the shared refinery.
 function UpgradeService.Client:BuyStation(player: Player, stationId: string): boolean
 	local allowed, stamp = RequestGate.check(lastBuyRequest[player], os.clock(), 0.15)
 	lastBuyRequest[player] = stamp
@@ -66,44 +61,21 @@ function UpgradeService.Client:BuyStation(player: Player, stationId: string): bo
 	if typeof(stationId) ~= "string" or not Config.Home.Stations[stationId] then
 		return false
 	end
-	if not (PlotService:GetStations(player) or PlotService:HasSharedRefinery()) then
-		self.Server.Client.Notice:Fire(player, "You need a plot first.")
+	if not RefineryService:CanUseMenu(player) then
+		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to upgrade production.")
 		return false
 	end
 	return self.Server:BuyStation(player, stationId)
 end
 
-function UpgradeService:_connect(player: Player, stations: Model)
-	for _, model in stations:GetChildren() do
-		local stationId = model:GetAttribute("StationId")
-		local prompt = model:FindFirstChild("Upgrade", true)
-		if typeof(stationId) == "string" and prompt and prompt:IsA("ProximityPrompt") then
-			prompt.Triggered:Connect(function(who)
-				if who == player then
-					self:BuyStation(player, stationId)
-				else
-					self.Client.Notice:Fire(who, "That's " .. player.DisplayName .. "'s plot. Yours is Plot " .. tostring(who:GetAttribute("PlotId")) .. ".")
-				end
-			end)
-		end
-	end
-end
-
 function UpgradeService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
-	PlotService = Knit.GetService("PlotService")
 	RefineryService = Knit.GetService("RefineryService")
 end
 
 function UpgradeService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastBuyRequest[player] = nil
-	end)
-	PlotService.PlotAssigned:Connect(function(player, _plot)
-		local stations = PlotService:GetStations(player)
-		if stations then
-			self:_connect(player, stations)
-		end
 	end)
 end
 

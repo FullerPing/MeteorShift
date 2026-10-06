@@ -3,6 +3,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
@@ -49,7 +50,7 @@ local function pointOf(item: Instance?): Vector3?
 end
 
 local function hopperOf(owner: Player): Vector3?
-	local map = workspace:FindFirstChild("Map")
+	local map = WorldMap.find()
 	local town = map and map:FindFirstChild("TownSquare")
 	local shared = town and town:FindFirstChild("Refinery")
 	if shared then return pointOf(shared:FindFirstChild("Intake", true) or shared:FindFirstChild("Hopper", true) or shared:FindFirstChild("UsePoint", true)) end

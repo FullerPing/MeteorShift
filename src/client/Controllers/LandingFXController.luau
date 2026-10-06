@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Tuning = require(ReplicatedStorage.Shared.Config.LandingFX)
@@ -225,7 +226,7 @@ end
 -- yet, so every lookup falls back to Config.LandingFX.Crater.
 local function readScene(): Scene
 	local crater = Tuning.Crater
-	local map = workspace:FindFirstChild("Map") or workspace:WaitForChild("Map", 5)
+	local map = WorldMap.find() or WorldMap.wait()
 	local craterModel = if map then map:FindFirstChild("Crater") or map:WaitForChild("Crater", 5) else nil
 	local spawn = child(craterModel, "MeteorSpawn")
 	local center = if spawn and spawn:IsA("BasePart") then spawn.Position else crater.Center
@@ -1361,7 +1362,7 @@ end
 -- Watches node HP for refreezes and runs the rime loop while the scene grows
 local function startRime(record: Record, rime: Rime)
 	local token = record.token
-	local crater = child(workspace:FindFirstChild("Map"), "Crater")
+	local crater = child(WorldMap.find(), "Crater")
 	local holder = if crater then crater:FindFirstChild("ActiveMeteor") or crater:WaitForChild("ActiveMeteor", 5) else nil
 	if not holder or not alive(record, token) then
 		return

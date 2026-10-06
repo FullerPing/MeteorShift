@@ -22,4 +22,14 @@ function WorldMap.refineryPoint(root: Instance?): BasePart?
 	return if refinery and refinery:IsA("Model") and point and point:IsA("BasePart") then point else nil
 end
 
+-- The prompt is 14 studs; menu transactions retain four studs of movement tolerance.
+function WorldMap.canUseRefinery(map: Instance?, character: Model?): boolean
+	local point = WorldMap.refineryPoint(map)
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	return point ~= nil and root ~= nil and root:IsA("BasePart")
+		and humanoid ~= nil and humanoid.Health > 0
+		and (root.Position - point.Position).Magnitude <= 18
+end
+
 return WorldMap

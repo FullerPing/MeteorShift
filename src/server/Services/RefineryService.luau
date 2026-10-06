@@ -1,27 +1,12 @@
 --!strict
--- The plot production line: hopper -> conveyor -> refinery -> collection post
--- (spec §6, reworked). Handles deposits, the online tick, offline catch-up,
--- collecting bars and keeping the station displays and upgrade prompts current.
---
--- The line is cloned onto a plot by PlotService when someone claims it. Each
--- station is a Model with a StationId attribute ("hopper", "conveyor",
--- "refinery", "collector") containing:
---   Display   BillboardGui with a TextLabel "Text"
---   Upgrade   ProximityPrompt (handled by UpgradeService)
--- plus Hopper.Intake (touch to deposit) and CollectionPost.Bin (touch to collect).
---
--- Passes and products (spec §9, MonetizationService): Offline Hours+ raises the
--- offline cap to Config.Home.OfflineCapPass, and Refinery Overclock speeds the
--- refinery up in the online tick only, counting its time down while you play.
-
+-- One shared world refinery; each player retains their own saved production line.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
-local Format = require(ReplicatedStorage.Shared.Format)
-local Price = require(ReplicatedStorage.Shared.Price)
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Refining = require(script.Parent.Parent.Lib.Refining)
@@ -34,7 +19,7 @@ local RefineryService = Knit.CreateService({
 		Collected = Knit.CreateSignal(), -- (bars)
 		WhileAway = Knit.CreateSignal(), -- (report)
 		Notice = Knit.CreateSignal(), -- (text)
-		Open = Knit.CreateSignal(), -- owner's physical refinery management prompt
+		Open = Knit.CreateSignal(), -- shared refinery prompt
 	},
 })
 
@@ -43,12 +28,10 @@ RefineryService.BarsCollected = Signal.new() -- (player, bars)
 RefineryService.CaughtUp = Signal.new() -- (player, awaySeconds, bars) after offline catch-up
 
 local DataService
-local PlotService
 local PlayerStateService
 local EconomyService
 local MonetizationService
 
-local touchCooldown: { [Player]: { [string]: number } } = {}
 local blockedBy: { [Player]: Refining.Blocked } = {}
 local remoteTimes: { [Player]: { [string]: number } } = {}
 local lastVault: { [Player]: number } = {}
@@ -68,135 +51,25 @@ local function remoteReady(player: Player, action: string, cooldown: number): bo
 	return allowed
 end
 
-local function formatRate(rate: number): string
-	return if rate < 100 then string.format("%g", rate) else Format.number(rate)
-end
-
-local function station(stations: Model, id: string): Instance?
-	for _, child in stations:GetChildren() do
-		if child:GetAttribute("StationId") == id then
-			return child
+-- Only aggregate activity is replicated to the world, never a player's inventory.
+function RefineryService:RefreshWorld()
+	local point = WorldMap.refineryPoint(WorldMap.find())
+	if not point then return end
+	local running = false
+	for _, player in Players:GetPlayers() do
+		local data = PlayerStateService:Get(player)
+		if data and sum(data.hopper) > 0 and blockedBy[player] ~= "collector" then
+			running = true
+			break
 		end
 	end
-	return nil
-end
-
-local function setDisplay(container: Instance?, text: string)
-	local display = container and container:FindFirstChild("Display", true)
-	local label = display and display:FindFirstChild("Text")
-	if label and label:IsA("TextLabel") then
-		label.Text = text
-	end
-end
-
-local function setPrompt(container: Instance?, stationId: string, currentLevel: number)
-	local prompt = container and container:FindFirstChild("Upgrade", true)
-	if not prompt or not prompt:IsA("ProximityPrompt") then
-		return
-	end
-	local levels = Config.Home.Stations[stationId].Levels
-	local nextLevel = levels[currentLevel + 1]
-	if nextLevel then
-		prompt.ActionText = "Upgrade to Lv " .. (currentLevel + 1)
-		prompt.ObjectText = Price.text(nextLevel.Cost, nextLevel.Shards)
-		prompt:SetAttribute("Maxed", false)
-	else
-		prompt.ActionText = "Max level"
-		prompt.ObjectText = Config.Home.Stations[stationId].Name
-		prompt:SetAttribute("Maxed", true)
-	end
-end
-
--- Decorative slots and upgrade pieces read these attributes locally. Publish
--- zero for depleted types too, so a previous pile cannot remain visible.
-local function publishAppearance(stations: Model, data: any)
-	for _, id in Config.Home.StationOrder do
-		stations:SetAttribute("StationLevel_" .. id, data.stations[id])
-	end
-	local types: { [string]: boolean } = {}
-	for _, id in Config.Home.OreOrder do types[id] = true end
-	for _, source in { Config.Home.OreNames, Config.Home.BarPrices, data.hopper, data.bin } do
-		for id in source do
-			if type(id) == "string" then types[id] = true end
-		end
-	end
-	for name in stations:GetAttributes() do
-		if string.sub(name, 1, 4) == "Ore_" then
-			types[string.sub(name, 5)] = true
-		elseif string.sub(name, 1, 5) == "Bars_" then
-			types[string.sub(name, 6)] = true
-		end
-	end
-	for id in types do
-		stations:SetAttribute("Ore_" .. id, data.hopper[id] or 0)
-		stations:SetAttribute("Bars_" .. id, data.bin[id] or 0)
-	end
-	stations:SetAttribute("ActiveOre", RefineryQueue.nextOre(data.hopper, data.refinePriority))
-end
-
--- Brings the owner's station displays, prompts and conveyor state up to date.
-function RefineryService:RefreshPlot(player: Player)
-	local data = PlayerStateService:Get(player)
-	local stations = PlotService:GetStations(player)
-	if not data or not stations then
-		return
-	end
-
-	local s = data.stations
-	local hopper = station(stations, "hopper")
-	local conveyor = station(stations, "conveyor")
-	local refinery = station(stations, "refinery")
-	local collector = station(stations, "collector")
-
-	setDisplay(hopper, string.format(
-		"Hopper · Lv %d\n%s / %s ore",
-		s.hopper,
-		Format.number(sum(data.hopper)),
-		Format.number(Refining.hopperCapacity(data, PlayerStateService:GetVaultMultiplier(player)))
-	))
-	setDisplay(conveyor, string.format("Conveyor · Lv %d\n%s ore/s", s.conveyor, formatRate(Refining.conveyorRate(data))))
-	local speedMult = MonetizationService:RefinerySpeedMult(data)
-	local refineryText = string.format("Refinery · Lv %d\n%s bars/s", s.refinery, formatRate(Refining.refineryRate(data, speedMult)))
-	if speedMult > 1 then
-		refineryText ..= "\nOVERCLOCK ×" .. formatRate(speedMult)
-	end
-	setDisplay(refinery, refineryText)
-	local binText = string.format(
-		"Collection Post · Lv %d\n%s / %s bars",
-		s.collector,
-		Format.number(sum(data.bin)),
-		Format.number(Refining.collectorCapacity(data, PlayerStateService:GetVaultMultiplier(player)))
-	)
-	if blockedBy[player] == "collector" then
-		binText ..= "\nFULL - collect!"
-	end
-	setDisplay(collector, binText)
-
-	setPrompt(hopper, "hopper", s.hopper)
-	setPrompt(conveyor, "conveyor", s.conveyor)
-	setPrompt(refinery, "refinery", s.refinery)
-	setPrompt(collector, "collector", s.collector)
-	publishAppearance(stations, data)
-
-	-- Clients animate ore on the belt while the line is running
-	local running = sum(data.hopper) > 0 and blockedBy[player] ~= "collector"
-	stations:SetAttribute("Running", running)
-	stations:SetAttribute("LineRate", Refining.lineRate(data, speedMult))
-	for _, model in { refinery, conveyor } do
-		if model then
-			for _, fx in model:GetDescendants() do
-				if fx:IsA("Smoke") or fx:IsA("ParticleEmitter") or fx:IsA("Fire") then
-					(fx :: any).Enabled = running
-				end
-			end
-		end
-	end
+	point.Parent:SetAttribute("Running", running)
 end
 
 -- immediate: bypasses the flush accumulator (deposit/collect/purchases). The
 -- online tick, which runs for every player far more often, leaves it deferred.
 function RefineryService:Refresh(player: Player, immediate: boolean?)
-	self:RefreshPlot(player)
+	self:RefreshWorld()
 	if immediate then
 		PlayerStateService:ReplicateNow(player)
 	else
@@ -207,15 +80,14 @@ end
 -- The rebirth caller replicates the reset profile after clearing all transient state.
 function RefineryService:ResetAfterRebirth(player: Player)
 	blockedBy[player] = nil
-	touchCooldown[player] = nil
-	self:RefreshPlot(player)
+	self:RefreshWorld()
 end
 
 -- Only the caller's saved line can change. Validation creates a detached,
 -- complete preference list; empty requests restore the configured default.
 function RefineryService:SetPriority(player: Player, requested: any): boolean
 	local data = PlayerStateService:Get(player)
-	if not data or not (PlotService:GetStations(player) or PlotService:HasSharedRefinery()) then
+	if not data or not self:CanUseMenu(player) then
 		return false
 	end
 	local priority = RefineryQueue.validate(requested)
@@ -224,20 +96,6 @@ function RefineryService:SetPriority(player: Player, requested: any): boolean
 	end
 	data.refinePriority = priority
 	self:Refresh(player, true)
-	return true
-end
-
-local function touchReady(player: Player, key: string): boolean
-	local entry = touchCooldown[player]
-	if not entry then
-		entry = {}
-		touchCooldown[player] = entry
-	end
-	local now = os.clock()
-	if now - (entry[key] or 0) < 1 then
-		return false
-	end
-	entry[key] = now
 	return true
 end
 
@@ -318,71 +176,10 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	self.CaughtUp:Fire(player, awaySeconds, bars)
 end
 
-function RefineryService:_connectStations(player: Player, stations: Model)
-	local function isOwner(hit: BasePart): boolean
-		return Players:GetPlayerFromCharacter(hit.Parent) == player
-	end
-
-	local hopper = station(stations, "hopper")
-	local intake = hopper and hopper:FindFirstChild("Intake", true)
-	if intake and intake:IsA("BasePart") then
-		intake.Touched:Connect(function(hit)
-			if isOwner(hit) and touchReady(player, "hopper") then
-				self:Deposit(player)
-			end
-		end)
-	end
-
-	local collector = station(stations, "collector")
-	local bin = collector and collector:FindFirstChild("Bin", true)
-	if bin and bin:IsA("BasePart") then
-		bin.Touched:Connect(function(hit)
-			if isOwner(hit) and touchReady(player, "bin") then
-				self:Collect(player)
-			end
-		end)
-	end
-
-	local refinery = station(stations, "refinery")
-	if refinery then
-		for _, descendant in refinery:GetDescendants() do
-			if descendant:IsA("ProximityPrompt") and descendant.Name == "ManageRefinery" then
-				descendant:Destroy()
-			end
-		end
-	end
-	local anchor: BasePart? = if hopper and hopper:IsA("Model") then hopper.PrimaryPart else nil
-	if not anchor and hopper then
-		local body = hopper:FindFirstChild("Body", true)
-		local part = if body and body:IsA("BasePart") then body else hopper:FindFirstChildWhichIsA("BasePart", true)
-		if part and part:IsA("BasePart") then
-			anchor = part
-		end
-	end
-	if anchor and hopper and not hopper:FindFirstChild("ManageRefinery", true) then
-		local prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "ManageRefinery"
-		prompt.ActionText = "Refining order"
-		prompt.ObjectText = "Hopper"
-		prompt.KeyboardKeyCode = Enum.KeyCode.R
-		prompt.HoldDuration = 0
-		prompt.MaxActivationDistance = 12
-		prompt.UIOffset = Vector2.new(0, 0)
-		prompt.Parent = anchor
-		prompt.Triggered:Connect(function(who)
-			if who == player then
-				self.Client.Open:Fire(player)
-			end
-		end)
-	end
-end
-
--- The shared refinery in town (Workspace.Map.TownSquare.Refinery): using it empties your
--- backpack into your hopper, collects your finished bars and opens your refinery panel. It is
--- the same line everywhere; each player works their own saved hopper and bars.
 local sharedCooldown: { [Player]: number } = {}
 
 function RefineryService:UseShared(player: Player)
+	if not self:CanUseMenu(player) then return end
 	local now = os.clock()
 	if now - (sharedCooldown[player] or 0) < 0.5 then
 		return
@@ -392,23 +189,11 @@ function RefineryService:UseShared(player: Player)
 end
 
 function RefineryService:_connectShared()
-	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
-	local refinery = if townSquare then townSquare:FindFirstChild("Refinery") else nil
-	if not refinery then
+	local point = WorldMap.refineryPoint(WorldMap.wait())
+	if not point then
+		warn("[RefineryService] TownSquare.Refinery requires its exact UsePoint part")
 		return
 	end
-	local point = refinery:FindFirstChild("UsePoint", true)
-	if not (point and point:IsA("BasePart")) then
-		point = if refinery:IsA("Model") then refinery.PrimaryPart else nil
-	end
-	if not (point and point:IsA("BasePart")) then
-		point = refinery:FindFirstChildWhichIsA("BasePart", true)
-	end
-	if not (point and point:IsA("BasePart")) then
-		warn("[RefineryService] TownSquare.Refinery has no UsePoint part; players can't use it")
-		return
-	end
-	-- not named ManageRefinery: the client hides that one from everyone but a plot's owner
 	local existing = point:FindFirstChild("UseRefinery")
 	local prompt: ProximityPrompt
 	if existing and existing:IsA("ProximityPrompt") then
@@ -428,27 +213,9 @@ function RefineryService:_connectShared()
 	end)
 end
 
--- Menu transactions require a living character near the shared building or
--- the caller's own production line. No client supplies inventory or quantities.
+-- Transactions require a living character near the shared UsePoint.
 function RefineryService:CanUseMenu(player: Player): boolean
-	local character = player.Character
-	local root = character and character:FindFirstChild("HumanoidRootPart")
-	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-	if not (root and root:IsA("BasePart") and humanoid and humanoid.Health > 0) then return false end
-	local map = workspace:FindFirstChild("Map")
-	local town = map and map:FindFirstChild("TownSquare")
-	local shared = town and town:FindFirstChild("Refinery")
-	local point = shared and shared:FindFirstChild("UsePoint", true)
-	if point and point:IsA("BasePart") and (root.Position - point.Position).Magnitude <= 18 then return true end
-	local stations = PlotService:GetStations(player)
-	if stations then
-		for _, id in { "hopper", "collector" } do
-			local container = station(stations, id)
-			local anchor = container and container:FindFirstChildWhichIsA("BasePart", true)
-			if anchor and (root.Position - anchor.Position).Magnitude <= 18 then return true end
-		end
-	end
-	return false
+	return WorldMap.canUseRefinery(WorldMap.find(), player.Character)
 end
 
 function RefineryService.Client:Deposit(player: Player): number
@@ -484,7 +251,6 @@ end
 
 function RefineryService:KnitInit()
 	DataService = Knit.GetService("DataService")
-	PlotService = Knit.GetService("PlotService")
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	EconomyService = Knit.GetService("EconomyService")
 	MonetizationService = Knit.GetService("MonetizationService")
@@ -492,14 +258,6 @@ end
 
 function RefineryService:KnitStart()
 	self:_connectShared()
-
-	PlotService.PlotAssigned:Connect(function(player, _plot)
-		local stations = PlotService:GetStations(player)
-		if stations then
-			self:_connectStations(player, stations)
-		end
-		self:RefreshPlot(player)
-	end)
 
 	DataService.ProfileLoaded:Connect(function(player, profile)
 		local lastSeen = profile.Data.lastSeen
@@ -517,11 +275,11 @@ function RefineryService:KnitStart()
 	end)
 
 	PlayerStateService.OreAutoDeposited:Connect(function(player)
-		self:RefreshPlot(player)
+		self:RefreshWorld()
 	end)
 
 	Players.PlayerRemoving:Connect(function(player)
-		touchCooldown[player] = nil
+		task.defer(function() self:RefreshWorld() end)
 		blockedBy[player] = nil
 		remoteTimes[player] = nil
 		sharedCooldown[player] = nil

@@ -14,6 +14,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -183,7 +184,7 @@ function ShopService.Client:Upgrade(player: Player, kind: Kind, stat: string): b
 end
 
 function ShopService:_connectTownShop()
-	local townSquare = workspace:WaitForChild("Map"):FindFirstChild("TownSquare")
+	local townSquare = WorldMap.wait():FindFirstChild("TownSquare")
 	local shop = if townSquare then townSquare:FindFirstChild("PickaxeShop") else nil
 	if not shop then
 		return

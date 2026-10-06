@@ -12,6 +12,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
@@ -126,7 +127,7 @@ function DebrisService:KnitInit()
 end
 
 function DebrisService:KnitStart()
-	local folder = workspace:WaitForChild("Map"):WaitForChild("Debris")
+	local folder = WorldMap.wait():WaitForChild("Debris")
 	for _, part in folder:GetChildren() do
 		if part:IsA("BasePart") then
 			self:_track(part)

@@ -10,6 +10,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 
 local player = Players.LocalPlayer
@@ -215,7 +216,7 @@ function NodeHealthController:KnitStart()
 		hitByMe[part] = true
 	end)
 
-	local map = workspace:WaitForChild("Map")
+	local map = WorldMap.wait()
 	watch(map:WaitForChild("Crater"):WaitForChild("ActiveMeteor"))
 	watch(map:WaitForChild("Debris"))
 	-- Debris respawns reuse the same part; re-add when the TargetId comes back

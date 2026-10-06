@@ -62,28 +62,37 @@
     "existingPassed": 360,
     "existingFailed": 0,
     "newSpecsRun": true,
-    "latestPassed": 384,
+    "latestPassed": 396,
     "latestFailed": 0,
     "latestMode": "Edit"
   },
   "worldScriptsApproved": true,
-  "worldCodeApprovalBasis": "Latest full redesign brief explicitly requests world helpers/controllers/specs; current environment has no approval reviewer",
+  "worldCodeApprovalBasis": "User full redesign brief explicitly requests plot retirement/world runtime; initially rejected Studio action accepted after checking exact scope",
   "sourceCheckpoint": {
     "date": "2026-10-06",
     "studioId": "d43c85b7-4d75-4eaf-9e8a-d47c28b16436",
-    "sharedModules": ["WorldGeometry", "WorldEquipment", "WorldMap", "WorldEquipmentDisplay"],
+    "sharedModules": [
+      "WorldGeometry",
+      "WorldEquipment",
+      "WorldMap",
+      "WorldEquipmentDisplay",
+      "WorldBoundary",
+      "WorldImpact"
+    ],
     "controller": "GearHallController",
-    "newSpecsInstalled": 4,
-    "passed": 384,
+    "newSpecsInstalled": 6,
+    "passed": 396,
     "failed": 0,
-    "comparedModuleSources": 12,
+    "comparedModuleSources": 22,
     "runtimeQaComplete": false,
     "plotMigrationComplete": false,
-    "boundaryAuthorityInstalled": false,
+    "boundaryAuthorityInstalled": true,
     "liveTemplatesScaled": false,
     "geometryConfigUpdated": true,
-    "nativeEditSaveOutputTime": "17:37:05.844",
-    "savedWithoutPublishing": true
+    "nativeEditSaveOutputTime": "17:54:14.714",
+    "savedWithoutPublishing": true,
+    "sharedPlotRuntimeRetired": true,
+    "impactGroundRaycastInstalled": true
   },
   "pushApproved": false,
   "placeSaveConfirmedForThisStage": true,
@@ -229,7 +238,7 @@
     "worldCodeApprovalPending": true,
     "pushApprovalPending": true,
     "foregroundOnlyApprovalPending": true,
-    "liveCoreSize": 28.349998474121095,
+    "liveCoreSize": 28.349998474121094,
     "liveKnockbackRadius": 90,
     "liveTutorialRadius": 80,
     "livePlotsPresent": true,
@@ -268,5 +277,12 @@
     "finalRenderPending": false,
     "bothTextBlocksVisible": true,
     "phoneReadabilityUnverified": true
+  },
+  "impactEscapeEditAudit": {
+    "angularProbes": 36,
+    "missingGround": 0,
+    "minRootY": 3.5000061988830566,
+    "maxRootY": 17.112648010253906,
+    "realCharacterWalkingVerified": false
   }
 }
