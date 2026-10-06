@@ -1,0 +1,27 @@
+# Map redesign requirement audit
+
+6 October 2026. Saved art checkpoint: `0049b90`, branch `job-for-tomorrow`. This audit is read-only against the connected Edit place and current source. The full objective remains incomplete.
+
+| Requirement | Evidence and remaining work |
+|---|---|
+| Preserve owner work and frozen GUI | Original Map remains active; Map_Old absent. No Source or scene mutation in this audit. All 39 frozen file hashes checked; only the approved TutorialController lookup differs. Its panel/guide suffix matches the baseline. Owner docs/ff.md and three unrun draft specs remain untouched. |
+| Measured plan and rollback | Self-approved PLAN.md/layout.svg and numeric budgets exist. Four original exports and fresh Studio snapshots are archived, including full TerrainComplete. Do not use the earlier bounded Terrain capture for full rollback. |
+| Bright studded original world | Map_Redesign at offset (0,0,3000) has 1,417 anchored authored parts, zero Scripts/MeshParts/previews. Landmarks, spawn trim, decorative eggs, mineral exhibits and four yards exist. Full visual acceptance remains unverified. |
+| Meteor at least 2x in every linear dimension | Isolated scaled binary templates preserve Core 56.699997 and doubled NodePieces/attachments. Live Core is still 28.349998 per axis; runtime templates, Config and FX/sound/shake changes are pending. Candidate reach and sampled bounds do not prove walking/aiming on Iron/Ice/Crystal. |
+| Enlarged crater and safe Refinery | Staged ramps/terraces and shared Refinery exist. Refinery has 145 parts, Foundation PrimaryPart, exactly one UsePoint, SharedRefinery true, no Scripts/prompts/Humanoids. Pivot is staged (0,0.800000012,2620), intended final (0,0.800000012,-380); horizontal pivot/UsePoint/visible-edge distances are 380/343/348. New geometry is not active. Live knockback/tutorial radii remain 90/80. |
+| Remove plots and all plot fallbacks | Not implemented. Live Map.Plots and Assets.PlotStations exist. PlotService/HomeController remain on disk; RefineryService/UpgradeService retain PlotService/GetStations/PlotAssigned dependencies. |
+| Live Gear Hall | Counter, 16 tier cards and two current mounts are staged. WorldEquipment/WorldGeometry/WorldMap are absent from Shared; world controller, local models, rotation and immediate State/stat updates are not installed. |
+| Other zones and sealed authority | Six staged disabled spawns, decorative Config odds, Rebirth, Museum, four yards and wall geometry exist. Kill plane is only a marker; authoritative boundary service is not installed. |
+| Tests and full staged gameplay QA | Existing runner's earlier 360/360 result excludes the new specs. All three world specs are absent from Studio Tests and unrun. Prior static QA passed 84 Edit paths/six forecourt probes; 74 jump waypoints, real walking, variants, interactions, pets, fresh tutorial, rebirth/rejoin and exploit checks remain pending. No new runtime/profile test in this audit. |
+| Phone and event performance | Required 320x568, 390x844, 844x390 layouts, sign readability, event/40-pet rendering and frame-time budgets have not been accepted. Cheap static lighting/particles do not prove runtime performance. |
+| Three complete critique/fix rounds | Thirteen mixed partial native JPEGs, zero complete accepted rounds. Several zones and full daylight after-fix views are missing. Final crest colour and phone odds readability remain unverified. Rust Yard capture cell 601 stalled and was cancelled without an image; no process is being awaited. |
+| Swap, repeat QA, remove old map | Not attempted. Original Map/Assets/Terrain/Lighting remain unchanged, staging pads disabled. No swap/deletion before all acceptance gates pass. |
+| Save, final exports, documentation and checkpoints | Latest recorded Edit save is 08:29:19.492 on 6 October, never published. Four staging binaries were freshly verified against manifest byte counts/SHA256: Map 85,876; Assets 73,990; Refinery 23,070; Lighting 4,703. Final contract exports remain untouched. Local checkpoints exist; GitHub push is pending approval. Final README/report claims must follow completed runtime/swap QA. |
+
+## Why execution is blocked
+
+Automatic approval review rejected world-test ModuleScript/Source synchronization under the initial building-only no-scripts rule, and rejected disclosure of the backup/checkpoint payload to `https://github.com/FullerPing/MeteorShift`, branch `job-for-tomorrow`, pending explicit destination approval. The human questions remain unanswered. Only TutorialController world lookup and computer use for saving have separate approval. Foreground-only computer use for Studio MCP screenshots is also a pending question.
+
+The fresh resumed sequence consists of town/refinery polish (`2cc6e5d`), spawn/odds polish (`0049b90`), then this audit. The same approval gates persisted through all three. Independent art and verified exports are preserved; all observed safe repairs have been applied. Remaining implementation requires Source authorization, while further evidence-led art review requires reliable capture or the pending focus permission. Blind polish, repeated stalled requests, or a premature swap would not satisfy the brief. The fresh blocked threshold is satisfied.
+
+Resume from Stage 2 when the relevant required authorization or external capability changes. Do not rebuild the staged scene, infer approval from an automatic continuation, weaken tests or mark the objective complete.

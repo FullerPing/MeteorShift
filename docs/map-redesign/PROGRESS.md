@@ -2,6 +2,18 @@
 
 Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected place before continuing.
 
+## Current resumed-run audit — blocked, not complete
+
+The third resumed goal turn rechecked the full brief, plan, Git, connected Edit place, frozen GUI hashes and all four staging export hashes. See `REQUIREMENTS-AUDIT.md` for the requirement-by-requirement evidence. Saved art checkpoint is `0049b90`; no scene or Source changes were made in this audit.
+
+The same world-code and GitHub-push approvals remained unanswered through the resumed refinery/town polish (`2cc6e5d`), spawn/odds polish (`0049b90`) and this audit. Those first two turns made independent progress; they do not establish completion. The remaining runtime integration requires the rejected Source/ModuleScript actions. Further useful visual review is limited by stalled captures and the unanswered foreground-only computer-use question. The fresh blocked threshold is now satisfied; mark the goal blocked and preserve the full objective.
+
+Authoritative read-only checks: staged map 1,417 anchored parts, zero scripts/meshes/previews; Refinery 145 parts, PrimaryPart Foundation, exactly one UsePoint, SharedRefinery true, no scripts/prompts/Humanoids. Original Map exists and Map_Old does not. Live Core remains 28.349998 studs per axis, Knockback radius 90, Tutorial radius 80; PlotStations and Map.Plots still exist. WorldGeometry, WorldEquipment and WorldMap are absent from Shared, and all three new specs are absent from Studio Tests. PlotService and its RefineryService/UpgradeService consumers still exist on disk.
+
+The first Rust Yard close-view request also stalled and was explicitly cancelled (cell 601), producing no image. No capture/process is being awaited. There are still 13 mixed partial images and zero completed critique rounds. Do not repeat the same stalled requests without a relevant tool-state or permission change. Do not use save-only computer-use permission for screenshot focus/QA.
+
+All 39 frozen GUI hashes were freshly checked: only the separately approved TutorialController world lookup differs; the panel/guide suffix still matches `01424D468C83D06980BD5B9FF751EDEB3407834BD973BE9E76536C3DAF05CF73`. All four binary byte counts and SHA256 values match the staging manifest. Latest place-save evidence remains 08:29:19.492 on 6 October; no publish, push, swap, old-map deletion or new runtime/profile test occurred.
+
 ## Checklist
 
 - [x] Read the full pasted objective and inspect current Git/open place.

@@ -191,11 +191,35 @@
     "cells": [
       574,
       583,
-      587
+      587,
+      601
     ],
     "status": "cancelled",
+    "latestRequestedView": "RustYard_FirstCloseView_20261006",
+    "latestImageProduced": false,
     "foregroundPermissionPending": true,
     "noLiveHandle": true
+  },
+  "resumedBlockedAudit": {
+    "date": "2026-10-06",
+    "consecutiveTurnsWithSamePendingApprovals": 3,
+    "savedArtCheckpoint": "0049b90",
+    "earlierResumedCheckpoint": "2cc6e5d",
+    "worldCodeApprovalPending": true,
+    "pushApprovalPending": true,
+    "foregroundOnlyApprovalPending": true,
+    "liveCoreSize": 28.349998474121095,
+    "liveKnockbackRadius": 90,
+    "liveTutorialRadius": 80,
+    "livePlotsPresent": true,
+    "livePlotStationsPresent": true,
+    "worldHelpersInstalled": false,
+    "newSpecsInstalled": false,
+    "stagingFileHashesReverified": 4,
+    "frozenGuiFilesReverified": 39,
+    "sourceOrSceneModifiedThisAudit": false,
+    "goalComplete": false,
+    "evidence": "REQUIREMENTS-AUDIT.md"
   },
   "spawnPolish": {
     "parts": 47,

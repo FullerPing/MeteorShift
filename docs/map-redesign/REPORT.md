@@ -2,6 +2,8 @@
 
 Updated 6 October 2026. This records staged geometry, not a completed redesign.
 
+The resumed run is blocked after three turns with the same pending world-code and push approvals. Saved art checkpoint is `0049b90`. The latest read-only audit verified the staging exports and GUI protection and documented the live contract gaps in `REQUIREMENTS-AUDIT.md`. Live Core remains 28.349998 studs per axis, Knockback 90, Tutorial 80, and plot assets/runtime still exist. No new world helpers or specs are installed in Studio. No completion claim is made.
+
 The original town remains active. Workspace.Map_Redesign contains the new world at offset (0, 0, 3000). No swap, old-map deletion or publishing has occurred. The original Map still has 2,043 parts; live Assets, Terrain and Lighting remain unchanged.
 
 ## Built and measured
@@ -38,7 +40,7 @@ The template audit verified 113 parts, 36 attachments, one light and one emitter
 
 Large concave CSG collision closed the crater opening. The union is now visual-only; 134 invisible primitive proxies provide ground collision. Initial forecourt probes assumed Y 0 and falsely intersected the raised avenue; they now use raycast surface heights. Assertions were preserved.
 
-Thirteen native JPEGs now cover a partial first visual review; see critique/round-1/REVIEW.md for provisional image scores. Trading Post is obscured and multiple zones/full daylight after-fix views are missing, so zero complete rounds are claimed. Rebirth capture failed; the after-fix refinery request stalled and was terminated. First repairs include a furnace mouth, exposed conveyor, lower Gear Hall boards, corrected signs/cards, two fill lights and a128×72Hatchery with eggs beside unchanged Config odds. The conveyor initially violated the footprint by1.74studs; world-space corner measurement fixed it without relaxing the assertion. Final refineryfrontZ−348, conveyor−348.4, hatchery/spinegap14. The existing impact-clear teleport also needs a destination-ground raycast: retaining the player's deep-bowl Y plus four studs could strand them beneath outer ground. That source fix remains pending authorization.
+Thirteen native JPEGs now cover a partial first visual review; see critique/round-1/REVIEW.md for provisional image scores. A corrected Trading Post view is clear, but multiple zones/full daylight after-fix views are missing, so zero complete rounds are claimed. Rebirth capture failed; the after-fix refinery request stalled and was terminated. The latest Rust Yard request also stalled and was cancelled (cell 601), producing no image; no capture is being awaited. First repairs include a furnace mouth, exposed conveyor, lower Gear Hall boards, corrected signs/cards, two fill lights and a128×72Hatchery with eggs beside unchanged Config odds. The conveyor initially violated the footprint by1.74studs; world-space corner measurement fixed it without relaxing the assertion. Final refineryfrontZ−348, conveyor−348.4, hatchery/spinegap14. The existing impact-clear teleport also needs a destination-ground raycast: retaining the player's deep-bowl Y plus four studs could strand them beneath outer ground. That source fix remains pending authorization.
 
 ## Checkpoint and remaining work
 
