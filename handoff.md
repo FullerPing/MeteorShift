@@ -4,6 +4,12 @@ Updated 6 October 2026. Repository: `Z:\final-final-actual-final\MeteorShift`. B
 
 ## Current handoff — full map redesign supersedes the older UI task
 
+**Current execution resumed:** the environment now has full filesystem/network access without an approval reviewer. The latest full redesign brief explicitly authorizes the required world code; the earlier script-review block is historical. Shared.WorldEquipment/WorldGeometry/WorldMap/WorldEquipmentDisplay and GearHallController are installed, with four new specs. The full Edit scratch-clone suite passed **384/384**, including actual 18-model creation, tier updates, local ownership, rotation, mount offsets and cleanup. Runtime State/prompt/phone/performance verification is still pending. Frozen GUI remains protected.
+
+Current Studio ID is `d43c85b7-4d75-4eaf-9e8a-d47c28b16436`, same place113476105600560, Edit. Latest confirmed save: native Output **17:37:05.844** on6October2026, Ctrl+S, no publishing. Map_Redesign remains1417parts at Z+3000; no preview/model fixture was left in Workspace. Geometry Config now matches the new crater/FX (knockback180/tutorial160). Plot runtime and old live templates are still present; do not run Play against the archived map. Next work is the shared-only service migration and staged world consumer/root integration. Save-only computer-use permission persists; no foreground QA exception is inferred.
+
+The blocked audit below describes the state before this source checkpoint. Preserve it as history rather than treating its missing-helper/old-Config evidence as current. Staging binary art exports still describe the saved art; source modules are saved in the place/repository separately. Read fresh PROGRESS.md and Git/Studio state before resuming.
+
 The full redesign brief is at `C:\Users\37062\.codex\attachments\0ea8130b-6c1b-4f2b-a642-45be382e3361\pasted-text-1.txt`. Read `docs/map-redesign/PLAN.md`, `PROGRESS.md`, the critique review, Git status and the connected Studio state. The full goal is incomplete; preserve the staged scene rather than rebuilding it.
 
 **Latest audit:** the resumed run is blocked after three consecutive turns with the same unanswered world-code and push approvals. The first two saved independent polish; this turn verified the remaining contract gaps and cancelled a stalled Rust Yard capture (cell 601, no image). No live capture is being awaited. Read `docs/map-redesign/REQUIREMENTS-AUDIT.md` before resuming. Saved art checkpoint is `0049b90`; this audit changes documentation only.

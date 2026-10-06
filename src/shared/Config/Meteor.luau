@@ -42,7 +42,7 @@ Meteor.StandingInterval = 1 -- how often clients get their rank and the top thre
 
 -- Shockwave: knockback only, no damage (spec §5.1)
 Meteor.Knockback = {
-	Radius = 90,
+	Radius = 180,
 	Speed = 110,
 	Lift = 55,
 }

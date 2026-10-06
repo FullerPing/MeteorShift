@@ -61,9 +61,30 @@
   "sourceTests": {
     "existingPassed": 360,
     "existingFailed": 0,
-    "newSpecsRun": false
+    "newSpecsRun": true,
+    "latestPassed": 384,
+    "latestFailed": 0,
+    "latestMode": "Edit"
   },
-  "worldScriptsApproved": false,
+  "worldScriptsApproved": true,
+  "worldCodeApprovalBasis": "Latest full redesign brief explicitly requests world helpers/controllers/specs; current environment has no approval reviewer",
+  "sourceCheckpoint": {
+    "date": "2026-10-06",
+    "studioId": "d43c85b7-4d75-4eaf-9e8a-d47c28b16436",
+    "sharedModules": ["WorldGeometry", "WorldEquipment", "WorldMap", "WorldEquipmentDisplay"],
+    "controller": "GearHallController",
+    "newSpecsInstalled": 4,
+    "passed": 384,
+    "failed": 0,
+    "comparedModuleSources": 12,
+    "runtimeQaComplete": false,
+    "plotMigrationComplete": false,
+    "boundaryAuthorityInstalled": false,
+    "liveTemplatesScaled": false,
+    "geometryConfigUpdated": true,
+    "nativeEditSaveOutputTime": "17:37:05.844",
+    "savedWithoutPublishing": true
+  },
   "pushApproved": false,
   "placeSaveConfirmedForThisStage": true,
   "screenshotCritiqueRounds": 0,

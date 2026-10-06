@@ -2,6 +2,24 @@
 
 Updated 6 October 2026. Read PLAN.md, this file, Git status and the connected place before continuing.
 
+## Execution resumed after permission change
+
+Current source checkpoint: WorldEquipment, WorldGeometry, WorldMap and WorldEquipmentDisplay exist on disk and in Studio, with the new GearHallController. The four new specs are installed and the full scratch-clone runner passed **384/384**. RED evidence was 0/3 missing helpers; after implementation 17/3 exposed old geometry Config; the display spec separately failed 0/1 before its implementation, then passed 4/4. Config now uses knockback180, tutorial160, crater floor−44/opening160/centreY5.3, doubled landing dimensions and cardinal effect-free approaches. Mining reach, HP, counts, rates, durations, prices and odds are unchanged. The controller's actual Observe connection was inspected and supports Disconnect.
+
+Studio reopened twice during this work. Current confirmed connection is `d43c85b7-4d75-4eaf-9e8a-d47c28b16436`, place113476105600560, Edit mode; staged art remains1417parts. All12 changed/new module sources were compared with disk in this session; they matched. Native Ctrl+S completed, observed Output **17:37:05.844 Saved new changes in "Craterworks: Meteor Mining" to Roblox.** on6October2026. Save only, no publishing. The save screenshot is not critique evidence. Full GUI manifest verification and local commit follow this checkpoint; staged runtime/phone/performance testing has not run.
+
+Ruling: isolate the world display's Instance lifecycle in Shared.WorldEquipmentDisplay and leave GearHallController as State/Heartbeat wiring — actual EquipmentModels, mount translation, replacement/cleanup and collision budgets can be tested without mocking Knit or changing ScreenGuis — cost if wrong: runtime client QA must still prove connection/wiring and sign readability.
+
+The existing clone runner initially saw pre-sync Config values immediately after disk edits. Readback then showed the new sources present; a guarded synchronization and new scratch clone passed380/380 before the display spec was added. Rojo is asynchronous; compare live Source with disk before running or claiming coverage. Do not duplicate modules when an automatic sync has already created them.
+
+Next: test and implement shared-only Refinery/Upgrade services, remove PlotService/HomeController/plot State, connect world consumers to the Studio root selector, add boundary authority and impact ground-raycast, then staged Play QA. The original map/assets remain untouched, so do not play against the archived world with the new geometry Config. No stage is marked complete until all its runtime contracts are met.
+
+The current environment has full filesystem/network access and no approval reviewer. The latest full redesign brief explicitly requests new world controllers/helpers/specs and runtime plot removal; it supersedes the initial building-only script restriction for this redesign. Resume Stage 2 under that brief, preserving every frozen GUI file and the original active map. The prior blocked audit below remains historical evidence, not a current stop condition. Computer-use scope remains saving only; foreground QA permission has not changed.
+
+Ruling: keep the existing feature branch and scene isolation at Map_Redesign — it preserves the owner's open Studio/source relationship and the brief explicitly requires this staging root — cost if wrong: source/runtime changes remain reversible by checkpoint while original world assets remain archived.
+
+Ruling: update the draft geometry spec's fallback centre from Y2 to Y5.3 before its RED run — the measured lowest meteor bound required Y5.3 and the saved scene/approved plan already use it — cost if wrong: runtime variant QA must reject a mismatched landing height. No acceptance assertion is removed.
+
 ## Current resumed-run audit — blocked, not complete
 
 The third resumed goal turn rechecked the full brief, plan, Git, connected Edit place, frozen GUI hashes and all four staging export hashes. See `REQUIREMENTS-AUDIT.md` for the requirement-by-requirement evidence. Saved art checkpoint is `0049b90`; no scene or Source changes were made in this audit.

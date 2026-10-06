@@ -25,6 +25,6 @@ Tutorial.Steps = {
 } :: { Step }
 
 -- Standing this close (horizontally) to the crater centre during an event counts as "reached"
-Tutorial.CraterRadius = 80
+Tutorial.CraterRadius = 160
 
 return Tutorial
