@@ -78,10 +78,13 @@ function NativeUI.menu(name: string, title: string, color: Color3, width: number
 	NativeUI.button(panel, "Close", "X", UDim2.new(1, -48, 0, 4), UDim2.fromOffset(44, 44), NativeUI.RED)
 	return gui
 end
-function NativeUI.get(name: string): ScreenGui
+-- `prepare` runs before the shared cartoon skin, so a controller can mark the
+-- subtrees it styles itself (attribute CartoonCustom = true).
+function NativeUI.get(name: string, prepare: ((ScreenGui) -> ())?): ScreenGui
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	local gui = playerGui:WaitForChild(name, 15)
 	assert(gui and gui:IsA("ScreenGui"), "Missing StarterGui prefab: " .. name .. ". Run tools/build-native-ui.luau in Edit mode.")
+	if prepare then prepare(gui :: ScreenGui) end
 	MenuSkin.apply(gui :: ScreenGui)
 	for _, node in gui:GetDescendants() do
 		if node:IsA("GuiButton") then

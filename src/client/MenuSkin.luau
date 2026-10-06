@@ -313,6 +313,8 @@ local function skinNode(node: Instance, gui: ScreenGui)
 		local name = ancestor.Name
 		if name == "Design" or name == "CartoonTile" or name == "Tooltip" or name == "ReadyBadge" or name == "Dimmer" then return end
 		if string.sub(name, 1, 4) == "Skin" or string.sub(name, -8) == "Backdrop" then return end
+		-- Controllers that draw their own cartoon layout mark the subtree.
+		if ancestor:GetAttribute("CartoonCustom") == true then return end
 		ancestor = ancestor.Parent
 	end
 	if node:IsA("GuiButton") and node.Parent and node.Parent:IsA("ScreenGui") and string.find(node.Name, "Button") then return end

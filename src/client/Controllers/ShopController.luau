@@ -16,6 +16,8 @@ local Pets = require(RS.Shared.Pets)
 local N = require(script.Parent.Parent.NativeUI)
 local Preview = require(script.Parent.Parent.NativePreview)
 local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
+local UpgradePanel = require(script.Parent.Parent.UpgradePanel)
+local Cartoon = require(script.Parent.Parent.Cartoon)
 local player = Players.LocalPlayer
 local Controller = Knit.CreateController({ Name = "ShopController" })
 local wantOpen, wantHighlight = false, false
@@ -32,7 +34,15 @@ end
 function Controller:KnitStart()
 	local shop, pets = Knit.GetService("ShopService"), Knit.GetService("PetService")
 	local petVisuals = Knit.GetController("PetVisualController")
-	local gui = N.get("GearShop")
+	local gui = N.get("GearShop", function(shopGui)
+		-- The upgrade screens draw their own Gatherer-style view; the ribbon goes blue.
+		local panel = shopGui:WaitForChild("Panel")
+		local header = panel:FindFirstChild("Header")
+		if header and header:IsA("GuiObject") then header.BackgroundColor3 = N.CYAN end
+		for _, kind in { "pickaxe", "backpack" } do
+			panel:WaitForChild(kind .. "Screen"):WaitForChild("Showcase"):SetAttribute("CartoonCustom", true)
+		end
+	end)
 	gui.Enabled = true
 	local p: any, nav: any = gui.Panel, gui.ShopButton
 	local navRefs = ExactNavButton.bind(nav)
@@ -63,6 +73,60 @@ function Controller:KnitStart()
 		return if stat == "power" then string.format("%.2f", pick.Power) elseif stat == "speed" then string.format("%.2fs", pick.Swing)
 			elseif stat == "reach" then string.format("%.1f studs", pick.Reach) else string.format("%.1f%%", pick.CritChance * 100)
 	end
+	-- Raw stat numbers so the upgrade view can show the value and its +delta.
+	local function statNumber(kind: string, stat: string, level: number): number
+		if kind == "backpack" then return math.floor(Gear.capacity(1, { capacity = level })) end
+		local levels = { power = 1, speed = 1, reach = 1, crit = 1 }
+		levels[stat] = level
+		local pick = Gear.pickaxe(1, levels)
+		return if stat == "power" then pick.Power elseif stat == "speed" then pick.Swing elseif stat == "reach" then pick.Reach else pick.CritChance * 100
+	end
+	local function statDelta(kind: string, stat: string, delta: number): string
+		local sign = if delta >= 0 then "+" else "-"
+		local size = math.abs(delta)
+		if kind == "backpack" then return sign .. Format.number(math.floor(size + .5)) .. " ore" end
+		return sign .. (if stat == "power" then string.format("%.2f", size) elseif stat == "speed" then string.format("%.2fs", size)
+			elseif stat == "reach" then string.format("%.2f studs", size) else string.format("%.1f%%", size))
+	end
+	-- One Gatherer-style view per gear kind: pick a stat row (or Evolve), an
+	-- amount, then press Upgrade. The authored stat rows stay as hidden bindings.
+	local AMOUNTS = { 1, 10, math.huge }
+	local views: { [string]: any } = {}
+	local upgradeSelected: (kind: string) -> ()
+	for _, kind in { "pickaxe", "backpack" } do
+		local screen = p[kind .. "Screen"]
+		screen.Rows.Visible = false
+		local showcase = screen.Showcase
+		local well = showcase.Well
+		for _, child in well:GetChildren() do
+			if child:IsA("UIStroke") or child:IsA("UICorner") or child:IsA("UIGradient") or child.Name == "StudTexture" then child:Destroy() end
+		end
+		well.Position, well.Size, well.BackgroundColor3, well.ZIndex = UDim2.new(), UDim2.fromScale(1, 1), Color3.fromRGB(96, 146, 214), 2
+		local wellCorner = Instance.new("UICorner"); wellCorner.CornerRadius = UDim.new(0, 12); wellCorner.Parent = well
+		local wellStroke = Instance.new("UIStroke"); wellStroke.Color, wellStroke.Thickness = Color3.fromRGB(22, 50, 118), 4; wellStroke.Parent = well
+		local wellGradient = Instance.new("UIGradient"); wellGradient.Rotation = 90
+		wellGradient.Color = ColorSequence.new(Color3.fromRGB(150, 196, 255), Color3.fromRGB(74, 122, 196)); wellGradient.Parent = well
+		showcase.ZIndex = 3
+		local name, tierText = showcase.GearName, showcase.TierText
+		name.Position, name.Size, name.ZIndex = UDim2.new(0, 8, 1, -36), UDim2.new(1, -16, 0, 30), 6
+		name.TextXAlignment, name.TextScaled, name.TextColor3, name.Font = Enum.TextXAlignment.Center, true, N.WHITE, Cartoon.FONT
+		tierText.Position, tierText.Size, tierText.ZIndex = UDim2.fromOffset(8, 8), UDim2.fromOffset(96, 24), 6
+		tierText.TextXAlignment, tierText.TextSize, tierText.TextColor3, tierText.Font = Enum.TextXAlignment.Center, 14, N.WHITE, Cartoon.FONT
+		tierText.BackgroundTransparency, tierText.BackgroundColor3 = 0.15, Color3.fromRGB(22, 50, 118)
+		local chipCorner = Instance.new("UICorner"); chipCorner.CornerRadius = UDim.new(0.5, 0); chipCorner.Parent = tierText
+		for _, text in { name, tierText } do
+			text.TextStrokeTransparency = 1
+			Cartoon.textStroke(if text == name then 3 else 2).Parent = text
+		end
+		local view = UpgradePanel.new(screen, { amounts = { "1x", "10x", "MAX" }, portrait = false })
+		-- `auto` picks the first stat that can still level (or Evolve) until the player chooses a row.
+		local entry = { view = view, selected = Config.Gear[if kind == "pickaxe" then "Pickaxe" else "Backpack"].Stats[1], amount = 1, auto = true }
+		view.onSelect = function(id: string) entry.selected, entry.auto = id, false; update() end
+		view.onAmount = function(index: number) entry.amount = index; update() end
+		view.onUpgrade = function() upgradeSelected(kind) end
+		views[kind] = entry
+	end
+	local wasOpen = false
 	local function close() wantOpen = false; player:SetAttribute("ShopOpen", false); update() end
 	local function petEntry(id: string): any return state and state.pets and state.pets.owned[id] end
 	local function equipped(id: string): boolean return state ~= nil and state.pets ~= nil and table.find(state.pets.equipped, id) ~= nil end
@@ -72,6 +136,8 @@ function Controller:KnitStart()
 	update = function()
 		local g = geometry
 		local open = player:GetAttribute("ShopOpen") == true
+		if open and not wasOpen then for _, entry in views do entry.auto = true end end
+		wasOpen = open
 		p.Visible, gui.Dimmer.Visible = open, open
 		nav.Visible = not open
 		p.AnchorPoint = Vector2.zero
@@ -125,6 +191,62 @@ function Controller:KnitStart()
 				.. " · Player level " .. (state and state.level or 1) .. "/" .. Levels.evolveLevel(e.tier) .. "\n" .. Price.text(e.cost, e.shards) else "Nothing left to evolve."
 			N.enable(banner.Evolve, ready and affordable and busyId == nil, N.GREEN)
 			banner.Evolve.Text = if not e then "MAX" elseif not ready then "LOCKED" elseif affordable then "EVOLVE" else "SAVE UP"
+			-- The Gatherer-style view for this kind
+			local entry = views[kind]
+			local view = entry.view
+			if entry.auto then
+				entry.selected = "evolve"
+				for _, stat in settings.Stats do
+					if Gear.canLevel(kind, tier, stats[stat] or 1) then entry.selected = stat; break end
+				end
+			end
+			local width, height = g.panel.w - 2 * g.padding, g.carouselH
+			local rows = {}
+			for _, stat in settings.Stats do
+				local level = stats[stat] or 1
+				local cap = not Gear.canLevel(kind, tier, level)
+				local now = statNumber(kind, stat, level)
+				table.insert(rows, {
+					id = stat, name = settings.Names[stat], value = statValue(kind, stat, level),
+					delta = if cap then (if tier == #tiers then "MAX" else "TIER CAP") else statDelta(kind, stat, statNumber(kind, stat, level + 1) - now),
+					locked = cap,
+				})
+			end
+			table.insert(rows, { id = "evolve", name = "Evolve", value = "Tier " .. tier,
+				delta = if e then "→ Tier " .. e.tier else "MAX", locked = not ready })
+			view:select(entry.selected)
+			view:setRows(rows)
+			view:layout(width, height, not g.narrow)
+			if view.portraitRect then
+				local r = view.portraitRect
+				screen.Showcase.Position, screen.Showcase.Size = UDim2.fromOffset(r.x, r.y), UDim2.fromOffset(r.w, r.h)
+			end
+			local cash = if state then state.cash else 0
+			if entry.selected == "evolve" then
+				local gateLevel = stats[settings.Gate] or 1
+				local needLevel = if e then Levels.evolveLevel(e.tier) else 0
+				view:setInfo({
+					levelLabel = "Tier", level = if e then "T" .. tier .. " → T" .. e.tier else "T" .. tier .. " (max)",
+					costLabel = "Cost", cost = if e then Price.text(e.cost, e.shards) else "-",
+					button = if busyId == kind .. "_evolve" then "Evolving..." elseif not e then "Fully evolved"
+						elseif gateLevel < Gear.cap(tier) then "Max " .. settings.Names[settings.Gate] .. " first"
+						elseif state and state.level < needLevel then "Reach level " .. needLevel
+						else "Evolve",
+					enabled = ready and affordable and busyId == nil, tone = "purple", amounts = false,
+				}, entry.amount)
+			else
+				local stat = entry.selected
+				local level = stats[stat] or 1
+				local cap = not Gear.canLevel(kind, tier, level)
+				local count, total = Gear.bulk(kind, tier, stat, level, cash, AMOUNTS[entry.amount])
+				local single = Gear.price(kind, stat, level)
+				view:setInfo({
+					level = if cap then "Lv. " .. level else "Lv. " .. level .. " → " .. (level + math.max(count, 1)),
+					cost = if cap then "-" elseif count > 0 then Format.cash(total) elseif single then Format.cash(single) else "-",
+					button = if busyId == kind .. "_" .. stat then "Upgrading..." elseif cap then (if tier == #tiers then "Max level" else "Tier cap · evolve") else "Upgrade",
+					enabled = state ~= nil and busyId == nil and not cap and count >= 1,
+				}, entry.amount)
+			end
 		end
 		local pg = ShopLayout.petCards(g)
 		local showPets = open and tab == "pets"
@@ -204,6 +326,24 @@ function Controller:KnitStart()
 		navRefs.badge.Visible = wantHighlight
 	end
 	refresh = update
+	upgradeSelected = function(kind: string)
+		if not state or busyId then return end
+		local settings, entry = settingsOf[kind], views[kind]
+		if entry.selected == "evolve" then
+			local e = Gear.evolution(kind, state[kind .. "Tier"], state[kind .. "Stats"])
+			if not e or not e.ready or state.level < Levels.evolveLevel(e.tier) or not Price.canAfford(state, e.cost, e.shards) then return end
+			purchase(kind .. "_evolve", "Evolved.", function() return shop:Evolve(kind) end)
+			return
+		end
+		local stat = entry.selected
+		local wanted = Gear.bulk(kind, state[kind .. "Tier"], stat, state[kind .. "Stats"][stat] or 1, state.cash, AMOUNTS[entry.amount])
+		if wanted < 1 then return end
+		purchase(kind .. "_" .. stat, settings.Names[stat] .. " upgraded.", function()
+			local any = false
+			for i = 1, wanted do if not shop:Upgrade(kind, stat) then break end; any = true; if i < wanted then task.wait(.025) end end
+			return any
+		end)
+	end
 	for _, kind in { "pickaxe", "backpack" } do
 		local settings = settingsOf[kind]
 		for _, stat in settings.Stats do

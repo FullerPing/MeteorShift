@@ -11,6 +11,7 @@ local Levels = require(RS.Shared.Levels)
 local Config = require(RS.Shared.Config)
 local Price = require(RS.Shared.Price)
 local N = require(script.Parent.Parent.NativeUI)
+local UpgradePanel = require(script.Parent.Parent.UpgradePanel)
 local player = Players.LocalPlayer
 local Controller = Knit.CreateController({ Name = "RefineryController" })
 local OTHER_MENUS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen" }
@@ -22,7 +23,10 @@ end
 function Controller:Close() player:SetAttribute("RefineryOpen", false) end
 function Controller:KnitStart()
 	local service, upgrades = Knit.GetService("RefineryService"), Knit.GetService("UpgradeService")
-	local gui = N.get("RefineryMenu")
+	local gui = N.get("RefineryMenu", function(menu)
+		local header = menu:WaitForChild("Panel"):FindFirstChild("Header")
+		if header and header:IsA("GuiObject") then header.BackgroundColor3 = N.CYAN end
+	end)
 	self.Gui = gui
 	local p: any = gui.Panel
 	local state: any = nil
@@ -81,6 +85,52 @@ function Controller:KnitStart()
 	local function stat(id: string, entry: any): string
 		return (if entry.Rate then string.format("%g", entry.Rate) else Format.number(entry.Capacity or 0)) .. " " .. units[id]
 	end
+	-- Gatherer-style upgrades page: pick a station row, an amount, then Upgrade.
+	local shortUnits = { hopper = " ore", conveyor = " ore/s", refinery = " bars/s", collector = " bars" }
+	local stationIcons = { hopper = "ore", conveyor = "chevron", refinery = "foundry", collector = "bars" }
+	local STATION_AMOUNTS = { 1, 5, math.huge }
+	local selectedStation, stationAmount = Home.StationOrder[1], 1
+	local view = UpgradePanel.new(p, { amounts = { "1x", "5x", "MAX" }, portrait = true })
+	view.root.Position = UDim2.fromOffset(16, 132)
+	local function amountOf(entry: any): number return entry.Rate or entry.Capacity or 0 end
+	local function shortStat(id: string, value: number): string
+		return (if Home.Stations[id].Levels[1].Rate then string.format("%g", value) else Format.number(value)) .. shortUnits[id]
+	end
+	-- How many levels of `id` the wallet covers for the chosen amount, and their price.
+	local function stationPlan(id: string): (number, number, number)
+		local def = Home.Stations[id]
+		local level = if state and state.line and state.line[id] then state.line[id].level else 1
+		local count, cash, shards = 0, 0, 0
+		while state and count < STATION_AMOUNTS[stationAmount] do
+			local nextLevel = def.Levels[level + count + 1]
+			if not nextLevel or not Price.canAfford(state, cash + nextLevel.Cost, shards + nextLevel.Shards) then break end
+			cash, shards, count = cash + nextLevel.Cost, shards + nextLevel.Shards, count + 1
+		end
+		return count, cash, shards
+	end
+	local function buyStations()
+		local id = selectedStation
+		local count = stationPlan(id)
+		if count < 1 or upgrading or transaction then return end
+		local def = Home.Stations[id]
+		upgrading, feedback = id, ""; update()
+		task.spawn(function()
+			local bought = 0
+			for i = 1, count do
+				local ok, accepted = pcall(function() return upgrades:BuyStation(id) end)
+				if not ok or not accepted then break end
+				bought += 1
+				if i < count then task.wait(0.05) end
+			end
+			upgrading = nil
+			if bought > 0 then feedback = def.Name .. " upgraded" .. (if bought > 1 then " ×" .. bought else "") .. "."
+			elseif feedback == "" then feedback = "Couldn't upgrade. Please try again." end
+			update()
+		end)
+	end
+	view.onSelect = function(id: string) selectedStation = id; update() end
+	view.onAmount = function(index: number) stationAmount = index; update() end
+	view.onUpgrade = buyStations
 	update = function()
 		local l, line = geometry, state and state.line
 		local refining = page == "refine"
@@ -106,7 +156,8 @@ function Controller:KnitStart()
 		end
 		p.refineTab.BackgroundColor3 = if refining then N.CYAN else N.CARD
 		p.productionTab.BackgroundColor3 = if refining then N.CARD else N.ORANGE
-		p.UpgradeWallet.Visible, p.ProductionUpgrades.Visible = not refining, not refining
+		p.UpgradeWallet.Visible, p.ProductionUpgrades.Visible = not refining, false
+		view.root.Visible = not refining
 		p.UpgradeWallet.Text = if state then Format.cash(state.cash) .. " · " .. Format.number(state.shards) .. " shards · Your production line" else "Loading..."
 		p.ProductionUpgrades.Size = UDim2.new(1, -32, 1, -188)
 		for _, id in Home.StationOrder do
@@ -120,6 +171,33 @@ function Controller:KnitStart()
 			N.enable(card.BuyUpgrade, enabled, N.ORANGE)
 			card.BuyUpgrade.Text = if not state then "Loading..." elseif upgrading == id then "Upgrading..." elseif not nextLevel then "MAX LEVEL"
 				else (if enabled then "UPGRADE" else "SAVE UP") .. "\n" .. Price.text(nextLevel.Cost, nextLevel.Shards)
+		end
+		local stationRows = {}
+		for _, id in Home.StationOrder do
+			local def = Home.Stations[id]
+			local level = if line and line[id] then line[id].level else 1
+			local current, nextLevel = def.Levels[level], def.Levels[level + 1]
+			table.insert(stationRows, {
+				id = id, name = def.Name, value = shortStat(id, amountOf(current)),
+				delta = if nextLevel then "+" .. shortStat(id, amountOf(nextLevel) - amountOf(current)) else "MAX",
+				locked = nextLevel == nil,
+			})
+		end
+		view:select(selectedStation)
+		view:setRows(stationRows)
+		view:layout(p.Size.X.Offset - 32, math.max(0, p.Size.Y.Offset - 188))
+		view:setPortrait(Config.HudIcons[stationIcons[selectedStation]])
+		do
+			local def = Home.Stations[selectedStation]
+			local level = if line and line[selectedStation] then line[selectedStation].level else 1
+			local nextLevel = def.Levels[level + 1]
+			local count, cash, shards = stationPlan(selectedStation)
+			view:setInfo({
+				level = if nextLevel then "Lv. " .. level .. " → " .. (level + math.max(count, 1)) else "Lv. " .. level,
+				cost = if not nextLevel then "MAXED" elseif count > 0 then Price.text(cash, shards) else Price.text(nextLevel.Cost, nextLevel.Shards),
+				button = if not state then "Loading..." elseif upgrading == selectedStation then "Upgrading..." elseif not nextLevel then "Max level" else "Upgrade",
+				enabled = state ~= nil and nextLevel ~= nil and count >= 1 and upgrading == nil and transaction == nil,
+			}, stationAmount)
 		end
 		local rows = Queue.rows(state and state.hopperInventory, state and state.collectorInventory, state and state.refinePriority)
 		local visible, ids = {}, queuedIds()
