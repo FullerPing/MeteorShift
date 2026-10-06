@@ -55,9 +55,11 @@ function WorldEquipment.current(kind: string, state: any): any
 		} }
 	end
 	local pick = Gear.pickaxe(tier, stats)
+	local bonuses = if type(snapshot.pets) == "table" and type(snapshot.pets.bonuses) == "table" then snapshot.pets.bonuses else {}
+	local critBonus = if finite(bonuses.crit) and bonuses.crit >= 0 then bonuses.crit else 0
 	return { tier = tier, name = item.Name, stats = {
 		power = pick.Power, swing = effective(snapshot.swing, pick.Swing),
-		reach = effective(snapshot.reach, pick.Reach), critChance = pick.CritChance,
+		reach = effective(snapshot.reach, pick.Reach), critChance = math.clamp(pick.CritChance + critBonus, 0, 1),
 		orePerHit = pick.OrePerHit,
 	} }
 end

@@ -10,6 +10,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
+local WorldGeometry = require(ReplicatedStorage.Shared.WorldGeometry)
+local MeteorVisualGeometry = require(ReplicatedStorage.Shared.MeteorVisualGeometry)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
@@ -21,7 +23,7 @@ local MeteorFXController = Knit.CreateController({
 	Name = "MeteorFXController",
 })
 
-local STREAK_OFFSET = Vector3.new(-420, 520, 260) -- where the streak enters the sky, relative to the crater
+local geometry = MeteorVisualGeometry.build(WorldGeometry.Settings.MeteorScale, Config.Meteor.Knockback.Radius)
 
 local shakeTrauma = 0 -- 0..1, decays over time
 local rumbleLevel = 0 -- sustained shake while the meteor approaches
@@ -47,7 +49,7 @@ local function distanceScale(position: Vector3, radius: number): number
 	if not root then
 		return 0
 	end
-	return math.clamp(1 - (root.Position - position).Magnitude / radius, 0, 1)
+	return MeteorVisualGeometry.falloff((root.Position - position).Magnitude, radius)
 end
 
 function MeteorFXController:_clearStreak()
@@ -80,33 +82,41 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	local ball = Instance.new("Part")
 	ball.Name = "MeteorStreak"
 	ball.Shape = Enum.PartType.Ball
-	ball.Size = Vector3.one * 16
+	ball.Size = geometry.Streak.StartSize
 	ball.Material = Enum.Material.Neon
 	ball.Color = color
 	ball.Anchored = true
 	ball.CanCollide = false
 	ball.CanQuery = false
 	ball.CastShadow = false
-	ball.Position = target + STREAK_OFFSET
+	ball.Position = target + geometry.Streak.Offset
 
-	local fire = Instance.new("Fire")
-	fire.Size = 30
-	fire.Heat = 25
-	fire.Color = color
-	fire.SecondaryColor = Color3.fromRGB(255, 230, 120)
-	fire.Parent = ball
+	-- Native Fire is capped at Size30/Heat25; one local emitter can grow with the
+	-- meteor without more lights or parts. At most14 live flame particles.
+	local flame = Instance.new("ParticleEmitter")
+	flame.Name = "MeteorFlame"
+	flame.Texture = "rbxasset://textures/particles/fire_main.dds"
+	flame.Size = geometry.Streak.FlameSize
+	flame.Speed = geometry.Streak.FlameSpeed
+	flame.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), color)
+	flame.Transparency = NumberSequence.new(0.1, 1)
+	flame.Lifetime = NumberRange.new(0.4, 0.7)
+	flame.Rate = 20
+	flame.LightEmission = 1
+	flame.SpreadAngle = Vector2.new(15, 15)
+	flame.Parent = ball
 
 	local light = Instance.new("PointLight")
 	light.Brightness = 6
-	light.Range = 60
+	light.Range = geometry.Streak.LightRange
 	light.Color = color
 	light.Parent = ball
 
 	local a0 = Instance.new("Attachment")
-	a0.Position = Vector3.new(0, 6, 0)
+	a0.Position = geometry.Streak.TrailTop
 	a0.Parent = ball
 	local a1 = Instance.new("Attachment")
-	a1.Position = Vector3.new(0, -6, 0)
+	a1.Position = geometry.Streak.TrailBottom
 	a1.Parent = ball
 	local trail = Instance.new("Trail")
 	trail.Attachment0 = a0
@@ -121,11 +131,11 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	local smoke = Instance.new("ParticleEmitter")
 	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
 	smoke.Color = ColorSequence.new(Color3.fromRGB(90, 80, 75))
-	smoke.Size = NumberSequence.new(8, 20)
+	smoke.Size = geometry.Streak.SmokeSize
 	smoke.Transparency = NumberSequence.new(0.3, 1)
 	smoke.Lifetime = NumberRange.new(2, 3)
 	smoke.Rate = 40
-	smoke.Speed = NumberRange.new(2, 5)
+	smoke.Speed = geometry.Streak.SmokeSpeed
 	smoke.Parent = ball
 
 	ball.Parent = workspace.CurrentCamera
@@ -133,7 +143,7 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 
 	streakTween = TweenService:Create(ball, TweenInfo.new(math.max(secondsLeft, 0.2), Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Position = target,
-		Size = Vector3.one * 22,
+		Size = geometry.Streak.EndSize,
 	})
 	streakTween:Play()
 
@@ -143,7 +153,9 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	sound.Looped = true
 	sound.Volume = rumbleEntry.Volume
 	sound.PlaybackSpeed = Sfx.pitch(rumbleEntry)
-	sound.Parent = workspace.CurrentCamera
+	sound.RollOffMinDistance = geometry.Sound.minDistance
+	sound.RollOffMaxDistance = geometry.Sound.maxDistance
+	sound.Parent = ball
 	sound:Play()
 	rumble = sound
 end
@@ -162,12 +174,11 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	ring.Material = Enum.Material.Neon
 	ring.Color = color
 	ring.Transparency = 0.2
-	ring.Size = Vector3.new(1, 8, 8)
-	ring.CFrame = CFrame.new(position - Vector3.new(0, 4, 0)) * CFrame.Angles(0, 0, math.rad(90))
+	ring.Size = geometry.Impact.RingStartSize
+	ring.CFrame = CFrame.new(position + geometry.Impact.RingOffset) * CFrame.Angles(0, 0, math.rad(90))
 	ring.Parent = folder
-	local radius = Config.Meteor.Knockback.Radius * 2
 	TweenService:Create(ring, TweenInfo.new(1.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
-		Size = Vector3.new(1, radius, radius),
+		Size = geometry.Impact.RingEndSize,
 		Transparency = 1,
 	}):Play()
 
@@ -180,11 +191,11 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	flash.CastShadow = false
 	flash.Material = Enum.Material.Neon
 	flash.Color = Color3.fromRGB(255, 230, 170)
-	flash.Size = Vector3.one * 10
+	flash.Size = geometry.Impact.FlashStartSize
 	flash.Position = position
 	flash.Parent = folder
 	TweenService:Create(flash, TweenInfo.new(0.6, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = Vector3.one * 70,
+		Size = geometry.Impact.FlashEndSize,
 		Transparency = 1,
 	}):Play()
 
@@ -194,19 +205,19 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	dustAnchor.CanCollide = false
 	dustAnchor.CanQuery = false
 	dustAnchor.Transparency = 1
-	dustAnchor.Size = Vector3.new(40, 1, 40)
+	dustAnchor.Size = geometry.Impact.DustAnchorSize
 	dustAnchor.Position = position
 	dustAnchor.Parent = folder
 	local dust = Instance.new("ParticleEmitter")
 	dust.Texture = "rbxasset://textures/particles/smoke_main.dds"
 	dust.Color = ColorSequence.new(Color3.fromRGB(150, 130, 110))
-	dust.Size = NumberSequence.new({ NumberSequenceKeypoint.new(0, 8), NumberSequenceKeypoint.new(1, 26) })
+	dust.Size = geometry.Impact.DustSize
 	dust.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.2),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	dust.Lifetime = NumberRange.new(3, 5)
-	dust.Speed = NumberRange.new(20, 45)
+	dust.Speed = geometry.Impact.DustSpeed
 	dust.SpreadAngle = Vector2.new(80, 80)
 	dust.Drag = 2
 	dust.Enabled = false
@@ -220,7 +231,7 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	explosion.Position = position
 	explosion.Parent = folder
 
-	Sfx.play("MeteorImpact", dustAnchor)
+	Sfx.play("MeteorImpact", dustAnchor, geometry.Sound)
 
 	task.delay(6, function()
 		ring:Destroy()
@@ -275,13 +286,13 @@ function MeteorFXController:_onImpact(position: Vector3, typeId: string?)
 	local meteorType = Config.Meteor.Types[typeId or "Iron"] or Config.Meteor.Types.Iron
 	self:_shockwave(position, meteorType.GlowColor)
 	knockback(position)
-	addShake(0.4 + distanceScale(position, 250) * 0.6)
+	addShake(0.4 + distanceScale(position, geometry.Shake.ImpactRadius) * 0.6)
 	flashScreen(0.5, 0.8)
 end
 
 function MeteorFXController:_onCoreCracked(position: Vector3)
 	flashScreen(0.8, 1.2)
-	addShake(0.3 + distanceScale(position, 200) * 0.5)
+	addShake(0.3 + distanceScale(position, geometry.Shake.CoreRadius) * 0.5)
 	if player:GetAttribute("ReduceEffects") == true then return end
 
 	local burst = Instance.new("Part")
@@ -292,29 +303,29 @@ function MeteorFXController:_onCoreCracked(position: Vector3)
 	burst.CastShadow = false
 	burst.Material = Enum.Material.Neon
 	burst.Color = Color3.fromRGB(255, 200, 120)
-	burst.Size = Vector3.one * 14
+	burst.Size = geometry.Core.StartSize
 	burst.Position = position
 	burst.Parent = workspace.CurrentCamera
 	TweenService:Create(burst, TweenInfo.new(0.9, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-		Size = Vector3.one * 60,
+		Size = geometry.Core.EndSize,
 		Transparency = 1,
 	}):Play()
 
 	local shards = Instance.new("ParticleEmitter")
 	shards.Color = ColorSequence.new(Color3.fromRGB(120, 220, 255), Color3.fromRGB(200, 120, 255))
 	shards.LightEmission = 1
-	shards.Size = NumberSequence.new(1.2, 0)
-	shards.Speed = NumberRange.new(40, 80)
+	shards.Size = geometry.Core.ShardsSize
+	shards.Speed = geometry.Core.ShardsSpeed
 	shards.SpreadAngle = Vector2.new(180, 180)
 	shards.Lifetime = NumberRange.new(1, 1.8)
-	shards.Acceleration = Vector3.new(0, -50, 0)
+	shards.Acceleration = geometry.Core.ShardsAcceleration
 	shards.Enabled = false
 	shards.Parent = burst
 	shards:Emit(80)
 
-	Sfx.play("CoreCrack", burst)
-	Sfx.play("CoreWhoosh", burst)
-	Sfx.play("CoreChime", burst)
+	Sfx.play("CoreCrack", burst, geometry.Sound)
+	Sfx.play("CoreWhoosh", burst, geometry.Sound)
+	Sfx.play("CoreChime", burst, geometry.Sound)
 	task.delay(3, function()
 		burst:Destroy()
 	end)

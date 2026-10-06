@@ -1,0 +1,41 @@
+{
+  "status": "restored-original-map-playing",
+  "studioId": "d43c85b7-4d75-4eaf-9e8a-d47c28b16436",
+  "date": "2026-10-06",
+  "restoreBeforeSaving": true,
+  "baseline": {
+    "devWorldPresent": false,
+    "spawns": [
+      {
+        "enabled": true,
+        "path": "Workspace.Map.TownSquare.Spawn"
+      },
+      {
+        "enabled": false,
+        "path": "Workspace.Map_Redesign.TownSquare.SpawnPad5"
+      },
+      {
+        "enabled": false,
+        "path": "Workspace.Map_Redesign.TownSquare.SpawnPad6"
+      },
+      {
+        "enabled": false,
+        "path": "Workspace.Map_Redesign.TownSquare.SpawnPad3"
+      },
+      {
+        "enabled": false,
+        "path": "Workspace.Map_Redesign.TownSquare.SpawnPad2"
+      },
+      {
+        "enabled": false,
+        "path": "Workspace.Map_Redesign.TownSquare.SpawnPad4"
+      },
+      {
+        "enabled": false,
+        "path": "Workspace.Map_Redesign.TownSquare.Spawn"
+      }
+    ],
+    "placeId": 113476105600560,
+    "memoryPresent": false
+  }
+}

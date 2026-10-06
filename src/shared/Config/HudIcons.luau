@@ -7,7 +7,7 @@ return table.freeze({
 	backpack = "rbxassetid://84219914513971",
 	crystal = "rbxassetid://127047811968456",
 	coin = "rbxassetid://93455526376116",
-	equipment = "rbxassetid://136249520305285",
+	equipment = "rbxassetid://5938101267", -- owner's authored Gear artwork
 	chevron = "rbxassetid://109613779937854",
 	bars = "rbxassetid://91600762574304",
 	barStack = "rbxassetid://71884621343262", -- tintable 64 × 64 ingots

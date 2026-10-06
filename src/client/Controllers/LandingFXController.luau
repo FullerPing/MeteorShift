@@ -321,17 +321,6 @@ local function readScene(): Scene
 			end
 		end
 	end
-	local plots = child(map, "Plots")
-	if plots then
-		for _, plot in plots:GetChildren() do
-			for _, name in { "Pad", "Path" } do
-				local item = plot:FindFirstChild(name)
-				if item and item:IsA("BasePart") then
-					box(item.CFrame, item.Size)
-				end
-			end
-		end
-	end
 	-- The spawn, the fountain and the planters; flat paving and trim don't count
 	if townSquare then
 		for _, item in townSquare:GetDescendants() do

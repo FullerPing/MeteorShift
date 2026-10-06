@@ -32,7 +32,7 @@ Hud.Column = {
 	Width = 88,
 	Height = 88,
 	Gap = 0,
-	Top = 280,
+	Top = 270,
 	Left = 24,
 }
 
@@ -68,6 +68,19 @@ Hud.LeftCards = {
 Hud.Backpack = { Width = 230, Height = 86, Right = 24, Bottom = 18 }
 Hud.Training = { Width = 332, Height = 125, Gap = 14 }
 Hud.SettingsSize = 44
+
+-- Desktop reference layout. Touch and portrait retain their authored geometry.
+Hud.Desktop = {
+	Timer = { Width = 560, Height = 108, Top = 28 },
+	LeftCards = {
+		X = 24,
+		Gap = 6,
+		Resources = { Width = 292, Height = 116, Bottom = 18 },
+		Equipment = { Width = 88, Height = 88 },
+		Production = { Width = 550, Height = 116, ExpandedHeight = 356, Bottom = 16 },
+	},
+	Backpack = { Width = 292, Height = 116, Right = 24, Bottom = 18 },
+}
 
 -- Roblox's own touch controls, which the HUD has to keep clear of. Mirrors TouchGui: the
 -- jump button is 70 px on small screens (shorter side <= SmallMaxSide) and 120 px on

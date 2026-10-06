@@ -49,22 +49,9 @@ local function pointOf(item: Instance?): Vector3?
 	return nil
 end
 
-local function hopperOf(owner: Player): Vector3?
-	local map = WorldMap.find()
-	local town = map and map:FindFirstChild("TownSquare")
-	local shared = town and town:FindFirstChild("Refinery")
-	if shared then return pointOf(shared:FindFirstChild("Intake", true) or shared:FindFirstChild("Hopper", true) or shared:FindFirstChild("UsePoint", true)) end
-	local plots = map and map:FindFirstChild("Plots")
-	if plots then
-		for _, plot in plots:GetChildren() do
-			if plot:GetAttribute("OwnerUserId") == owner.UserId then
-				local stations = plot:FindFirstChild("Stations")
-				local hopper = stations and stations:FindFirstChild("Hopper")
-				return pointOf(hopper and hopper:FindFirstChild("Intake", true)) or pointOf(hopper)
-			end
-		end
-	end
-	return nil
+local function sharedRefineryPoint(): Vector3?
+	local point = WorldMap.refineryPoint(WorldMap.find())
+	return if point then point.Position else nil
 end
 
 local function petSound(follower: Follower, name: string, id: string, volume: number, pitch: number, looped: boolean?)
@@ -364,7 +351,7 @@ function PetVisualController:KnitStart()
 							follower.workStartedAt = os.clock()
 							follower.workingUntil = follower.workStartedAt + 0.7
 							follower.target = if typeof(target) == "Vector3" then target else nil
-							follower.hopper = if role == "hauler" then hopperOf(follower.owner) else nil
+							follower.hopper = if role == "hauler" then sharedRefineryPoint() else nil
 							if not reduced then PetModel.burst(follower.visual) end
 							break
 						end

@@ -1,5 +1,13 @@
 # MeteorShift handoff
 
+## Current state — original map in Play at owner request
+
+On6October2026 the owner requested “for now return play mode to original map.” Studio connectiond43c85b7-4d75-4eaf-9e8a-d47c28b16436 is now PLAYING Workspace.Map with ServerStorage.Assets, original28.349998Core, originalMeteorSpawn(0,-1.25,0), originalspawn enabled and six stagedspawns disabled. QA attributes/global restoration ledgers are cleared; simulator default/landscape right/FitToWindow. Preserve this mode until the owner asks to resume staged work. Map_Redesign1417parts and Assets_Redesign119parts remain untouched; no swap or publishing.
+
+Latest Source checkpoint is saved in Studio at18:39:50.718, fullsuite412/0, all14changed/newmodules match disk/compile. Source/tools/docs changes since9fe2381 remain uncommitted; preserve ownerdocs/ff.md. Details:docs/map-redesign/runtime-qa-20261006.md and latestPROGRESS.md. Verified runtime refinery open/deposit/normalclaimrequest, TradingPostE sale, shopE, State gear replacement and recovery after local equipment loss. Two actual walking routes passed with100health; jump actions issued but actualobserved0, so jumps remain pending. Ice impact survived with100health; variants/fullBasicnode reach/performance/pets/tutorial/rebirth/rejoin/phones/critique/swap/finalexports/push remain incomplete.
+
+Current staged blocker is mining ascent NoPath to middle/upper/crown. Lower terrace is reachable; Ascent0→segments8/16/24 paths succeed,32+fail. Temporarily disabling494meteorpart collisions did not change the result; all restored before stoppingPlay. Inspect terrace ceiling interference with the rising helix; no geometry repair has been applied. RuntimeWalkingQA.luau now provides the original14targets plus MiningStartLanding and four terraceAscentJoin targets. Phone320×568 evidence stored in qa-images/run5-hud-320x568.png. Read currentPROGRESS before any restart; the older sections below describe superseded checkpoints.
+
 ## Isolated template checkpoint — 6 October 2026
 
 Restored the verified73990-byte staging asset binary into ServerStorage.Assets_Redesign:119parts, zero scripts, Core56.699997 on all axes. Original Assets/Core28.349998 and Map remain unchanged. MeteorService now selects isolated templates only when Studio opts into DevWorldMap=Map_Redesign; production always selects Assets. New selector test failed6passed/1failed before implementation; full suite now397passed/0failed. WorldMap/MeteorService/spec syntax checks pass. Native Edit save confirmed17:58:56.929, no publishing. The staging map is not selected yet and its six spawns remain disabled; do not start Play against the original map with enlarged geometry config.

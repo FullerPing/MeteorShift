@@ -38,7 +38,28 @@ local function statsLabel(stand: Instance): TextLabel?
 	return if found and found:IsA("TextLabel") then found else nil
 end
 
+-- Streamed Models may arrive before their BaseParts. Never build a partial display.
+function Display.ready(hall: Instance?): boolean
+	if not hall then return false end
+	local walls, stands = hall:FindFirstChild("TierWalls"), hall:FindFirstChild("CurrentStands")
+	if not walls or not stands then return false end
+	for _, kind in { "pickaxe", "backpack" } do
+		local catalog = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
+		for _, item in catalog do
+			local card = walls:FindFirstChild(kind .. item.Tier)
+			if not card or not card:IsA("BasePart") or typeof(card:GetAttribute("DisplayOffset")) ~= "CFrame" then return false end
+			local label = card:FindFirstChild("Status", true)
+			if not label or not label:IsA("TextLabel") then return false end
+		end
+		local stand = stands:FindFirstChild(kind)
+		if not stand or not stand:IsA("Model") or not stand.PrimaryPart
+			or typeof(stand:GetAttribute("DisplayOffset")) ~= "CFrame" or not statsLabel(stand) then return false end
+	end
+	return true
+end
+
 function Display.mount(hall: Instance): any
+	assert(Display.ready(hall), "Gear Hall mounts have not finished streaming")
 	assert(not hall:FindFirstChild("LocalEquipment"), "World displays already mounted")
 	local walls, stands = hall:FindFirstChild("TierWalls"), hall:FindFirstChild("CurrentStands")
 	assert(walls and stands, "Missing Gear Hall mounts")
@@ -46,7 +67,7 @@ function Display.mount(hall: Instance): any
 	folder.Name = "LocalEquipment"
 	folder:SetAttribute("LocalGearDisplays", true)
 	folder.Parent = hall
-	local self: any = setmetatable({ folder = folder, cards = {}, stands = {}, current = {}, angle = 0, dead = false }, View)
+	local self: any = setmetatable({ hall = hall, folder = folder, cards = {}, stands = {}, current = {}, angle = 0, dead = false }, View)
 	for _, kind in { "pickaxe", "backpack" } do
 		local catalog = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
 		for _, item in catalog do
@@ -78,6 +99,10 @@ function View:update(state: any)
 			local stand = self.stands[kind]
 			local model = make(kind, row.tier, mountFrame(stand), stand:GetAttribute("DisplayScale") or 2.2, self.folder)
 			model.Name = "Current_" .. kind
+			local parts = {}
+			for _, part in model:GetDescendants() do
+				if part:IsA("BasePart") then table.insert(parts, part) end
+			end
 			local bottom = stand:GetAttribute("DisplayBottomOffset")
 			if typeof(bottom) == "Vector3" then
 				local target = stand:GetPivot():PointToWorldSpace(bottom).Y
@@ -91,7 +116,7 @@ function View:update(state: any)
 				end
 				model:PivotTo(model:GetPivot() + Vector3.new(0, target - lowest, 0))
 			end
-			current = { model = model, tier = row.tier, base = model:GetPivot() }
+			current = { model = model, tier = row.tier, base = model:GetPivot(), parts = parts }
 			self.current[kind] = current
 			model:PivotTo(current.base * CFrame.Angles(0, self.angle, 0))
 		end
@@ -119,6 +144,25 @@ function View:update(state: any)
 			end
 		end
 	end
+end
+
+-- Local descendants of the streamed hall can disappear before the authored mounts.
+function View:intact(): boolean
+	if self.dead or self.folder.Parent ~= self.hall then return false end
+	for _, card in self.cards do
+		if card.model.Parent ~= self.folder then return false end
+		for part in card.colors do
+			if not part:IsDescendantOf(card.model) then return false end
+		end
+	end
+	for _, kind in { "pickaxe", "backpack" } do
+		local current = self.current[kind]
+		if not current or current.model.Parent ~= self.folder then return false end
+		for _, part in current.parts do
+			if not part:IsDescendantOf(current.model) then return false end
+		end
+	end
+	return true
 end
 
 function View:step(dt: number)

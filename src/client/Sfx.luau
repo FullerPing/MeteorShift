@@ -15,6 +15,8 @@ local Sfx = {}
 local DEFAULT_MAX_2D = 4
 local DEFAULT_MAX_3D = 6
 
+export type SpatialReach = { minDistance: number?, maxDistance: number? }
+
 local pools: { [string]: { Sound } } = {}
 local nextIndex: { [string]: number } = {}
 local active3d: { [string]: number } = {}
@@ -40,8 +42,9 @@ local function ready(name: string, entry: Config.SoundEntry): boolean
 end
 
 -- Play `name`. With `parent` (a part or attachment) the sound is heard from there,
--- otherwise it is 2D. Returns the Sound, or nil when dropped.
-function Sfx.play(name: string, parent: Instance?): Sound?
+-- otherwise it is 2D. Optional reach applies only to this spatial sound; omitted
+-- reach retains the existing rolloff. Returns the Sound, or nil when dropped.
+function Sfx.play(name: string, parent: Instance?, reach: SpatialReach?): Sound?
 	local entry = Config.Sounds[name]
 	if not entry or not ready(name, entry) then
 		return nil
@@ -56,7 +59,8 @@ function Sfx.play(name: string, parent: Instance?): Sound?
 		sound.SoundId = entry.Id
 		sound.Volume = entry.Volume
 		sound.PlaybackSpeed = Sfx.pitch(entry)
-		sound.RollOffMaxDistance = 1000
+		sound.RollOffMaxDistance = if reach and reach.maxDistance then reach.maxDistance else 1000
+		if reach and reach.minDistance then sound.RollOffMinDistance = reach.minDistance end
 		sound.Parent = parent
 		sound:Play()
 		local done = false

@@ -53,6 +53,17 @@ return function(t: any)
 		t.eq(new.name, Config.Backpacks[8].Name)
 		t.eq(new.stats.capacity, 2400)
 	end)
+	t.test("world crit reflects equipped pet State and updates with the loadout", function()
+		local state = { pickaxeTier = 1, pets = { bonuses = { crit = 0.12 } } }
+		t.near(Equipment.current("pickaxe", state).stats.critChance, 0.12, 1e-6)
+		state.pets.bonuses.crit = 0.04
+		t.near(Equipment.current("pickaxe", state).stats.critChance, 0.04, 1e-6)
+		state.pets.bonuses.crit = 2
+		t.eq(Equipment.current("pickaxe", state).stats.critChance, 1)
+		for _, pets in { false, { bonuses = false }, { bonuses = { crit = "high" } }, { bonuses = { crit = math.huge } } } do
+			t.eq(Equipment.current("pickaxe", { pets = pets }).stats.critChance, 0)
+		end
+	end)
 	t.test("presentation does not mutate State and clamps out-of-range tiers", function()
 		local state = { pickaxeTier = 999, pickaxeStats = { power = 2 } }
 		local row = Equipment.current("pickaxe", state)

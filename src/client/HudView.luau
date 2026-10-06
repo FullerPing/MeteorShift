@@ -23,7 +23,7 @@ local function text(scope: Scope, name: string, value: any, x: number, y: number
 		Font = if bold then UI.FONT else UI.BODY_FONT,
 		TextSize = size, TextColor3 = color or WHITE, TextXAlignment = Enum.TextXAlignment.Left,
 		TextTruncate = Enum.TextTruncate.AtEnd,
-		TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = if bold then 0.15 elseif floating then 0.4 else 1,
+		TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = if bold then 0.15 else 0.4,
 	})
 end
 local function meter(scope: Scope, name: string, x: number, y: number, w: number, fill: any, color: any, height: number?)
@@ -47,7 +47,7 @@ local function frame(scope: Scope, hud: any, name: string, baseWidth: number, re
 			if name == "Timer" then return layout.timerVisible end
 			return true
 		end),
-		BackgroundTransparency = if clear then 1 else 0.06,
+		BackgroundTransparency = if clear then 1 else 0,
 		Position = scope:Computed(function(use) local r = rectFor(use(hud)); return UDim2.fromOffset(r.x, r.y) end),
 		Size = scope:Computed(function(use) local r = rectFor(use(hud)); return UDim2.fromOffset(baseWidth, r.h / (r.w / baseWidth)) end),
 		[Children] = {
@@ -79,9 +79,9 @@ local function barViews(scope: Scope, rows: any, scale: any)
 			Name = id .. "Bars", LayoutOrder = index, Size = UDim2.new(1, -4, 0, 30), BackgroundTransparency = 1,
 			[Children] = {
 				UI.hudIcon(rowScope, "barStack", { Position = UDim2.fromOffset(0, 5), Size = UDim2.fromOffset(24, 24), ImageColor3 = tint }),
-				text(rowScope, "Type", rowScope:Computed(function(use) return use(row).name end), 34, 5, 150, 24, rowFont(15), tint, true),
-				text(rowScope, "Amount", rowScope:Computed(function(use) return Format.number(use(row).amount) end), 194, 5, 68, 24, rowFont(15), WHITE, true),
-				text(rowScope, "Value", rowScope:Computed(function(use) return Format.cash(use(row).value) end), 272, 5, 96, 24, rowFont(14), UI.HUD_MINT),
+				text(rowScope, "Type", rowScope:Computed(function(use) return use(row).name end), 34, 5, 224, 24, rowFont(17), tint, true),
+				text(rowScope, "Amount", rowScope:Computed(function(use) return Format.number(use(row).amount) end), 284, 5, 88, 24, rowFont(17), WHITE, true),
+				text(rowScope, "Value", rowScope:Computed(function(use) return Format.cash(use(row).value) end), 400, 5, 112, 24, rowFont(17), WHITE, true),
 			},
 		})
 	end)
@@ -115,40 +115,50 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 		end)
 	end
 	local function productionFont(size: number, minimum: number)
-		return font(scope, hud, 400, function(l) return l.leftCards.Production end, size, minimum)
+		return font(scope, hud, 550, function(l) return l.leftCards.Production end, size, minimum)
 	end
 	local glow = scope:Computed(function(use)
 		local s = use(data.meteorState); local kind = s and Config.Meteor.Types[s.type]
 		return if kind then kind.GlowColor:Lerp(WHITE, 0.2) else ORANGE
 	end)
 	local barRows = scope:Computed(function(use) return HudResources.bars(state(use)) end)
-	local productionScale = scope:Computed(function(use) return use(hud).leftCards.Production.w / 400 end)
+	local productionScale = scope:Computed(function(use) return use(hud).leftCards.Production.w / 550 end)
 	local rowViews = barViews(scope, barRows, productionScale)
 	local canSell = scope:Computed(function(use)
 		local s = state(use)
 		return s ~= nil and s.bars > 0 and not use(data.saleBusy)
 	end)
 	local saleHeight = scope:Computed(function(use) return HudLayout.closeSize(44, use(productionScale)) end)
+	local saleText = scope:Computed(function(use)
+		if use(data.saleBusy) then return "SELLING..." end
+		local s = state(use)
+		if not s then return "LOADING BARS..." end
+		if s.bars <= 0 then return "NO BARS TO SELL" end
+		return "SELL ALL · " .. Format.cash(s.barValue)
+	end)
 	local summary = scope:New("Frame")({
-		Name = "Summary", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromOffset(400, 82), BackgroundTransparency = 1,
+		Name = "Summary", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.fromOffset(550, 116), BackgroundTransparency = 1,
 		[Children] = {
-			UI.hudIcon(scope, "foundry", { Position = UDim2.fromOffset(0, 18), Size = UDim2.fromOffset(58, 58) }),
-			text(scope, "ProductionLabel", scope:Computed(function(use) return if use(hud).leftCards.Production.w / 400 < 0.75 then "RATE:" else "PRODUCTION:" end), 70, 5, 105, 22, productionFont(14, 10), WHITE, true, true),
-			text(scope, "ProductionRate", scope:Computed(function(use) local s = state(use); return (if s and s.line then Format.number(s.line.rate) else "0") .. "/s" end), 176, 5, 79, 22, productionFont(15, 11), UI.HUD_MINT, true, true),
-			UI.hudIcon(scope, "ore", { Position = UDim2.fromOffset(70, 32), Size = UDim2.fromOffset(21, 21) }),
-			text(scope, "HopperAmount", lineText("hopper"), 98, 30, 113, 25, productionFont(14, 11), WHITE, true, true),
-			UI.hudIcon(scope, "bars", { Position = UDim2.fromOffset(70, 57), Size = UDim2.fromOffset(21, 21) }),
-			text(scope, "CollectorAmount", lineText("collector"), 98, 55, 113, 25, productionFont(14, 11), WHITE, true, true),
-			UI.hudIcon(scope, "bars", { Position = UDim2.fromOffset(220, 23), Size = UDim2.fromOffset(55, 55) }),
-			text(scope, "CarriedBars", scope:Computed(function(use) return "Bars: " .. use(bars) end), 286, 28, 87, 23, productionFont(14, 11), WHITE, true, true),
-			text(scope, "SaleValue", scope:Computed(function(use) local s = state(use); return Format.cash(if s then s.barValue else 0) end), 286, 53, 87, 23, productionFont(14, 11), UI.HUD_MINT, true, true),
+			UI.hudIcon(scope, "foundry", { Position = UDim2.fromOffset(20, 36), Size = UDim2.fromOffset(62, 68) }),
+			text(scope, "ProductionLabel", "PRODUCTION", 100, 12, 148, 27, productionFont(19, 12), WHITE, true, true),
+			text(scope, "ProductionRate", scope:Computed(function(use) local s = state(use); return (if s and s.line then Format.number(s.line.rate) else "0") .. "/s" end), 352, 8, 125, 32, productionFont(28, 14), WHITE, true, true),
+			scope:New("Frame")({ Name = "Divider", Position = UDim2.fromOffset(262, 14), Size = UDim2.fromOffset(2, 88), BackgroundColor3 = UI.OUTLINE, BackgroundTransparency = 0.7, BorderSizePixel = 0 }),
+			UI.hudIcon(scope, "ore", { Position = UDim2.fromOffset(101, 49), Size = UDim2.fromOffset(26, 26) }),
+			text(scope, "HopperAmount", lineText("hopper"), 136, 45, 118, 30, productionFont(21, 12), WHITE, true, true),
+			UI.hudIcon(scope, "bars", { Position = UDim2.fromOffset(101, 83), Size = UDim2.fromOffset(26, 26) }),
+			text(scope, "CollectorAmount", lineText("collector"), 136, 79, 118, 30, productionFont(21, 12), WHITE, true, true),
+			UI.hudIcon(scope, "bars", { Position = UDim2.fromOffset(283, 52), Size = UDim2.fromOffset(60, 60) }),
+			text(scope, "CarriedBars", scope:Computed(function(use) return "Bars: " .. use(bars) end), 352, 46, 130, 29, productionFont(21, 12), WHITE, true, true),
+			text(scope, "SaleValue", scope:Computed(function(use) local s = state(use); return Format.cash(if s then s.barValue else 0) end), 352, 77, 130, 31, productionFont(25, 12), WHITE, true, true),
 			scope:New("TextButton")({
 				Name = "ToggleFoundry", Size = UDim2.fromScale(1, 1), Text = "", BackgroundTransparency = 1, ZIndex = 2,
 				[OnEvent("Activated")] = toggle,
 				[Children] = {
-					UI.hudIcon(scope, "chevron", { Position = UDim2.fromOffset(375, 29), Size = UDim2.fromOffset(24, 24),
+					scope:New("Frame")({ Name = "ExpandFace", Position = UDim2.fromOffset(496, 31), Size = UDim2.fromOffset(44, 60), BackgroundColor3 = UI.HUD_SURFACE, BorderSizePixel = 0,
+						[Children] = { UI.corner(scope, 4), scope:New("UIStroke")({ Color = WHITE, Transparency = 0.5, Thickness = 1.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) } }),
+					UI.hudIcon(scope, "chevron", { Position = UDim2.fromOffset(502, 44), Size = UDim2.fromOffset(32, 32),
 						Rotation = scope:Computed(function(use) return if use(expanded) then 180 else 0 end) }),
-					scope:New("TextButton")({ Name = "OpenRefinery", Size = scope:Computed(function(use) return UDim2.new(0, HudLayout.closeSize(64, use(productionScale)), 1, 0) end),
+					scope:New("TextButton")({ Name = "OpenRefinery", Size = scope:Computed(function(use) return UDim2.new(0, HudLayout.closeSize(90, use(productionScale)), 1, 0) end),
 						Text = "", BackgroundTransparency = 1, ZIndex = 3, [OnEvent("Activated")] = function() data.openRefinery() end }),
 				},
 			}),
@@ -156,74 +166,78 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 	})
 	local details = scope:New("ScrollingFrame")({
 		Name = "ExpandedDetails", Size = scope:Computed(function(use)
-			return UDim2.fromOffset(400, math.max(0, use(hud).leftCards.Production.h / use(productionScale) - 82))
+			return UDim2.fromOffset(550, math.max(0, use(hud).leftCards.Production.h / use(productionScale) - 116))
 		end), BackgroundColor3 = UI.HUD_SURFACE, BorderSizePixel = 0, Visible = expanded, Active = true,
-		CanvasSize = UDim2.fromOffset(400, 240), ScrollingDirection = Enum.ScrollingDirection.Y,
+		CanvasSize = UDim2.fromOffset(550, 240), ScrollingDirection = Enum.ScrollingDirection.Y,
 		ScrollBarThickness = 3, ScrollBarImageColor3 = UI.HUD_MUTED,
 		[Children] = {
 			UI.hudFill(scope), text(scope, "Title", "FOUNDRY", 14, 10, 290, 28, productionFont(18, 13), WHITE, true),
 			scope:New("ImageButton")({ Name = "CloseDetails", AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0),
-				Size = scope:Computed(function(use) local target = HudLayout.closeSize(56, use(hud).leftCards.Production.w / 400); return UDim2.fromOffset(target, target) end),
+				Size = scope:Computed(function(use) local target = HudLayout.closeSize(56, use(productionScale)); return UDim2.fromOffset(target, target) end),
 				Image = "", BackgroundTransparency = 1, [OnEvent("Activated")] = toggle,
 				[Children] = { UI.hudIcon(scope, "close", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(20, 20) }) } }),
 			text(scope, "HopperLabel", "HOPPER", 14, 48, 90, 20, productionFont(12, 10), UI.HUD_MUTED),
-			text(scope, "HopperCapacity", lineText("hopper"), 108, 46, 88, 24, productionFont(14, 11), WHITE, true),
-			meter(scope, "HopperMeter", 14, 76, 176, lineRatio("hopper"), ORANGE, 5),
-			text(scope, "StorageLabel", "STORAGE", 210, 48, 94, 20, productionFont(12, 10), UI.HUD_MUTED),
-			text(scope, "StorageCapacity", lineText("collector"), 310, 46, 76, 24, productionFont(14, 11), WHITE, true),
-			meter(scope, "StorageMeter", 210, 76, 176, lineRatio("collector"), UI.HUD_GOLD, 5),
+			text(scope, "HopperCapacity", lineText("hopper"), 120, 46, 126, 24, productionFont(16, 11), WHITE, true),
+			meter(scope, "HopperMeter", 14, 76, 238, lineRatio("hopper"), ORANGE, 5),
+			text(scope, "StorageLabel", "STORAGE", 286, 48, 100, 20, productionFont(12, 10), UI.HUD_MUTED),
+			text(scope, "StorageCapacity", lineText("collector"), 408, 46, 124, 24, productionFont(16, 11), WHITE, true),
+			meter(scope, "StorageMeter", 286, 76, 238, lineRatio("collector"), UI.HUD_GOLD, 5),
 			text(scope, "BarsLabel", "CARRIED BARS", 14, 91, 196, 20, productionFont(12, 10), UI.HUD_MUTED),
-			text(scope, "ValueLabel", "SALE VALUE", 280, 91, 110, 20, productionFont(12, 10), UI.HUD_MUTED),
+			text(scope, "ValueLabel", "SALE VALUE", 410, 91, 124, 20, productionFont(12, 10), UI.HUD_MUTED),
 			scope:New("ScrollingFrame")({
 				Name = "BarInventory", Position = UDim2.fromOffset(14, 116),
-				Size = scope:Computed(function(use) return UDim2.fromOffset(376, math.max(24, 108 - use(saleHeight))) end),
+				Size = scope:Computed(function(use) return UDim2.fromOffset(522, math.max(24, 108 - use(saleHeight))) end),
 				BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 				ScrollBarThickness = 3, ScrollBarImageColor3 = UI.HUD_MUTED, ScrollingDirection = Enum.ScrollingDirection.Y,
 				[Children] = { scope:New("UIListLayout")({ SortOrder = Enum.SortOrder.LayoutOrder }), rowViews },
 			}),
 			scope:New("TextButton")({
 				Name = "SellAllBars", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromOffset(14, 236),
-				Size = scope:Computed(function(use) return UDim2.fromOffset(372, use(saleHeight)) end),
+				Size = scope:Computed(function(use) return UDim2.fromOffset(522, use(saleHeight)) end),
 				BorderSizePixel = 0, Font = UI.FONT, TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0, TextSize = productionFont(15, 12),
-				Text = scope:Computed(function(use)
-					if use(data.saleBusy) then return "SELLING..." end
-					local s = state(use)
-					if not s then return "LOADING BARS..." end
-					if s.bars <= 0 then return "NO BARS TO SELL" end
-					return "SELL ALL · " .. Format.cash(s.barValue)
-				end),
+				Text = "",
 				BackgroundColor3 = scope:Computed(function(use) return if use(canSell) then UI.HUD_MINT else UI.HUD_BORDER end),
 				TextColor3 = scope:Computed(function(use) return if use(canSell) then WHITE else UI.HUD_MUTED end),
 				AutoButtonColor = canSell, Selectable = canSell, Active = canSell,
 				[OnEvent("Activated")] = function() if Fusion.peek(canSell) then data.sellBars() end end,
-				[Children] = { UI.hudFill(scope) },
+				[Children] = { UI.hudFill(scope), UI.hudText(scope, {
+					Name = "Label", Size = UDim2.fromScale(1, 1), Text = saleText, Font = UI.FONT,
+					TextSize = productionFont(17, 12), TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0,
+					TextColor3 = scope:Computed(function(use) return if use(canSell) then WHITE else UI.HUD_MUTED end),
+				}) },
 			}),
 		},
 	})
 	return {
-		frame(scope, hud, "Resources", 250, function(l) return l.leftCards.Resources end, {
-			UI.hudIcon(scope, "crystal", { Position = UDim2.fromOffset(4, 4), Size = UDim2.fromOffset(39, 39) }),
-			text(scope, "Shards", shards, 56, 1, 190, 46, 37, WHITE, true, true),
-			UI.hudIcon(scope, "coin", { Position = UDim2.fromOffset(2, 58), Size = UDim2.fromOffset(42, 42) }),
-			text(scope, "Cash", scope:Computed(function(use) return Format.cash(use(data.cashShown)) end), 57, 53, 189, 48, 45, WHITE, true, true),
+		frame(scope, hud, "Resources", 292, function(l) return l.leftCards.Resources end, {
+			UI.hudIcon(scope, "crystal", { Position = UDim2.fromOffset(16, 17), Size = UDim2.fromOffset(35, 35) }),
+			text(scope, "Shards", shards, 62, 9, 212, 42, 34, WHITE, true, true),
+			UI.hudIcon(scope, "coin", { Position = UDim2.fromOffset(16, 59), Size = UDim2.fromOffset(35, 35) }),
+			text(scope, "Cash", scope:Computed(function(use) return Format.cash(use(data.cashShown)) end), 62, 48, 216, 45, 39, WHITE, true, true),
 			-- Player level: "LV 5", an XP bar that fills as you hit, then the rebirth sale multiplier
-			text(scope, "Level", scope:Computed(function(use) local s = state(use); return "LV " .. (if s and s.level then s.level else 1) end), 2, 100, 52, 16, 14, UI.HUD_GOLD, true, true),
-			meter(scope, "LevelMeter", 56, 105, 84, scope:Computed(function(use)
+			text(scope, "Level", scope:Computed(function(use) local s = state(use); return "LV " .. (if s and s.level then s.level else 1) end), 14, 96, 46, 18, 15, UI.HUD_GOLD, true, true),
+			meter(scope, "LevelMeter", 64, 102, 110, scope:Computed(function(use)
 				local s = state(use)
 				return if s and s.xpNeeded and s.xpNeeded > 0 then s.xp / s.xpNeeded else 1
 			end), UI.HUD_GOLD, 6),
 			text(scope, "Multiplier", scope:Computed(function(use)
 				local s = state(use); local m = Rebirth.multiplier(if s then s.rebirths else 0)
 				return if m > 1 then "×" .. Format.number(m) .. " sales" else ""
-			end), 146, 101, 100, 15, 12, UI.HUD_MINT, false, true),
+			end), 182, 96, 104, 18, 14, WHITE, true, true),
 		}, false),
-		frame(scope, hud, "Production", 400, function(l) return l.leftCards.Production end, { details, summary }, false),
-		frame(scope, hud, "Backpack", 230, function(l) return l.backpack end, {
-			UI.hudIcon(scope, "backpack", { Position = UDim2.fromOffset(0, 6), Size = UDim2.fromOffset(61, 68) }),
-			text(scope, "Capacity", scope:Computed(function(use) return Format.number(use(carried)) .. " / " .. Format.number(use(capacity)) end), 76, 15, 152, 49, 40,
+		frame(scope, hud, "Production", 550, function(l) return l.leftCards.Production end, { details, summary }, false),
+		frame(scope, hud, "Backpack", 292, function(l) return l.backpack end, {
+			UI.hudIcon(scope, "backpack", { Position = UDim2.fromOffset(18, 38), Size = UDim2.fromOffset(49, 58) }),
+			text(scope, "BackpackLabel", "BACKPACK", 82, 11, 194, 25, 18, WHITE, true, true),
+			text(scope, "Capacity", scope:Computed(function(use) return Format.number(use(carried)) .. " / " .. Format.number(use(capacity)) end), 82, 34, 194, 39, 32,
 				scope:Computed(function(use) return if use(full) then UI.RED else WHITE end), true, true),
-			meter(scope, "CapacityMeter", 77, 70, 148, scope:Computed(function(use) return use(carried) / math.max(use(capacity), 1) end),
-				scope:Computed(function(use) return if use(full) then UI.RED else CYAN end), 5),
+			meter(scope, "CapacityMeter", 82, 80, 194, scope:Computed(function(use) return use(carried) / math.max(use(capacity), 1) end),
+				scope:Computed(function(use) return if use(full) then UI.RED else CYAN end), 8),
+			UI.hudText(scope, {
+				Name = "CapacityPercent", Position = UDim2.fromOffset(82, 94), Size = UDim2.fromOffset(194, 18),
+				Text = scope:Computed(function(use) return tostring(math.floor(math.clamp(use(carried) / math.max(use(capacity), 1), 0, 1) * 100 + 0.5)) .. "% full" end),
+				Font = UI.FONT, TextSize = 15, TextColor3 = WHITE, TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0.15,
+			}),
 			scope:New("TextButton")({
 				Name = "OpenBackpack", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 2,
 				[OnEvent("Activated")] = function()
@@ -233,10 +247,10 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 				end,
 			}),
 		}, false),
-		frame(scope, hud, "Timer", 593, function(l) return l.timer end, {
-			meter(scope, "RemainingTime", 0, 0, 593, data.timeProgress, glow, 6),
-			UI.hudIcon(scope, "meteor", { Position = UDim2.fromOffset(0, 26), Size = UDim2.fromOffset(74, 74) }),
-			text(scope, "MeteorName", scope:Computed(function(use) local s = use(data.meteorState); return if s then string.upper(s.typeName) else "METEOR MINING" end), 82, 18, 316, 30, font(scope, hud, 593, function(l) return l.timer end, 24, 10), glow, true, true),
+		frame(scope, hud, "Timer", 560, function(l) return l.timer end, {
+			meter(scope, "RemainingTime", 12, 100, 536, data.timeProgress, glow, 4),
+			UI.hudIcon(scope, "meteor", { Position = UDim2.fromOffset(18, 23), Size = UDim2.fromOffset(66, 66) }),
+			text(scope, "MeteorName", scope:Computed(function(use) local s = use(data.meteorState); return if s then string.upper(s.typeName) else "METEOR MINING" end), 100, 16, 332, 27, font(scope, hud, 560, function(l) return l.timer end, 22, 12), glow, true, true),
 			text(scope, "Phase", scope:Computed(function(use)
 				local p = use(data.phase)
 				if p == Phase.Countdown then return "Incoming meteor" end
@@ -245,9 +259,33 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 				if p == Phase.CoreCracked then return "Core cracked!" end
 				if p == Phase.Cooled then return "Meteor cooled" end
 				return "Next meteor soon"
-			end), 82, 54, 312, 49, 36, WHITE, true, true),
-			text(scope, "Time", data.timerText, 405, 19, 188, 86, 64, scope:Computed(function(use) local color = use(data.timerColor); return if color ~= UI.WHITE then color else use(glow) end), true, true),
-		}, true),
+			end), 100, 46, 332, 44, 32, WHITE, true, true),
+			UI.hudText(scope, {
+				Name = "TimerLabel", Position = UDim2.fromOffset(440, 18), Size = UDim2.fromOffset(112, 22), Font = UI.FONT,
+				Text = scope:Computed(function(use) local p = use(data.phase); return if p == Phase.Active then "COOLS IN" elseif p == Phase.Countdown then "ARRIVES IN" else "NEXT EVENT" end),
+				TextSize = 14, TextColor3 = WHITE, TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0.15,
+			}),
+			UI.hudText(scope, {
+				Name = "Time", Position = UDim2.fromOffset(438, 42), Size = UDim2.fromOffset(114, 46), Font = UI.FONT,
+				Text = scope:Computed(function(use) local value = use(data.timerText); return if value == "" then "--:--" else value end),
+				TextSize = 40, TextColor3 = scope:Computed(function(use) local color = use(data.timerColor); return if color ~= UI.WHITE then color else UI.HUD_GOLD end),
+				TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0.15,
+			}),
+		}, false),
+		scope:New("Frame")({
+			Name = "YourPlot", BorderSizePixel = 0, BackgroundColor3 = UI.HUD_SURFACE,
+			Visible = scope:Computed(function(use) local l = use(hud); return l.timerVisible and not l.touch and not l.portrait end),
+			Position = scope:Computed(function(use) local l = use(hud); local s = l.timer.w / 560; return UDim2.fromOffset((l.viewport.X - 190 * s) / 2, l.timer.y + l.timer.h + 10 * s) end),
+			Size = UDim2.fromOffset(190, 40),
+			[Children] = {
+				scope:New("UIScale")({ Scale = scope:Computed(function(use) return use(hud).timer.w / 560 end) }),
+				UI.hudFill(scope),
+				-- A location tag, matching the reference. Plot assignment and travel
+				-- are gameplay concerns; this HUD pass does not add a teleport.
+				UI.hudText(scope, { Name = "PlotLabel", Position = UDim2.fromOffset(10, 3), Size = UDim2.fromOffset(170, 34),
+					Text = "⌂ YOUR PLOT", Font = UI.FONT, TextSize = 21, TextColor3 = WHITE, TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0.15 }),
+			},
+		}),
 	}
 end
 

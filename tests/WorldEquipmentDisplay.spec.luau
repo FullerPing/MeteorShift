@@ -27,6 +27,58 @@ return function(t: any)
 		end
 		return hall
 	end
+	t.test("incomplete streamed mounts cannot leave a partial local display", function()
+		local hall = fixture(Vector3.zero)
+		hall.TierWalls.pickaxe8:Destroy()
+		local ok = pcall(function() Display.mount(hall) end)
+		t.eq(ok, false)
+		t.eq(hall:FindFirstChild("LocalEquipment"), nil)
+		hall:Destroy()
+	end)
+	t.test("readiness detects missing mounts and recovers when they stream back", function()
+		local hall = fixture(Vector3.zero)
+		t.eq(Display.ready(nil), false)
+		t.eq(Display.ready(hall), true)
+		local card = hall.TierWalls.backpack8; card.Parent = nil
+		t.eq(Display.ready(hall), false)
+		card.Parent = hall.TierWalls
+		t.eq(Display.ready(hall), true)
+		local foot = hall.CurrentStands.pickaxe.PrimaryPart; foot.Parent = nil
+		t.eq(Display.ready(hall), false)
+		foot.Parent = hall.CurrentStands.pickaxe; hall.CurrentStands.pickaxe.PrimaryPart = foot
+		t.eq(Display.ready(hall), true)
+		hall:Destroy()
+	end)
+	t.test("local display integrity detects streamed equipment loss while authored mounts survive", function()
+		local hall = fixture(Vector3.zero); local view = Display.mount(hall)
+		t.ok(type(view.intact) == "function", "view:intact must detect missing local equipment")
+		t.eq(view:intact(), true)
+		for _, name in { "Tier_pickaxe_1", "Tier_backpack_1", "Current_pickaxe", "Current_backpack" } do
+			local model = view.folder:FindFirstChild(name)
+			t.ok(model, "missing local fixture " .. name)
+			model.Parent = nil
+			t.eq(Display.ready(hall), true, "authored mounts still available")
+			t.eq(view:intact(), false, "missing local model " .. name)
+			model.Parent = view.folder
+			t.eq(view:intact(), true)
+			local part: BasePart? = nil
+			for _, candidate in model:GetDescendants() do
+				if candidate:IsA("BasePart") and candidate ~= model.PrimaryPart then part = candidate; break end
+			end
+			assert(part, "equipment fixture needs a non-primary part")
+			local parent = part.Parent
+			part.Parent = nil
+			t.eq(Display.ready(hall), true, "authored mounts survive individual part loss")
+			t.eq(view:intact(), false, "missing local part in " .. name)
+			part.Parent = parent
+			t.eq(view:intact(), true)
+		end
+		view:update({ pickaxeTier = 4, backpackTier = 8 })
+		t.eq(view:intact(), true, "normal tier replacement keeps the display complete")
+		view:destroy()
+		t.eq(view:intact(), false, "destroyed views cannot remain intact")
+		hall:Destroy()
+	end)
 	t.test("builds exactly eighteen local noncolliding anchored models within budget", function()
 		local hall = fixture(Vector3.zero)
 		local view = Display.mount(hall)

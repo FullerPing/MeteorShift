@@ -17,6 +17,7 @@ return function(t: any)
 		{ name = "780x360", size = Vector2.new(780, 360), touch = true },
 		{ name = "1334x750", size = Vector2.new(1334, 750), touch = true },
 		{ name = "1920x1080", size = Vector2.new(1920, 1080), touch = false },
+		{ name = "1196x679 desktop", size = Vector2.new(1196, 679), touch = false, inset = 58 },
 		-- a small desktop window, the other place the column meets the screen edge
 		{ name = "1280x600 mouse", size = Vector2.new(1280, 600), touch = false },
 		{ name = "960x540 mouse", size = Vector2.new(960, 540), touch = false },
@@ -43,6 +44,25 @@ return function(t: any)
 		-- The authored face is 80 square; its editable caption ends at y=105.
 		return { x = button.x, y = button.y, w = button.w, h = math.max(button.h, button.w * 105 / 80) }
 	end
+
+	t.test("desktop meteor banner and plot tag leave room for notifications", function()
+		for _, size in { Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(960, 540), Vector2.new(800, 450) } do
+			for _, expanded in { false, true } do
+				local l = HudLayout.compute(size, false, 58, expanded, true, true)
+				local tag = { x = (size.X - 190 * l.scale) / 2, y = l.timer.y + l.timer.h + 10 * l.scale,
+					w = 190 * l.scale, h = 40 * l.scale }
+				local context = tostring(size) .. " expanded=" .. tostring(expanded)
+				t.ok(l.timer.y <= 36, context .. " banner uses the clear centre of the top row")
+				t.ok(l.timer.x >= 180, context .. " banner clears Roblox controls on the left")
+				t.near(l.timer.x + l.timer.w / 2, size.X / 2, 1e-6, context .. " banner stays centred")
+				t.ok(HudLayout.inside(tag, screen(size)), context .. " plot tag fits")
+				for name, rect in { notification = l.notification, objective = l.eventPanel, foundry = l.leftCards.Production,
+					wallet = l.leftCards.Resources, backpack = l.backpack, training = l.tutorial } do
+					t.ok(not HudLayout.overlaps(tag, rect), context .. " plot tag clears " .. name)
+				end
+			end
+		end
+	end)
 
 	t.test("personal navigation captions clear visible cards, neighbours and movement", function()
 		for _, v in viewports do
@@ -103,29 +123,20 @@ return function(t: any)
 		end
 	end)
 
-	t.test("desktop HUD matches the Figma reference frame", function()
+	t.test("desktop HUD keeps corner balances and a centred production strip", function()
 		local l = HudLayout.compute(Vector2.new(1440, 810), false)
-		t.eq(l.leftCards.Resources.x, 24)
-		t.eq(l.leftCards.Resources.y, 676)
-		t.eq(l.leftCards.Resources.w, 250)
-		t.eq(l.leftCards.Resources.h, 116)
-		t.eq(l.timer.w, 593)
-		t.eq(l.timer.h, 130)
-		t.eq(l.buttons.SHOP.x, 24)
-		t.eq(l.buttons.SHOP.y, 280)
-		t.eq(l.buttons.SHOP.w, 88)
-		t.eq(l.buttons.REBIRTH.y, 395.5)
-		t.eq(l.buttons.STORE.y, 511)
-		t.eq(l.buttons.INDEX.x, 1328)
+		local wallet, production, backpack = l.leftCards.Resources, l.leftCards.Production, l.backpack
+		t.eq(wallet.x, 24, "wallet hugs the left margin")
+		t.eq(backpack.x + backpack.w, 1416, "backpack hugs the right margin")
+		t.near(wallet.y + wallet.h, backpack.y + backpack.h, 1e-6, "corner panels share a baseline")
+		t.near(production.x + production.w / 2, 720, 1e-6, "production stays centred")
+		t.ok(production.w > wallet.w and production.w > backpack.w, "production has room for its two totals and sale value")
+		t.ok(wallet.x + wallet.w + 6 <= production.x, "wallet clears production")
+		t.ok(production.x + production.w + 6 <= backpack.x, "production clears backpack")
+		t.ok(personalButtonBounds(l.buttons.STORE).y + personalButtonBounds(l.buttons.STORE).h < wallet.y, "left captions stop above the wallet")
+		t.ok(l.buttons.INDEX.x > production.x + production.w, "Index remains on the right")
 		t.eq(l.leftCards.Equipment, l.buttons.SHOP)
-		t.eq(l.leftCards.Production.x, 520)
-		t.eq(l.leftCards.Production.y, 712)
-		t.eq(l.leftCards.Production.w, 400)
-		t.eq(l.leftCards.Production.h, 82)
-		t.eq(l.tutorial.x, 554)
-		t.eq(l.tutorial.y, 573)
-		t.eq(l.backpack.x, 1186)
-		t.eq(l.backpack.y, 706)
+		t.ok(l.tutorial.y + l.tutorial.h < production.y, "training clears the production summary")
 	end)
 
 	t.test("landscape reference stacks left navigation and aligns the bottom status strip", function()
@@ -181,7 +192,7 @@ return function(t: any)
 				for _, name in Hud.ButtonOrder do table.insert(active, { name = name, rect = l.buttons[name] }) end
 				for i, item in active do
 					t.ok(HudLayout.inside(item.rect, screen(v.size)), v.name .. " " .. item.name .. " fits")
-					local sharesTopRow = not (v.touch or l.portrait) and item.name == "settings"
+					local sharesTopRow = not (v.touch or l.portrait) and (item.name == "settings" or item.name == "clock")
 						or (v.touch and not l.portrait and (item.name == "settings" or item.name == "STORE") and item.rect.x >= v.size.X - 120)
 					if sharesTopRow then
 						t.ok(item.rect.x >= 180, v.name .. " " .. item.name .. " clears Roblox controls on the left")
@@ -196,10 +207,11 @@ return function(t: any)
 					end
 				end
 				t.eq(l.tutorialVisible, not (v.touch and expanded) and v.tightPortrait ~= true, v.name .. " guide visibility expanded=" .. tostring(expanded))
-				local foundryScale = l.leftCards.Production.w / 400
-				t.ok(82 * foundryScale >= 44 - 1e-6, v.name .. " foundry summary remains a usable target")
+				local productionSpec = if not v.touch and not l.portrait then Hud.Desktop.LeftCards.Production else Hud.LeftCards.Production
+				local foundryScale = l.leftCards.Production.w / productionSpec.Width
+				t.ok(productionSpec.Height * foundryScale >= 44 - 1e-6, v.name .. " foundry summary remains a usable target")
 				if expanded and v.touch then
-					t.ok(l.leftCards.Production.h - 82 * foundryScale >= 44 - 1e-6, v.name .. " scrolling details retain a 44 px close target")
+					t.ok(l.leftCards.Production.h - productionSpec.Height * foundryScale >= 44 - 1e-6, v.name .. " scrolling details retain a 44 px close target")
 				end
 				local trainingScale = l.tutorial.w / 332
 				t.ok(HudLayout.closeSize(34, trainingScale) * trainingScale >= 44 - 1e-6, v.name .. " training skip target")
@@ -519,6 +531,9 @@ return function(t: any)
 		local supported = {
 			{ name = "1440x810 desktop", size = Vector2.new(1440, 810), touch = false },
 			{ name = "1196x660 desktop", size = Vector2.new(1196, 660), touch = false },
+			{ name = "960x540 desktop", size = Vector2.new(960, 540), touch = false },
+			{ name = "800x450 desktop", size = Vector2.new(800, 450), touch = false },
+			{ name = "800x450 desktop tall inset", size = Vector2.new(800, 450), touch = false, inset = 58 },
 			{ name = "844x390 touch", size = Vector2.new(844, 390), touch = true },
 			{ name = "390x844 touch", size = Vector2.new(390, 844), touch = true },
 			{ name = "390x667 touch", size = Vector2.new(390, 667), touch = true },
@@ -527,7 +542,7 @@ return function(t: any)
 		for _, v in supported do
 			for _, foundry in { false, true } do
 				for _, notice in { false, true } do
-					local l = HudLayout.compute(v.size, v.touch, nil, foundry, notice)
+					local l = HudLayout.compute(v.size, v.touch, v.inset, foundry, notice)
 					local popup = HudLayout.backpackPanel(l)
 					local context = v.name .. " foundry=" .. tostring(foundry) .. " notice=" .. tostring(notice)
 					local safe = { x = 12, y = l.inset + 12, w = v.size.X - 24, h = v.size.Y - l.inset - 24 }
@@ -539,10 +554,13 @@ return function(t: any)
 					t.ok(popup.h >= 72 and popup.h <= 128, context .. " header and at least one ore row fit")
 					t.ok(not HudLayout.overlaps(popup, l.backpack), context .. " popup leaves its toggle visible")
 					for _, button in l.buttons do
-						t.ok(not HudLayout.overlaps(popup, button), context .. " popup clears navigation")
+						t.ok(not HudLayout.overlaps(popup, personalButtonBounds(button)), context .. " popup clears navigation captions")
 					end
 					if l.settings then
 						t.ok(not HudLayout.overlaps(popup, l.settings), context .. " popup clears settings")
+					end
+					if not l.touch and not l.portrait and l.eventVisible then
+						t.ok(not HudLayout.overlaps(popup, l.eventPanel), context .. " popup clears the visible objective")
 					end
 				end
 			end
@@ -550,10 +568,11 @@ return function(t: any)
 	end)
 
 	t.test("backpack popup fits three ore rows within its desktop anchor width", function()
-		local popup = HudLayout.backpackPanel(HudLayout.compute(Vector2.new(1440, 810), false))
-		t.eq(popup.x, 1186)
-		t.eq(popup.y, 570)
-		t.eq(popup.w, 230)
+		local l = HudLayout.compute(Vector2.new(1440, 810), false)
+		local popup = HudLayout.backpackPanel(l)
+		t.eq(popup.x, l.backpack.x)
+		t.eq(popup.y + popup.h, l.backpack.y - 8)
+		t.eq(popup.w, l.backpack.w)
 		t.eq(popup.h, 128)
 	end)
 
@@ -562,8 +581,8 @@ return function(t: any)
 		for _, fixture in { { count = 0, height = 72 }, { count = 1, height = 72 }, { count = 2, height = 100 }, { count = 3, height = 128 }, { count = 7, height = 128 } } do
 			local popup = HudLayout.backpackPanel(l, fixture.count)
 			t.eq(popup.h, fixture.height, "ore rows=" .. fixture.count)
-			t.eq(popup.y + popup.h, 698, "changing row count keeps the popup directly above its anchor")
-			t.eq(popup.x, 1186, "changing row count preserves anchor width")
+			t.eq(popup.y + popup.h, l.backpack.y - 8, "changing row count keeps the popup directly above its anchor")
+			t.eq(popup.x, l.backpack.x, "changing row count preserves anchor width")
 		end
 	end)
 

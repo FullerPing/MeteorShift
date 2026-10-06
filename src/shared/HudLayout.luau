@@ -103,8 +103,14 @@ function HudLayout.compute(
 	local notificationHeight = if rewardNotificationActive then 64 else 48
 	local width, height = viewport.X, viewport.Y
 	local scale = HudLayout.scale(viewport)
-	local cards = Hud.LeftCards
 	local portrait = width < height
+	local desktop = not touch and not portrait
+	local cards = if desktop then Hud.Desktop.LeftCards else Hud.LeftCards
+	local timerSpec = if desktop then Hud.Desktop.Timer else Hud.Timer
+	local backpackSpec = if desktop then Hud.Desktop.Backpack else Hud.Backpack
+	local statusScale = if desktop then math.min(scale,
+		(width - (cards.X + backpackSpec.Right) * scale - 12)
+			/ (cards.Resources.Width + cards.Production.Width + backpackSpec.Width)) else scale
 	local compact = portrait or height < 600
 	local buttons: { [string]: Rect } = {}
 	local buttonBase = Vector2.new(Hud.Column.Width, Hud.Column.Height)
@@ -117,13 +123,15 @@ function HudLayout.compute(
 	local function centred(y: number, w: number, h: number, s: number): Rect
 		return sized((width - w * s) / 2, y, w, h, s)
 	end
-	local timer = centred(math.max(topInset + 6, Hud.Timer.Top * scale), Hud.Timer.Width, Hud.Timer.Height, scale)
-	local resources = sized(cards.X * scale, height - (cards.Resources.Bottom + cards.Resources.Height) * scale,
-		cards.Resources.Width, cards.Resources.Height, scale)
-	local backpack = sized(width - (Hud.Backpack.Right + Hud.Backpack.Width) * scale,
-		height - (Hud.Backpack.Bottom + Hud.Backpack.Height) * scale, Hud.Backpack.Width, Hud.Backpack.Height, scale)
-	local production = centred(height - (cards.Production.Bottom + productionHeight) * scale,
-		cards.Production.Width, productionHeight, scale)
+	local timer = centred(if desktop then timerSpec.Top * scale else math.max(topInset + 6, timerSpec.Top * scale),
+		timerSpec.Width, timerSpec.Height, scale)
+	local resources = sized(cards.X * scale, height - cards.Resources.Bottom * scale - cards.Resources.Height * statusScale,
+		cards.Resources.Width, cards.Resources.Height, statusScale)
+	local backpack = sized(width - backpackSpec.Right * scale - backpackSpec.Width * statusScale,
+		height - backpackSpec.Bottom * scale - backpackSpec.Height * statusScale,
+		backpackSpec.Width, backpackSpec.Height, statusScale)
+	local production = centred(height - cards.Production.Bottom * scale - productionHeight * statusScale,
+		cards.Production.Width, productionHeight, statusScale)
 	local eventPanel = sized(width - (Hud.EdgeMargin + Hud.EventPanel.Width) * scale,
 		math.max(topInset + 6, Hud.EventPanel.Top * scale), Hud.EventPanel.Width, Hud.EventPanel.Height, scale)
 	local tutorial = centred(production.y - (training.Gap + training.Height) * scale, training.Width, training.Height, scale)
@@ -395,9 +403,12 @@ function HudLayout.compute(
 			math.max(2, topInset - Hud.SettingsSize - 2), Hud.SettingsSize, Hud.SettingsSize, 1)
 		if HudLayout.overlaps(timer, eventPanel) then eventPanel.y = timer.y + timer.h + 8 end
 		if expanded then
-			local available = height - cards.Production.Bottom * scale - timer.y - timer.h - 8
+			-- The framed plot tag sits ten units under the clock and is forty high.
+			-- Keep the guide and expanded foundry below that shared header.
+			local headerBottom = timer.y + timer.h + 50 * scale
+			local available = height - cards.Production.Bottom * scale - headerBottom - 8
 				- (training.Height + training.Gap) * scale
-			local productionScale = math.min(scale, available / productionHeight)
+			local productionScale = math.min(statusScale, available / productionHeight)
 			production = centred(height - cards.Production.Bottom * scale - productionHeight * productionScale,
 				cards.Production.Width, productionHeight, productionScale)
 			tutorial = centred(production.y - (training.Height + training.Gap) * scale, training.Width, training.Height, scale)
@@ -420,11 +431,20 @@ function HudLayout.compute(
 		buttons.INDEX = sized(width - (Hud.EdgeMargin + Hud.Column.Width) * buttonScale,
 			math.max(height * 0.48 - Hud.Column.Height * buttonScale / 2, eventPanel.y + eventPanel.h + 8),
 			Hud.Column.Width, Hud.Column.Height, buttonScale)
+		local index = buttons.INDEX
+		local indexBottom = index.y + navigationHeight(index.w, index.h)
+		if backpack.y - indexBottom - 2 * BackpackPopupGap < BackpackPopupMinHeight then
+			-- Short desktop windows need the Index above the attached ore popup.
+			-- Keep its full authored caption, then place the objective underneath.
+			index.y = math.max(topInset + 6, settings.y + settings.h + 8)
+			eventPanel.y = math.max(eventPanel.y, index.y + navigationHeight(index.w, index.h) + 8)
+		end
 	end
 	-- Notifications use real pixels, independent of card scale. The reward line
 	-- needs two rows; tight expanded screens temporarily reserve the event slot
 	-- instead of shrinking the text into movement controls or the foundry.
-	local notification = tightNotification or centred(timer.y + timer.h + 8, math.min(400, width - 24), notificationHeight, 1)
+	local notification = tightNotification or centred(timer.y + timer.h + (if desktop then 50 * scale else 0) + 8,
+		math.min(400, width - 24), notificationHeight, 1)
 	local eventVisible = not tightPortrait and not (activeNotification and touch and portrait and expanded == true)
 	if referenceLandscape then
 		if expanded then
@@ -499,6 +519,9 @@ function HudLayout.backpackPanel(layout: Layout, rowCount: number?): Rect
 	end
 	for _, button in layout.buttons do clearNavigation(button, true) end
 	if layout.settings then clearNavigation(layout.settings) end
+	if not layout.touch and not layout.portrait and layout.eventVisible then
+		clearNavigation(layout.eventPanel)
+	end
 	local screenBottom = viewport.Y - margin
 	local bottom = math.min(anchor.y - gap, screenBottom)
 	local availableAbove = bottom - top

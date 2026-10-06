@@ -82,6 +82,10 @@ local function supporterConfetti()
 end
 
 function HUDController:KnitStart()
+	-- The retired authored counter contains a white test frame and a static $0.
+	-- Keep existing places clean when Rojo leaves unknown StarterGui objects intact.
+	local legacyCounter = player:WaitForChild("PlayerGui"):FindFirstChild("CashShardDisplay")
+	if legacyCounter and legacyCounter:IsA("ScreenGui") then legacyCounter.Enabled = false end
 	local MeteorService = Knit.GetService("MeteorService")
 	local ContributionService = Knit.GetService("ContributionService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")

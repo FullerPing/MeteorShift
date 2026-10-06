@@ -11,6 +11,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local Sfx = require(script.Parent.Sfx)
+local StudSurface = require(script.Parent.StudSurface)
 
 local Children = Fusion.Children
 
@@ -39,7 +40,7 @@ UI.DISABLED = Color3.fromRGB(73, 83, 94)
 UI.MUTED = UI.DISABLED
 
 -- HUD surfaces stay blue independently of the menus' charcoal palette.
-UI.HUD_SURFACE = Color3.fromRGB(28, 72, 105)
+UI.HUD_SURFACE = Color3.fromRGB(37, 208, 255)
 UI.HUD_BORDER = UI.OUTLINE
 UI.HUD_MUTED = UI.SUBTEXT
 UI.HUD_GOLD = Color3.fromRGB(255, 219, 100)
@@ -64,9 +65,46 @@ end
 function UI.hudFill(scope: Scope)
 	return {
 		UI.corner(scope, 12),
-		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-		scope:New("UIGradient")({ Rotation = 90, Color = ColorSequence.new(UI.WHITE, UI.PANEL_BOTTOM) }),
-		studTexture(scope, 0.75, 12),
+		scope:New("UIStroke")({ Color = UI.HUD_BORDER, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+		-- Use the authored navigation's stud image and cyan overlay. Tiling keeps
+		-- the studs the same size on wide cards as on the square Gear button.
+		scope:New("ImageLabel")({
+			Name = "StudFace", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.WHITE, BackgroundTransparency = 0,
+			BorderSizePixel = 0, Image = STUD_TEXTURE, ImageColor3 = UI.WHITE,
+			ScaleType = Enum.ScaleType.Tile, TileSize = UDim2.fromOffset(80, 80),
+			ZIndex = 0, Active = false, Selectable = false,
+			[Children] = { UI.corner(scope, 12) },
+		}),
+		scope:New("Frame")({
+			Name = "ColorOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = UI.HUD_SURFACE,
+			BorderSizePixel = 0, ZIndex = 0, Active = false, Selectable = false,
+			[Children] = {
+				UI.corner(scope, 12),
+				scope:New("UIGradient")({ Rotation = 90,
+					Color = ColorSequence.new({
+						ColorSequenceKeypoint.new(0, UI.WHITE),
+						ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 166, 255)),
+						ColorSequenceKeypoint.new(1, UI.WHITE),
+					}),
+					Transparency = NumberSequence.new({
+						NumberSequenceKeypoint.new(0, 0.50625),
+						NumberSequenceKeypoint.new(0.501366, 0.24375),
+						NumberSequenceKeypoint.new(1, 0.49375),
+					}),
+				}),
+			},
+		}),
+		-- The authored second stud layer adds raised edges above the cyan tint.
+		scope:New("ImageLabel")({
+			Name = "StudShadow", Size = UDim2.fromScale(1, 1),
+			BackgroundColor3 = Color3.fromRGB(79, 149, 255), BackgroundTransparency = 0.75,
+			BorderSizePixel = 0, Image = STUD_TEXTURE, ImageColor3 = UI.WHITE,
+			ScaleType = Enum.ScaleType.Tile, TileSize = UDim2.fromOffset(80, 80),
+			ZIndex = 0, Active = false, Selectable = false,
+			[Children] = { UI.corner(scope, 12), scope:New("UIStroke")({ Color = UI.OUTLINE,
+				Thickness = 4.11, Transparency = 0.54, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }) },
+		}),
+		StudSurface.blur(nil, 80, 12, 0),
 	}
 end
 

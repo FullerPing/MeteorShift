@@ -34,3 +34,25 @@ Gear mounts use **relative** `DisplayOffset` CFrames. Resolve a tier card with `
 Runtime integration must also fix MeteorService's old impact-clear teleport height: keeping `root.Position.Y + 4` while moving a player from the Y-44 bowl to outsideR180 can strand them beneath the new ground. Raycast the destination surface and place them above it, retaining zero damage and existing knockback speed/lift. This source change is pending world-code permission.
 
 See `docs/map-redesign/PLAN.md`, `PROGRESS.md`, and the staging manifest for current limits and incomplete gates. Final four contract exports remain unchanged until full pre-swap/post-swap QA passes.
+
+## Runtime walking evidence
+
+`RuntimeWalkingQA.luau` is the Play-time exception to the Edit commands above. Evaluate it **alone** through Studio MCP with `datamodel_type = "Play"` after starting the selected `DevWorldMap = "Map_Redesign"` test session. It installs `_G.MapRedesignWalkingQA` in that command's runtime context and creates no saved Script. Keep subsequent calls in the same context; on a client, the named player must be `Players.LocalPlayer`.
+
+Read `return _G.MapRedesignWalkingQA.targets()` for the original 14 destination names used by StaticQA, plus `MiningStartLanding`, `LowerTerraceAscentJoin`, `MiddleTerraceAscentJoin`, `UpperTerraceAscentJoin`, and `CrownTerraceAscentJoin`. Mining destinations use the actual part's transformed top centre plus a three-stud root offset. They enable ascent and descent checks from the current character location. Start one route using the exact live player's `Name`, then poll at most ten seconds per call:
+
+```luau
+return _G.MapRedesignWalkingQA.start("EXACT_PLAYER_NAME", "Refinery")
+```
+
+```luau
+return _G.MapRedesignWalkingQA.step(5)
+```
+
+Repeat `step(5)` until `finished = true`; `status()` is an immediate snapshot. The worker runs asynchronously between calls, including a 20-second path-computation watchdog, a 180-second route deadline, a 10-second waypoint deadline, and four seconds without meaningful progress before a stuck failure. It computes from the actual character position with radius 3, height 6, jumping enabled, and eight-stud waypoint spacing, then issues actual Humanoid `MoveTo` and waypoint jump actions. It never teleports, grants progression, or alters walking speed/jump power. Avoid manual movement during a route.
+
+Capture `return _G.MapRedesignWalkingQA.status(true)` for complete waypoint records after each route. `pathComputed` reports only computation success; `walkedSuccess` requires observed arrivals at every waypoint, final actual root distance within four studs, and no observed health loss. Results include positions, health minimum, waypoint counts and timings, planned/issued/observed jumps, observed travel, blockage indices, and final distance. A computed route can still finish `failed` from timeout, stuck movement, health loss, respawn, or final distance. This measures locomotion only; it does not certify interactions, progression, performance, or all 84 spawn-to-target combinations.
+
+`jumpActionsIssued` counts jump commands, which alone do not prove actual jumps. Report jump execution only when observed character state and motion support it; `actualJumpsObserved = 0` leaves that proof incomplete even when the walking route passes.
+
+Use `return _G.MapRedesignWalkingQA.cancel()` to stop the original character's current route. Reloading the command cancels the previous tool before replacing it; collect its evidence first. Cleanup disconnects observers, destroys the temporary Path, cancels its movement target, and clears a still-pending jump only when the tool changed it. No persistent Humanoid tuning values are changed. Further routes begin from wherever the actual character ended; a respawn requires a new `start`.

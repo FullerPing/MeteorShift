@@ -60,8 +60,21 @@ function ExactNavButton.author(parent: Instance, name: string, label: string, ic
 end
 
 function ExactNavButton.bind(button: TextButton)
+	local StudSurface = require(script.Parent.StudSurface)
+	local design = button:WaitForChild("Design") :: Frame
+	for _, name in { "StudFace", "Shadow", "ColorOverlay" } do
+		local layer = design:FindFirstChild(name)
+		if layer and layer:IsA("GuiObject") and not layer:FindFirstChildOfClass("UICorner") then
+			local corner = Instance.new("UICorner")
+			corner.CornerRadius, corner.Parent = UDim.new(0, 12), layer
+		end
+	end
+	if not design:FindFirstChild("StudBlur") then
+		local blur = StudSurface.blur(design, 80, 12, 4)
+		blur.Name = "StudBlur"
+	end
 	return {
-		caption = button:WaitForChild("Design"):WaitForChild("Caption") :: TextLabel,
+		caption = design:WaitForChild("Caption") :: TextLabel,
 		tooltip = button:WaitForChild("Tooltip") :: TextLabel,
 		badge = button:WaitForChild("ReadyBadge") :: Frame,
 		scale = button:WaitForChild("LayoutScale") :: UIScale,
