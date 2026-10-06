@@ -68,6 +68,10 @@ Hud.LeftCards = {
 Hud.Backpack = { Width = 230, Height = 86, Right = 24, Bottom = 18 }
 Hud.Training = { Width = 332, Height = 125, Gap = 14 }
 Hud.SettingsSize = 44
+-- Mouse layouts: the player level badge in the top-left corner under the Roblox
+-- top bar (base units). It shrinks to clear the clock and is dropped below
+-- MinHeight px; touch and cramped screens show the level on the wallet card.
+Hud.Level = { Width = 360, Height = 96, Top = 10, MinHeight = 48 }
 
 -- Desktop reference layout. Touch and portrait retain their authored geometry.
 Hud.Desktop = {

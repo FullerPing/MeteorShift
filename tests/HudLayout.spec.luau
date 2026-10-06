@@ -492,6 +492,30 @@ return function(t: any)
 		end
 	end)
 
+	t.test("the level badge sits top-left on mouse screens and clears everything else", function()
+		for _, v in viewports do
+			local layout = HudLayout.compute(v.size, v.touch, v.inset)
+			local level = HudLayout.level(layout)
+			if v.touch or v.size.X < v.size.Y then
+				t.ok(level == nil, v.name .. " touch and portrait keep the level on the wallet")
+				continue
+			end
+			if not level then continue end
+			t.ok(HudLayout.inside(level, screen(v.size)), v.name .. " level on screen")
+			t.ok(level.y >= layout.inset, v.name .. " level under the top bar")
+			t.ok(level.h >= Hud.Level.MinHeight, v.name .. " level readable")
+			for name, rect in { clock = layout.timer, objective = layout.eventPanel, wallet = layout.leftCards.Resources,
+				backpack = layout.backpack, notification = layout.notification } do
+				t.ok(not HudLayout.overlaps(level, rect), v.name .. " level vs " .. name)
+			end
+			for name, button in layout.buttons do
+				t.ok(not HudLayout.overlaps(level, personalButtonBounds(button)), v.name .. " level vs " .. name)
+			end
+		end
+		local roomy = HudLayout.level(HudLayout.compute(Vector2.new(1920, 1080), false, 58))
+		t.ok(roomy ~= nil, "a full HD window shows the level badge")
+	end)
+
 	t.test("touch: MINE is directly above the jump button, right edges aligned", function()
 		for _, v in viewports do
 			if v.touch then

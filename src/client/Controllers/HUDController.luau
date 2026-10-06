@@ -489,11 +489,12 @@ function HUDController:KnitStart()
 		showRichToast(HudMessages.sale(bars, cash))
 		local layout = Fusion.peek(hud)
 		local card = layout.leftCards.Resources
-		local currentScale = card.w / 250
+		-- HudView draws the wallet at a 292-wide base; the cash line starts at (62, 56).
+		local currentScale = card.w / 292
 		local cardY = card.y
 		local floater = Instance.new("TextLabel")
 		floater.BackgroundTransparency = 1
-		floater.Position = UDim2.fromOffset(card.x + 57 * currentScale, cardY + 53 * currentScale)
+		floater.Position = UDim2.fromOffset(card.x + 62 * currentScale, cardY + 56 * currentScale)
 		floater.Size = UDim2.fromOffset(200, 36)
 		floater.Font = FONT
 		floater.Text = "+" .. Format.cash(cash)
@@ -505,7 +506,7 @@ function HUDController:KnitStart()
 		floater.Parent = ui
 		local info = TweenInfo.new(1.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 		TweenService:Create(floater, info, {
-			Position = UDim2.fromOffset(card.x + 63 * currentScale, cardY - 18 * currentScale),
+			Position = UDim2.fromOffset(card.x + 68 * currentScale, cardY - 18 * currentScale),
 			TextTransparency = 1,
 			TextStrokeTransparency = 1,
 		}):Play()

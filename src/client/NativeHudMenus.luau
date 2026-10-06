@@ -41,6 +41,17 @@ function NativeHudMenus.start()
 	local empty = backpackPanel:WaitForChild("Empty") :: TextLabel
 	local title = backpackPanel:WaitForChild("Title") :: TextLabel
 	local template = backpack:WaitForChild("Templates"):WaitForChild("OreRow") :: Frame
+	-- The popup is a short list under a slim ribbon: a small red X badge on the
+	-- corner, and rows that shrink to fit instead of scrolling.
+	backpackClose.AnchorPoint, backpackClose.Position, backpackClose.Size = Vector2.zero, UDim2.new(1, -24, 0, -12), UDim2.fromOffset(32, 32)
+	backpackClose.ZIndex = math.max(backpackClose.ZIndex, 8)
+	local closeIcon = backpackClose:FindFirstChild("Icon")
+	if closeIcon and closeIcon:IsA("GuiObject") then closeIcon.Size = UDim2.fromOffset(16, 16) end
+	inventory.Position, inventory.Size = UDim2.fromOffset(8, 34), UDim2.new(1, -16, 1, -40)
+	inventory.ScrollingEnabled, inventory.Active, inventory.ScrollBarThickness = false, false, 0
+	local padding = inventory:FindFirstChildOfClass("UIPadding")
+	if padding then padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 0), UDim.new(0, 0) end
+	empty.Position = UDim2.fromOffset(8, 34)
 	local rowViews: { [string]: Frame } = {}
 	local rows: { HudResources.OreRow } = {}
 	local layout = UI.hudLayout()
@@ -61,8 +72,8 @@ function NativeHudMenus.start()
 	local function updateBackpack()
 		local rect = HudLayout.backpackPanel(layout, #rows)
 		backpackPanel.Position, backpackPanel.Size = UDim2.fromOffset(rect.x, rect.y), UDim2.fromOffset(rect.w, rect.h)
-		local scrolling, wide = #rows * 28 > rect.h - 44, rect.w >= 150
-		inventory.Active, inventory.ScrollingEnabled = scrolling, scrolling
+		local wide = rect.w >= 150
+		local rowHeight = math.clamp(math.floor((rect.h - 40) / math.max(#rows, 1)), 16, 28)
 		title.Text, empty.Visible = if wide then "Backpack" else "Bag", #rows == 0
 		local visible: { [string]: boolean } = {}
 		for index, resource in rows do
@@ -73,15 +84,19 @@ function NativeHudMenus.start()
 				row.Name, row.Parent = resource.id .. "Ore", inventory
 				rowViews[resource.id] = row
 			end
-			row.Visible, row.LayoutOrder = true, index
+			row.Visible, row.LayoutOrder, row.Size = true, index, UDim2.new(1, 0, 0, rowHeight)
 			local tint = if resource.id == "frost" then Color3.fromRGB(123, 230, 239) elseif resource.id == "crystal" then Color3.fromRGB(221, 161, 255) else UI.HUD_GOLD
+			local textHeight = rowHeight - 4
 			local icon = row:WaitForChild("Icon") :: ImageLabel
 			icon.Visible, icon.ImageColor3 = wide, tint
+			icon.Position, icon.Size = UDim2.fromOffset(0, math.floor((rowHeight - textHeight) / 2)), UDim2.fromOffset(textHeight, textHeight)
 			local kind = row:WaitForChild("Type") :: TextLabel
-			kind.Text, kind.TextColor3, kind.TextSize = resource.name, tint, if wide then 14 else 12
-			kind.Position, kind.Size = UDim2.fromOffset(if wide then 26 else 0, 2), UDim2.new(1, -(if wide then 76 else 38), 0, 24)
+			kind.Text, kind.TextColor3 = resource.name, tint
+			kind.TextSize = math.floor(textHeight * (if wide then 0.7 else 0.6))
+			kind.Position, kind.Size = UDim2.fromOffset(if wide then textHeight + 6 else 0, 2), UDim2.new(1, -(if wide then textHeight + 56 else 38), 0, textHeight)
 			local amount = row:WaitForChild("Amount") :: TextLabel
-			amount.Text, amount.TextSize, amount.Size = Format.number(resource.amount), if wide then 16 else 12, UDim2.fromOffset(if wide then 44 else 32, 24)
+			amount.Text, amount.TextSize = Format.number(resource.amount), math.floor(textHeight * (if wide then 0.78 else 0.6))
+			amount.Size = UDim2.fromOffset(if wide then 56 else 32, textHeight)
 		end
 		for id, row in rowViews do
 			if not visible[id] then row:Destroy(); rowViews[id] = nil end

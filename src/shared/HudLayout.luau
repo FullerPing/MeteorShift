@@ -535,6 +535,27 @@ function HudLayout.backpackPanel(layout: Layout, rowCount: number?): Rect
 	return { x = x, y = top, w = width, h = height }
 end
 
+-- The standalone level badge (mouse layouts): top-left under the Roblox top
+-- bar, shrunk to stay clear of the clock. nil when it cannot fit beside the
+-- navigation, so the wallet card shows the level instead.
+function HudLayout.level(layout: Layout): Rect?
+	if layout.touch or layout.portrait then return nil end
+	local spec = Hud.Level
+	local x = Hud.Desktop.LeftCards.X * layout.scale
+	local s = math.min(layout.scale, (layout.timer.x - 8 - x) / spec.Width)
+	if spec.Height * s < spec.MinHeight then return nil end
+	local rect = { x = x, y = layout.inset + spec.Top * layout.scale, w = spec.Width * s, h = spec.Height * s }
+	local blockers = { layout.timer, layout.eventPanel, layout.leftCards.Resources, layout.backpack, layout.notification }
+	if layout.settings then table.insert(blockers, layout.settings) end
+	for _, button in layout.buttons do
+		table.insert(blockers, { x = button.x, y = button.y, w = button.w, h = navigationHeight(button.w, button.h) })
+	end
+	for _, other in blockers do
+		if HudLayout.overlaps(rect, other) then return nil end
+	end
+	return rect
+end
+
 -- A centred panel (shop, index, rebirth, store) of `baseWidth` x `baseHeight` unscaled
 -- units. It is scaled down to fit the height under the top bar and to stay
 -- SideMargin from each side; `width` is the unscaled width to give the Frame (so that

@@ -1,6 +1,6 @@
 --!strict
--- The touch MINE button (spec §10). On touch-only devices, while a pickaxe is in your
--- hands, a big round MINE button sits above Roblox's jump button, right edges aligned.
+-- The touch MINE button (spec §10). While touch is the active input and a pickaxe is in
+-- your hands, a big round MINE button sits above Roblox's jump button, right edges aligned.
 -- Holding it swings continuously at the pickaxe's speed at the nearest mineable target in
 -- reach and in front of the character (MiningController:SetTouchHold, which uses
 -- Shared.Aim). It is presentation only: every swing still goes through NodeService,
@@ -13,6 +13,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
@@ -75,8 +76,19 @@ function MobileControlsController:KnitStart()
 		return layout.mine ~= nil and HudLayout.overlaps(HudLayout.backpackPanel(layout, 3), layout.mine)
 	end
 
+	-- Touchscreen PCs report TouchEnabled too. Show MINE only while touch is how
+	-- the player is actually playing, so mouse and keyboard players never see it.
+	local function touchActive(): boolean
+		if not UserInputService.TouchEnabled then return false end
+		if UserInputService:GetLastInputType() == Enum.UserInputType.Touch then return true end
+		return not UserInputService.KeyboardEnabled and not UserInputService.MouseEnabled
+	end
+	local touchInput = scope:Value(touchActive())
+	table.insert(scope, UserInputService.LastInputTypeChanged:Connect(function() touchInput:set(touchActive()) end))
+
 	local visible = scope:Computed(function(use)
 		return use(hud).mine ~= nil
+			and use(touchInput)
 			and use(equipped)
 			and not use(shopOpen)
 			and not use(indexOpen)
