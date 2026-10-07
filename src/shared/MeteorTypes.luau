@@ -9,10 +9,13 @@
 --   refreezeHp     Ice twist: a node nobody has hit for 5 s regains 2% of max HP per second
 --   shardPoolMult  the type's shard pool x, scaled down when meteors come faster than the
 --                  default interval (private servers)
+--   golden         the golden variant of a type (Config.Hooks.GoldenMeteor): same Id and twist, its
+--                  ore pays PayMult times, gold crust and ore chunks
 --
 -- Pure functions only, so the rules are covered by tests/MeteorTypes.spec.
 
 local Meteor = require(script.Parent.Config.Meteor)
+local Hooks = require(script.Parent.Config.Hooks)
 
 type MeteorType = Meteor.MeteorType
 
@@ -23,8 +26,8 @@ local MeteorTypes = {}
 
 -- The next meteor type: `roll` is uniform in [0, 1) (math.random() on the server) and
 -- lands in the types' Weight bands in TypeOrder. Everyone mines the type's own ore; what a
--- player's level refines at full speed is Shared.Levels.clearance, so no lobby is stuck on
--- one type and nobody is locked out.
+-- player's level yields in full is Shared.Levels.oreYield (a fraction below it, never nothing), so
+-- no lobby is stuck on one type and nobody is locked out.
 function MeteorTypes.pick(roll: number): MeteorType
 	local total = 0
 	for _, id in TypeOrder do
@@ -69,6 +72,20 @@ function MeteorTypes.shardPoolMult(meteorType: MeteorType, intervalSeconds: numb
 		return meteorType.ShardMult
 	end
 	return meteorType.ShardMult * math.max(intervalSeconds, 0) / defaultInterval
+end
+
+local GOLD_CRUST = { Color3.fromRGB(196, 150, 46), Color3.fromRGB(222, 176, 66), Color3.fromRGB(170, 128, 36) }
+
+-- A golden copy of `meteorType`: it keeps its Id (so every effect keyed by type still works), its
+-- name gets "Golden", and its ore pays Config.Hooks.GoldenMeteor.PayMult times per hit.
+function MeteorTypes.golden(meteorType: MeteorType): MeteorType
+	local copy = table.clone(meteorType)
+	copy.DisplayName = "Golden " .. meteorType.DisplayName
+	copy.YieldMult = meteorType.YieldMult * Hooks.GoldenMeteor.PayMult
+	copy.CrustColors = GOLD_CRUST
+	copy.OreColor = Color3.fromRGB(255, 226, 120)
+	copy.Golden = true
+	return copy
 end
 
 return MeteorTypes

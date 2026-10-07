@@ -52,18 +52,21 @@ return function(t: any)
 		t.eq(Purchases.cashGrant(10, 0, 0, 1, 2000, 500), 500, "ceiling takes precedence")
 	end)
 
-	t.test("iron prices apply until Frost is fully cleared", function()
-		for level = 1, Config.Levels.OreLevel.frost - 1 do
-			t.eq(Purchases.averageBarPrice(level), Config.Home.BarPrices.iron)
+	t.test("a higher level never lowers the quote, and underleveled ore counts for a fraction", function()
+		local previous = 0
+		for level = 1, Config.Levels.MaxLevel do
+			local price = Purchases.averageBarPrice(level)
+			t.ok(price >= previous - 1e-9, "level " .. level)
+			previous = price
 		end
+		-- Level 1: weights 60, 25 x 0.4, 15 x 0.4; weighted value 7,200 / 76.
+		t.near(Purchases.averageBarPrice(1), 7200 / 76, 1e-9)
 	end)
 
-	t.test("cleared prices use meteor weights and each ore's clearance", function()
-		-- Level 4: weights 60, 25, 1.8375; weighted value 88,125 / 86.8375.
-		t.near(Purchases.averageBarPrice(4), 1014.82654383187, 1e-9)
-		-- Level 6: weights 60, 25, 15; weighted value 483,000 / 100.
-		t.near(Purchases.averageBarPrice(6), 4830, 1e-9)
-		t.near(Purchases.averageBarPrice(20), 4830, 1e-9)
+	t.test("once every ore is cleared the quote uses the plain meteor weights", function()
+		-- Weights 60, 25, 15; weighted value 3,000 + 3,750 + 6,750 over 100.
+		t.near(Purchases.averageBarPrice(Config.Levels.OreLevel.crystal), 135, 1e-9)
+		t.near(Purchases.averageBarPrice(Config.Levels.MaxLevel), 135, 1e-9)
 	end)
 
 	t.test("ore pass and timed Ore Rush use the larger multiplier", function()

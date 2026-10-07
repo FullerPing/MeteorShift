@@ -1,40 +1,175 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1200" viewBox="-600 -600 1200 1200">
- <rect x="-600" y="-600" width="1200" height="1200" fill="#18253d"/>
- <rect x="-510" y="-510" width="1020" height="1020" rx="30" fill="#68d641" stroke="#405169" stroke-width="20"/>
- <g transform="scale(1,-1)">
-  <circle r="320" fill="none" stroke="#efdfb7" stroke-width="18"/>
-  <path d="M0,-320V-160M0,160V320M-320,0H-160M160,0H320M-20,-458L-65,-435V-326" fill="none" stroke="#efdfb7" stroke-width="24"/>
-  <path d="M-230,-326H230M-155,-340V-326M140,-341V-326M-65,-430H70M-325,-160H-277M316,-160H277M-275,224L-233,219M275,224L233,219M-341,55H-314M341,55H314" fill="none" stroke="#efdfb7" stroke-width="18"/>
-  <circle r="310" fill="none" stroke="#fff" stroke-width="2" stroke-dasharray="9 9" opacity=".6"/>
-  <circle r="180" fill="none" stroke="#faaf43" stroke-width="3" stroke-dasharray="9 9"/>
-  <circle r="160" fill="#485264" stroke="#fbc931" stroke-width="8"/>
-  <circle r="90" fill="#263142" stroke="#68748b" stroke-width="4"/>
-  <path d="M0,-160V-90M0,160V90M-160,0H-90M160,0H90" stroke="#e7d6a8" stroke-width="24"/>
-  <circle r="51" fill="#f28223" stroke="#2a2330" stroke-width="9"/>
-  <rect x="-38" y="-412" width="76" height="64" fill="#ff8223" stroke="#fff1d7" stroke-width="5"/>
-  <rect x="90" y="-416" width="100" height="72" fill="#29c9ff" stroke="#fff1d7" stroke-width="5"/>
-  <rect x="-219" y="-416" width="128" height="72" fill="#be63ff" stroke="#fff1d7" stroke-width="5"/>
-  <rect x="42" y="-480" width="56" height="40" fill="#f3ce45" stroke="#fff1d7" stroke-width="4"/>
-  <rect x="-68" y="-490" width="96" height="64" fill="#b6ee75" stroke="#fff1d7" stroke-width="4"/>
-  <rect x="-396" y="-196" width="72" height="72" fill="#ffd736" stroke="#fff1d7" stroke-width="5"/>
-  <rect x="318" y="-198" width="84" height="76" fill="#82e8ff" stroke="#fff1d7" stroke-width="5"/>
-  <rect x="-325" y="224" width="100" height="92" rx="12" fill="#bd673e" stroke="#fde0c0" stroke-width="4"/>
-  <rect x="225" y="224" width="100" height="92" rx="12" fill="#a1e4ff" stroke="#fff" stroke-width="4"/>
-  <rect x="-436" y="7" width="92" height="96" rx="12" fill="#9672e6" stroke="#e3d4ff" stroke-width="4"/>
-  <rect x="344" y="7" width="92" height="96" rx="12" fill="#e2c740" stroke="#fff6b5" stroke-width="4"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="1120" viewBox="0 0 1440 1120" role="img" aria-labelledby="title description">
+ <title id="title">MeteorShift current compact layout, 7 October 2026</title>
+ <desc id="description">A 540 by 540 stud playable square with six half-scale town landmarks, unchanged spawn pads and debris fields, an opening diameter of 166.4, floor radius55.25 and floorY minus14.755. The meteor is twice its original size and lands at its original centreY minus1.25. Elevated MiningAccess is removed; lower meteor geometry is partly buried and ground access QA remains pending.</desc>
+ <defs>
+  <marker id="arrow" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0L10,5L0,10Z" fill="#90a7bf"/></marker>
+  <style>text{font-family:Arial,sans-serif} .label{font-weight:700;fill:#fff4d9} .detail{fill:#b8c7d7} .metric{fill:#dae4ee;font-size:13px}</style>
+ </defs>
+ <rect width="1440" height="1120" fill="#18253d"/>
+ <text x="48" y="65" fill="#fff4d9" font-size="34" font-weight="700">METEORSHIFT / COMPACT WORLD</text>
+ <text x="48" y="99" class="detail" font-size="16">Current specification · 7 October 2026 · final X,Z coordinates · staging offset Z +3000</text>
+ <text x="48" y="132" fill="#82e8ff" font-size="15" font-weight="700">540 × 540 playable area  /  buildings 0.5×  /  meteor 2×  /  ground-only mining access</text>
+ <g transform="translate(420,548) scale(1.3,-1.3)">
+  <rect x="-270" y="-270" width="540" height="540" fill="#68d641" stroke="#718299" stroke-width="5"/>
+  <circle r="134" fill="none" stroke="#efdfb7" stroke-width="18"/>
+  <path d="M0,-134.1616V-83.2 M0,83.2V134.1616 M-134.1616,0H-83.2 M83.2,0H134.1616 M-20,-241L-55,-215V-130" fill="none" stroke="#efdfb7" stroke-width="24"/>
+  <path d="M-215,-130H215 M-135,-165V-130 M128,-165.5V-130 M0,-158.5V-130 M-196.5,-55H-122.3697 M192,-55H122.3697 M-168,77H-109.8651 M168,77H109.8651 M-130,139L-91.6413,97.9857 M130,139L91.6413,97.9857" fill="none" stroke="#efdfb7" stroke-width="18"/>
+  <path d="M-55,-215H60V-232" fill="none" stroke="#efdfb7" stroke-width="14"/>
+  <circle r="125" fill="none" stroke="#ffffff" stroke-width="1.4" stroke-dasharray="5 5" opacity=".82"/>
+  <circle r="117" fill="none" stroke="#ffae55" stroke-width="1.8" stroke-dasharray="5 5"/>
+  <circle r="83.2" fill="#485264" stroke="#fbc931" stroke-width="4"/>
+  <circle r="55.25" fill="#263142" stroke="#7486a0" stroke-width="2"/>
+  <path d="M0,-83.2V-55.25 M0,83.2V55.25 M-83.2,0H-55.25 M83.2,0H55.25" stroke="#efdfb7" stroke-width="24"/>
+  <circle r="50.4" fill="#905e3c" stroke="#ffb450" stroke-width="1.4" stroke-dasharray="3 3"/>
+  <circle r="28.35" fill="#f28223" stroke="#382331" stroke-width="3"/>
+  <rect id="zone-Refinery" x="-19" y="-193" width="38" height="32" fill="#ff8223" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-GearHall" x="103" y="-203" width="50" height="36" fill="#29c9ff" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-Hatchery" x="-167" y="-203" width="64" height="36" fill="#be63ff" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-TradingPost" x="46" y="-255" width="28" height="20" fill="#ffd736" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-Spawn" x="-68" y="-268" width="96" height="54" fill="#9cdbec" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-Rebirth" x="-232" y="-73" width="36" height="36" fill="#ffd736" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-Museum" x="193" y="-74" width="42" height="38" fill="#82e8ff" stroke="#fff1d7" stroke-width="1.5"/>
+  <rect id="zone-RustWorks" x="-180" y="139" width="100" height="92" fill="#bd673e" stroke="#fff1d7" stroke-width="1.5" rx="5"/>
+  <rect id="zone-FrostYard" x="80" y="139" width="100" height="92" fill="#a1e4ff" stroke="#fff1d7" stroke-width="1.5" rx="5"/>
+  <rect id="zone-VioletQuarry" x="-260" y="29" width="92" height="96" fill="#9672e6" stroke="#fff1d7" stroke-width="1.5" rx="5"/>
+  <rect id="zone-SulfurRidge" x="168" y="29" width="92" height="96" fill="#e2c740" stroke="#fff1d7" stroke-width="1.5" rx="5"/>
+  <rect x="-52" y="-263" width="12" height="12" fill="#fff1d7" stroke="#293d59" stroke-width="1"/>
+  <rect x="-26" y="-263" width="12" height="12" fill="#fff1d7" stroke="#293d59" stroke-width="1"/>
+  <rect x="0" y="-263" width="12" height="12" fill="#fff1d7" stroke="#293d59" stroke-width="1"/>
+  <rect x="-52" y="-235" width="12" height="12" fill="#fff1d7" stroke="#293d59" stroke-width="1"/>
+  <rect x="-26" y="-235" width="12" height="12" fill="#fff1d7" stroke="#293d59" stroke-width="1"/>
+  <rect x="0" y="-235" width="12" height="12" fill="#fff1d7" stroke="#293d59" stroke-width="1"/>
+  <rect x="-43.5" y="-265.75" width="47" height="1.5" fill="#29c9ff" stroke="#fff1d7" stroke-width=".5"/>
+  <circle cx="0" cy="-158.5" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="128" cy="-165.5" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="-135" cy="-165" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="60" cy="-232" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="-55" cy="-215" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="-196.5" cy="-55" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="192" cy="-55" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="-130" cy="139" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="130" cy="139" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="-168" cy="77" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
+  <circle cx="168" cy="77" r="2.5" fill="#ffffff" stroke="#18253d" stroke-width=".8"/>
  </g>
- <g font-family="Arial,sans-serif" font-weight="700" text-anchor="middle" fill="#fff" stroke="#18253d" stroke-width="3" paint-order="stroke">
-  <text y="-545" font-size="32">METEORSHIFT — APPROVED STAGED LAYOUT</text>
-  <text y="-510" font-size="15">Final coordinates in studs · stage offset Z +3000 · paths 18–24 wide · boundary ±510</text>
-  <text y="-5" font-size="19">2× METEOR</text><text y="19" font-size="14">~101 × 90 × 101</text>
-  <text y="-113" font-size="14">FLOOR R90 / Y−44</text><text y="-165" font-size="14">OPENING R160</text>
-  <text x="0" y="380" font-size="16">REFINERY</text><text x="140" y="380" font-size="16">GEAR HALL</text>
-  <text x="-155" y="380" font-size="16">HATCHERY</text><text x="70" y="460" font-size="12">TRADING</text>
-  <text x="-20" y="452" font-size="12">6 SPAWNS</text><text x="-360" y="160" font-size="16">REBIRTH</text>
-  <text x="360" y="160" font-size="16">INDEX</text><text x="-275" y="-270" font-size="17">RUST WORKS</text>
-  <text x="275" y="-270" font-size="17">FROST YARD</text><text x="-390" y="-55" font-size="14">VIOLET QUARRY</text>
-  <text x="390" y="-55" font-size="14">SULFUR RIDGE</text>
-  <text y="550" font-size="16">Orange dashed: knockback R180 · White dashed: maximum landing reach R310 · Main loop R320</text>
-  <text y="578" font-size="14">Refinery nearest footprint R348 · Every zone has an entrance and a connected route</text>
+ <g text-anchor="middle">
+  <text x="420" y="544" class="label" font-size="21">2×</text>
+  <text x="420" y="564" class="label" font-size="12">METEOR</text>
+  <text x="420" y="429" class="label" font-size="12">OPENING Ø166.4</text>
+  <text x="420" y="783.1" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">01</text>
+  <text x="586.4" y="793.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">02</text>
+  <text x="244.5" y="793.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">03</text>
+  <text x="498" y="871.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">04</text>
+  <text x="394" y="866.3" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">05</text>
+  <text x="141.8" y="624.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">06</text>
+  <text x="698.2" y="624.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="14" font-weight="700">07</text>
+  <text x="251" y="304.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="12" font-weight="700">RUST WORKS</text>
+  <text x="251" y="322.5" fill="#fff4d9" stroke="#18253d" stroke-width="1.5" paint-order="stroke" font-size="12" font-weight="700">08</text>
+  <text x="589" y="304.5" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="12" font-weight="700">FROST YARD</text>
+  <text x="589" y="322.5" fill="#fff4d9" stroke="#18253d" stroke-width="1.5" paint-order="stroke" font-size="12" font-weight="700">09</text>
+  <text x="141.8" y="444.9" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="12" font-weight="700">VIOLET QUARRY</text>
+  <text x="141.8" y="462.9" fill="#fff4d9" stroke="#18253d" stroke-width="1.5" paint-order="stroke" font-size="12" font-weight="700">10</text>
+  <text x="698.2" y="444.9" fill="#fff4d9" stroke="#18253d" stroke-width="2" paint-order="stroke" font-size="12" font-weight="700">SULFUR RIDGE</text>
+  <text x="698.2" y="462.9" fill="#fff4d9" stroke="#18253d" stroke-width="1.5" paint-order="stroke" font-size="12" font-weight="700">11</text>
  </g>
+ <path d="M52,229V184 M778,548H808" stroke="#90a7bf" stroke-width="1.5" marker-end="url(#arrow)"/>
+ <text x="28" y="174" class="detail" font-size="12">+Z</text>
+ <text x="789" y="532" class="detail" font-size="12">+X</text>
+ <path d="M69,913V949 M771,913V949" stroke="#90a7bf" stroke-width="1.3" fill="none"/>
+ <path d="M73,936H767" stroke="#90a7bf" stroke-width="1.3" fill="none" marker-start="url(#arrow)" marker-end="url(#arrow)"/>
+ <text x="420" y="927" text-anchor="middle" class="detail" font-size="14">540 STUDS · BOUNDARY ±270</text>
+ <rect x="830" y="156" width="566" height="784" rx="12" fill="#22344e" stroke="#3b516d"/>
+ <text x="856" y="188" class="label" font-size="17">EXACT ZONE FOOTPRINTS</text>
+ <text x="856" y="208" class="detail" font-size="12">Dimensions W×D · centres X,Z · entrances X,Y,Z</text>
+ <g id="legend-Refinery">
+  <rect x="856" y="222" width="28" height="28" rx="4" fill="#ff8223"/>
+  <text x="870" y="241" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">01</text>
+  <text x="899" y="238" class="label" font-size="15">REFINERY · 0.5×</text>
+  <text x="899" y="256" class="detail" font-size="12">38 × 32 · centre (0, −177)</text>
+  <text x="899" y="273" class="detail" font-size="12">entrance (0, 3, −158.5)</text>
+ </g>
+ <g id="legend-GearHall">
+  <rect x="856" y="284" width="28" height="28" rx="4" fill="#29c9ff"/>
+  <text x="870" y="303" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">02</text>
+  <text x="899" y="300" class="label" font-size="15">GEAR HALL · 0.5×</text>
+  <text x="899" y="318" class="detail" font-size="12">50 × 36 · centre (128, −185)</text>
+  <text x="899" y="335" class="detail" font-size="12">entrance (128, 0, −165.5)</text>
+ </g>
+ <g id="legend-Hatchery">
+  <rect x="856" y="346" width="28" height="28" rx="4" fill="#be63ff"/>
+  <text x="870" y="365" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">03</text>
+  <text x="899" y="362" class="label" font-size="15">HATCHERY · 0.5×</text>
+  <text x="899" y="380" class="detail" font-size="12">64 × 36 · centre (−135, −185)</text>
+  <text x="899" y="397" class="detail" font-size="12">entrance (−135, 0, −165)</text>
+ </g>
+ <g id="legend-TradingPost">
+  <rect x="856" y="408" width="28" height="28" rx="4" fill="#ffd736"/>
+  <text x="870" y="427" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">04</text>
+  <text x="899" y="424" class="label" font-size="15">TRADING POST · 0.5×</text>
+  <text x="899" y="442" class="detail" font-size="12">28 × 20 · centre (60, −245)</text>
+  <text x="899" y="459" class="detail" font-size="12">entrance (60, 0, −232)</text>
+ </g>
+ <g id="legend-Spawn">
+  <rect x="856" y="470" width="28" height="28" rx="4" fill="#9cdbec"/>
+  <text x="870" y="489" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">05</text>
+  <text x="899" y="486" class="label" font-size="15">SPAWN PLAZA</text>
+  <text x="899" y="504" class="detail" font-size="12">96 × 54 · centre (−20, −241)</text>
+  <text x="899" y="521" class="detail" font-size="12">entrance (−55, 0, −215)</text>
+ </g>
+ <g id="legend-Rebirth">
+  <rect x="856" y="532" width="28" height="28" rx="4" fill="#ffd736"/>
+  <text x="870" y="551" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">06</text>
+  <text x="899" y="548" class="label" font-size="15">REBIRTH · 0.5×</text>
+  <text x="899" y="566" class="detail" font-size="12">36 × 36 · centre (−214, −55)</text>
+  <text x="899" y="583" class="detail" font-size="12">entrance (−196.5, 0, −55)</text>
+ </g>
+ <g id="legend-Museum">
+  <rect x="856" y="594" width="28" height="28" rx="4" fill="#82e8ff"/>
+  <text x="870" y="613" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">07</text>
+  <text x="899" y="610" class="label" font-size="15">INDEX MUSEUM · 0.5×</text>
+  <text x="899" y="628" class="detail" font-size="12">42 × 38 · centre (214, −55)</text>
+  <text x="899" y="645" class="detail" font-size="12">entrance (192, 0, −55)</text>
+ </g>
+ <g id="legend-RustWorks">
+  <rect x="856" y="656" width="28" height="28" rx="4" fill="#bd673e"/>
+  <text x="870" y="675" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">08</text>
+  <text x="899" y="672" class="label" font-size="15">RUST WORKS</text>
+  <text x="899" y="690" class="detail" font-size="12">100 × 92 · centre (−130, 185)</text>
+  <text x="899" y="707" class="detail" font-size="12">entrance (−130, 0, 139)</text>
+ </g>
+ <g id="legend-FrostYard">
+  <rect x="856" y="718" width="28" height="28" rx="4" fill="#a1e4ff"/>
+  <text x="870" y="737" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">09</text>
+  <text x="899" y="734" class="label" font-size="15">FROST YARD</text>
+  <text x="899" y="752" class="detail" font-size="12">100 × 92 · centre (130, 185)</text>
+  <text x="899" y="769" class="detail" font-size="12">entrance (130, 0, 139)</text>
+ </g>
+ <g id="legend-VioletQuarry">
+  <rect x="856" y="780" width="28" height="28" rx="4" fill="#9672e6"/>
+  <text x="870" y="799" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">10</text>
+  <text x="899" y="796" class="label" font-size="15">VIOLET QUARRY</text>
+  <text x="899" y="814" class="detail" font-size="12">92 × 96 · centre (−214, 77)</text>
+  <text x="899" y="831" class="detail" font-size="12">entrance (−168, 0, 77)</text>
+ </g>
+ <g id="legend-SulfurRidge">
+  <rect x="856" y="842" width="28" height="28" rx="4" fill="#e2c740"/>
+  <text x="870" y="861" text-anchor="middle" fill="#18253d" font-size="12" font-weight="700">11</text>
+  <text x="899" y="858" class="label" font-size="15">SULFUR RIDGE</text>
+  <text x="899" y="876" class="detail" font-size="12">92 × 96 · centre (214, 77)</text>
+  <text x="899" y="893" class="detail" font-size="12">entrance (168, 0, 77)</text>
+ </g>
+ <text x="856" y="921" class="detail" font-size="11">Spawn pads, roads and fields retain their current sizes.</text>
+ <rect x="48" y="972" width="748" height="112" rx="10" fill="#22344e" stroke="#3b516d"/>
+ <text x="70" y="997" class="label" font-size="14">CRATER &amp; METEOR</text>
+ <text x="70" y="1019" class="metric">Opening R83.2 / Ø166.4 · floor R55.25 at Y−14.755 · rim Y0</text>
+ <text x="70" y="1041" class="metric">Meteor centre (0, −1.25, 0) · Core ≈56.7 per axis · shell outline approximate</text>
+ <text x="70" y="1063" fill="#ffbd79" font-size="13">No elevated MiningAccess · lower geometry partly buried · access QA pending</text>
+ <rect x="830" y="960" width="566" height="144" rx="10" fill="#22344e" stroke="#3b516d"/>
+ <text x="856" y="985" class="label" font-size="14">ROUTES &amp; EFFECTS</text>
+ <line x1="856" y1="1007" x2="893" y2="1007" stroke="#ffae55" stroke-width="2" stroke-dasharray="5 4"/>
+ <text x="907" y="1012" class="metric">Knockback R117 · zero damage</text>
+ <line x1="856" y1="1032" x2="893" y2="1032" stroke="#ffffff" stroke-width="2" stroke-dasharray="5 4"/>
+ <text x="907" y="1037" class="metric">Persistent landing geometry R125</text>
+ <text x="856" y="1062" class="metric">Loop R134 / width18 · connectors ≥14 · main paths24</text>
+ <text x="856" y="1085" class="detail" font-size="11">Schematic routes and footprints; real mining/phone/performance QA remains.</text>
 </svg>

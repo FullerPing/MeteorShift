@@ -117,4 +117,40 @@ return function(t: any)
 		t.eq(Template.stations.refinery, 1)
 		t.eq(next(Template.index), nil)
 	end)
+
+	t.test("colony perks and the overstay counter: perks survive, the counter clears", function()
+		local data = profile()
+		data.perks = { headStart = 2, stationMemory = 2, efficientLine = 3, offlineTraining = 1, petBond = 1 }
+		data.overflow = 5e6
+		Reset.apply(data, 1000)
+		t.eq(data.perks.headStart, 2)
+		t.eq(data.perks.efficientLine, 3)
+		t.eq(data.perks.petBond, 1)
+		t.eq(data.overflow, 0)
+	end)
+
+	t.test("Station Memory keeps a share of hopper, conveyor and collector levels but never the refinery rule", function()
+		local data = profile()
+		data.perks = { stationMemory = 2 } -- keeps 50% of the levels above 1
+		Reset.apply(data, 1000)
+		t.eq(data.stations.hopper, 3) -- 5: 1 + floor(4 x .5)
+		t.eq(data.stations.conveyor, 3) -- 6: 1 + floor(5 x .5)
+		t.eq(data.stations.collector, 2) -- 4: 1 + floor(3 x .5)
+		t.eq(data.stations.refinery, 7, "the refinery always survives")
+	end)
+
+	t.test("Head Start rebuilds the gear at a higher tier, held to the player level", function()
+		local Levels = require(t.shared.Levels)
+		local data = profile()
+		data.perks = { headStart = 4 }
+		data.level = Levels.evolveLevel(5)
+		Reset.apply(data, 1000)
+		t.eq(data.pickaxeTier, 5)
+		t.eq(data.backpackTier, 5)
+		local low = profile()
+		low.perks = { headStart = 4 }
+		low.level = 1
+		Reset.apply(low, 1000)
+		t.eq(low.pickaxeTier, 4, "level 1 can only hold the tiers that are free")
+	end)
 end

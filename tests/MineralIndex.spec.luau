@@ -230,4 +230,17 @@ return function(t: any)
 			return 0.5
 		end)), nil, "no nodes")
 	end)
+
+	t.test("soft pity raises the odds of minerals not yet found, never of ones already owned", function()
+		local sorted = rarestFirst("Iron")
+		local rare = sorted[1]
+		local calls = {}
+		local function rng(): number
+			table.insert(calls, 1)
+			return rare.Odds * 1.5 -- misses at the plain odds, hits at 2x
+		end
+		t.eq(MineralIndex.roll("Iron", true, rng, {}, nil) ~= rare.Id, true, "no pity: a miss")
+		t.eq(MineralIndex.roll("Iron", true, rng, {}, 2), rare.Id, "pity doubles an unfound mineral")
+		t.eq(MineralIndex.roll("Iron", true, rng, { [rare.Id] = 1 }, 2) ~= rare.Id, true, "owned minerals get no pity")
+	end)
 end

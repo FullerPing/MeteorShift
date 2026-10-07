@@ -1,14 +1,38 @@
 # Map redesign progress
 
-## User-requested original-map Play — 6 October 2026
+## Current session — 7 October 2026, new-map Play
 
-The owner requested “for now return play mode to original map.” Staged run 5 was stopped; all seven spawn enabled states, DevWorldMap/DevMemoryStore and device settings were restored. Studio had already left mobile simulation, so the orientation-only restoration initially failed; current device/orientation were checked, then mobile mode was briefly activated solely to restore FitToWindow/landscape right before returning to default. Verified original spawn enabled, six staged pads disabled, QA attributes/globals absent. Play was restarted on Workspace.Map, ServerStorage.Assets, original MeteorSpawn(0,-1.25,0), Core28.349998 on all axes. Map_Redesign remains preserved. Leave this original-map Play session running as requested; do not automatically return to staged QA.
+The owner requested spawning at the new map. The prior Play session was stopped; Edit captured the spawn/attribute baselines in `_G.MapRedesignPlaySetup`, selected `Workspace.DevWorldMap = Map_Redesign`, enabled `ServerStorage.DevMemoryStore`, disabled the original spawn and enabled all six staged pads. Play restarted on the new map and assets. FullPinger actually spawned beside SpawnPad4 at (-47.2502, 5.7504, 2774.4697), health 100, 5.9354 studs from that pad. Runtime RespawnLocation is the new map main Spawn.
+
+This temporary setup is active and unsaved. Before a future Edit save, stop Play and restore every recorded spawn Enabled value and attribute value (including nil) from the Edit `_G.MapRedesignPlaySetup` snapshot. Its SpawnStates entries use Instance/Path/Enabled; Attributes entries use Instance/Name/Value. This is a spawn confirmation, not a walking/mining QA pass. No source or GUI changes, map swap or publishing. The following saved Edit checkpoint is prior history.
+
+## Previous saved checkpoint — 7 October 2026, Edit
+
+Latest owner steering is implemented in the staged scene: **540 × 540** playable ground; six buildings, separate PickaxeShop and welcome decoration scaled to **0.5**; **237-part MiningAccess removed**; MeteorSpawn restored to original **Y −1.25**. Verified 2× meteor templates remain, with Core approximately 56.7 on every axis. Opening radius 83.2, floor radius 55.25 and floor Y −14.755 are retained. No GUI change was made for this revision.
+
+Studio is **Edit**, not Play. Map_Redesign contains **1173 parts**; Refinery 145 parts, UsePoint (0,3,2841.5), pivot (0,0.4,2823). Original Map remains 2043 parts with original spawn enabled; all six staged spawns are disabled. Temporary world selectors and memory-profile setup are restored.
+
+Fresh StaticQA: **84 computed ground paths, zero failures; six forecourt probes, zero collision failures**. Fresh Edit source/API runner completed **423 passed / 0 failed**; all **39 protected GUI hashes are unchanged**. The 96-midpoint elevated headroom diagnostic and five terrace/ascent walking destinations are retired, with explicit absence required for MiningAccess. These Edit checks do not verify actual walking or reach. Actual Play walking/jumps and all 36 crust targets plus exposed core remain unverified for this revision. At Y −1.25 the doubled meteor's lower geometry is buried beneath the −14.755 floor; no fit or all-node reach claim is made.
+
+**Edit save confirmed:** native Studio Output on 7 October at **07:35:58.313** reported `Saved new changes in "Craterworks: Meteor Mining" to Roblox.` after Ctrl+S. No publishing. Four latest staged exports passed disk readback, canonical base64 and engine roundtrip verification: Map 73466 bytes/1173 parts, Refinery 23216 bytes/145 parts, Assets 73990 bytes/119 parts, Lighting 4703 bytes. Current hashes are in REPORT.md and qa-session-state.json; previous files are archived under `assets/archive/staging-before-small-buildings/`.
+
+Full goal remains incomplete; no swap. Ground walking/mining/variants/gameplay, phones, pets/performance, complete critique rounds and controlled final delivery remain required. Older manifest/hash/save evidence below describes prior checkpoints.
+
+The following sections preserve earlier history. Their Play states, raised-ascent requirements and old dimensions are superseded by this checkpoint.
+
+## Historical redesign-spawn Play — 6 October 2026
+
+The owner previously requested “return to redesign spawn.” Original-map Play was stopped, the seven spawn states and absent QA attributes were captured in Edit `_G.MapRedesignPlaySetup`, and staged selection/memory profiles were enabled. That temporary run used Workspace.Map_Redesign/Assets_Redesign with the character at main spawn(-46,1.1,2528), full health. Original spawn was disabled and six staged spawns enabled; device stayed default. This session has ended and its selector/memory/spawn setup is restored at the current Edit checkpoint. No map swap or publishing occurred.
+
+## Historical original-map Play — 6 October 2026
+
+The owner requested “for now return play mode to original map.” Staged run5 was stopped; all seven spawn states, DevWorldMap/DevMemoryStore and device settings were restored. After checking device/orientation, mobile mode was briefly activated solely to restore FitToWindow/landscape right before returning to default. Original spawn was enabled, six staged pads disabled and QA attributes/globals absent. Play was then restarted on Workspace.Map/ServerStorage.Assets with original MeteorSpawn(0,-1.25,0), Core28.349998. That temporary session has ended; current state is Edit as recorded above.
 
 Latest code suite: **412 passed / 0 failed**. Fourteen live changed/new source modules match disk and compile; runtime walking tool also compiles. Streaming integrity RED was6passed/1failed, followed by full GREEN412/0. Removing wall/current equipment parts in actual Play rebuilt18models and preserved latest tier4/6; current budget331parts. All39frozen hashes still differ only for the approved TutorialController lookup. Native Edit save confirmed **18:39:50.718** on6October2026, no publishing. Subsequent QA created no saved Script fixtures; current source/tools/docs changes remain uncommitted.
 
 Run4 verified refinery E/open, Deposit20, normal Claim request20, TradingPost E sale20bars/$1000 and shop E/Open; details and limitations are in runtime-qa-20261006.md. Run5 actual walks: spawn→Refinery21waypoints/8.29s, Refinery→southFloorLanding38waypoints/17.71s, minimumhealth100. Issued jumps2/3 but observed0: jump gate is unverified. Ice impact observation retainedhealth100; Ice meteor495parts/36nodes/Core56.699997/bounds99.160889×97.387466×98.936737. A later Iron measured100.288887×98.350693×100.409729, vertical−43.019425..55.331267. Phone320×568 screenshot is qa-images/run5-hud-320x568.png; actual camera viewport320×487. Full phone/menu/readability coverage remains incomplete.
 
-**Next staged repair:** Crown ascent walking returned NoPath. From Ascent0, lower terrace path succeeds but middle/upper/crown fail; same result with494meteorparts temporarily noncolliding, then every collision property restored. Ascent targets8/16/24 reachable,32andabove fail. Inspect the full terrace decks overhead as the rising helix passes under them; this is the current geometry hypothesis, not a proven or implemented repair. No mining access geometry has been changed. Add real navigation acceptance before changing joints/radius; do not waive Basic reach or path gates.
+**Historical staged blocker, now retired:** Crown ascent walking returned NoPath. From Ascent0, lower terrace succeeded but middle/upper/crown failed; the result persisted with494meteorparts temporarily noncolliding, then all properties restored. Ascent8/16/24 were reachable,32+failed. The terrace-ceiling hypothesis led to a replacement ascent; the owner subsequently removed all elevated MiningAccess on7October. Current ground navigation and actual Basic mining still require their own acceptance.
 
 Full goal remains incomplete: no swap, no complete critique rounds, no final exports or push. The HUD staging warning persists under the frozen GUI constraint. Earlier sections are historical and superseded by this checkpoint.
 

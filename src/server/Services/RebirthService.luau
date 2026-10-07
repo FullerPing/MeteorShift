@@ -3,8 +3,10 @@
 -- REBIRTH panel; the server re-checks the price (Shared.Rebirth.cost) against the
 -- player's cash.
 --
--- Rebirth resets cash, gear, all ore/bars, other production upgrades and décor.
--- Refinery level, Core Shards and mineral-index rewards survive. Purchased value,
+-- Rebirth resets cash, gear, all ore/bars, other production upgrades and décor (Colony Perks
+-- can keep or head-start parts of that, Lib.RebirthReset). Refinery level, Core Shards, perks and
+-- mineral-index rewards survive. Bar-sale cash earned beyond the rebirth's cost pays overstay
+-- shards (Shared.Rebirth.overstayShards), and each rank announces what it unlocks. Purchased value,
 -- preferences and lifetime history are retained independently of gameplay resets.
 -- In return the rebirth count goes up by one, and with it the permanent bar sale
 -- multiplier (Shared.Rebirth.multiplier, read by EconomyService:SaleMultiplier).
@@ -49,9 +51,13 @@ function RebirthService:Rebirth(player: Player): boolean
 	end
 
 	local cashSpent = data.cash
+	local bonusShards = Rebirth.overstayShards(data.overflow or 0, cost)
 	RebirthReset.apply(data, os.time())
 	rebirths += 1
 	data.rebirths = rebirths
+	if bonusShards > 0 then
+		PlayerStateService:AddShards(player, bonusShards)
+	end
 
 	PlayerStateService:ResetTransientInventory(player)
 	ShopService:ApplyPickaxe(player)
@@ -66,6 +72,15 @@ function RebirthService:Rebirth(player: Player): boolean
 			Format.number(Rebirth.multiplier(rebirths))
 		)
 	)
+	local unlock = Rebirth.unlock(rebirths)
+	local parts = { string.format("Rebirth %d! Bars sell for ×%s.", rebirths, Format.number(Rebirth.multiplier(rebirths))) }
+	if bonusShards > 0 then
+		table.insert(parts, string.format("+%d bonus shards for the progress you didn't need.", bonusShards))
+	end
+	if unlock then
+		table.insert(parts, "Unlocked: " .. unlock .. ".")
+	end
+	self.Client.Notice:Fire(player, table.concat(parts, " "))
 	self.Reborn:Fire(player, rebirths, cashSpent)
 	return true
 end

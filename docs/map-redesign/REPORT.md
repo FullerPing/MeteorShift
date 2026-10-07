@@ -1,5 +1,36 @@
 # Map redesign report — incomplete checkpoint
 
+## Current checkpoint — 7 October 2026, Edit; saved
+
+The owner's latest revision is applied to the staged **540 × 540** world. Six buildings, the separate shop counter and welcome decoration are scaled to **0.5**. All **237 parts of elevated MiningAccess are removed**. MeteorSpawn returns to original **Y −1.25**, while the isolated 2× templates keep Core approximately 56.7 on every axis, eight times original volume. Crater opening radius 83.2, floor radius 55.25 and floor Y −14.755 remain. This revision made no GUI change.
+
+| Current item | Confirmed Edit evidence |
+|---|---|
+| Staged map | 1173 parts; offset (0,0,3000) |
+| Original map | 2043 parts preserved; original spawn enabled |
+| Staged spawns and QA setup | Six spawns disabled; temporary selector/memory setup restored; no active Play |
+| Refinery | 145 parts; UsePoint (0,3,2841.5); pivot (0,0.4,2823) |
+| Ground navigation | 84 computed StaticQA routes; zero failures |
+| Forecourt clearance | Six probes; zero collision failures |
+| Fresh Edit source/API suite | 423 passed / 0 failed; no Play/reach claim |
+| Protected GUI | 39 hashes checked; zero changes |
+| Superseded elevated QA | 96-ascent headroom check and five walking targets retired; MiningAccess absence required |
+
+Actual Play walking/jumps and mining are still pending for this scene. The doubled meteor's lower geometry lies below the shallow floor at the restored original height. Previous raised-meteor candidate distances do not establish current standing, aiming or reach to all 36 crust targets and exposed core. No all-target reach or fresh gameplay claim is made.
+
+**Edit save confirmed:** native Studio Output on 7 October at **07:35:58.313** reported `Saved new changes in "Craterworks: Meteor Mining" to Roblox.` after Ctrl+S. No publishing. The following four latest files in `assets/staging/map-redesign/` passed disk readback, canonical base64 and engine roundtrip verification. Previous exports are archived under `assets/archive/staging-before-small-buildings/`.
+
+| File | Bytes | Parts | SHA256 |
+|---|---:|---:|---|
+| Map_Redesign.rbxm | 73466 | 1173 | `a1fec55df66a84c5f4678e2067af35b15cde8ea8fe725660e2ed36cf401d240b` |
+| Refinery_Redesign.rbxm | 23216 | 145 | `fa61328820f129082c0cecca7086fedac33cc9056a30a9304cc2658b67508a28` |
+| ServerAssets_Redesign.rbxm | 73990 | 119 | `682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14` |
+| Lighting_Redesign.rbxm | 4703 | — | `50ee2270288b7a1df1a4f14f0dc14f2e8fe61070cbe597e768c82701716ffa89` |
+
+Full goal remains incomplete: actual ground routes, mining/variant/gameplay acceptance, phone readability, pets/performance, complete critique rounds and controlled final delivery remain. Original map is retained; no swap. Older saves/exports below are historical.
+
+The following report preserves earlier checkpoints. Its large-world dimensions, raised ascent, Play state and pending source migrations are historical where they conflict with the current evidence above.
+
 ## Isolated template checkpoint — 6 October 2026
 
 Restored the verified73990-byte staging asset binary into ServerStorage.Assets_Redesign:119parts, zero scripts, Core56.699997 on all axes. Original Assets/Core28.349998 and Map remain unchanged. MeteorService now selects isolated templates only when Studio opts into DevWorldMap=Map_Redesign; production always selects Assets. New selector test failed6passed/1failed before implementation; full suite now397passed/0failed. WorldMap/MeteorService/spec syntax checks pass. Native Edit save confirmed17:58:56.929, no publishing. The staging map is not selected yet and its six spawns remain disabled; do not start Play against the original map with enlarged geometry config.
@@ -26,9 +57,9 @@ The resumed run is blocked after three turns with the same pending world-code an
 
 The original town remains active. Workspace.Map_Redesign contains the new world at offset (0, 0, 3000). No swap, old-map deletion or publishing has occurred. The original Map still has 2,043 parts; live Assets, Terrain and Lighting remain unchanged.
 
-## Built and measured
+## Historical built and measured geometry — 6 October 2026
 
-| Item | Current evidence |
+| Item | Evidence at that checkpoint |
 |---|---|
 | Authored staged map | 1,417 parts; no MeshParts or Scripts; all anchored |
 | Refinery | 145 parts; PrimaryPart Foundation; one UsePoint; SharedRefinery true; no Scripts, prompts or Humanoids |
@@ -79,7 +110,7 @@ Automatic approval review rejected creating world test ModuleScripts under the i
 - Preserve the frozen RefineryController's dormant PlotId listener and report its status after plot removal. Frozen HUD bindings to Workspace.Map require post-swap verification.
 - Economy, mineral odds, monetization, mining reach and HP are unchanged.
 
-## What to inspect first
+## Historical inspection notes — earlier large layout
 
 Inspect the staged town near Z 2660: orange Refinery in the centre, violet Hatchery to the west and blue Gear Hall to the east. Check the crater ascent around Z 3000 next, then west Rebirth, east Museum and the four debris yards. Keep staging pads disabled until runtime selection is connected.
 

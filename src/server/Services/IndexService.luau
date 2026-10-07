@@ -7,7 +7,8 @@
 -- own pickaxe meets the meteor's RequiredTier only (spec §8.1). Debris never rolls.
 -- The rarest mineral of a page needs a rich crust node (MeteorService marks them
 -- with a Rich attribute). Nothing purchasable changes the odds: 2x Ore doubles ore,
--- never minerals (spec §9.4).
+-- never minerals (spec §9.4). The one thing that moves them is play: after a long streak
+-- without finding a mineral you don't have, those minerals' odds rise (Shared.Hooks.pityMult).
 --
 -- A completed page is announced to the server; it adds its bonus to bar sales
 -- (EconomyService:SaleMultiplier) and its title. The player's best title is kept in
@@ -18,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Hooks = require(ReplicatedStorage.Shared.Hooks)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 
 local IndexService = Knit.CreateService({
@@ -31,6 +33,9 @@ local IndexService = Knit.CreateService({
 local PlayerStateService
 local MeteorService
 local RewardService
+
+-- Validated hits since the player last found a mineral they didn't have (soft pity, not saved)
+local dryHits: { [Player]: number } = {}
 
 local random = Random.new()
 local function roll(): number
@@ -57,8 +62,17 @@ function IndexService:_onHit(player: Player, kind: string, part: BasePart)
 	if PlayerStateService:GetPickaxe(player).Tier < meteorType.RequiredTier then
 		return
 	end
-	local mineralId = MineralIndex.roll(page.Id, part:GetAttribute("Rich") == true, roll)
+	local data = PlayerStateService:Get(player)
+	if not data then
+		return
+	end
+	local dry = (dryHits[player] or 0) + 1
+	dryHits[player] = dry
+	local mineralId = MineralIndex.roll(page.Id, part:GetAttribute("Rich") == true, roll, data.index, Hooks.pityMult(dry))
 	if mineralId then
+		if (data.index[mineralId] or 0) == 0 then
+			dryHits[player] = 0
+		end
 		self:Award(player, mineralId)
 	end
 end
@@ -103,6 +117,10 @@ function IndexService:KnitStart()
 	for _, player in Players:GetPlayers() do
 		restoreTitle(player) -- profiles loaded before this service started
 	end
+
+	Players.PlayerRemoving:Connect(function(player)
+		dryHits[player] = nil
+	end)
 
 	NodeService.Hit:Connect(function(player: Player, kind: string, part: BasePart)
 		self:_onHit(player, kind, part)

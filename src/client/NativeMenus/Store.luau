@@ -67,7 +67,7 @@ function Menu.build(): ScreenGui
 	gui:SetAttribute("NativePrefab", true)
 	local nav = NativeUI.button(gui, "StoreButton", "", UDim2.fromOffset(1112, 502), UDim2.fromOffset(120, 108), Color3.fromRGB(255, 207, 55))
 	NativeUI.create("UIScale", { Name = "LayoutScale", Scale = 1 }, nav)
-	icon(nav, "Icon", "premium", UDim2.new(0.13, 0, 0.02, 0), UDim2.fromScale(0.74, 0.74))
+	icon(nav, "Icon", "store", UDim2.new(0.13, 0, 0.02, 0), UDim2.fromScale(0.74, 0.74))
 	local caption = NativeUI.text(nav, "Caption", "STORE", UDim2.fromScale(0, 0.70), UDim2.fromScale(1, 0.30))
 	caption.TextSize, caption.TextXAlignment = 18, Enum.TextXAlignment.Center
 	local tooltip = NativeUI.text(nav, "Tooltip", "STORE", UDim2.new(1, 8, 0.5, -16), UDim2.fromOffset(102, 32))

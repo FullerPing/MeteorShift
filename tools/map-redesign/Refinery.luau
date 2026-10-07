@@ -2,15 +2,21 @@
 local A=assert(_G.MapRedesignArt)
 local C=A.colors
 local town=A.ensure(A.map,"TownSquare")
-local refinery=A.group(town,"Refinery")
-refinery:SetAttribute("SharedRefinery",true)
+local target
+for _,zone in A.geometry.Zones do if zone.id=="Refinery" then target=zone end end
+assert(target,"Missing refinery zone")
 local ray=RaycastParams.new()
 ray.FilterType=Enum.RaycastFilterType.Include
 ray.FilterDescendantsInstances={A.map.Ground,A.map.Roads}
-local ground=workspace:Raycast(Vector3.new(0,180,2620),Vector3.new(0,-300,0),ray)
+local ground=workspace:Raycast(Vector3.new(target.x,180,target.z)+A.offset,Vector3.new(0,-300,0),ray)
 assert(ground,"No refinery ground")
+local front=workspace:Raycast(Vector3.new(target.x,80,target.z+37)+A.offset,Vector3.new(0,-150,0),ray)
+assert(front,"No walkable refinery front")
+-- Complete ground preflight before replacing the owned staged model.
+local refinery=A.group(town,"Refinery")
+refinery:SetAttribute("SharedRefinery",true)
 local y=ground.Position.Y
-local function cf(x,height,z) return A.cf(x,y+height,z) end
+local function cf(x,height,z) return A.cf(x+target.x,y+height,z+target.z+380) end
 local base=A.part(refinery,"Foundation",Vector3.new(76,1.6,64),cf(0,.8,-380),C.navy)
 refinery.PrimaryPart=base
 A.part(refinery,"SmelterHousing",Vector3.new(66,36,42),cf(0,19.6,-384),C.stone,Enum.Material.Metal)
@@ -97,9 +103,8 @@ A.sign(refinery,"ServiceSign","DEPOSIT ORE  •  CLAIM BARS",Vector3.new(48,4,1)
 for _,x in {-20,20} do
 	A.part(refinery,"ServiceBracket",Vector3.new(3,2,11),cf(x,11,-357),C.cream,Enum.Material.Metal,false)
 end
-local front=workspace:Raycast(Vector3.new(0,80,2657),Vector3.new(0,-150,0),ray)
-assert(front,"No walkable refinery front")
-local point=A.part(refinery,"UsePoint",Vector3.new(6,1,6),A.cf(0,front.Position.Y+3,-343),C.gold,nil,false)
+local point=A.part(refinery,"UsePoint",Vector3.new(6,1,6),
+	A.cf(target.x,front.Position.Y+3,target.z+37),C.gold,nil,false)
 point.Transparency=1
 point.CanCollide,point.CanTouch,point.CanQuery=false,false,false
 local forbidden,points={},0
@@ -124,8 +129,9 @@ for _,p in refinery:GetDescendants() do
 	end
 end
 local nearest=-frontZ
-assert(nearest>=348-.001,"Refinery visible geometry crosses its footprint")
-assert((point.Position-A.offset).Magnitude>314,"UsePoint inside effect extent")
+assert(nearest>=-target.z-32-.001,"Refinery visible geometry crosses its authored footprint")
+local use=point.Position-A.offset
+assert(Vector3.new(use.X,0,use.Z).Magnitude>A.geometry.LandingRadius,"UsePoint inside effect extent")
 A.map:SetAttribute("RefineryPass",1)
-return {stage="Refinery",parts=A.count(refinery),groundY=y,usePoint={0,front.Position.Y+3,-343},
+return {stage="Refinery",parts=A.count(refinery),groundY=y,usePoint={use.X,use.Y,use.Z},
 	nearestFootprint=nearest,reused={"Hopper","Conveyor","Refinery"},prompts=0,scripts=0,totalParts=A.count(A.map)}

@@ -10,6 +10,9 @@
 --   top three  Config.Meteor.TopBonus by contribution among the core hitters
 --
 -- Players who only mined crust get no shards; their ore is theirs to keep.
+--
+-- Consolation: a meteor that cools with its core far enough down (Config.Hooks.Consolation)
+-- still pays the floor to everyone who hit the core, so a near miss isn't nothing.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -54,6 +57,22 @@ function Rewards.compute(entries: { Entry }, poolMult: number): { [number]: Rewa
 		reward.Total += reward.Top
 	end
 
+	return rewards
+end
+
+-- The floor for every core hitter, for a meteor that cooled with its core mostly down.
+-- `coreRemaining` is the core's HP as a share of its max (0 to 1). Same shape as compute.
+function Rewards.consolation(entries: { Entry }, coreRemaining: number): { [number]: Reward }
+	local rewards: { [number]: Reward } = {}
+	if coreRemaining > 1 - Config.Hooks.Consolation.CoreDownFraction then
+		return rewards
+	end
+	local floor = Config.Meteor.ShardFloor
+	for index, entry in entries do
+		if entry.HitCore then
+			rewards[index] = { Floor = floor, Bonus = 0, Top = 0, Total = floor }
+		end
+	end
 	return rewards
 end
 

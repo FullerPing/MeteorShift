@@ -49,4 +49,28 @@ function MeteorVisualGeometry.falloff(distance: number, radius: number): number
 	return math.clamp(1 - distance / radius, 0, 1)
 end
 
+-- Height of the visible outer shockfront. The meteor's centre may be elevated;
+-- its Y is deliberately excluded from the crater's ground profile.
+function MeteorVisualGeometry.groundHeight(radius: number, crater: any): number
+	local slope = math.clamp((radius-crater.FloorRadius)/(crater.OpeningRadius-crater.FloorRadius), 0, 1)
+	return crater.FloorY + (crater.RimY-crater.FloorY)*slope
+end
+
+function MeteorVisualGeometry.groundRingPosition(impact: Vector3, radius: number, thickness: number, crater: any, samples: any?): Vector3
+	local y = MeteorVisualGeometry.groundHeight(radius,crater)
+	if samples and #samples > 0 and radius >= samples[1].radius and radius <= samples[#samples].radius then
+		y = samples[#samples].y
+		for i, sample in samples do
+			if radius <= sample.radius then
+				local previous = samples[math.max(1,i-1)]
+				local span = sample.radius-previous.radius
+				local alpha = if span > 0 then math.clamp((radius-previous.radius)/span,0,1) else 0
+				y = previous.y+(sample.y-previous.y)*alpha
+				break
+			end
+		end
+	end
+	return Vector3.new(impact.X,y+thickness/2+.04,impact.Z)
+end
+
 return MeteorVisualGeometry

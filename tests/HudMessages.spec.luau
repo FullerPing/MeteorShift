@@ -69,8 +69,14 @@ return function(t: any)
 		local crack = Pets.playerXp(Levels.crackXp("iron"), 0.2)
 		Levels.addXp(progress, hit)
 		Levels.addXp(progress, crack)
-		t.eq(progress.level, 2)
-		t.near(progress.xp, 29.6, 1e-6)
+		-- the same 29 + hit + crack XP, spent level by level on the current curve
+		local left, level = 29 + hit + crack, 1
+		while Levels.xpToNext(level) and left >= (Levels.xpToNext(level) :: number) do
+			left -= Levels.xpToNext(level) :: number
+			level += 1
+		end
+		t.eq(progress.level, level)
+		t.near(progress.xp, left, 1e-6)
 		t.eq(Messages.meteorReward(25, 0, { 10, 6, 3 }, hit + crack),
 			'<font color="#71CDFF">25</font> shards received · <font color="#FFD166">+30.6 XP</font>')
 	end)

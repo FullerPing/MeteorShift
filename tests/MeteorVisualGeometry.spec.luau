@@ -36,11 +36,14 @@ return function(t: any)
 	end)
 
 	t.test("impact fills the doubled ground and dust volume around the same world position", function()
-		local fx = Geometry.build(2, 180).Impact
+		local fx = Geometry.build(2, 117).Impact
 		local position = Vector3.new(10, 30, -20)
-		t.eq(position + fx.RingOffset, Vector3.new(10, 22, -20), "ground offset scales around impact")
+		local crater = {FloorY=-14.755,FloorRadius=55.25,OpeningRadius=83.2,RimY=0}
+		local ring = Geometry.groundRingPosition(position, 8, fx.RingStartSize.X, crater)
+		t.near(ring.Y, -13.715, 1e-4, "raised core does not raise the ground shockfront")
+		t.eq(Vector2.new(ring.X, ring.Z), Vector2.new(10, -20))
 		t.eq(fx.RingStartSize, Vector3.new(2, 16, 16))
-		t.eq(fx.RingEndSize, Vector3.new(2, 360, 360))
+		t.eq(fx.RingEndSize, Vector3.new(2, 234, 234))
 		t.eq(fx.FlashStartSize, Vector3.new(20, 20, 20))
 		t.eq(fx.FlashEndSize, Vector3.new(140, 140, 140))
 		t.eq(fx.DustAnchorSize, Vector3.new(80, 2, 80))
@@ -57,6 +60,20 @@ return function(t: any)
 		t.near(fx.RingEndSize.Y / 2, 80, 1e-6)
 		t.near(fx.RingEndSize.Z / 2, 80, 1e-6)
 		t.near(fx.RingEndSize.X, 3, 1e-6, "thickness still follows visual scale")
+	end)
+	t.test("shockfront follows floor bowl and streamed ground independently of meteor height", function()
+		local crater = {FloorY=-14.755,FloorRadius=55.25,OpeningRadius=83.2,RimY=0}
+		local impact = Vector3.new(0,35.4,3000)
+		t.near(Geometry.groundRingPosition(impact, 117, 2, crater).Y, 1.04, 1e-4)
+		t.near(Geometry.groundRingPosition(impact, 69.225, 2, crater).Y, -6.3375, 1e-4)
+		local samples = {{radius=0,y=-15},{radius=60,y=-10},{radius=100,y=0}}
+		t.near(Geometry.groundRingPosition(impact, 80, 2, crater, samples).Y, -3.96, 1e-4)
+		t.near(Geometry.groundRingPosition(impact, 120, 2, crater, samples).Y, 1.04, 1e-4)
+	end)
+	t.test("missing outer streamed ground falls back to the crater rim", function()
+		local crater = {FloorY=-14.755,FloorRadius=55.25,OpeningRadius=83.2,RimY=0}
+		local floorOnly = {{radius=8,y=-14.755},{radius=52,y=-14.755}}
+		t.near(Geometry.groundRingPosition(Vector3.new(0,35.4,3000),117,2,crater,floorOnly).Y,1.04,1e-4)
 	end)
 
 	t.test("core shards preserve their ballistic shape at double scale", function()

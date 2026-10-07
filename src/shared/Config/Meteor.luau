@@ -5,8 +5,8 @@
 local Meteor = {}
 
 -- Phase durations, in seconds (spec §5.1)
-Meteor.FirstCountdown = 120 -- first meteor after a server starts is ~2 minutes away (spec §4)
-Meteor.Countdown = 240
+Meteor.FirstCountdown = 90 -- first meteor after a server starts is ~1.5 minutes away (spec §4)
+Meteor.Countdown = 180 -- 3 minutes: a 343 s cycle gives a new player four meteors in the first 19 minutes (docs/economy-rework.md)
 Meteor.ImpactDuration = 3
 -- The cooling timer (Active) is per type: Meteor.Types[id].ActiveDuration
 Meteor.CrackedDuration = 5
@@ -42,17 +42,21 @@ Meteor.StandingInterval = 1 -- how often clients get their rank and the top thre
 
 -- Shockwave: knockback only, no damage (spec §5.1)
 Meteor.Knockback = {
-	Radius = 180,
+	Radius = 117,
 	Speed = 110,
 	Lift = 55,
 }
 
 -- Meteor types (spec §8.1): every type is the same event with the ore, the required
 -- pickaxe tier, one twist and the multipliers swapped. Shared.MeteorTypes holds the
--- rules (odds, twist math). Everyone mines every type; the refinery's clearance
--- by player level (Config.Levels) is what keeps it fair. Alien Boss and Seasonal
--- meteors are not built yet.
-Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest
+-- rules (odds, twist math). Everyone mines every type; what a hit yields by player level
+-- (Config.Levels, Shared.Levels.oreYield) is what keeps it fair. The Alien boss is not in
+-- the weighted schedule: Meteor.Boss brings it in. Seasonal meteors are not built yet.
+Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest, the weighted schedule
+
+-- The Alien boss meteor: every EveryMeteors-th meteor (about hourly) on a server where someone
+-- has at least MinRebirths rebirths (the rebirth 3 unlock). It pays a new, rarer ore.
+Meteor.Boss = { Type = "Alien", EveryMeteors = 10, MinRebirths = 3 }
 
 Meteor.Twists = {
 	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second.
@@ -82,6 +86,7 @@ export type MeteorType = {
 	OreMaterial: Enum.Material,
 	CoreColor: Color3,
 	GlowColor: Color3,
+	Golden: boolean?, -- a golden variant of a scheduled type (Shared.MeteorTypes.golden)
 }
 
 Meteor.Types = {
@@ -97,11 +102,11 @@ Meteor.Types = {
 		Weight = 60,
 		Twist = "None",
 		CrustColors = {
-			Color3.fromRGB(86, 78, 74),
-			Color3.fromRGB(104, 92, 84),
-			Color3.fromRGB(70, 64, 62),
+			Color3.fromRGB(184, 118, 84),
+			Color3.fromRGB(204, 138, 98),
+			Color3.fromRGB(156, 98, 72),
 		},
-		CrustMaterial = Enum.Material.Basalt,
+		CrustMaterial = Enum.Material.Plastic,
 		OreColor = Color3.fromRGB(196, 170, 150),
 		OreMaterial = Enum.Material.Metal,
 		CoreColor = Color3.fromRGB(215, 78, 24),
@@ -119,11 +124,11 @@ Meteor.Types = {
 		Weight = 25,
 		Twist = "Refreeze",
 		CrustColors = {
-			Color3.fromRGB(176, 208, 232),
-			Color3.fromRGB(150, 188, 220),
-			Color3.fromRGB(200, 226, 244),
+			Color3.fromRGB(150, 214, 255),
+			Color3.fromRGB(122, 194, 246),
+			Color3.fromRGB(192, 232, 255),
 		},
-		CrustMaterial = Enum.Material.Glacier,
+		CrustMaterial = Enum.Material.Plastic,
 		OreColor = Color3.fromRGB(96, 226, 255),
 		OreMaterial = Enum.Material.Ice,
 		CoreColor = Color3.fromRGB(40, 160, 235),
@@ -141,18 +146,41 @@ Meteor.Types = {
 		Weight = 15,
 		Twist = "Resonance",
 		CrustColors = {
-			Color3.fromRGB(116, 78, 138),
-			Color3.fromRGB(138, 88, 150),
-			Color3.fromRGB(98, 64, 118),
+			Color3.fromRGB(158, 108, 204),
+			Color3.fromRGB(182, 126, 220),
+			Color3.fromRGB(132, 90, 180),
 		},
-		CrustMaterial = Enum.Material.Rock,
+		CrustMaterial = Enum.Material.Plastic,
 		OreColor = Color3.fromRGB(255, 122, 214),
 		OreMaterial = Enum.Material.Glass,
 		CoreColor = Color3.fromRGB(205, 50, 190),
 		GlowColor = Color3.fromRGB(255, 86, 232),
 	} :: MeteorType,
+	Alien = {
+		Id = "Alien",
+		DisplayName = "Alien Boss Meteor",
+		Ore = "alien",
+		RequiredTier = 5,
+		YieldMult = 1,
+		HpMult = 1.5,
+		ActiveDuration = 180,
+		ShardMult = 3,
+		Weight = 0, -- never in the weighted schedule: Meteor.Boss
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(62, 176, 126),
+			Color3.fromRGB(86, 204, 148),
+			Color3.fromRGB(48, 150, 110),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(120, 255, 150),
+		OreMaterial = Enum.Material.Neon,
+		CoreColor = Color3.fromRGB(70, 235, 120),
+		GlowColor = Color3.fromRGB(110, 255, 160),
+	} :: MeteorType,
 } :: { [string]: MeteorType }
 
-Meteor.InertColor = Color3.fromRGB(58, 56, 56)
+-- A cooled meteor: a dull toy grey, dark enough to read as spent against the bright map
+Meteor.InertColor = Color3.fromRGB(104, 100, 106)
 
 return Meteor

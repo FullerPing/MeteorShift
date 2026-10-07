@@ -7,6 +7,9 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
+local Hooks = require(ReplicatedStorage.Shared.Hooks)
+local Perks = require(ReplicatedStorage.Shared.Perks)
+local Format = require(ReplicatedStorage.Shared.Format)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Refining = require(script.Parent.Parent.Lib.Refining)
@@ -31,6 +34,7 @@ local DataService
 local PlayerStateService
 local EconomyService
 local MonetizationService
+local RewardService
 
 local blockedBy: { [Player]: Refining.Blocked } = {}
 local remoteTimes: { [Player]: { [string]: number } } = {}
@@ -161,8 +165,30 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	end
 	local cap = MonetizationService:OfflineCap(player) -- Offline Hours+ raises it
 	local seconds = math.min(awaySeconds, cap)
-	local made, bars, blocked = Refining.run(data, seconds, nil, PlayerStateService:GetVaultMultiplier(player))
+	local made, bars, blocked = Refining.run(data, seconds, nil, PlayerStateService:GetVaultMultiplier(player), Perks.lineMult(data.perks))
 	blockedBy[player] = blocked
+	-- Welcome back (Config.Hooks.WelcomeBack): the catch-up sometimes finds extra bars
+	local bonus = if bars > 0 then Hooks.welcomeBack(math.random()) else 1
+	local bonusBars = 0
+	if bonus > 1 then
+		local room = math.max(Refining.collectorCapacity(data, PlayerStateService:GetVaultMultiplier(player)) - sum(data.bin), 0)
+		for oreType, amount in made do
+			local extra = math.min(math.floor(amount * (bonus - 1) + 0.5), room)
+			if extra > 0 then
+				room -= extra
+				data.bin[oreType] = (data.bin[oreType] or 0) + extra
+				made[oreType] = amount + extra
+				bonusBars += extra
+			end
+		end
+		bars += bonusBars
+		if bonusBars <= 0 then
+			bonus = 1
+		end
+	end
+	if bonus > 1 then
+		RewardService:Bonus(player, "welcomeBack", string.format("Lucky find! Your plot made ×%s while you were away (+%s bars).", Format.number(bonus), Format.number(bonusBars)))
+	end
 	-- What the bars sell for at the Trading Post, sale multipliers included
 	local value = math.floor(PlayerStateService:BarValue(made) * EconomyService:SaleMultiplier(player))
 	self.Client.WhileAway:Fire(player, {
@@ -170,6 +196,7 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 		away = awaySeconds,
 		capped = awaySeconds > cap,
 		bars = bars,
+		bonus = bonus,
 		value = value,
 		blocked = blocked,
 	})
@@ -254,6 +281,7 @@ function RefineryService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	EconomyService = Knit.GetService("EconomyService")
 	MonetizationService = Knit.GetService("MonetizationService")
+	RewardService = Knit.GetService("RewardService")
 end
 
 function RefineryService:KnitStart()
@@ -303,7 +331,7 @@ function RefineryService:KnitStart()
 					local vaultMult = PlayerStateService:GetVaultMultiplier(player)
 					local vaultChanged = lastVault[player] ~= vaultMult
 					lastVault[player] = vaultMult
-					local _, made, blocked = Refining.run(data, dt, speedMult, PlayerStateService:GetVaultMultiplier(player))
+					local _, made, blocked = Refining.run(data, dt, speedMult, PlayerStateService:GetVaultMultiplier(player), Perks.lineMult(data.perks))
 					blockedBy[player] = blocked
 					-- Refinery Overclock only counts down while the player is online
 					local oreBoostBefore = data.oreBoostLeft or 0

@@ -3,11 +3,15 @@ assert(not game:GetService("RunService"):IsRunning(),"Edit mode required")
 assert(not _G.MapRedesignLightingPreview,"Restore temporary lighting before checkpoint export/save")
 local map=assert(workspace:FindFirstChild("Map_Redesign"))
 assert(map:GetAttribute("MapRedesignOwned"),"Unowned staged map")
-local scaled=assert(_G.MapRedesignScaledAssets,"Run MeteorPreview first")
+local scaled=assert(_G.MapRedesignScaledAssets or game.ServerStorage:FindFirstChild("Assets_Redesign"),
+	"Verified doubled meteor assets required")
+assert(scaled:GetAttribute("MapRedesignOwned"),"Unowned staged assets")
 local snapshot=map:Clone()
 snapshot.WorldPivot=CFrame.new(0,0,3000)
 for _,v in snapshot:GetDescendants() do
 	if v:GetAttribute("PreviewOnly") then v:Destroy() end
+	-- Staging exports never retain the temporary new-map Play spawn selection.
+	if v:IsA("SpawnLocation") then v.Enabled=false end
 end
 local ref=map.TownSquare.Refinery:Clone()
 ref:PivotTo(ref:GetPivot()-Vector3.new(0,0,3000))

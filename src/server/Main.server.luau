@@ -7,15 +7,41 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local Admins = require(script.Parent.Lib.Admins)
 
 Knit.AddServices(script.Parent.Services)
 
 Knit.Start()
 	:andThen(function()
 		print("[MeteorShift] server started")
-		if RunService:IsStudio() then
-			local PlayerStateService = Knit.GetService("PlayerStateService")
+		local PlayerStateService = Knit.GetService("PlayerStateService")
+		local MeteorService = Knit.GetService("MeteorService")
+		local ShopService = Knit.GetService("ShopService")
 
+		-- Sets the player's pickaxe and/or backpack to a tier (1 to 8, see
+		-- Config.Pickaxes and Config.Backpacks; nil leaves it as is) and restyles the
+		-- pickaxe. Returns what the player now has.
+		-- game.ServerStorage.DevGear:Invoke(game.Players:GetPlayers()[1], 5, 8)
+		-- (stat levels start at the first level of the tier, as after evolving)
+		local function setGear(player: Player, pickaxeTier: number?, backpackTier: number?): string
+			local data = PlayerStateService:Get(player)
+			if not data then
+				return "No profile loaded yet"
+			end
+			if pickaxeTier then
+				data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
+				data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
+				ShopService:ApplyPickaxe(player)
+			end
+			if backpackTier then
+				data.backpackTier = math.clamp(math.floor(backpackTier), 1, #Config.Backpacks)
+				data.backpackStats = Gear.freshBackpackStats(data.backpackTier)
+			end
+			PlayerStateService:ReplicateNow(player)
+			return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)
+		end
+
+		if RunService:IsStudio() then
 			-- Studio only: a hook the command bar can call to hand out cash, ore and shards for
 			-- testing. The optional pickaxeTier sets the player's pickaxe tier (clamped to
 			-- Config.Pickaxes) and restyles the tool, e.g. tier 5 to mine Crystal meteors.
@@ -116,7 +142,6 @@ Knit.Start()
 			-- Studio only: brings down a meteor of the given type (Iron, Ice or Crystal) soon,
 			-- ending the one that is down if there is one (MeteorService:DevSpawn).
 			-- game.ServerStorage.DevMeteor:Invoke("Crystal")
-			local MeteorService = Knit.GetService("MeteorService")
 			local meteorHook = Instance.new("BindableFunction")
 			meteorHook.Name = "DevMeteor"
 			meteorHook.OnInvoke = function(typeId: string): string
@@ -124,29 +149,6 @@ Knit.Start()
 			end
 			meteorHook.Parent = ServerStorage
 
-			-- Studio only: sets the player's pickaxe and/or backpack to a tier (1 to 8, see
-			-- Config.Pickaxes and Config.Backpacks; nil leaves it as is) and restyles the
-			-- pickaxe. Returns what the player now has.
-			-- game.ServerStorage.DevGear:Invoke(game.Players:GetPlayers()[1], 5, 8)
-			-- (stat levels start at the first level of the tier, as after evolving)
-			local ShopService = Knit.GetService("ShopService")
-			local function setGear(player: Player, pickaxeTier: number?, backpackTier: number?): string
-				local data = PlayerStateService:Get(player)
-				if not data then
-					return "No profile loaded yet"
-				end
-				if pickaxeTier then
-					data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
-					data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
-					ShopService:ApplyPickaxe(player)
-				end
-				if backpackTier then
-					data.backpackTier = math.clamp(math.floor(backpackTier), 1, #Config.Backpacks)
-					data.backpackStats = Gear.freshBackpackStats(data.backpackTier)
-				end
-				PlayerStateService:ReplicateNow(player)
-				return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)
-			end
 			-- Studio only: gives the player a pet at a level and equips it if a slot is free (ignores
 			-- the shard price). Returns the player's pets.
 			-- game.ServerStorage.DevPet:Invoke(game.Players:GetPlayers()[1], "packMule", 10)
@@ -159,7 +161,7 @@ Knit.Start()
 					return nil
 				end
 				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0 }
-				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < Pets.slots(data.rebirths, Knit.GetService("MonetizationService"):HasPass(player, "ExtraPetSlot")) then
+				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < PlayerStateService:PetSlots(player) then
 					table.insert(data.pets.equipped, petId)
 				end
 				PlayerStateService:ReplicateNow(player)
@@ -188,36 +190,39 @@ Knit.Start()
 			gearHook.Name = "DevGear"
 			gearHook.OnInvoke = setGear
 			gearHook.Parent = ServerStorage
-
-			-- Studio only: the same as chat commands, so they work in Play without switching
-			-- the command bar to the server. The reply shows as a notice on the HUD.
-			--   /meteor <Iron|Ice|Crystal>   /pickaxe <1-8>   /backpack <1-8>
-			local TextChatService = game:GetService("TextChatService")
-			local function chatCommand(alias: string, run: (Player, string?) -> string)
-				local command = Instance.new("TextChatCommand")
-				command.Name = "Dev" .. string.sub(alias, 2)
-				command.PrimaryAlias = alias
-				command.Triggered:Connect(function(source: TextSource, text: string)
-					local player = Players:GetPlayerByUserId(source.UserId)
-					if player then
-						local reply = run(player, string.match(text, "^%S+%s+(%S+)"))
-						print("[Dev] " .. text .. ": " .. reply)
-						ShopService.Client.Notice:Fire(player, reply)
-					end
-				end)
-				command.Parent = TextChatService
-			end
-			chatCommand("/meteor", function(_player, typeId)
-				return MeteorService:DevSpawn(typeId or "")
-			end)
-			chatCommand("/pickaxe", function(player, tier)
-				local number = tonumber(tier)
-				return if number then setGear(player, number, nil) else "Usage: /pickaxe 1-" .. #Config.Pickaxes
-			end)
-			chatCommand("/backpack", function(player, tier)
-				local number = tonumber(tier)
-				return if number then setGear(player, nil, number) else "Usage: /backpack 1-" .. #Config.Backpacks
-			end)
 		end
+
+		-- Dev chat commands, for Studio and for the user ids in Lib.Admins on a live server (anyone
+		-- else typing them is ignored without a reply). The reply shows as a notice on the HUD.
+		--   /meteor <Iron|Ice|Crystal|Alien>   /pickaxe <1-8>   /backpack <1-8>
+		local TextChatService = game:GetService("TextChatService")
+		local function chatCommand(alias: string, run: (Player, string?) -> string)
+			local command = Instance.new("TextChatCommand")
+			command.Name = "Dev" .. string.sub(alias, 2)
+			command.PrimaryAlias = alias
+			command.Triggered:Connect(function(source: TextSource, text: string)
+				if not Admins.can(source.UserId, RunService:IsStudio()) then
+					return
+				end
+				local player = Players:GetPlayerByUserId(source.UserId)
+				if player then
+					local reply = run(player, string.match(text, "^%S+%s+(%S+)"))
+					print("[Dev] " .. player.Name .. " " .. text .. ": " .. reply)
+					ShopService.Client.Notice:Fire(player, reply)
+				end
+			end)
+			command.Parent = TextChatService
+		end
+		chatCommand("/meteor", function(_player, typeId)
+			return MeteorService:DevSpawn(typeId or "")
+		end)
+		chatCommand("/pickaxe", function(player, tier)
+			local number = tonumber(tier)
+			return if number then setGear(player, number, nil) else "Usage: /pickaxe 1-" .. #Config.Pickaxes
+		end)
+		chatCommand("/backpack", function(player, tier)
+			local number = tonumber(tier)
+			return if number then setGear(player, nil, number) else "Usage: /backpack 1-" .. #Config.Backpacks
+		end)
 	end)
 	:catch(warn)

@@ -45,6 +45,25 @@ function Controller:KnitStart()
 	end)
 	gui.Enabled = true
 	local p: any, nav: any = gui.Panel, gui.ShopButton
+	-- Cards for eggs and pets added to Config after the StarterGui prefab was exported (the Aurora Egg)
+	-- are cloned from an existing card, so the shop keeps working until the prefab is rebuilt in Studio.
+	do
+		local carousel = p.petsCarousel
+		local template = carousel:FindFirstChild("egg_" .. Config.Pets.Eggs[1].Id) or carousel:FindFirstChildWhichIsA("Frame")
+		local function ensure(name: string, title: string, order: number)
+			local card = carousel:FindFirstChild(name)
+			if not card and template then
+				card = template:Clone()
+				card.Name = name
+				card.Parent = carousel
+				local label = card:FindFirstChild("ItemName")
+				if label then label.Text = title end
+			end
+			if card then card.LayoutOrder = order end
+		end
+		for order, egg in Config.Pets.Eggs do ensure("egg_" .. egg.Id, egg.Name, order) end
+		for order, pet in Config.Pets.List do ensure("pet_" .. pet.Id, pet.Name, #Config.Pets.Eggs + order) end
+	end
 	local navRefs = ExactNavButton.bind(nav)
 	local state: any = nil
 	local tab, notice = "pickaxe", ""
@@ -293,7 +312,9 @@ function Controller:KnitStart()
 			c.Stats.Text = "COST: " .. egg.Cost .. " Core Shards\n\nGuaranteed " .. Config.Pets.Rarities[egg.PityFrom].Name .. "+ in " .. pity .. " hatches\n\n" .. table.concat(odds, " · ")
 			c.Price.Text = "Core Shards earned in play"
 			N.enable(c.Purchase, state ~= nil and busyId == nil and Price.canAfford(state, 0, egg.Cost), N.GREEN)
-			c.Purchase.Text = if busyId == "egg_" .. egg.Id then "HATCHING..." elseif state and state.shards >= egg.Cost then "HATCH" else "SAVE SHARDS"
+			local locked = state ~= nil and (state.rebirths or 0) < (egg.MinRebirths or 0)
+			if locked then N.enable(c.Purchase, false, N.GREEN) end
+			c.Purchase.Text = if busyId == "egg_" .. egg.Id then "HATCHING..." elseif locked then "REBIRTH " .. egg.MinRebirths .. " TO UNLOCK" elseif state and state.shards >= egg.Cost then "HATCH" else "SAVE SHARDS"
 		end
 		for _, def in Config.Pets.List do
 			local entry, isEquipped = petEntry(def.Id), equipped(def.Id)

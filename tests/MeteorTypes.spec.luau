@@ -85,4 +85,16 @@ return function(t: any)
 		t.near(MeteorTypes.shardPoolMult(Types.Crystal, 120, 240), Types.Crystal.ShardMult / 2, 1e-9, "Crystal at half")
 		t.near(MeteorTypes.shardPoolMult(Types.Iron, 60, 240), Types.Iron.ShardMult / 4, 1e-9, "Iron at a quarter")
 	end)
+
+	t.test("the Alien boss is not in the weighted rotation and a golden copy pays more", function()
+		local Config = require(t.shared.Config)
+		local MeteorTypes = require(t.shared.MeteorTypes)
+		t.eq(Config.Meteor.Types[Config.Meteor.Boss.Type].Weight, 0)
+		t.eq(table.find(Config.Meteor.TypeOrder, Config.Meteor.Boss.Type), nil)
+		local first = Config.Meteor.Types[Config.Meteor.TypeOrder[1]]
+		local golden = MeteorTypes.golden(first)
+		t.eq(golden.Golden, true)
+		t.eq(first.Golden, nil, "the original is untouched")
+		t.eq(golden.YieldMult, first.YieldMult * Config.Hooks.GoldenMeteor.PayMult)
+	end)
 end

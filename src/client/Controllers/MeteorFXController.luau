@@ -130,7 +130,7 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 
 	local smoke = Instance.new("ParticleEmitter")
 	smoke.Texture = "rbxasset://textures/particles/smoke_main.dds"
-	smoke.Color = ColorSequence.new(Color3.fromRGB(90, 80, 75))
+	smoke.Color = ColorSequence.new(Color3.fromRGB(150, 142, 140))
 	smoke.Size = geometry.Streak.SmokeSize
 	smoke.Transparency = NumberSequence.new(0.3, 1)
 	smoke.Lifetime = NumberRange.new(2, 3)
@@ -163,6 +163,43 @@ end
 function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	if player:GetAttribute("ReduceEffects") == true then return end
 	local folder = workspace.CurrentCamera
+	-- Sample ground only. Elevated mining galleries and the meteor are excluded:
+	-- they must not lift a shockfront that is travelling across the bowl/rim.
+	local samples = {}
+	local map = WorldMap.find()
+	if map then
+		local surfaces = {}
+		for _, name in { "Ground", "Roads" } do
+			local surface = map:FindFirstChild(name)
+			if surface then table.insert(surfaces,surface) end
+		end
+		local crater = map:FindFirstChild("Crater")
+		if crater then
+			for _, name in { "Bowl", "AccessRamps" } do
+				local surface = crater:FindFirstChild(name)
+				if surface then table.insert(surfaces,surface) end
+			end
+		end
+		local rays = RaycastParams.new()
+		rays.FilterType = Enum.RaycastFilterType.Include
+		rays.FilterDescendantsInstances = surfaces
+		rays.RespectCanCollide = true
+		for _, radius in { 8, 52, 55.25, 62, 70, 78, 83.2, Config.Meteor.Knockback.Radius } do
+			local heights = {}
+			for k = 0, 7 do
+				local angle = k*math.pi/4
+				local origin = Vector3.new(position.X+math.cos(angle)*radius,100,position.Z+math.sin(angle)*radius)
+				local hit = workspace:Raycast(origin,Vector3.new(0,-200,0),rays)
+				if hit then table.insert(heights,hit.Position.Y) end
+			end
+			local y = MeteorVisualGeometry.groundHeight(radius,Config.LandingFX.Crater)
+			if #heights >= 3 then
+				table.sort(heights)
+				y = heights[math.ceil(#heights/2)]
+			end
+			table.insert(samples,{radius=radius,y=y})
+		end
+	end
 
 	-- Expanding ring on the ground
 	local ring = Instance.new("Part")
@@ -175,8 +212,13 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	ring.Color = color
 	ring.Transparency = 0.2
 	ring.Size = geometry.Impact.RingStartSize
-	ring.CFrame = CFrame.new(position + geometry.Impact.RingOffset) * CFrame.Angles(0, 0, math.rad(90))
+	local function groundRing()
+		local centre = MeteorVisualGeometry.groundRingPosition(position,ring.Size.Y/2,ring.Size.X,Config.LandingFX.Crater,samples)
+		ring.CFrame = CFrame.new(centre)*CFrame.Angles(0,0,math.rad(90))
+	end
+	groundRing()
 	ring.Parent = folder
+	local groundConnection = ring:GetPropertyChangedSignal("Size"):Connect(groundRing)
 	TweenService:Create(ring, TweenInfo.new(1.1, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
 		Size = geometry.Impact.RingEndSize,
 		Transparency = 1,
@@ -210,7 +252,7 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	dustAnchor.Parent = folder
 	local dust = Instance.new("ParticleEmitter")
 	dust.Texture = "rbxasset://textures/particles/smoke_main.dds"
-	dust.Color = ColorSequence.new(Color3.fromRGB(150, 130, 110))
+	dust.Color = ColorSequence.new(Color3.fromRGB(196, 170, 140))
 	dust.Size = geometry.Impact.DustSize
 	dust.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.2),
@@ -234,6 +276,7 @@ function MeteorFXController:_shockwave(position: Vector3, color: Color3)
 	Sfx.play("MeteorImpact", dustAnchor, geometry.Sound)
 
 	task.delay(6, function()
+		groundConnection:Disconnect()
 		ring:Destroy()
 		flash:Destroy()
 		dustAnchor:Destroy()

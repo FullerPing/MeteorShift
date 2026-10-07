@@ -1,10 +1,10 @@
 --!strict
--- Profile schema v4 (spec §12.4, with the plot production line instead of
+-- Profile schema v6 (spec §12.4, with the plot production line instead of
 -- refinery slots, one pickaxe and backpack leveled by stat: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 5,
+	version = 6,
 	cash = 0,
 	shards = 0,
 	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
@@ -15,6 +15,11 @@ return {
 	pets = { owned = {}, equipped = {}, hatches = {} }, -- hatches: per egg, hatches since the last Epic or better (pity)
 	level = 1, -- player level (Shared.Levels): earned from meteors, kept through rebirth
 	xp = 0,
+	-- Colony Perks (Shared.Perks): level of each, bought with shards, kept through rebirth
+	perks = { headStart = 0, stationMemory = 0, efficientLine = 0, offlineTraining = 0, petBond = 0 },
+	-- Bar-sale cash earned beyond the cost of the next rebirth since it was first affordable
+	-- (Shared.Rebirth.overstayShards); reset by a rebirth
+	overflow = 0,
 	backpack = {}, -- ore carried, by type
 	-- Plot production line: hopper -> conveyor -> refinery -> collection post
 	stations = {

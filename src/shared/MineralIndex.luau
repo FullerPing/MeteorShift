@@ -43,14 +43,20 @@ for pageId, page in Pages do
 end
 
 -- The mineral one hit on this page's meteor drops, or nil. `rng` returns a uniform
--- number in [0, 1) and is called once per mineral rolled.
-function MineralIndex.roll(pageId: string, isRichNode: boolean, rng: () -> number): string?
+-- number in [0, 1) and is called once per mineral rolled. Soft pity: `pityMult` (default 1,
+-- Shared.Hooks.pityMult after a long dry streak) multiplies the odds of the minerals the player has
+-- not found yet (`owned`), never those they already have, so it can't inflate duplicates.
+function MineralIndex.roll(pageId: string, isRichNode: boolean, rng: () -> number, owned: PlayerIndex?, pityMult: number?): string?
 	local minerals = rarestFirst[pageId]
 	if not minerals then
 		return nil
 	end
 	for _, mineral in minerals do
-		if (isRichNode or not mineral.RichOnly) and rng() < mineral.Odds then
+		local odds = mineral.Odds
+		if pityMult and pityMult > 1 and not (owned and (owned[mineral.Id] or 0) > 0) then
+			odds = math.min(odds * pityMult, 1)
+		end
+		if (isRichNode or not mineral.RichOnly) and rng() < odds then
 			return mineral.Id
 		end
 	end

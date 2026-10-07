@@ -8,7 +8,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 local Queue = require(ReplicatedStorage.Shared.RefineryQueue)
-local Levels = require(ReplicatedStorage.Shared.Levels)
 
 local Stations = Config.Home.Stations
 
@@ -25,7 +24,6 @@ export type HomeData = {
 	bin: { [string]: number }, -- bars waiting at the collection post
 	progress: number?, -- fractional ore carried between ticks
 	refinePriority: { string }?, -- preferred ore types, falling through when empty
-	level: number?, -- player level: sets each ore's refining speed (Shared.Levels.clearance); nil = full speed
 }
 
 local Refining = {}
@@ -51,9 +49,10 @@ function Refining.refineryRate(data: HomeData, speedMult: number?): number
 	return (level("refinery", data.stations.refinery).Rate :: number) * (speedMult or 1)
 end
 
--- Bars per second the line can make right now (ignoring stock and room)
-function Refining.lineRate(data: HomeData, speedMult: number?): number
-	return math.min(Refining.conveyorRate(data), Refining.refineryRate(data, speedMult))
+-- Bars per second the line can make right now (ignoring stock and room). `lineMult` is the
+-- Efficient Line perk (Shared.Perks.lineMult) and scales the whole line.
+function Refining.lineRate(data: HomeData, speedMult: number?, lineMult: number?): number
+	return math.min(Refining.conveyorRate(data), Refining.refineryRate(data, speedMult)) * (lineMult or 1)
 end
 
 local function sum(t: { [string]: number }): number
@@ -66,9 +65,10 @@ end
 Refining.sum = sum
 
 -- Takes ore in the saved order, then deterministic defaults, until `budget` line units or
--- `limit` ore are used up. An ore refined at speed e costs 1/e units (Levels.clearance), so
--- with full speed everywhere a unit is an ore. Returns the ore taken and the units left.
-local function takeOre(hopper: { [string]: number }, limit: number, budget: number, priority: { string }?, level: number?): ({ [string]: number }, number)
+-- `limit` ore are used up. Every ore refines at full speed, so a unit is an ore (what a hit
+-- yields by player level is decided when the ore is mined, Shared.Levels.oreYield). Returns the
+-- ore taken and the units left.
+local function takeOre(hopper: { [string]: number }, limit: number, budget: number, priority: { string }?): ({ [string]: number }, number)
 	local taken = {}
 	local remaining = limit
 	for _, oreType in Queue.order(priority, hopper) do
@@ -76,13 +76,12 @@ local function takeOre(hopper: { [string]: number }, limit: number, budget: numb
 			break
 		end
 		local have = hopper[oreType] or 0
-		local cost = 1 / (if level then Levels.clearance(level, oreType) else 1)
-		local n = math.min(have, remaining, math.floor(budget / cost + 1e-9))
+		local n = math.min(have, remaining, math.floor(budget + 1e-9))
 		if n > 0 then
 			hopper[oreType] = have - n
 			taken[oreType] = (taken[oreType] or 0) + n
 			remaining -= n
-			budget -= n * cost
+			budget -= n
 		end
 	end
 	for oreType, have in hopper do
@@ -98,20 +97,19 @@ export type Blocked = "hopper" | "collector" | nil
 
 -- Runs the line for `seconds`. Mutates data. Returns bars made per ore type,
 -- the total, and what limited it (empty hopper or full collection post).
-function Refining.run(data: HomeData, seconds: number, speedMult: number?, capacityMult: number?): ({ [string]: number }, number, Blocked)
-	local capacity = Refining.lineRate(data, speedMult) * seconds + (data.progress or 0)
+function Refining.run(data: HomeData, seconds: number, speedMult: number?, capacityMult: number?, lineMult: number?): ({ [string]: number }, number, Blocked)
+	local capacity = Refining.lineRate(data, speedMult, lineMult) * seconds + (data.progress or 0)
 	local room = math.max(Refining.collectorCapacity(data, capacityMult) - sum(data.bin), 0)
 	local stock = sum(data.hopper)
 
-	local made, left = takeOre(data.hopper, room, capacity, data.refinePriority, data.level)
+	local made, left = takeOre(data.hopper, room, capacity, data.refinePriority)
 	local n = 0
 	for oreType, amount in made do
 		data.bin[oreType] = (data.bin[oreType] or 0) + amount
 		n += amount
 	end
 
-	-- Unused line time because the post is full or the hopper is dry. Ore that is still
-	-- waiting but costs more than what is left (a slow ore) keeps its progress banked.
+	-- Unused line time because the post is full or the hopper is dry.
 	local blocked: Blocked = nil
 	if left >= 1 and (room - n <= 0 or sum(data.hopper) <= 0) then
 		blocked = if room <= stock then "collector" else "hopper"

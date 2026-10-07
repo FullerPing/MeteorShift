@@ -23,8 +23,11 @@ local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local WorldImpact = require(ReplicatedStorage.Shared.WorldImpact)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Hooks = require(ReplicatedStorage.Shared.Hooks)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
+local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local CallMeteor = require(ReplicatedStorage.Shared.CallMeteor)
@@ -96,7 +99,7 @@ local current: Meteor? = nil
 local lastCalledEnd: number? = nil
 local eventCalled = false
 local callTimes: { number } = {}
--- Studio only (DevSpawn): the meteor type asked for from the command bar or chat. It
+-- DevSpawn: the meteor type asked for from the command bar or chat. It
 -- ends a meteor that is still down and comes in StreakLeadTime seconds into its countdown.
 local devNext: Config.MeteorType? = nil
 local lastDevSkipRequest: { [Player]: number } = {}
@@ -174,14 +177,38 @@ local function countdownLength(first: boolean): number
 	return if first then MeteorConfig.FirstCountdown else interval
 end
 
--- The next meteor's type (spec §8.1): weighted odds (MeteorTypes.pick). In Studio, ServerStorage's DevMeteorType
+-- Meteors since the last Alien boss, and whether anyone here has the rebirths to see one
+local meteorsSinceBoss = 0
+
+local function bossAllowed(): boolean
+	for _, other in Players:GetPlayers() do
+		local data = PlayerStateService:Get(other)
+		if data and (data.rebirths or 0) >= MeteorConfig.Boss.MinRebirths then
+			return true
+		end
+	end
+	return false
+end
+
+-- The next meteor's type (spec §8.1): weighted odds (MeteorTypes.pick), the Alien boss every
+-- Boss.EveryMeteors meteors when someone has the rebirths, and a small chance the scheduled
+-- type turns golden (Config.Hooks.GoldenMeteor). In Studio, ServerStorage's DevMeteorType
 -- attribute ("Ice") forces a type for testing.
 local function pickType(): Config.MeteorType
 	local forced = ServerStorage:GetAttribute("DevMeteorType")
 	if RunService:IsStudio() and typeof(forced) == "string" and MeteorConfig.Types[forced] then
 		return MeteorConfig.Types[forced]
 	end
-	return MeteorTypes.pick(math.random())
+	meteorsSinceBoss += 1
+	if meteorsSinceBoss >= MeteorConfig.Boss.EveryMeteors and bossAllowed() then
+		meteorsSinceBoss = 0
+		return MeteorConfig.Types[MeteorConfig.Boss.Type]
+	end
+	local picked = MeteorTypes.pick(math.random())
+	if math.random() < Config.Hooks.GoldenMeteor.Chance then
+		return MeteorTypes.golden(picked)
+	end
+	return picked
 end
 
 -- Mining Power per second of the active players, with the floor (spec §5.3).
@@ -207,6 +234,7 @@ end
 local function paintCluster(piece: BasePart, meteorType: Config.MeteorType)
 	piece.Color = meteorType.CrustColors[math.random(1, #meteorType.CrustColors)]
 	piece.Material = meteorType.CrustMaterial
+	StudSkin.apply(piece)
 	for _, child in piece:GetDescendants() do
 		if child:IsA("BasePart") then
 			if child.Name == "Ore" then
@@ -217,6 +245,7 @@ local function paintCluster(piece: BasePart, meteorType: Config.MeteorType)
 			elseif child.Name == "Rock" then
 				child.Color = piece.Color
 				child.Material = piece.Material
+				StudSkin.apply(child)
 			end
 		end
 	end
@@ -225,17 +254,18 @@ end
 -- Marks a crust node rich (spec §8.2): IndexService reads the Rich attribute on each
 -- hit. Its ore chunks take Config.Index.RichColor and it sparkles so players can
 -- spot it; breaking or cooling the meteor turns the sparkle off with its other effects.
-local function markRich(piece: BasePart)
-	piece:SetAttribute("Rich", true)
+local function markRich(piece: BasePart, attribute: string?, color: Color3?)
+	local tint = color or Config.Index.RichColor
+	piece:SetAttribute(attribute or "Rich", true)
 	for _, child in piece:GetDescendants() do
 		if child:IsA("BasePart") and child.Name == "Ore" then
-			child.Color = Config.Index.RichColor
+			child.Color = tint
 			child.Material = Enum.Material.Neon
 		end
 	end
 	local sparkle = Instance.new("ParticleEmitter") -- the default texture is a sparkle
 	sparkle.Name = "RichSparkle"
-	sparkle.Color = ColorSequence.new(Config.Index.RichColor)
+	sparkle.Color = ColorSequence.new(tint)
 	sparkle.LightEmission = 1
 	sparkle.Rate = 8
 	sparkle.Lifetime = NumberRange.new(0.8, 1.4)
@@ -292,6 +322,37 @@ function MeteorService:_unlockCore(meteor: Meteor)
 	RewardService:Announce("CoreUnlocked", "The core is exposed! Hit it before it cools!")
 end
 
+-- Variable rewards for breaking a crust node (Config.Hooks): a chance of a shard crumb for the player
+-- who broke it, and the Golden Node's ore lumps for its breaker and everyone else who hit it. Lumps
+-- go straight to the hopper, so a full backpack never wastes them.
+function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: { [Player]: boolean }, oreFor: (Player) -> (string?, number))
+	local crumb = Hooks.shardCrumb(math.random(), math.random())
+	if crumb > 0 and PlayerStateService:Get(breaker) then
+		PlayerStateService:AddShards(breaker, crumb)
+		RewardService:Bonus(breaker, "crumb", string.format("Shard crumb! +%d ◆", crumb))
+	end
+	if not golden then
+		return
+	end
+	hitters[breaker] = true
+	for hitter in hitters do
+		if hitter.Parent and PlayerStateService:Get(hitter) then
+			local oreId, oreMult = oreFor(hitter)
+			if oreId then
+				local ore = Hooks.goldenNodeOre(NodeService:OrePerHit(hitter, oreMult), hitter == breaker)
+				local added = PlayerStateService:AddOreToHopper(hitter, oreId, ore)
+				if added <= 0 then
+					added = PlayerStateService:AddOre(hitter, oreId, ore)
+				end
+				if added > 0 then
+					RewardService:Bonus(hitter, "golden", string.format("%s +%d ore!", if hitter == breaker then "Golden Node broken!" else "Golden Node assist:", added))
+				end
+			end
+		end
+	end
+	RewardService:Announce("Golden", string.format("%s broke the Golden Node!", breaker.DisplayName))
+end
+
 function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	local assets = WorldMap.assets()
 	local spawnPoint = WorldMap.wait():WaitForChild("Crater"):WaitForChild("MeteorSpawn") :: BasePart
@@ -303,7 +364,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	local core = (assets:WaitForChild("Meteor"):WaitForChild("Core") :: BasePart):Clone()
 	place(core, spawnPoint.CFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
 	core.Anchored = true
-	core.Material = Enum.Material.Basalt
+	core.Material = Enum.Material.Plastic
 	-- the template's lights and embers are Iron orange; other types recolour them
 	local recolorLights = meteorType.Id ~= "Iron"
 	core.Color = meteorType.CoreColor:Lerp(Color3.new(0, 0, 0), 0.7)
@@ -350,10 +411,11 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		return state.phase == Phase.Active and current == meteor
 	end
 
-	-- Everyone mines the meteor's own ore at their pickaxe's full rate (spec §8.1); the
-	-- refinery's clearance by player level (Shared.Levels) decides how fast it is refined.
-	local function oreFor(_player: Player): (string?, number)
-		return meteorType.Ore, meteorType.YieldMult
+	-- Everyone mines the meteor's own ore (spec §8.1). A hit yields a fraction of it until the player
+	-- level reaches the ore's clearance level (Shared.Levels.oreYield); the refinery is never slower.
+	local function oreFor(player: Player): (string?, number)
+		local data = PlayerStateService:Get(player)
+		return meteorType.Ore, meteorType.YieldMult * Levels.oreYield(if data then data.level else 1, meteorType.Ore)
 	end
 
 	-- Mining Power per hit: the Crystal twist makes every player on the same node or core mine harder
@@ -366,6 +428,18 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	crustFolder.Parent = model
 
 	local richNodes = MineralIndex.pickRichNodes(#slots, math.random)
+	-- The Golden Node: one crust node (a rich one only when every node is) glows gold
+	local goldenIndex = 0
+	if #slots > 0 then
+		local candidates = {}
+		for index = 1, #slots do
+			if not richNodes[index] then
+				table.insert(candidates, index)
+			end
+		end
+		goldenIndex = if #candidates > 0 then candidates[math.random(1, #candidates)] else math.random(1, #slots)
+	end
+	local goldenHitters: { [Player]: boolean } = {}
 	for index, slot in slots do
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index
@@ -374,6 +448,9 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		paintCluster(piece, meteorType)
 		if richNodes[index] then
 			markRich(piece)
+		end
+		if index == goldenIndex then
+			markRich(piece, "Golden", Color3.fromRGB(255, 214, 64))
 		end
 		piece.Parent = crustFolder
 
@@ -389,8 +466,12 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 			end,
 			OnHit = function(player, power, ore)
 				ContributionService:AddCrust(player, power, ore)
+				if index == goldenIndex then
+					goldenHitters[player] = true
+				end
 			end,
-			OnBroken = function()
+			OnBroken = function(breaker)
+				self:_crustBonuses(breaker, index == goldenIndex, goldenHitters, oreFor)
 				meteor.CrustBroken += 1
 				self:_breakPart(piece)
 				self:_publish({ crustBroken = meteor.CrustBroken })
@@ -482,7 +563,9 @@ function MeteorService:_cool(meteor: Meteor)
 	for _, part in meteor.Model:GetDescendants() do
 		if part:IsA("BasePart") then
 			part.Color = MeteorConfig.InertColor
-			part.Material = Enum.Material.Slate
+			part.Material = Enum.Material.Plastic
+			local studs = part:FindFirstChild(StudSkin.Name)
+			if studs then (studs :: Texture).Color3 = part.Color end
 		elseif part:IsA("Light") or part:IsA("ParticleEmitter") then
 			part.Enabled = false
 		end
@@ -546,12 +629,13 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 		self:_publish({ phase = Phase.CoreCracked, endsAt = now() + MeteorConfig.CrackedDuration })
 		self.Client.CoreCracked:FireAll(meteor.Core.Position)
 		self:_breakPart(meteor.Core)
-		RewardService:Finish(true, meteorType, poolMult)
+		RewardService:Finish(true, meteorType, poolMult, 0)
 		task.wait(MeteorConfig.CrackedDuration)
 	else
 		self:_publish({ phase = Phase.Cooled, endsAt = now() + MeteorConfig.CooledDuration })
 		self:_cool(meteor)
-		RewardService:Finish(false, meteorType, poolMult)
+		local coreHp, coreMax = NodeService:GetHp(meteor.CoreId)
+		RewardService:Finish(false, meteorType, poolMult, if coreMax > 0 then coreHp / coreMax else 1)
 		task.wait(MeteorConfig.CooledDuration)
 	end
 
@@ -568,6 +652,11 @@ function MeteorService:_loop()
 		local queued = devNext
 		devNext = nil
 		local meteorType = queued or pickType()
+		if meteorType.Golden then
+			RewardService:Announce("Golden", "A GOLDEN meteor is coming: its ore pays " .. Config.Hooks.GoldenMeteor.PayMult .. "x!")
+		elseif meteorType.Id == MeteorConfig.Boss.Type then
+			RewardService:Announce("Boss", "The Alien boss meteor is coming!")
+		end
 		self:_publish({
 			phase = Phase.Countdown,
 			endsAt = now() + (if queued then MeteorConfig.StreakLeadTime else countdownLength(first)),
@@ -605,14 +694,12 @@ function MeteorService:_loop()
 	end
 end
 
--- Studio only, for testing: brings a meteor of the given type ("Iron", "Ice", "Crystal",
--- any case) down soon. During a countdown it swaps the type and lands in StreakLeadTime
+-- For testing: brings a meteor of the given type ("Iron", "Ice", "Crystal", "Alien", any case)
+-- down soon. Not exposed to clients; the callers (Main.server's Studio hook and the /meteor chat
+-- command, which checks Lib.Admins) decide who may use it. During a countdown it swaps the type and lands in StreakLeadTime
 -- seconds; otherwise the meteor that is down ends early (it cools) and the asked-for one
 -- comes in StreakLeadTime seconds into the next countdown. Returns what will happen.
 function MeteorService:DevSpawn(typeId: string): string
-	if not RunService:IsStudio() then
-		return "DevSpawn only works in Studio"
-	end
 	local meteorType: Config.MeteorType? = nil
 	for id, candidate in MeteorConfig.Types do
 		if string.lower(id) == string.lower(tostring(typeId)) then

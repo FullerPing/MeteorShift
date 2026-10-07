@@ -12,6 +12,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local HudResources = require(ReplicatedStorage.Shared.HudResources)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
+local MeteorIcon = require(ReplicatedStorage.Shared.MeteorIcon)
 local UI = require(script.Parent.UI)
 local Cartoon = require(script.Parent.Cartoon)
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
@@ -65,7 +66,7 @@ local function floatingIcon(scope: Scope, name: string, x: number, y: number, si
 		Name = name .. "Art", Position = UDim2.fromOffset(x, y), Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1,
 		[Children] = {
 			UI.hudIcon(scope, name, { Name = "Shadow", Position = UDim2.fromOffset(2, 4), Size = UDim2.fromScale(1, 1),
-				ImageColor3 = INK, ImageTransparency = 0.6, ZIndex = 1 }),
+				Image = iconProps.Image, ImageColor3 = INK, ImageTransparency = 0.6, ZIndex = 1 }),
 			UI.hudIcon(scope, name, iconProps),
 		},
 	})
@@ -382,7 +383,10 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			}),
 		}, false),
 		frame(scope, hud, "Timer", 560, function(l) return l.timer end, {
-			floatingIcon(scope, "meteor", 10, 6, 82),
+			floatingIcon(scope, "meteor", 10, 6, 82, { Image = scope:Computed(function(use)
+				local state = use(data.meteorState)
+				return MeteorIcon.resolve(if state then state.type else nil)
+			end) }),
 			text(scope, "MeteorName", scope:Computed(function(use) local s = use(data.meteorState); return if s then string.upper(s.typeName) else "METEOR MINING" end), 102, 10, 284, 28, font(scope, hud, 560, function(l) return l.timer end, 23, 12), glow),
 			text(scope, "Phase", scope:Computed(function(use)
 				local p = use(data.phase)
@@ -408,21 +412,7 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 				TextStrokeColor3 = INK, TextStrokeTransparency = 0,
 			}),
 			meter(scope, "RemainingTime", 14, 90, 532, data.timeProgress, glow, 12),
-		}, false),
-		scope:New("Frame")({
-			Name = "YourPlot", BorderSizePixel = 0, BackgroundTransparency = 1,
-			Visible = scope:Computed(function(use) local l = use(hud); return l.timerVisible and not l.touch and not l.portrait end),
-			Position = scope:Computed(function(use) local l = use(hud); local s = l.timer.w / 560; return UDim2.fromOffset((l.viewport.X - 190 * s) / 2, l.timer.y + l.timer.h + 12 * s) end),
-			Size = UDim2.fromOffset(190, 40),
-			[Children] = {
-				scope:New("UIScale")({ Scale = scope:Computed(function(use) return use(hud).timer.w / 560 end) }),
-				-- A location tag styled like the references' purple top pill. Plot
-				-- assignment and travel are gameplay concerns; no teleport is added.
-				UI.hudFill(scope, "purple", { radius = 12, studs = false :: any }),
-				UI.hudText(scope, { Name = "PlotLabel", Position = UDim2.fromOffset(10, 1), Size = UDim2.fromOffset(170, 34), ZIndex = 2,
-					Text = "YOUR PLOT", Font = UI.FONT, TextSize = 23, TextColor3 = WHITE, TextStrokeColor3 = INK, TextStrokeTransparency = 0 }),
-			},
-		}),
+		}, true), -- no card behind the clock
 	}
 end
 
@@ -440,7 +430,10 @@ function HudView.objective(scope: Scope, hud: any, data: { [string]: any })
 		return use(data.coreHp) / math.max(use(data.coreMaxHp), 1)
 	end)
 	local card = frame(scope, hud, "EventPanel", 284, function(l) return l.eventPanel end, {
-		floatingIcon(scope, "meteor", 10, 6, 44),
+		floatingIcon(scope, "meteor", 10, 6, 44, { Image = scope:Computed(function(use)
+			local state = use(data.meteorState)
+			return MeteorIcon.resolve(if state then state.type else nil)
+		end) }),
 		text(scope, "Title", scope:Computed(function(use) local s = use(data.meteorState); return if s and s.unlocked then "STRIKE THE CORE" else "BREAK THE CRUST" end), 60, 16, 212, 26, eventFont(18, 10), GOLD),
 		text(scope, "Objective", scope:Computed(function(use)
 			local s, rank = use(data.meteorState), use(data.standing)

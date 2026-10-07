@@ -3,8 +3,8 @@
 -- (floor, contribution share of the bonus pool, top three, the meteor type's pool
 -- multiplier) is the pure Server.Lib.Rewards.
 --
--- Each participant's results also say which ore they mined from this meteor and how
--- fast their refinery handles it (clearance, 1 = full speed; Shared.Levels).
+-- Each participant's results also say which ore they mined from this meteor and how much of
+-- a full hit it yielded at their level (yield, 1 = full; Shared.Levels.oreYield).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -19,12 +19,16 @@ local RewardService = Knit.CreateService({
 	Name = "RewardService",
 	Client = {
 		-- To each participant: { cracked, ore, oreType, contribution, rank, hitCore, floor,
-		-- bonus, top, shards, xp, leaders, clearance }. xp includes the actual scholar-adjusted
-		-- hit and crack awards. oreType is the meteor's ore id; clearance
-		-- is the refining speed for it at their level, 0 to 1.
+		-- bonus, top, shards, xp, leaders, yield, consolation }. xp includes the actual scholar-adjusted
+		-- hit and crack awards. oreType is the meteor's ore id; yield is the share of each hit's
+		-- ore their level collects from it, 0 to 1; consolation is true when the floor was paid for a
+		-- core that was mostly down but not cracked.
 		Results = Knit.CreateSignal(),
 		-- To everyone: { kind, text }
 		Announcement = Knit.CreateSignal(),
+		-- To one player: { kind, text }, a small personal reward (shard crumb, Golden Node lump,
+		-- supply crate, welcome-back bonus) the HUD shows as a notice
+		Bonus = Knit.CreateSignal(),
 	},
 })
 
@@ -38,11 +42,18 @@ function RewardService:Announce(kind: string, text: string)
 	self.Client.Announcement:FireAll({ kind = kind, text = text })
 end
 
+-- A personal notice for one player (see Client.Bonus)
+function RewardService:Bonus(player: Player, kind: string, text: string)
+	self.Client.Bonus:Fire(player, { kind = kind, text = text })
+end
+
 -- Called when the event ends, cracked or cooled. `poolMult` scales the shard bonus
--- pool (MeteorTypes.shardPoolMult for the meteor that ended).
-function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, poolMult: number)
+-- pool (MeteorTypes.shardPoolMult for the meteor that ended). `coreRemaining` is the core's
+-- HP as a share of its max, which decides the consolation for a meteor that cooled.
+function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, poolMult: number, coreRemaining: number?)
 	local ranked = ContributionService:GetRanked()
-	local rewards = if cracked then Rewards.compute(ranked, poolMult) else {}
+	local rewards = if cracked then Rewards.compute(ranked, poolMult) else Rewards.consolation(ranked, coreRemaining or 1)
+	local consolation = not cracked and next(rewards) ~= nil
 	for index, reward in rewards do
 		reward.Total = Pets.coreShards(reward.Total, PlayerStateService:GetPetBonuses(ranked[index].Player).shards)
 	end
@@ -82,7 +93,8 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			cracked = cracked,
 			ore = entry.Ore,
 			oreType = meteorType.Ore,
-			clearance = Levels.clearance(if data then data.level else 1, meteorType.Ore),
+			yield = Levels.oreYield(if data then data.level else 1, meteorType.Ore),
+			consolation = consolation and reward ~= nil,
 			contribution = entry.Contribution,
 			rank = index,
 			hitCore = entry.HitCore,
@@ -103,6 +115,8 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 		self:Announce("Top", "Core cracked! " .. table.concat(names, "   "))
 	elseif cracked then
 		self:Announce("Top", "Core cracked!")
+	elseif consolation then
+		self:Announce("Cooled", "The meteor cooled, but the core was nearly down. Core hitters keep a consolation shard payout.")
 	else
 		self:Announce("Cooled", "The meteor cooled. Ore you mined is yours to keep.")
 	end

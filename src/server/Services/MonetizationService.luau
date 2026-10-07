@@ -41,6 +41,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Purchases = require(ReplicatedStorage.Shared.Purchases)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Refining = require(script.Parent.Parent.Lib.Refining)
@@ -124,8 +125,11 @@ function MonetizationService:BackpackMult(player: Player): number
 	return if self:HasPass(player, "BiggerBackpack") then Monetization.BackpackMult else 1
 end
 
+-- The free cap grows with the Offline Training perk (up to 4 hours); the Offline Hours+ pass is the 8-hour step
 function MonetizationService:OfflineCap(player: Player): number
-	return if self:HasPass(player, "OfflineHours") then Config.Home.OfflineCapPass else Config.Home.OfflineCap
+	local data = PlayerStateService:Get(player)
+	local free = Config.Home.OfflineCap + Perks.offlineBonus(if data then data.perks else nil)
+	return if self:HasPass(player, "OfflineHours") then math.max(Config.Home.OfflineCapPass, free) else free
 end
 
 function MonetizationService:HasAutoDeposit(player: Player): boolean

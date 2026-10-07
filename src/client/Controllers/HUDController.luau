@@ -244,6 +244,17 @@ function HUDController:KnitStart()
 		Sfx.play("Purchase")
 		showToast("Player level " .. level .. "!")
 	end)
+	-- Personal variable rewards (Config.Hooks): shard crumbs, Golden Node lumps, supply crates, welcome-back finds
+	local BONUS_COLORS = {
+		crumb = Color3.fromRGB(150, 230, 255),
+		golden = Color3.fromRGB(255, 214, 64),
+		crate = Color3.fromRGB(139, 240, 195),
+		welcomeBack = Color3.fromRGB(255, 214, 64),
+	}
+	RewardService.Bonus:Connect(function(message)
+		Sfx.play("Purchase")
+		showToast(message.text, BONUS_COLORS[message.kind])
+	end)
 	ShopService.Upgraded:Connect(function(kind: string, stat: string, level: number)
 		local names = if kind == "pickaxe" then Config.Gear.Pickaxe.Names else Config.Gear.Backpack.Names
 		Sfx.play("Purchase")

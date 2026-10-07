@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Levels = require(ReplicatedStorage.Shared.Levels)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
@@ -34,6 +35,13 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 	local nextLevel = stationConfig.Levels[current + 1]
 	if not nextLevel then
 		self.Client.Notice:Fire(player, stationConfig.Name .. " is already at max level.")
+		return false
+	end
+	-- Conveyor and refinery levels 5 to 8 need the player level of the same-numbered tier
+	-- (Config.Levels.EvolveLevel); the hopper and collection post only cost cash
+	local levelNeeded = if stationId == "conveyor" or stationId == "refinery" then Levels.evolveLevel(current + 1) else 1
+	if (data.level or 1) < levelNeeded then
+		self.Client.Notice:Fire(player, string.format("Reach player level %d for %s Lv %d. Take part in meteors to earn XP.", levelNeeded, stationConfig.Name, current + 1))
 		return false
 	end
 	local shortfall = Price.shortfall(data, nextLevel.Cost, nextLevel.Shards, stationConfig.Name .. " Lv " .. (current + 1))

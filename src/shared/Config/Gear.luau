@@ -1,7 +1,7 @@
 --!strict
 -- One pickaxe and one backpack for the whole game. Each has stats you level up with cash,
 -- and a tier that caps how high they go. Evolving to the next tier costs the tier's price
--- in Config.Pickaxes / Config.Backpacks (cash and Core Shards) and needs the Gate stat at
+-- in Config.Pickaxes / Config.Backpacks (cash only; a player level gates it) and needs the Gate stat at
 -- the cap. Shared.Gear holds the rules; this only tunes them.
 --
 -- A stat level runs 1 to LevelsPerTier x tiers, across the whole game. Tier t caps it at
@@ -22,10 +22,10 @@ Gear.Pickaxe = {
 	-- Evolving needs this stat at its tier cap
 	Gate = "power",
 	Cost = {
-		power = { Base = 50, Growth = 1.17 },
-		speed = { Base = 60, Growth = 1.17 },
-		reach = { Base = 30, Growth = 1.15 },
-		crit = { Base = 60, Growth = 1.15 },
+		power = { Base = 30, Growth = 1.115 },
+		speed = { Base = 40, Growth = 1.115 },
+		reach = { Base = 20, Growth = 1.11 },
+		crit = { Base = 40, Growth = 1.11 },
 	} :: { [string]: StatCost },
 	ReachPerLevel = 0.15, -- studs added to Config.Meteor.MineRange per level above 1
 	CritPerLevel = 0.003, -- crit chance per level above 1
@@ -37,7 +37,7 @@ Gear.Backpack = {
 	Names = { capacity = "Capacity" },
 	Gate = "capacity",
 	Cost = {
-		capacity = { Base = 40, Growth = 1.17 },
+		capacity = { Base = 25, Growth = 1.115 },
 	} :: { [string]: StatCost },
 }
 

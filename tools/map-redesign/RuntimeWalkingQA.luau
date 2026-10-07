@@ -12,6 +12,11 @@ local previous = _G.MapRedesignWalkingQA
 if previous and type(previous.cancel) == "function" then
 	previous.cancel("tool_reloaded")
 end
+local geometryModule = game:GetService("ReplicatedStorage").Shared.WorldGeometry:Clone()
+local geometryOk, WorldGeometry = pcall(require, geometryModule)
+geometryModule:Destroy()
+assert(geometryOk, "Cannot load current WorldGeometry: " .. tostring(WorldGeometry))
+local geometry = WorldGeometry.Settings
 
 local api = {}
 local current = nil
@@ -27,37 +32,31 @@ local function active(run)
 	return current == run and (run.phase == "computing" or run.phase == "walking")
 end
 local function targets()
-	-- Retains StaticQA's 14 destinations, plus actual mining-access surfaces.
+	-- Retains StaticQA's 14 ground destinations. The owner retired five elevated targets.
 	-- This tool never runs a spawn/target matrix.
+	assert(not map.Crater:FindFirstChild("MiningAccess"), "Ground-only revision requires MiningAccess absent")
 	local town = assert(map:FindFirstChild("TownSquare"), "TownSquare missing")
 	local result = {
 		Refinery = town.Refinery.UsePoint.Position,
 		GearCounter = town.PickaxeShop.ShopPoint.Position,
 		SellBars = town.TradingPost.SellPoint.Position,
-		HatcheryEntrance = Vector3.new(-155, 3, 2660),
+		HatcheryEntrance = WorldGeometry.zone("Hatchery").entrance + geometry.StageOffset + Vector3.new(0, 3, 0),
 		RebirthEntrance = town.RebirthMonument.RebirthPoint.Position,
 		MuseumEntrance = town.IndexMuseum.IndexPoint.Position,
 	}
 	for _, field in map.DebrisFields:GetChildren() do
 		local entrance = field:GetAttribute("Entrance")
 		assert(typeof(entrance) == "Vector3", field.Name .. " Entrance attribute missing")
-		result[field.Name .. "Entrance"] = entrance + Vector3.new(0, 3, 3000)
+		result[field.Name .. "Entrance"] = entrance + geometry.StageOffset + Vector3.new(0, 3, 0)
 	end
 	for _, landing in map.Crater.AccessRamps:GetChildren() do
 		if landing:IsA("BasePart") and landing.Name:find("FloorLanding") then
 			result[landing.Name] = landing.Position + Vector3.new(0, landing.Size.Y / 2 + 3, 0)
 		end
 	end
-	local access = assert(map.Crater:FindFirstChild("MiningAccess"), "MiningAccess missing")
-	local function surfaceTarget(part)
-		assert(part and part:IsA("BasePart") and part.CanCollide, "Walkable mining-access part required")
-		return part.CFrame:PointToWorldSpace(Vector3.new(0, part.Size.Y / 2, 0)) + Vector3.new(0, 3, 0)
-	end
-	result.MiningStartLanding = surfaceTarget(access:FindFirstChild("StartLanding"))
-	for _, name in { "Lower", "Middle", "Upper", "Crown" } do
-		local terrace = assert(access:FindFirstChild(name .. "Terrace"), name .. "Terrace missing")
-		result[name .. "TerraceAscentJoin"] = surfaceTarget(terrace:FindFirstChild("AscentJoin"))
-	end
+	local count = 0
+	for _ in result do count += 1 end
+	assert(count == 14, "Fourteen original ground destinations required")
 	return result
 end
 function api.targets()

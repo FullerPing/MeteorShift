@@ -1,0 +1,113 @@
+{
+  "stagingOnly": true,
+  "stageOffset": [
+    0,
+    0,
+    3000
+  ],
+  "date": "2026-10-07",
+  "placeSaveConfirmedForThisStage": true,
+  "placeSaveEvidence": {
+    "date": "2026-10-07",
+    "studioOutputTime": "07:35:58.313",
+    "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
+    "action": "Ctrl+S",
+    "mode": "Edit",
+    "published": false,
+    "originalMapPreserved": true,
+    "temporarySelectorsRestored": true,
+    "originalSpawnEnabled": true,
+    "stagedSpawnsDisabled": 6,
+    "scaledAssetsSavedUnder": "ServerStorage.Assets_Redesign"
+  },
+  "geometry": {
+    "ground": [
+      540,
+      540
+    ],
+    "buildingScale": 0.5,
+    "meteorScale": 2,
+    "craterOpeningRadius": 83.2,
+    "floorRadius": 55.25,
+    "floorY": -14.755,
+    "meteorCentre": [
+      0,
+      -1.25,
+      0
+    ],
+    "elevatedMiningAccess": false
+  },
+  "validation": {
+    "sourceTests": {
+      "passed": 423,
+      "failed": 0
+    },
+    "frozenGuiFiles": 39,
+    "frozenGuiChanges": 0,
+    "computedGroundPaths": 84,
+    "pathFailures": 0,
+    "forecourtProbes": 6,
+    "forecourtCollisionFailures": 0,
+    "migrationChangedFramesOrSizes": 0,
+    "liveMiningReachPending": true,
+    "fullGameplayQaPending": true
+  },
+  "files": [
+    {
+      "file": "Lighting_Redesign.rbxm",
+      "bytes": 4703,
+      "base64Chars": 6272,
+      "sha256": "50ee2270288b7a1df1a4f14f0dc14f2e8fe61070cbe597e768c82701716ffa89",
+      "diskVerified": true,
+      "scripts": 0,
+      "roundtripPassed": true,
+      "parts": 0,
+      "binaryHeaderVerified": true
+    },
+    {
+      "file": "Map_Redesign.rbxm",
+      "bytes": 73466,
+      "base64Chars": 97956,
+      "sha256": "a1fec55df66a84c5f4678e2067af35b15cde8ea8fe725660e2ed36cf401d240b",
+      "diskVerified": true,
+      "scripts": 0,
+      "roundtripPassed": true,
+      "parts": 1173,
+      "pivot": [
+        0,
+        0,
+        3000
+      ],
+      "binaryHeaderVerified": true
+    },
+    {
+      "file": "Refinery_Redesign.rbxm",
+      "bytes": 23216,
+      "base64Chars": 30956,
+      "sha256": "fa61328820f129082c0cecca7086fedac33cc9056a30a9304cc2658b67508a28",
+      "diskVerified": true,
+      "scripts": 0,
+      "roundtripPassed": true,
+      "parts": 145,
+      "pivot": [
+        0,
+        0.4,
+        -177
+      ],
+      "binaryHeaderVerified": true
+    },
+    {
+      "file": "ServerAssets_Redesign.rbxm",
+      "bytes": 73990,
+      "base64Chars": 98656,
+      "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14",
+      "diskVerified": true,
+      "scripts": 0,
+      "roundtripPassed": true,
+      "parts": 119,
+      "binaryHeaderVerified": true
+    }
+  ],
+  "previousStageArchivedAt": "assets/archive/staging-before-small-buildings",
+  "fullGoalComplete": false
+}

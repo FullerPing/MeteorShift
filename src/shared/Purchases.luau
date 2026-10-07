@@ -11,17 +11,14 @@ local Rules = Config.Monetization
 
 export type Grant = { cash: number, leveled: { [string]: number } }
 
--- Iron until Frost is cleared. After that, a meteor's weight is multiplied by its
--- ore's clearance before averaging bar prices: slower ore contributes less to the
+-- A meteor's weight is multiplied by the share of its ore a hit yields at the player's level
+-- (Levels.oreYield) before averaging bar prices: a fraction of a hit contributes less to the
 -- estimated income. This is a quote from line capacity, independent of live stock.
 function Purchases.averageBarPrice(level: number): number
-	if Levels.clearance(level, "frost") < 1 then
-		return Config.Home.BarPrices.iron
-	end
 	local total, value = 0, 0
 	for _, id in Config.Meteor.TypeOrder do
 		local meteor = Config.Meteor.Types[id]
-		local weight = meteor.Weight * Levels.clearance(level, meteor.Ore)
+		local weight = meteor.Weight * Levels.oreYield(level, meteor.Ore)
 		total += weight
 		value += weight * Config.Home.BarPrices[meteor.Ore]
 	end

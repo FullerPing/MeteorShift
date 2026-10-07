@@ -65,15 +65,19 @@ function RebirthController:KnitStart()
 		ready.Visible = canAfford
 		ready.BackgroundColor3 = if canAfford then MINT else GOLD
 		currentMultiplier.Text, nextMultiplier.Text = multiplierText(rebirths), multiplierText(rebirths + 1)
-		cashProgress.Text = "You have " .. Format.cash(cash) .. " / " .. Format.cash(cost)
+		local ratio = math.clamp(cash / math.max(cost, 1), 0, 1)
+		cashProgress.Text = string.format("You have %s / %s (%d%%)", Format.cash(cash), Format.cash(cost), math.floor(ratio * 100))
+		local unlock = Rebirth.unlock(rebirths + 1)
+		local bonus = Rebirth.overstayShards(if state then state.overflow or 0 else 0, cost)
 		confirm.Active, confirm.Selectable, confirm.AutoButtonColor = canAfford and not busy, canAfford and not busy, canAfford and not busy
 		confirm.Text = if busy then "REBIRTHING..." elseif armed then "CONFIRM REBIRTH" else "Rebirth " .. Format.cash(cost)
 		confirm.TextColor3 = if busy or not canAfford then NativeUI.MUTED else NativeUI.WHITE
 		confirm.BackgroundColor3 = if busy or not canAfford then Color3.fromRGB(73, 83, 94) elseif armed then GOLD else NativeUI.GREEN
 		footer.Text = if notice ~= "" then notice elseif busy then "Rebirthing..."
 			elseif armed then "Press again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s. This can't be undone."
-			elseif not canAfford then "Earn " .. Format.cash(cost - cash) .. " more to rebirth."
-			else "Index bonuses stay and stack with this multiplier."
+			elseif not canAfford then (if ratio >= 0.8 then "Almost there! Earn " else "Earn ") .. Format.cash(cost - cash) .. " more to rebirth."
+			else (if unlock then "Unlocks: " .. unlock .. ". " else "Index bonuses stay and stack with this multiplier. ")
+				.. (if bonus > 0 then "+" .. bonus .. " bonus shards now." else "Rebirth now: waiting never beats the x5.")
 		footer.TextColor3 = if armed or notice ~= "" then GOLD else NativeUI.MUTED
 	end
 	local function setOpen(value: boolean)

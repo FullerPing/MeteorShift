@@ -4,7 +4,7 @@
 --   sale = base price × rebirth multiplier × index bonus × VIP bonus × Merchant pet bonus
 --
 -- The rebirth multiplier is Shared.Rebirth.multiplier of the profile's rebirths
--- (×2 per rebirth, multiplicative, spec §8.3). The index bonus adds each completed
+-- (×5 per rebirth for the first sixteen, multiplicative, spec §8.3). The index bonus adds each completed
 -- mineral index page's CashBonus, additive across pages (spec §8.2,
 -- Shared.MineralIndex.cashBonus). The VIP pass adds Config.Monetization.VIPBarBonus
 -- (+10%, spec §9.1) as its own factor (MonetizationService:VIPMult).
@@ -62,6 +62,10 @@ function EconomyService:SellAll(player: Player): number
 	local cash = math.floor(PlayerStateService:BarValue(data.bars) * self:SaleMultiplier(player))
 	table.clear(data.bars)
 	data.stats.barsSold = (data.stats.barsSold or 0) + bars
+	-- Overstay tracking (Shared.Rebirth.overstayShards): sales cash that lands above the next
+	-- rebirth's cost is progress the player didn't need
+	local cost = Rebirth.cost(data.rebirths)
+	data.overflow = (data.overflow or 0) + math.max(data.cash + cash - math.max(data.cash, cost), 0)
 	PlayerStateService:AddCash(player, cash)
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Sold:Fire(player, bars, cash)

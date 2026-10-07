@@ -24,6 +24,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
 
@@ -113,8 +114,13 @@ local function migrate(data: { [any]: any }): { [any]: any }
 	data.backpackTier = math.clamp(math.floor(data.backpackTier or 1), 1, #Config.Backpacks)
 	data.pickaxeStats = Gear.cleanPickaxeStats(data.pickaxeTier, data.pickaxeStats)
 	data.backpackStats = Gear.cleanBackpackStats(data.backpackTier, data.backpackStats)
+	-- v5 -> v6 (economy rework): colony perks and the rebirth overflow counter. Nothing is refunded or
+	-- taken: the gear and stations a profile owns stay, only the prices and gates change.
+	data.perks = Perks.clean(data.perks)
+	local overflow = data.overflow
+	data.overflow = if type(overflow) == "number" and overflow == overflow and overflow >= 0 and overflow < math.huge then overflow else 0
 	-- Preserve a possible fourth slot until the server resolves the pass entitlement.
-	data.pets = Pets.clean(data.pets, data.rebirths, true)
+	data.pets = Pets.clean(data.pets, data.rebirths, true, Perks.petSlots(data.perks))
 	local oreBoost = data.oreBoostLeft
 	data.oreBoostLeft = if type(oreBoost) == "number" and oreBoost == oreBoost and oreBoost < math.huge then math.max(oreBoost, 0) else 0
 	-- v4 -> v5: player level and XP (everyone starts at level 1)

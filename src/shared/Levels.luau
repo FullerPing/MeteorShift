@@ -1,6 +1,7 @@
 --!strict
 -- Player level rules (Config.Levels): XP needed per level, awarding XP, the XP a meteor
--- pays, and the level an evolution needs. Pure, covered by tests/Levels.spec.
+-- pays, the share of an ore a hit yields at a level, and the level an evolution needs.
+-- Pure, covered by tests/Levels.spec.
 
 local Config = require(script.Parent.Config)
 
@@ -15,7 +16,7 @@ function Levels.xpToNext(level: number): number?
 	if level >= Settings.MaxLevel then
 		return nil
 	end
-	return math.floor(Settings.XpBase * Settings.XpGrowth ^ (level - 1) + 0.5)
+	return math.floor(Settings.XpFlat + Settings.XpQuad * level * level + 0.5)
 end
 
 -- Total XP from level 1 to reach `level`
@@ -66,11 +67,17 @@ function Levels.crackXp(oreId: string): number
 	return Settings.CrackBonusXp * ((Settings.TypeMult :: { [string]: number })[oreId] or 1)
 end
 
--- Refinery speed for an ore at a level: 1 at or above the ore's clearance level, then
--- Config.Levels.ClearancePerLevel for each level short
-function Levels.clearance(level: number, oreId: string): number
+-- Share of an ore's full yield a hit pays at a player level (S7): 1 at or above the ore's
+-- clearance level, Config.Levels.UnderLevelFloor at level 1, and in between it rises
+-- geometrically so each level short costs the same fraction. The refinery is not involved:
+-- bars always refine at full speed and sell at the same price for everyone.
+function Levels.oreYield(level: number, oreId: string): number
 	local need = (Settings.OreLevel :: { [string]: number })[oreId] or 1
-	return Settings.ClearancePerLevel ^ math.max(need - level, 0)
+	if level >= need then
+		return 1
+	end
+	local span = math.max(need - 1, 1)
+	return Settings.UnderLevelFloor ^ (math.clamp(need - level, 0, span) / span)
 end
 
 -- Player level needed to evolve to `tier`

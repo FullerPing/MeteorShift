@@ -96,4 +96,17 @@ return function(t: any)
 		t.eq(pair[1].Bonus, round(PER_HITTER * 2 * 1.5 / 2), "x1.5 pool, even split")
 		t.eq(pair[2].Bonus, round(PER_HITTER * 2 * 1.5 / 2), "x1.5 pool, even split")
 	end)
+
+	t.test("consolation: a core mostly down pays the floor to core hitters even when not cracked", function()
+		local paid = Rewards.consolation({ entry(5, true), entry(9, false), entry(1, true) }, 0.4)
+		t.eq(paid[1].Total, FLOOR)
+		t.eq(paid[2], nil)
+		t.eq(paid[3].Total, FLOOR)
+	end)
+
+	t.test("consolation: a core barely scratched pays nothing", function()
+		local paid = Rewards.consolation({ entry(5, true) }, 0.8)
+		t.eq(paid[1], nil)
+		t.eq(next(paid), nil)
+	end)
 end

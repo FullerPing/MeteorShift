@@ -501,12 +501,20 @@ function MiningController:KnitStart()
 
 	RunService.PreSimulation:Connect(turnTowardTarget)
 
-	NodeService.OreGained:Connect(function(id: number, oreType: string, amount: number)
+	NodeService.OreGained:Connect(function(id: number, oreType: string, amount: number, jackpot: string?)
 		local part = recentTargets[id]
 		recentTargets[id] = nil
 		if part then
 			oreFlyIn(part.Position, amount, oreType)
-			floater(part.Position + Vector3.new(0, 2, 0), "+" .. Format.number(amount) .. " ore", Color3.fromRGB(150, 230, 255), 22)
+			-- Rich Vein and Super Vein hits (Config.Hooks) get a bigger, gold number
+			local text = "+" .. Format.number(amount) .. " ore"
+			if jackpot == "super" then
+				floater(part.Position + Vector3.new(0, 3, 0), "SUPER VEIN! " .. text, Color3.fromRGB(255, 214, 64), 34)
+			elseif jackpot == "rich" then
+				floater(part.Position + Vector3.new(0, 3, 0), "Rich vein! " .. text, Color3.fromRGB(255, 226, 120), 28)
+			else
+				floater(part.Position + Vector3.new(0, 2, 0), text, Color3.fromRGB(150, 230, 255), 22)
+			end
 		end
 	end)
 
@@ -531,10 +539,44 @@ function MiningController:KnitStart()
 		container.ChildAdded:Connect(onChild)
 	end
 
-	local function onCharacter(character: Model)
-		watch(character)
-		watch(player:WaitForChild("Backpack"))
+	-- Every spawn gets a new Backpack, and CharacterAdded can fire before it is parented, so watch each
+	-- Backpack that appears and keep trying to equip the pickaxe for a few seconds after a spawn
+	local watched: { [Instance]: boolean } = setmetatable({}, { __mode = "k" }) :: any
+	local function watchOnce(container: Instance)
+		if watched[container] then return end
+		watched[container] = true
+		watch(container)
 	end
+	local function equipWhenReady(character: Model)
+		task.spawn(function()
+			for _ = 1, 24 do
+				if player.Character ~= character or not character.Parent then return end
+				local humanoid = character:FindFirstChildOfClass("Humanoid")
+				if humanoid and humanoid.Health > 0 then
+					if self:GetEquippedPickaxe() then return end
+					local backpack = player:FindFirstChildOfClass("Backpack")
+					if backpack then
+						for _, child in backpack:GetChildren() do
+							if child:IsA("Tool") and child:GetAttribute("Pickaxe") then
+								humanoid:EquipTool(child)
+								break
+							end
+						end
+					end
+				end
+				task.wait(0.25)
+			end
+		end)
+	end
+	local function onCharacter(character: Model)
+		watchOnce(character)
+		local backpack = player:FindFirstChildOfClass("Backpack")
+		if backpack then watchOnce(backpack) end
+		equipWhenReady(character)
+	end
+	player.ChildAdded:Connect(function(child)
+		if child:IsA("Backpack") then watchOnce(child) end
+	end)
 	if player.Character then
 		onCharacter(player.Character)
 	end

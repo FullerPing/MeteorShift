@@ -33,7 +33,7 @@ local Pets = {}
 export type Role = { Name: string, Cap: number, Text: string }
 export type Perk = { Role: string, Min: number, Max: number }
 export type Rarity = { Id: string, Name: string, Color: Color3 }
-export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string }
+export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string, MinRebirths: number? }
 export type Pet = {
 	Id: string, Name: string, Rarity: string, Perks: { Perk }, Color: Color3, Blurb: string,
 	Pass: string?, -- Config.Monetization pass key: owning the pass gives the pet (not in any egg)
@@ -51,8 +51,10 @@ Pets.MinerWindow = 15
 -- XP every equipped pet earns per validated hit of yours (a pet's own hits give none)
 Pets.XpPerHit = { Crust = 1, Core = 2, Debris = 0.2 } :: { [string]: number }
 
--- Pets you can have out at once: Base, plus PerRebirth for each rebirth, up to Max
-Pets.Slots = { Base = 1, PerRebirth = 1, Max = 3 }
+-- Pets you can have out at once: Base, plus PerRebirth for each rebirth, up to Max, plus one
+-- more from rebirth ExtraAtRebirth on (the rank 4 unlock). The Pet Bond perk (Config.Perks) and
+-- the ExtraPetSlot pass add to that.
+Pets.Slots = { Base = 1, PerRebirth = 1, Max = 3, ExtraAtRebirth = 4 }
 
 Pets.Roles = {
 	miner = { Name = "Miner", Cap = 1.00, Text = "Mines for you at %s of your pickaxe. Its ore goes straight to the hopper." },
@@ -87,6 +89,9 @@ Pets.Eggs = {
 		Odds = { common = 55, uncommon = 28, rare = 12, epic = 4.5, legendary = 0.5 }, Pity = 30, PityFrom = "epic" },
 	{ Id = "crystalEgg", Name = "Crystal Egg", Cost = 120,
 		Odds = { uncommon = 38, rare = 40, epic = 18, legendary = 4 }, Pity = 12, PityFrom = "epic" },
+	-- Rebirth 2 unlock: nothing below Epic, and a Legendary is guaranteed every 10 hatches
+	{ Id = "auroraEgg", Name = "Aurora Egg", Cost = 250, MinRebirths = 2,
+		Odds = { epic = 88, legendary = 12 }, Pity = 10, PityFrom = "legendary" },
 } :: { Egg }
 
 -- A duplicate pet gives this much XP to the one you already own

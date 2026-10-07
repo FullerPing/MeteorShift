@@ -13,6 +13,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPack = game:GetService("StarterPack")
 
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
@@ -241,6 +242,24 @@ function ShopService:KnitStart()
 			task.spawn(function()
 				local torso = character:WaitForChild("UpperTorso", 3) or character:FindFirstChild("Torso")
 				if torso and player.Character == character and PlayerStateService:Get(player) then
+					self:ApplyPickaxe(player)
+				end
+			end)
+			-- Safety net: a spawn that ends up with no pickaxe at all (StarterPack hand-out lost to a
+			-- slow load or a quick respawn) gets a fresh one
+			task.delay(2, function()
+				if player.Character ~= character or not character.Parent or not PlayerStateService:Get(player) then return end
+				local backpack = player:FindFirstChildOfClass("Backpack")
+				for _, container in { backpack, character } do
+					if container then
+						for _, child in (container :: Instance):GetChildren() do
+							if isPickaxe(child) then return end
+						end
+					end
+				end
+				local template = StarterPack:FindFirstChild("Pickaxe")
+				if template and backpack then
+					template:Clone().Parent = backpack
 					self:ApplyPickaxe(player)
 				end
 			end)

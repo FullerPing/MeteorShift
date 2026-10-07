@@ -10,7 +10,7 @@ return {
 	HitsPerMinuteShare = 0.7, -- share of swing slots that actually land (aiming, walking between nodes)
 	TripSeconds = 40, -- walk home, drop the backpack into the hopper, walk back
 	DebrisActivityShare = 0.5, -- share of the time between meteors spent mining debris
-	ShardsPerMeteor = 10, -- Core Shards a player earns per meteor on average: the 5-shard floor plus a share of the bonus pool, on the meteors that crack (about 13 when it does)
+	ShardsPerMeteor = 14, -- Core Shards a player earns per meteor on average: the 5-shard floor plus a share of the bonus pool on the meteors that crack (about 13 when it does), the consolation floor and the node crumbs
 	SellInterval = 60, -- the player collects bars and sells this often, seconds
 	StepSeconds = 2, -- simulation step
 	SampleInterval = 60, -- timeline snapshot spacing, seconds

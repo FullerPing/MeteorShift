@@ -6,7 +6,8 @@
 --   perksOf(def, level)    a pet's ordered { role, value } perks at that level
 --   roll(egg, roll, pity, pick) which pet an egg hatches (pure; PetService passes the randoms)
 --   bonuses(pets)           the equipped pets' perks added up per role, to each role's cap
---   slots(rebirths, extra)  how many pets can be out, including the optional slot pass
+--   slots(rebirths, extra, bonus)  how many pets can be out, including the optional slot pass
+--                           and the Pet Bond perk's bonus slots
 --   minerActive(last, now)  whether a real validated swing is inside the miner window
 --   xpToNext(level)         XP to the next level, nil at the max
 --   addXp(entry, xp)        adds XP to a { level, xp } entry, levelling up; returns levels gained
@@ -136,9 +137,13 @@ function Pets.roll(egg: Config.Egg, roll: number, pity: number, pick: number): (
 	return pet.Id, newPity
 end
 
-function Pets.slots(rebirths: number?, extraSlot: boolean?): number
+function Pets.slots(rebirths: number?, extraSlot: boolean?, bonusSlots: number?): number
 	local slots = Config.Slots
-	return math.min(slots.Base + slots.PerRebirth * math.max(math.floor(rebirths or 0), 0), slots.Max) + (if extraSlot then 1 else 0)
+	local count = math.max(math.floor(rebirths or 0), 0)
+	return math.min(slots.Base + slots.PerRebirth * count, slots.Max)
+		+ (if count >= slots.ExtraAtRebirth then 1 else 0)
+		+ (if extraSlot then 1 else 0)
+		+ math.max(math.floor(bonusSlots or 0), 0)
 end
 
 function Pets.xpToNext(level: number): number?
@@ -217,7 +222,7 @@ function Pets.fresh(): Saved
 end
 
 -- Makes a saved `pets` table legal (profile loads, migrations)
-function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?): Saved
+function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?, bonusSlots: number?): Saved
 	local owned: { [string]: Entry } = {}
 	if type(saved) == "table" and type(saved.owned) == "table" then
 		for petId, entry in saved.owned do
@@ -233,7 +238,7 @@ function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?): Saved
 	end
 	local equipped: { string } = {}
 	local seen: { [string]: boolean } = {}
-	local limit = Pets.slots(rebirths, extraSlot)
+	local limit = Pets.slots(rebirths, extraSlot, bonusSlots)
 	if type(saved) == "table" and type(saved.equipped) == "table" then
 		for _, petId in saved.equipped do
 			if type(petId) == "string" and owned[petId] and not seen[petId] and #equipped < limit then

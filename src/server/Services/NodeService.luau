@@ -25,6 +25,7 @@ local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Hooks = require(ReplicatedStorage.Shared.Hooks)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
@@ -60,7 +61,9 @@ type Target = {
 local NodeService = Knit.CreateService({
 	Name = "NodeService",
 	Client = {
-		-- Fired only to the player who mined, so ore visuals are per-player (spec §5.4)
+		-- Fired only to the player who mined, so ore visuals are per-player (spec §5.4):
+		-- (targetId, oreType, ore, jackpot) where jackpot is "rich" or "super" for a Rich Vein
+		-- or Super Vein hit (Shared.Hooks), nil for a normal one
 		OreGained = Knit.CreateSignal(),
 	},
 })
@@ -257,6 +260,13 @@ function NodeService:PetHit(player: Player, id: number, efficiency: number): boo
 	return true
 end
 
+-- Ore of one average hit for `player` on a target whose ore multiplier is `oreMult` (pickaxe ore per
+-- hit, the 2x Ore pass and a Yield pet; no jackpots). Bonus lumps like the Golden Node pay in these.
+function NodeService:OrePerHit(player: Player, oreMult: number): number
+	local pickaxe = PlayerStateService:GetPickaxe(player)
+	return Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player), PlayerStateService:GetPetBonuses(player).yield)
+end
+
 -- Server-side validation of one swing. Invalid swings are rejected silently.
 function NodeService:Swing(player: Player, id: number): (boolean, number?, boolean?)
 	if typeof(id) ~= "number" then
@@ -327,10 +337,17 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 	end
 	local ore = 0
 	if oreType then
-		local quantity = Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player), PlayerStateService:GetPetBonuses(player).yield)
+		-- A swing's ore is usually Hooks.oreBase of a hit and sometimes a Rich or Super Vein
+		-- (variable ratio, EV-neutral); a miner pet's hits pay the plain average
+		local veinMult, kind = Hooks.vein(math.random())
+		local quantity = Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player) * veinMult, PlayerStateService:GetPetBonuses(player).yield)
 		ore = PlayerStateService:AddOre(player, oreType, quantity)
+		if kind and ore < math.floor(quantity) then
+			-- a jackpot is never wasted on a full backpack: the rest goes straight to the hopper
+			ore += PlayerStateService:AddOreToHopper(player, oreType, math.floor(quantity) - ore)
+		end
 		if ore > 0 then
-			self.Client.OreGained:Fire(player, id, oreType, ore)
+			self.Client.OreGained:Fire(player, id, oreType, ore, kind)
 		end
 	end
 

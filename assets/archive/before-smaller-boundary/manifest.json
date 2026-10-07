@@ -1,0 +1,124 @@
+{
+  "stagingOnly": true,
+  "stageOffset": [
+    0,
+    0,
+    3000
+  ],
+  "date": "2026-10-07",
+  "placeSaveConfirmedForThisStage": true,
+  "placeSaveEvidence": {
+    "date": "2026-10-07",
+    "studioOutputTime": "15:28:06.601",
+    "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
+    "action": "Ctrl+S",
+    "mode": "Edit",
+    "published": false,
+    "originalMapPreserved": true,
+    "temporarySelectorsRestored": true,
+    "originalSpawnEnabled": true,
+    "stagedSpawnsDisabled": 6,
+    "scaledAssetsSavedUnder": "ServerStorage.Assets_Redesign"
+  },
+  "geometry": {
+    "ground": [
+      540,
+      540
+    ],
+    "buildingScale": 0.5,
+    "meteorScale": 2,
+    "craterOpeningRadius": 83.2,
+    "floorRadius": 55.25,
+    "floorY": -14.755,
+    "meteorCentre": [
+      0,
+      -1.25,
+      0
+    ],
+    "elevatedMiningAccess": false
+  },
+  "validation": {
+    "sourceTests": {
+      "passed": 423,
+      "failed": 0
+    },
+    "frozenGuiFiles": 39,
+    "frozenGuiChanges": 0,
+    "computedGroundPaths": 84,
+    "pathFailures": 0,
+    "forecourtProbes": 6,
+    "forecourtCollisionFailures": 0,
+    "migrationChangedFramesOrSizes": 0,
+    "liveMiningReachPending": true,
+    "fullGameplayQaPending": true
+  },
+  "files": [
+    {
+      "bytes": 77984,
+      "base64Chars": 103980,
+      "roundtripPassed": true,
+      "scripts": 0,
+      "file": "Map_Redesign.rbxm",
+      "pivot": [
+        0,
+        0,
+        3000
+      ],
+      "parts": 1173,
+      "sha256": "e7eea8cee8198b0373cb5b6c7603351c2313988ab42f55b4ab5e9c1c230c8968",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
+    },
+    {
+      "bytes": 73990,
+      "base64Chars": 98656,
+      "roundtripPassed": true,
+      "file": "ServerAssets_Redesign.rbxm",
+      "scripts": 0,
+      "parts": 119,
+      "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
+    },
+    {
+      "bytes": 23950,
+      "base64Chars": 31936,
+      "roundtripPassed": true,
+      "scripts": 0,
+      "file": "Refinery_Redesign.rbxm",
+      "pivot": [
+        0,
+        0.4000000059604645,
+        -177
+      ],
+      "parts": 145,
+      "sha256": "4ab8b163bde02457d09285c52f1fcc6fc8d6656dfc8d4355693c729268dec182",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
+    },
+    {
+      "bytes": 4703,
+      "base64Chars": 6272,
+      "roundtripPassed": true,
+      "file": "Lighting_Redesign.rbxm",
+      "scripts": 0,
+      "parts": 0,
+      "sha256": "50ee2270288b7a1df1a4f14f0dc14f2e8fe61070cbe597e768c82701716ffa89",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
+    }
+  ],
+  "previousStageArchivedAt": "assets/archive/before-stud-style",
+  "fullGoalComplete": false,
+  "studStyle": {
+    "texture": "rbxassetid://6927295847",
+    "tileSize": 4,
+    "texturedParts": 405,
+    "textureFaces": 799,
+    "addedBaseParts": 0,
+    "geometryAndCollisionPreserved": true,
+    "rerunCreated": 0,
+    "preload": "Success",
+    "phoneAndPerformanceVerified": false
+  }
+}

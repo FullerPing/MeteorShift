@@ -24,6 +24,8 @@ return {
 	Tutorial = require(script.Tutorial),
 	Net = require(script.Net),
 	Rebirth = require(script.Rebirth),
+	Hooks = require(script.Hooks),
+	Perks = require(script.Perks),
 	Telemetry = require(script.Telemetry),
 	Monetization = require(script.Monetization),
 	Hud = require(script.Hud),
@@ -31,5 +33,7 @@ return {
 	Balance = require(script.Balance),
 	Atmosphere = require(script.Atmosphere),
 	LandingFX = require(script.LandingFX),
+	ImpactFX = require(script.ImpactFX),
+	SurfaceFX = require(script.SurfaceFX),
 	Sounds = Sounds,
 }

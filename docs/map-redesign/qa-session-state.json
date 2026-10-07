@@ -1,8 +1,123 @@
 {
-  "status": "restored-original-map-playing",
-  "studioId": "d43c85b7-4d75-4eaf-9e8a-d47c28b16436",
-  "date": "2026-10-06",
+  "status": "meteor-icons-saved-new-map-preview-edit",
+  "studioId": "5bce759f-a429-40bc-b10c-2928738f89ea",
+  "date": "2026-10-07",
+  "mode": "Edit",
+  "activePlaySession": false,
   "restoreBeforeSaving": true,
+  "temporarySelectorsAndMemorySetupRestored": false,
+  "spawnStatesRestoredToBaseline": false,
+  "checkpoint": {
+    "playableSpan": [
+      540,
+      540
+    ],
+    "stageOffset": [
+      0,
+      0,
+      3000
+    ],
+    "stagedMapParts": 1173,
+    "originalMapParts": 2043,
+    "buildingScale": 0.5,
+    "scaledBuildings": 6,
+    "separateShopAndWelcomeScaled": true,
+    "miningAccessPresent": false,
+    "miningAccessRemovedParts": 237,
+    "meteorCenterY": -1.25,
+    "meteorScale": 2,
+    "coreSizeApproximately": [
+      56.7,
+      56.7,
+      56.7
+    ],
+    "openingRadius": 83.2,
+    "floorRadius": 55.25,
+    "floorY": -14.755,
+    "lowerMeteorPartiallyBuried": true,
+    "refineryParts": 145,
+    "refineryUsePoint": [
+      0,
+      3,
+      2841.5
+    ],
+    "refineryPivot": [
+      0,
+      0.4,
+      2823
+    ],
+    "guiChangedThisRevision": false
+  },
+  "verification": {
+    "staticComputedPaths": 84,
+    "staticPathFailures": [],
+    "forecourtProbes": 6,
+    "frontCollisionFailures": [],
+    "staticEditPassed": true,
+    "raisedAscentDiagnosticRetired": true,
+    "formerAscentSamples": 96,
+    "elevatedWalkingTargetsRetired": 5,
+    "sourceApiTestsFreshEdit": {
+      "passed": 423,
+      "failed": 0
+    },
+    "protectedGuiHashesChecked": 39,
+    "protectedGuiHashChanges": 0,
+    "playWalkingVerifiedForThisRevision": false,
+    "all36CrustAndCoreReachVerified": false
+  },
+  "save": {
+    "status": "CONFIRMED",
+    "latestFourStagedExports": "VERIFIED",
+    "nativeEditSaveConfirmedForThisCheckpoint": true,
+    "date": "2026-10-07",
+    "studioOutputTime": "20:22:14.150",
+    "studioOutputMessage": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
+    "action": "Ctrl+S in Edit",
+    "exportVerification": [
+      "disk readback",
+      "canonical base64",
+      "engine roundtrip"
+    ],
+    "exportDirectory": "assets/staging/map-redesign",
+    "previousExportsArchive": "assets/archive/staging-before-small-buildings",
+    "exports": [
+      {
+        "file": "Map_Redesign.rbxm",
+        "bytes": 73466,
+        "parts": 1173,
+        "sha256": "a1fec55df66a84c5f4678e2067af35b15cde8ea8fe725660e2ed36cf401d240b"
+      },
+      {
+        "file": "Refinery_Redesign.rbxm",
+        "bytes": 23216,
+        "parts": 145,
+        "sha256": "fa61328820f129082c0cecca7086fedac33cc9056a30a9304cc2658b67508a28"
+      },
+      {
+        "file": "ServerAssets_Redesign.rbxm",
+        "bytes": 73990,
+        "parts": 119,
+        "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14"
+      },
+      {
+        "file": "Lighting_Redesign.rbxm",
+        "bytes": 4703,
+        "sha256": "50ee2270288b7a1df1a4f14f0dc14f2e8fe61070cbe597e768c82701716ffa89"
+      }
+    ],
+    "swapPerformed": false,
+    "published": false
+  },
+  "goalComplete": false,
+  "history": [
+    {
+      "date": "2026-10-06",
+      "status": "user-requested-redesign-spawn-playing",
+      "sessionEnded": true,
+      "setupRestoredAtCurrentCheckpoint": true
+    }
+  ],
   "baseline": {
     "devWorldPresent": false,
     "spawns": [
@@ -37,5 +152,148 @@
     ],
     "placeId": 113476105600560,
     "memoryPresent": false
+  },
+  "iconUpdate": {
+    "date": "2026-10-07",
+    "store": "rbxassetid://131625469621882",
+    "gear": "rbxassetid://5938101267",
+    "rebirth": "rbxassetid://80993270685237",
+    "storeCorrectionApplied": true,
+    "nativeButtonsAndConfigMatch": true,
+    "xmlExportsUpdated": true,
+    "editSaveConfirmed": true,
+    "studioOutputTime": "14:59:52.841",
+    "published": false,
+    "userAuthorizedGuiException": true
+  },
+  "previousSpawnSession": {
+    "request": "make me spawn at the new map",
+    "world": "Map_Redesign",
+    "assets": "Assets_Redesign",
+    "memoryProfiles": true,
+    "originalSpawnEnabled": false,
+    "stagedSpawnsEnabled": 6,
+    "player": "FullPinger",
+    "confirmedPosition": [
+      -47.25019073486328,
+      5.750437259674072,
+      2774.4697265625
+    ],
+    "health": 100,
+    "nearestSpawn": "SpawnPad4",
+    "distanceToSpawn": 5.935364246368408,
+    "respawnPoint": "Workspace.Map_Redesign.TownSquare.Spawn",
+    "saved": false,
+    "published": false,
+    "restoreSnapshot": "Edit _G.MapRedesignPlaySetup: SpawnStates entries Instance/Path/Enabled; Attributes entries Instance/Name/Value"
+  },
+  "previewSelection": {
+    "world": "Map_Redesign",
+    "memoryProfiles": true,
+    "stagedSpawnsEnabled": 6,
+    "originalSpawnEnabled": false,
+    "activePlay": true,
+    "unsavedPreviewFlags": true
+  },
+  "studStyle": {
+    "texture": "rbxassetid://6927295847",
+    "tileSize": 4,
+    "texturedParts": 405,
+    "textureFaces": 799,
+    "addedBaseParts": 0,
+    "geometryAndCollisionPreserved": true,
+    "rerunCreated": 0,
+    "preload": "Success",
+    "phoneAndPerformanceVerified": false
+  },
+  "previousCorrectedStorePlaySession": {
+    "world": "Map_Redesign",
+    "assets": "Assets_Redesign",
+    "memoryProfiles": true,
+    "originalSpawnEnabled": false,
+    "stagedSpawnsEnabled": 6,
+    "player": "FullPinger",
+    "confirmedPosition": [
+      -19.754173278808594,
+      5.750437259674072,
+      2772.096435546875
+    ],
+    "storeIcon": "rbxassetid://131625469621882",
+    "gearIcon": "rbxassetid://5938101267",
+    "runtimeIconsConfirmed": true,
+    "temporarySetup": true,
+    "saved": false,
+    "published": false
+  },
+  "boundaryStyle": {
+    "wallHeight": 28,
+    "wallThickness": 16,
+    "wallBottom": -4,
+    "wallTop": 24,
+    "cliffWidth": 32,
+    "cliffHeights": [
+      14,
+      18,
+      22
+    ],
+    "cliffTopRange": [
+      38,
+      46
+    ],
+    "formerMaximumY": 138,
+    "currentMaximumY": 46,
+    "playableSpan": 540,
+    "changedParts": 68,
+    "rerunChangedParts": 0,
+    "unrelatedGeometryPreserved": true,
+    "collisionPropertiesPreserved": true
+  },
+  "activeSession": {
+    "world": "Map_Redesign",
+    "player": "FullPinger",
+    "confirmedPosition": [
+      -45.54908752441406,
+      5.750437259674072,
+      2742.482666015625
+    ],
+    "wallHeight": 28,
+    "cliffWidth": 32,
+    "boundaryMaximumY": 46,
+    "temporarySetup": true,
+    "saved": false,
+    "published": false
+  },
+  "meteorIcons": {
+    "date": "2026-10-07",
+    "files": [
+      "assets/hud/meteor-variants/meteor-crystal.png",
+      "assets/hud/meteor-variants/meteor-ice.png",
+      "assets/hud/meteor-variants/meteor-alien.png"
+    ],
+    "imageSize": [
+      1254,
+      1254
+    ],
+    "rgba": true,
+    "cornerAlpha": 0,
+    "assets": {
+      "Crystal": "rbxassetid://76342437955124",
+      "Ice": "rbxassetid://76941855475609",
+      "Alien": "rbxassetid://104674568881687"
+    },
+    "preload": [
+      "Success",
+      "Success",
+      "Success"
+    ],
+    "sourceMatchedStudio": true,
+    "moduleCount": 1,
+    "saveOutputTime": "21:12:36.902",
+    "nativeEditSaveConfirmed": true,
+    "published": false,
+    "figmaEdited": false,
+    "figmaLimitation": "Starter MCP plan limit; original saved PNG used",
+    "playTestRun": false,
+    "previewRestoredAfterSave": true
   }
 }

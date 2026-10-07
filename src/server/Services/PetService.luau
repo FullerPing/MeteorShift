@@ -21,6 +21,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
 
 local PetService = Knit.CreateService({
@@ -50,7 +51,7 @@ local lastRequest: { [Player]: number } = {}
 local lastWork: { [Player]: { [string]: number } } = {}
 
 local function slotsFree(player: Player, data: any): boolean
-	return #data.pets.equipped < Pets.slots(data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"))
+	return #data.pets.equipped < PlayerStateService:PetSlots(player)
 end
 
 function PetService:Work(player: Player, role: string, targetPosition: Vector3?)
@@ -73,7 +74,7 @@ function PetService:Equip(player: Player, petId: string): boolean
 		return false
 	end
 	if not slotsFree(player, data) then
-		self.Client.Notice:Fire(player, string.format("All %d pet slots are in use. Unequip a pet first. Rebirths and Extra Pet Slot open more.", Pets.slots(data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"))))
+		self.Client.Notice:Fire(player, string.format("All %d pet slots are in use. Unequip a pet first. Rebirths, Pet Bond and Extra Pet Slot open more.", PlayerStateService:PetSlots(player)))
 		return false
 	end
 	table.insert(data.pets.equipped, petId)
@@ -102,6 +103,10 @@ function PetService:Hatch(player: Player, eggId: string): string?
 	local data = PlayerStateService:Get(player)
 	local egg = Pets.egg(eggId)
 	if not data or not egg then
+		return nil
+	end
+	if (data.rebirths or 0) < (egg.MinRebirths or 0) then
+		self.Client.Notice:Fire(player, string.format("The %s opens at rebirth %d.", egg.Name, egg.MinRebirths or 0))
 		return nil
 	end
 	local shortfall = Price.shortfall(data, 0, egg.Cost, "the " .. egg.Name)
@@ -136,7 +141,7 @@ function PetService:SyncPassPets(player: Player)
 		return
 	end
 	if MonetizationService:PassesResolved(player) then
-		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"))
+		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"), Perks.petSlots(data.perks))
 	end
 	for _, def in Config.Pets.List do
 		if def.Pass and not data.pets.owned[def.Id] and MonetizationService:HasPass(player, def.Pass) then

@@ -96,6 +96,13 @@ function Controller:KnitStart()
 	local function shortStat(id: string, value: number): string
 		return (if Home.Stations[id].Levels[1].Rate then string.format("%g", value) else Format.number(value)) .. shortUnits[id]
 	end
+	-- The player level a station's level `index` needs and the player doesn't have yet, or nil
+	-- (conveyor and refinery levels 5 to 8 follow Config.Levels.EvolveLevel; the others are cash only)
+	local function levelGate(id: string, index: number): number?
+		if id ~= "conveyor" and id ~= "refinery" then return nil end
+		local needed = Levels.evolveLevel(index)
+		return if state and (state.level or 1) < needed then needed else nil
+	end
 	-- How many levels of `id` the wallet covers for the chosen amount, and their price.
 	local function stationPlan(id: string): (number, number, number)
 		local def = Home.Stations[id]
@@ -103,7 +110,7 @@ function Controller:KnitStart()
 		local count, cash, shards = 0, 0, 0
 		while state and count < STATION_AMOUNTS[stationAmount] do
 			local nextLevel = def.Levels[level + count + 1]
-			if not nextLevel or not Price.canAfford(state, cash + nextLevel.Cost, shards + nextLevel.Shards) then break end
+			if not nextLevel or levelGate(id, level + count + 1) or not Price.canAfford(state, cash + nextLevel.Cost, shards + nextLevel.Shards) then break end
 			cash, shards, count = cash + nextLevel.Cost, shards + nextLevel.Shards, count + 1
 		end
 		return count, cash, shards
@@ -164,12 +171,14 @@ function Controller:KnitStart()
 			local card, def = p.ProductionUpgrades[id .. "Upgrade"], Home.Stations[id]
 			local level = if line and line[id] then line[id].level else 1
 			local nextLevel = def.Levels[level + 1]
-			local enabled = state ~= nil and nextLevel ~= nil and upgrading == nil and transaction == nil and Price.canAfford(state, nextLevel.Cost, nextLevel.Shards)
+			local gate = if nextLevel then levelGate(id, level + 1) else nil
+			local enabled = state ~= nil and nextLevel ~= nil and gate == nil and upgrading == nil and transaction == nil and Price.canAfford(state, nextLevel.Cost, nextLevel.Shards)
 			card.Station.Text = def.Name .. " · Level " .. level
 			card.Improvement.Text = stat(id, def.Levels[level]) .. (if nextLevel then " → " .. stat(id, nextLevel) else " · MAX LEVEL")
 			card.Purpose.Text = descriptions[id]
 			N.enable(card.BuyUpgrade, enabled, N.ORANGE)
 			card.BuyUpgrade.Text = if not state then "Loading..." elseif upgrading == id then "Upgrading..." elseif not nextLevel then "MAX LEVEL"
+				elseif gate then "NEEDS LEVEL " .. gate .. "\n" .. Price.text(nextLevel.Cost, nextLevel.Shards)
 				else (if enabled then "UPGRADE" else "SAVE UP") .. "\n" .. Price.text(nextLevel.Cost, nextLevel.Shards)
 		end
 		local stationRows = {}
@@ -195,7 +204,8 @@ function Controller:KnitStart()
 			view:setInfo({
 				level = if nextLevel then "Lv. " .. level .. " → " .. (level + math.max(count, 1)) else "Lv. " .. level,
 				cost = if not nextLevel then "MAXED" elseif count > 0 then Price.text(cash, shards) else Price.text(nextLevel.Cost, nextLevel.Shards),
-				button = if not state then "Loading..." elseif upgrading == selectedStation then "Upgrading..." elseif not nextLevel then "Max level" else "Upgrade",
+				button = if not state then "Loading..." elseif upgrading == selectedStation then "Upgrading..." elseif not nextLevel then "Max level"
+					elseif levelGate(selectedStation, level + 1) then "Needs level " .. tostring(levelGate(selectedStation, level + 1)) else "Upgrade",
 				enabled = state ~= nil and nextLevel ~= nil and count >= 1 and upgrading == nil and transaction == nil,
 			}, stationAmount)
 		end
@@ -218,8 +228,8 @@ function Controller:KnitStart()
 			view.Type.Text = row.name .. (if line and line.refinery.activeOre == row.id then " · NEXT" else "")
 			view.Type.TextTruncate = Enum.TextTruncate.AtEnd
 			view.Amount.Text = Format.number(row.ore) .. " ore · " .. Format.number(row.bars) .. " ready bars"
-			local speed = Levels.clearance(if state then state.level or 1 else 1, row.id)
-			if speed < 1 then view.Amount.Text ..= string.format(" · %d%% speed, full at level %d", math.max(math.floor(speed * 100 + .5), 1), Config.Levels.OreLevel[row.id] or 1) end
+			local yield = Levels.oreYield(if state then state.level or 1 else 1, row.id)
+			if yield < 1 then view.Amount.Text ..= string.format(" · you mine %d%% of it, full at level %d", math.max(math.floor(yield * 100 + .5), 1), Config.Levels.OreLevel[row.id] or 1) end
 			view.Amount.TextTruncate = Enum.TextTruncate.AtEnd
 			for _, direction in { -1, 1 } do
 				local button = if direction < 0 then view.PriorityUp else view.PriorityDown
@@ -258,7 +268,7 @@ function Controller:KnitStart()
 		p.ProductionUpgrades[id .. "Upgrade"].BuyUpgrade.Activated:Connect(function()
 			local def = Home.Stations[id]
 			local nextLevel = state and state.line and def.Levels[state.line[id].level + 1]
-			if not nextLevel or upgrading or transaction or not Price.canAfford(state, nextLevel.Cost, nextLevel.Shards) then return end
+			if not nextLevel or upgrading or transaction or levelGate(id, state.line[id].level + 1) or not Price.canAfford(state, nextLevel.Cost, nextLevel.Shards) then return end
 			upgrading, feedback = id, ""; update()
 			task.spawn(function()
 				local ok, accepted = pcall(function() return upgrades:BuyStation(id) end)

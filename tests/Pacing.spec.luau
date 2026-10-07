@@ -12,11 +12,11 @@ return function(t: any)
 	local at30 = Pacing.sampleAt(result, 30 * 60)
 	local at35 = Pacing.sampleAt(result, 35 * 60)
 
-	t.test("the model is deterministic and reports a cycle of about seven minutes", function()
+	t.test("the model is deterministic and reports a cycle of about six minutes", function()
 		local again = Pacing.simulate(4 * 3600)
 		t.eq(#again.purchases, #result.purchases)
 		t.eq(again.samples[#again.samples].earned, result.samples[#result.samples].earned)
-		t.ok(result.cycle > 6 * 60 and result.cycle < 8 * 60, "cycle " .. result.cycle)
+		t.ok(result.cycle > 5 * 60 and result.cycle < 7 * 60, "cycle " .. result.cycle)
 	end)
 
 	t.test("lifetime sales reach the Steel price within one cycle of the first meteor cycle ending", function()
@@ -35,19 +35,33 @@ return function(t: any)
 		t.ok(at30.owned.pickaxe >= 5, "pickaxe tier " .. at30.owned.pickaxe)
 	end)
 
-	t.test("the first rebirth lands between 40 and 60 minutes in", function()
+	t.test("the first rebirth lands between 10 and 20 minutes in", function()
 		local run = Pacing.simulate(2 * 3600, { rebirths = 1 })
 		local first = run.rebirthTimes[1]
 		t.ok(first ~= nil, "no rebirth in two hours")
-		t.ok(first >= 40 * 60 and first <= 60 * 60, "first rebirth at " .. tostring(first and first / 60) .. " min")
+		t.ok(first >= 10 * 60 and first <= 20 * 60, "first rebirth at " .. tostring(first and first / 60) .. " min")
 	end)
 
-	t.test("rebirths keep a steady pace: each comes within 45 minutes of the one before", function()
+	t.test("laps lengthen from the first rebirth to the fourth, then stay level", function()
+		local run = Pacing.simulate(6 * 3600, { rebirths = 8 })
+		t.ok(#run.rebirthTimes >= 8, "only " .. #run.rebirthTimes .. " rebirths in six hours")
+		local lap, previous = {}, 0
+		for index = 1, 8 do
+			lap[index] = run.rebirthTimes[index] - previous
+			previous = run.rebirthTimes[index]
+		end
+		t.ok(lap[1] < lap[2] and lap[2] < lap[3] and lap[3] < lap[4], "the first four laps get longer")
+		for index = 5, 8 do
+			t.ok(lap[index] >= 18 * 60 and lap[index] <= 32 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
+		end
+	end)
+
+	t.test("rebirths keep a steady pace: each comes within 30 minutes of the one before", function()
 		local run = Pacing.simulate(4 * 3600, { rebirths = 5 })
 		t.ok(#run.rebirthTimes >= 5, "only " .. #run.rebirthTimes .. " rebirths in four hours")
 		for index = 2, 5 do
 			local gap = run.rebirthTimes[index] - run.rebirthTimes[index - 1]
-			t.ok(gap <= 45 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
+			t.ok(gap <= 30 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
 		end
 	end)
 
@@ -74,7 +88,7 @@ return function(t: any)
 	t.test("sales cover the gear owned (no free lunch), and millions come within the hour", function()
 		t.ok(at30.earned >= 100e3, "earned by 30 min: " .. at30.earned)
 		local at60 = Pacing.sampleAt(result, 60 * 60)
-		t.ok(at60.earned >= 2e6, "earned by 60 min: " .. at60.earned)
+		t.ok(at60.earned >= 1e6, "earned by 60 min: " .. at60.earned)
 	end)
 
 	t.test("nothing is bought before it can be paid for", function()

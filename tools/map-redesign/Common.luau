@@ -1,6 +1,20 @@
 -- Edit-time art helpers. Outside the Rojo tree; creates no saved scripts.
 assert(game:GetService("RunService"):IsStudio(), "Studio only")
 assert(not game:GetService("RunService"):IsRunning(), "Stop Play before authoring")
+-- Edit commands need current source values, not a previous require cache entry.
+local shared = game:GetService("ReplicatedStorage").Shared
+local function fresh(module)
+	local clone = module:Clone()
+	local ok, value = pcall(require, clone)
+	clone:Destroy()
+	assert(ok, "Cannot load current " .. module.Name .. ": " .. tostring(value))
+	return value
+end
+local geometry = fresh(shared.WorldGeometry).Settings
+local config = fresh(shared.Config)
+local crater = config.LandingFX.Crater
+assert(geometry.BoundaryHalf > crater.OpeningRadius and crater.FloorRadius < crater.OpeningRadius,
+	"Invalid compact ground/crater dimensions")
 local root = workspace:FindFirstChild("Map_Redesign")
 if root then
 	assert(root:IsA("Model") and root:GetAttribute("MapRedesignOwned"), "Unowned staged map")
@@ -11,12 +25,12 @@ else
 	root:SetAttribute("LayoutVersion", 1)
 	root.Parent = workspace
 end
-root:SetAttribute("StageOffset", Vector3.new(0, 0, 3000))
-root.WorldPivot = CFrame.new(0,0,3000)
-root:SetAttribute("CraterTerrainOpening", 160)
-root:SetAttribute("MiningClearRadius", 180)
+root:SetAttribute("StageOffset", geometry.StageOffset)
+root.WorldPivot = CFrame.new(geometry.StageOffset)
+root:SetAttribute("CraterTerrainOpening", crater.OpeningRadius)
+root:SetAttribute("MiningClearRadius", config.Meteor.Knockback.Radius)
 local A = {
-	map = root, offset = Vector3.new(0, 0, 3000),
+	map = root, offset = geometry.StageOffset, geometry = geometry, crater = crater,
 	colors = {
 		grass = Color3.fromRGB(104,214,65), navy = Color3.fromRGB(24,37,61),
 		stone = Color3.fromRGB(72,82,100), cyan = Color3.fromRGB(41,201,255),

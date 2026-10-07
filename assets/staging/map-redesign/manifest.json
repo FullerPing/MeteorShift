@@ -5,11 +5,57 @@
     0,
     3000
   ],
+  "date": "2026-10-07",
   "placeSaveConfirmedForThisStage": true,
+  "placeSaveEvidence": {
+    "date": "2026-10-07",
+    "studioOutputTime": "20:22:14.150",
+    "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
+    "action": "Ctrl+S",
+    "mode": "Edit",
+    "published": false,
+    "originalMapPreserved": true,
+    "temporarySelectorsRestored": true,
+    "originalSpawnEnabled": true,
+    "stagedSpawnsDisabled": 6,
+    "scaledAssetsSavedUnder": "ServerStorage.Assets_Redesign"
+  },
+  "geometry": {
+    "ground": [
+      540,
+      540
+    ],
+    "buildingScale": 0.5,
+    "meteorScale": 2,
+    "craterOpeningRadius": 83.2,
+    "floorRadius": 55.25,
+    "floorY": -14.755,
+    "meteorCentre": [
+      0,
+      -1.25,
+      0
+    ],
+    "elevatedMiningAccess": false
+  },
+  "validation": {
+    "sourceTests": {
+      "passed": 423,
+      "failed": 0
+    },
+    "frozenGuiFiles": 39,
+    "frozenGuiChanges": 0,
+    "computedGroundPaths": 84,
+    "pathFailures": 0,
+    "forecourtProbes": 6,
+    "forecourtCollisionFailures": 0,
+    "migrationChangedFramesOrSizes": 0,
+    "liveMiningReachPending": true,
+    "fullGameplayQaPending": true
+  },
   "files": [
     {
-      "bytes": 85876,
-      "base64Chars": 114504,
+      "bytes": 84935,
+      "base64Chars": 113248,
       "roundtripPassed": true,
       "scripts": 0,
       "file": "Map_Redesign.rbxm",
@@ -18,8 +64,10 @@
         0,
         3000
       ],
-      "parts": 1417,
-      "sha256": "6d28ccf9656faa1a41ad685e1fd255f824434c8ba046230dfab7092b4b5f706e"
+      "parts": 1173,
+      "sha256": "0ea49b96833818b5f3fe09ea9afb024a6db65a5d14e418a792910584eed5c405",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
     },
     {
       "bytes": 73990,
@@ -28,21 +76,25 @@
       "file": "ServerAssets_Redesign.rbxm",
       "scripts": 0,
       "parts": 119,
-      "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14"
+      "sha256": "682e0e6296da9e6ece35f0a3ffa45a96c702b4d3ccd3876686ea397bf1bb9b14",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
     },
     {
-      "bytes": 23070,
-      "base64Chars": 30760,
+      "bytes": 23720,
+      "base64Chars": 31628,
       "roundtripPassed": true,
       "scripts": 0,
       "file": "Refinery_Redesign.rbxm",
       "pivot": [
         0,
-        0.800000011920929,
-        -380
+        0.4000000059604645,
+        -177
       ],
       "parts": 145,
-      "sha256": "d1cb6848a485f2835243dca917aaf27a7befab165b755c5099d84770b16d77bf"
+      "sha256": "64902fa8be9785e54cc429cece9eb2259a6a568b343e9e0bcd5af3ef4ee5443a",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
     },
     {
       "bytes": 4703,
@@ -51,48 +103,45 @@
       "file": "Lighting_Redesign.rbxm",
       "scripts": 0,
       "parts": 0,
-      "sha256": "4879a25c0f803db18dd68e65508b4bd5df0052f934acaee8342073639b73d60d"
+      "sha256": "50ee2270288b7a1df1a4f14f0dc14f2e8fe61070cbe597e768c82701716ffa89",
+      "diskVerified": true,
+      "binaryHeaderVerified": true
     }
   ],
-  "previousPlaceSaveEvidence": {
-    "date": "2026-10-06",
-    "studioOutputTime": "07:58:13.871",
-    "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
-    "action": "File > Save to Roblox",
-    "mode": "Edit",
-    "published": false,
-    "unparentedScaledAssetsPersistedInPlace": false,
-    "inactiveLightingProfileSaved": true,
-    "temporaryPreviewsRemoved": true,
-    "originalLightingRestored": true,
-    "cleanupAfterTemporaryVisualPreview": true
+  "previousStageArchivedAt": "assets/archive/before-smaller-boundary",
+  "fullGoalComplete": false,
+  "studStyle": {
+    "texture": "rbxassetid://6927295847",
+    "tileSize": 4,
+    "texturedParts": 405,
+    "textureFaces": 799,
+    "addedBaseParts": 0,
+    "geometryAndCollisionPreserved": true,
+    "rerunCreated": 0,
+    "preload": "Success",
+    "phoneAndPerformanceVerified": false
   },
-  "lightingProfile": {
-    "inactive": true,
-    "effects": 6,
-    "pendingVisualQA": true,
-    "clockTime": 14,
-    "brightness": 2.5,
-    "hazeDensity": 0.17,
-    "liveLightingPropertyComparisons": 15,
-    "cloudSettingsAsData": true,
-    "realCloudsInStagedMap": 0,
-    "roundtripEffectPropertyChecks": 19,
-    "roundtripCloudSettingChecks": 6
-  },
-  "placeSaveEvidence": {
-    "date": "2026-10-06",
-    "studioOutputTime": "08:29:19.492",
-    "message": "Saved new changes in \"Craterworks: Meteor Mining\" to Roblox.",
-    "action": "File > Save to Roblox",
-    "mode": "Edit",
-    "published": false,
-    "unparentedScaledAssetsPersistedInPlace": false,
-    "inactiveLightingProfileSaved": true,
-    "temporaryPreviewsRemoved": true,
-    "originalLightingRestored": true,
-    "cleanupAfterTemporaryVisualPreview": true,
-    "spawnPolishSaved": true,
-    "oddsTypeSize": 44
+  "boundaryStyle": {
+    "wallHeight": 28,
+    "wallThickness": 16,
+    "wallBottom": -4,
+    "wallTop": 24,
+    "cliffWidth": 32,
+    "cliffHeights": [
+      14,
+      18,
+      22
+    ],
+    "cliffTopRange": [
+      38,
+      46
+    ],
+    "formerMaximumY": 138,
+    "currentMaximumY": 46,
+    "playableSpan": 540,
+    "changedParts": 68,
+    "rerunChangedParts": 0,
+    "unrelatedGeometryPreserved": true,
+    "collisionPropertiesPreserved": true
   }
 }

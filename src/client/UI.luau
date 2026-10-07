@@ -415,7 +415,7 @@ function UI.hudButton(
 			merged[key] = value
 		end
 	end
-	local iconNames = { SHOP = "equipment", INDEX = "index", REBIRTH = "rebirth", STORE = "premium" }
+	local iconNames = { SHOP = "equipment", INDEX = "index", REBIRTH = "rebirth", STORE = "store" }
 	local tileColors = { SHOP = UI.ORANGE, INDEX = UI.SHARD, REBIRTH = UI.GREEN, STORE = UI.CASH }
 	local tileColor = tileColors[name] or UI.CARD
 	local hover = scope:Value(false)

@@ -72,4 +72,26 @@ return function(t: any)
 			end
 		end
 	end)
+
+	t.test("level 50 takes about a day of play and level 10 comes within the first hour", function()
+		local total, toTen = 0, 0
+		for level = 1, Settings.MaxLevel - 1 do
+			total += Levels.xpToNext(level) :: number
+			if level == 9 then toTen = total end
+		end
+		t.ok(total > 15000 and total < 30000, "total XP " .. total)
+		t.ok(toTen / 70 * 343 / 60 < 60, "level 10 at " .. math.floor(toTen / 70 * 343 / 60) .. " min")
+	end)
+
+	t.test("ore yield is full at or above clearance and falls to the floor at level 1", function()
+		for ore, clear in Settings.OreLevel do
+			t.eq(Levels.oreYield(clear, ore), 1, ore)
+			t.eq(Levels.oreYield(Settings.MaxLevel, ore), 1, ore)
+			if clear > 2 then
+				t.near(Levels.oreYield(1, ore), Settings.UnderLevelFloor, 1e-9, ore)
+				t.ok(Levels.oreYield(clear - 1, ore) > Levels.oreYield(clear - 2, ore), ore)
+			end
+		end
+		t.eq(Levels.oreYield(1, "iron"), 1)
+	end)
 end

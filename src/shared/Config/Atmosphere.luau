@@ -27,8 +27,8 @@ Atmosphere.ApproachClear = 8 -- after impact, the approach gloom lifts over this
 Atmosphere.DustSeconds = 12 -- the impact dust settles over this many seconds
 Atmosphere.Response = 2.5 -- how quickly the lighting chases its target, per second (higher is snappier)
 
-Atmosphere.DustColor = Color3.fromRGB(150, 122, 100)
-Atmosphere.CloudShadeColor = Color3.fromRGB(86, 74, 78)
+Atmosphere.DustColor = Color3.fromRGB(196, 168, 136) -- sandy, to read against the bright daylight sky
+Atmosphere.CloudShadeColor = Color3.fromRGB(112, 108, 132)
 
 -- The meteor coming in: the light dims, clouds gather and the haze takes on the
 -- meteor type's glow colour (Iron orange, Ice cyan, Crystal magenta)
