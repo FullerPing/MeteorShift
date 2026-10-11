@@ -46,4 +46,5 @@ return {
 	RewardFX = require(script.RewardFX),
 	Leaderboards = LeaderboardsConfig,
 	Daily = require(script.Daily),
+	Badges = require(script.Badges),
 }

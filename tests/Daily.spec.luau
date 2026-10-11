@@ -193,4 +193,15 @@ return function(t: any)
 		t.eq(after.quests[1].slot, "d1")
 		t.ok(after.weekly ~= nil and after.weekly.slot == "w")
 	end)
+
+	t.test("a fresh profile gets the daily table with the start shield", function()
+		local Template = require(t.lib.ProfileTemplate)
+		t.eq(Template.version, 9)
+		t.eq(Template.daily.shields, Settings.StartShields)
+		t.eq(Template.daily.streak, 0)
+		t.eq(Template.daily.weekly.id, "")
+		local data = table.clone(Template.daily)
+		data.quests, data.weekly = {}, { id = "", progress = 0, claimed = false }
+		t.eq(Daily.rollover(data :: any, 20000, 1, 0, 1), true, "the template rolls over without error")
+	end)
 end

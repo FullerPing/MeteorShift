@@ -1,10 +1,10 @@
 --!strict
--- Profile schema v8 (spec §12.4, with the plot production line instead of
+-- Profile schema v9 (spec §12.4, with the plot production line instead of
 -- refinery slots, one pickaxe and backpack with a single level each: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 8,
+	version = 9,
 	cash = 0,
 	shards = 0,
 	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
@@ -60,5 +60,16 @@ return {
 		meteorsJoined = 0,
 		coresCracked = 0,
 		barsSold = 0,
+	},
+	-- Daily streak, quests and shields (Shared.Daily). `day` is the UTC day the quests were picked for.
+	daily = {
+		day = 0,
+		lastClaim = 0, -- UTC day of the last login claim
+		streak = 0,
+		shields = 1, -- Config.Daily.StartShields; DataService fills it into old profiles
+		quests = {}, -- { id, progress, claimed } for today
+		questBonusClaimed = false,
+		week = 0,
+		weekly = { id = "", progress = 0, claimed = false },
 	},
 }
