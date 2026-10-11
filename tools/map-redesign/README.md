@@ -1,3 +1,5 @@
+> **Superseded on 8 October 2026 by map v2 ("Main Street", toy-brick style): see [tools/map-v2/README.md](../map-v2/README.md).** The live map, layout and generators are now there; this folder is history and the source of the Refinery station models.
+
 # Map redesign authoring
 
 The owner's latest direction on **7 October 2026** supersedes the full-size buildings, staircases and raised meteor landing in [COMPACT-REVISION.md](../../docs/map-redesign/COMPACT-REVISION.md): scale buildings to **0.5** at their compact centres, remove `Crater.MiningAccess`, and restore MeteorSpawn's original **Y−1.25** landing height. The compact boundary remains ±270 and the crater opening remains 83.2 studs in radius (1.3× the original). Keep the verified **2×** Core/NodePieces templates in `ServerStorage.Assets_Redesign`; Core remains approximately 56.7 studs on every axis, eight times its original volume. Preserve the owner's internal GUI.
