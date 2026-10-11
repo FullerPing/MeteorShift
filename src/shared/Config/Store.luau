@@ -36,7 +36,7 @@ Store.Sections = {
 	{ Id = "cash", Title = "CASH", Tab = "Cash", Icon = "coin", Color = "green", Style = "tile",
 		Keys = { "PocketChange", "CashBundle" } },
 	{ Id = "boosts", Title = "BOOSTS", Tab = "Boosts", Icon = "foundry", Color = "purple", Style = "tile",
-		Keys = { "Overclock", "MiniOverclock" } },
+		Keys = { "Overclock", "MiniOverclock", "StreakShield" } },
 	{ Id = "pets", Title = "PETS", Tab = "Pets", Icon = "pets", Color = "purple", Style = "tile",
 		Keys = { "PetSlot", "PetMax" } },
 	{ Id = "support", Title = "SUPPORT", Icon = "premium", Color = "blue", Style = "tile", Keys = { "TipJar" } },

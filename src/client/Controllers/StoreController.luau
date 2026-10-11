@@ -32,14 +32,14 @@ local ITEM_ICONS: { [string]: string } = {
 	TwoXOre = "ore", BiggerBackpack = "backpack", OfflineHours = "bars", AutoDeposit = "foundry", VIP = "premium",
 	CallMeteor = "meteor", Overclock = "foundry", TipJar = "premium", PocketChange = "coin",
 	MiniOverclock = "foundry", OreRush = "ore", CashBundle = "coin", PetSlot = "plus",
-	TwoXCash = "coin", StarterPack = "bars", PetMax = "pets",
+	TwoXCash = "coin", StarterPack = "bars", PetMax = "pets", StreakShield = "premium",
 	BossMeteor = "meteorAlien", Shards50 = "crystal", Shards250 = "crystal", Shards1000 = "crystal", RebirthKeep = "rebirth",
 }
 local ITEM_ACCENTS: { [string]: Color3 } = {
 	TwoXOre = GOLD, BiggerBackpack = NativeUI.CYAN, OfflineHours = MINT, AutoDeposit = MINT, VIP = GOLD,
 	CallMeteor = NativeUI.ORANGE, Overclock = NativeUI.CYAN, TipJar = MINT, PocketChange = GOLD,
 	MiniOverclock = NativeUI.CYAN, OreRush = GOLD, CashBundle = GOLD, PetSlot = MINT,
-	TwoXCash = GOLD, StarterPack = MINT, PetMax = NativeUI.ORANGE,
+	TwoXCash = GOLD, StarterPack = MINT, PetMax = NativeUI.ORANGE, StreakShield = NativeUI.CYAN,
 	BossMeteor = NativeUI.ORANGE, Shards50 = NativeUI.CYAN, Shards250 = NativeUI.CYAN, Shards1000 = NativeUI.CYAN, RebirthKeep = MINT,
 }
 local BUTTON_TEXT: { [ButtonState]: string } = {

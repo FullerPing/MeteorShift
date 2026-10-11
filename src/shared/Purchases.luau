@@ -92,6 +92,8 @@ function Purchases.grant(data: any, key: string, cash: number?): Grant?
 		end
 	elseif key == "PetSlot" then
 		markFlag(data, "extraPetSlot")
+	elseif key == "StreakShield" then
+		data.daily.shields = (data.daily.shields or 0) + 1
 	elseif key == "StarterPack" then
 		if not cash or cash ~= cash or cash <= 0 or cash == math.huge then
 			return nil

@@ -35,7 +35,7 @@ return function(t: any)
 	}
 
 	t.test("products without a dashboard entry have the intended prices and stay off sale", function()
-		for key, price in { TipJar = 5 } do
+		for key, price in { TipJar = 5, StreakShield = 9 } do
 			t.eq(Config.Monetization.Products[key].Robux, price, key)
 			t.eq(Config.Monetization.Products[key].Id, 0, key)
 			t.ok(table.find(Config.Monetization.ProductOrder, key), key .. " listed")
@@ -321,6 +321,14 @@ return function(t: any)
 		t.eq(Purchases.receipt(data, "id-1", grant, save), true)
 		t.eq(grants, 75)
 		t.eq(#data.receipts, 75)
+	end)
+
+	t.test("Streak Shield adds one shield above the free cap and needs no cash", function()
+		local data: any = { daily = { shields = Config.Daily.ShieldCap } }
+		t.ok(Purchases.grant(data, "StreakShield") ~= nil, "the grant exists")
+		t.eq(data.daily.shields, Config.Daily.ShieldCap + 1)
+		Purchases.grant(data, "StreakShield")
+		t.eq(data.daily.shields, Config.Daily.ShieldCap + 2, "bought shields are not capped")
 	end)
 
 	t.test("missing profiles and failed grants leave receipts unacknowledged", function()

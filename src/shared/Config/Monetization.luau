@@ -113,7 +113,7 @@ Monetization.Passes = {
 
 Monetization.ProductOrder = {
 	"StarterPack", "TipJar", "PocketChange", "MiniOverclock", "OreRush", "CashBundle", "CallMeteor", "Overclock",
-	"PetMax", "PetSlot", "BossMeteor", "Shards50", "Shards250", "Shards1000", "RebirthKeep",
+	"PetMax", "PetSlot", "BossMeteor", "Shards50", "Shards250", "Shards1000", "RebirthKeep", "StreakShield",
 }
 
 -- Tier-up products, sold in the gear shop only (not in ProductOrder). Id = 0 stays off sale and hidden.
@@ -123,6 +123,13 @@ Monetization.GearOrder = {
 }
 
 Monetization.Products = {
+	StreakShield = {
+		Key = "StreakShield",
+		Id = 0, -- the owner adds the Creator Dashboard item; 0 keeps it off sale
+		Name = "Streak Shield",
+		Robux = 9,
+		Description = "Covers one missed day of your daily streak, so you don't lose it. Not random, no other effect.",
+	} :: Product,
 	TipJar = {
 		Key = "TipJar",
 		Id = 0,

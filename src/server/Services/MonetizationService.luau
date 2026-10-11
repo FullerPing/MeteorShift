@@ -266,6 +266,8 @@ function MonetizationService:_grantProduct(player: Player, data: any, key: strin
 		effect.notice = "Your equipped pets are at max level!"
 	elseif key == "PetSlot" then
 		effect.notice = "Extra pet slot unlocked!"
+	elseif key == "StreakShield" then
+		effect.notice = "Streak Shield added: it covers one missed day of your streak."
 	elseif key == "StarterPack" then
 		effect.notice = "Starter Value Pack: +$" .. Format.number(grant.cash) .. ", 20 minutes of Overclock and pet XP."
 	elseif grant.shards and grant.shards > 0 then
