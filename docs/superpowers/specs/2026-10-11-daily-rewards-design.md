@@ -1,6 +1,6 @@
 # Daily rewards, quests and badges: design
 
-Date: 2026-10-11. Status: awaiting owner review.
+Date: 2026-10-11. Status: approved and built; see the notes under "As built".
 
 ## Goal
 
@@ -78,17 +78,17 @@ added at purchase time (it should not happen: the grant is a plain increment).
 - **Server authority:** the client only asks to claim. The server checks the day, the progress and the claimed
   flag, saves, then pays through `PlayerStateService` and announces it through `RewardService:Bonus`.
 - **Shield purchase:** `MonetizationService` gets a `StreakShield` product (`Robux = 9`, `Id = 0`) whose grant
-  adds one shield up to the cap through `Purchases` like the other fixed grants (receipt saved before it is
-  acknowledged). The Store lists it as "Not on sale yet" until the id is set; at the cap the card is disabled
-  with the reason, so nobody pays for nothing.
+  adds one shield through `Purchases` like the other fixed grants (receipt saved before it is
+  acknowledged). Bought shields are not capped (only free gains stop at `ShieldCap`), so nobody pays for nothing. The Store lists it as "Not on sale yet" until the id is set.
 - **Badges:** keys `firstMeteor`, `firstCore`, `firstRebirth`, `rebirth10`, `level25`, `level50`, `pageIron`,
   `pageIce`, `pageCrystal`, `legendaryPet`, `streak7`. Awarded once per player per session (Roblox dedupes the
   rest), wrapped in `pcall`, and skipped when the id is `0`.
 
 ## Client
 
-A DAILY navigation button (with a notification dot when something is claimable) is added to `HudLayout` in the
-same stack as SHOP/INDEX/REBIRTH/STORE, with the usual 44 px minimum and phone layouts. The menu is built the
+The entry points are a "Daily rewards" row at the top of Settings, a red dot on the Settings gear while something is
+claimable, and a popup once per session. A dedicated nav tile was left out because `HudLayout` has five hand-tuned
+layouts; it can be added once a position and icon are chosen. The menu is built the
 same way as the other native menus (authored prefab when present, built in code otherwise, `tools/build-native-ui`
 updated). It shows the 7 cycle days with the current one highlighted, the shield count with a "streak is safe"
 note, today's three quests with progress bars and CLAIM buttons, the all-done bonus, and the weekly quest. On
@@ -104,8 +104,7 @@ join, a small popup offers the login reward once per day.
 Pure specs in `tests/Daily.spec.luau`: day and week keys, gap and shield resolution (covered, partly covered,
 none), cycle day and reward sizing (floor, ceiling, shard days), deterministic quest picking, progress
 counting, bonus and weekly rules, and the shield cap. `Purchases.spec` and `Monetization` tests cover the new
-product (id `0` is off sale, cap respected). `HudLayout`/`DailyLayout` specs cover the button on desktop,
-landscape phone and compact layouts.
+product (id `0` is off sale, cap respected). The client menu has no automated test (no GUI harness in the repo) and was checked in a Play session.
 
 ## Out of scope
 
