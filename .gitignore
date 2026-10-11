@@ -13,3 +13,6 @@ oldmain/
 # Scratch and generated output
 .tmp/
 output/
+
+# Executing-plans scratch
+.superpowers/

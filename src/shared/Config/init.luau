@@ -45,4 +45,5 @@ return {
 	Music = require(script.Music),
 	RewardFX = require(script.RewardFX),
 	Leaderboards = LeaderboardsConfig,
+	Daily = require(script.Daily),
 }
