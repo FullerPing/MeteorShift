@@ -8,8 +8,8 @@ return table.freeze({
 	meteorIce = "rbxassetid://76941855475609",
 	meteorAlien = "rbxassetid://104674568881687",
 	backpack = "rbxassetid://84219914513971",
-	crystal = "rbxassetid://127047811968456",
-	coin = "rbxassetid://93455526376116",
+	crystal = "rbxassetid://1436430600", -- shard icon
+	coin = "rbxassetid://15589362394",
 	equipment = "rbxassetid://5938101267", -- owner's authored Gear artwork
 	chevron = "rbxassetid://131625469621882",
 	bars = "rbxassetid://91600762574304",
@@ -25,5 +25,6 @@ return table.freeze({
 	plus = "rbxassetid://72035049172798",
 	index = "rbxassetid://127110909372919", -- owner's authored Index button icon
 	close = "rbxassetid://125219065228703",
+	pets = "rbxassetid://16380908271", -- white paw, generated (assets/hud/pets.png)
 	chat = "rbxassetid://96092458492519",
 })

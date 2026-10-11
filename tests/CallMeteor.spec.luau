@@ -58,6 +58,15 @@ return function(t: any)
 		t.ok(phase ~= late and late ~= cooldown and cooldown ~= cap and phase ~= cap, "reasons differ")
 	end)
 
+	t.test("the boss meteor needs the scheduled boss's rebirths, with a reason below that", function()
+		local need = require(t.shared.Config.Meteor).Boss.MinRebirths
+		local ok, reason = CallMeteor.bossUnlocked(need - 1)
+		t.eq(ok, false)
+		t.ok(type(reason) == "string" and reason ~= "", "says why")
+		t.eq(CallMeteor.bossUnlocked(need), true)
+		t.eq(CallMeteor.bossUnlocked(need + 10), true)
+	end)
+
 	t.test("counts calls inside the rolling window only", function()
 		local now = 10000
 		local times = { now - Rules.CapWindow - 1, now - Rules.CapWindow + 5, now - 10, now }

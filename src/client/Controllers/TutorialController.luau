@@ -1,6 +1,8 @@
 --!strict
--- First-session tutorial on the client (spec §11): a responsive training card,
--- a marker over what to do next and a beam from your character to it. The
+-- First-session tutorial on the client (spec §11), show-don't-tell: a small card
+-- with the step's icon and a one-word verb, and the world shows the rest: a glowing
+-- trail from your character to the target, an outline on it, a tapping hand (hit
+-- it) or bouncing arrow (go there) over it, and a pointing hand on HUD buttons. The
 -- server decides when a step is done (TutorialService); this only shows the way.
 
 local Players = game:GetService("Players")
@@ -28,6 +30,8 @@ local TutorialController = Knit.CreateController({
 
 local GUIDE_COLOR = Color3.fromRGB(255, 223, 98)
 local HIDE_BEAM_WITHIN = 14 -- studs; close enough to see the marker
+local TRAIL_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
+local METEOR_STEPS = { meteor_lands = true, reach_crater = true, mine_node = true, hit_core = true, core_shards = true }
 
 local function isAlive(part: Instance): boolean
 	local hp = part:GetAttribute("Hp")
@@ -142,44 +146,129 @@ local function attach(existing: Attachment?, parent: BasePart, name: string): At
 	return attachment
 end
 
--- The marker and beam, made once and moved between targets.
-local function makeGuide(): (BillboardGui, Beam)
+-- The guide, made once and moved between targets: a billboard over the target
+-- (a bouncing arrow, or a hand tapping with a ripple), a sparkling trail from the
+-- character to it and an outline on the target itself.
+type Guide = { marker: BillboardGui, arrow: TextLabel, hand: TextLabel, ripple: Frame, timer: TextLabel, beam: Beam, outline: Highlight }
+
+local function loop(instance: Instance, seconds: number, goal: { [string]: any }, style: Enum.EasingStyle?)
+	TweenService:Create(instance, TweenInfo.new(seconds, style or Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), goal):Play()
+end
+
+local function makeGuide(): Guide
 	local marker = Instance.new("BillboardGui")
 	marker.Name = "TutorialMarker"
-	marker.Size = UDim2.fromOffset(60, 60)
+	marker.Size = UDim2.fromOffset(110, 110)
 	marker.AlwaysOnTop = true
 	marker.LightInfluence = 0
 	marker.MaxDistance = 2000
 	marker.Enabled = false
-	local arrow = Instance.new("TextLabel")
-	arrow.BackgroundTransparency = 1
-	arrow.Size = UDim2.fromScale(1, 1)
-	arrow.Font = UI.FONT
-	arrow.Text = "▼"
-	arrow.TextSize = 44
-	arrow.TextColor3 = GUIDE_COLOR
-	arrow.TextStrokeColor3 = UI.OUTLINE
-	arrow.TextStrokeTransparency = 0
-	arrow.Parent = marker
-	TweenService:Create(
-		arrow,
-		TweenInfo.new(0.5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-		{ Position = UDim2.fromOffset(0, -12) }
-	):Play()
+	local function label(name: string, text: string, size: number): TextLabel
+		local l = Instance.new("TextLabel")
+		l.Name = name
+		l.BackgroundTransparency = 1
+		l.AnchorPoint = Vector2.new(0.5, 0.5)
+		l.Position = UDim2.fromScale(0.5, 0.5)
+		l.Size = UDim2.fromScale(1, 1)
+		l.Font = UI.FONT
+		l.Text = text
+		l.TextSize = size
+		l.TextColor3 = GUIDE_COLOR
+		l.TextStrokeColor3 = UI.OUTLINE
+		l.TextStrokeTransparency = 0
+		l.ZIndex = 2
+		l.Parent = marker
+		return l
+	end
+	local arrow = label("Arrow", "▼", 56)
+	loop(arrow, 0.5, { Position = UDim2.new(0.5, 0, 0.5, -14) })
+	-- tap: the hand presses down while a ring ripples out under the fingertip
+	local ripple = Instance.new("Frame")
+	ripple.Name = "Ripple"
+	ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+	ripple.Position = UDim2.fromScale(0.5, 0.78)
+	ripple.Size = UDim2.fromOffset(20, 20)
+	ripple.BackgroundTransparency = 1
+	local ring = Instance.new("UIStroke")
+	ring.Color = GUIDE_COLOR
+	ring.Thickness = 4
+	ring.Parent = ripple
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.5, 0)
+	corner.Parent = ripple
+	ripple.Parent = marker
+	TweenService:Create(ripple, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1), { Size = UDim2.fromOffset(70, 70) }):Play()
+	TweenService:Create(ring, TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1), { Transparency = 1 }):Play()
+	local hand = label("Hand", "👆", 72)
+	hand.Position = UDim2.fromScale(0.62, 0.95)
+	loop(hand, 0.35, { Position = UDim2.fromScale(0.6, 0.82), Rotation = -8 }, Enum.EasingStyle.Quad)
+	-- the "watch" step shows the time left over the crater
+	local timer = label("Timer", "", 34)
+	timer.Position = UDim2.new(0.5, 0, 0, -22)
+	timer.TextColor3 = Color3.new(1, 1, 1)
 	marker.Parent = player:WaitForChild("PlayerGui")
 
 	local beam = Instance.new("Beam")
 	beam.Name = "TutorialBeam"
 	beam.Color = ColorSequence.new(GUIDE_COLOR)
-	beam.Transparency = NumberSequence.new(0.2, 0.7)
+	beam.Transparency = NumberSequence.new(0, 0.4)
 	beam.LightEmission = 1
 	beam.FaceCamera = true
-	beam.Width0 = 0.5
-	beam.Width1 = 0.5
+	beam.Width0 = 1.6
+	beam.Width1 = 1.6
 	beam.Segments = 1
+	beam.Texture = TRAIL_TEXTURE
+	beam.TextureMode = Enum.TextureMode.Static
+	beam.TextureLength = 4
+	beam.TextureSpeed = 1.5 -- the sparkles flow toward the target
 	beam.Enabled = false
 	beam.Parent = workspace.CurrentCamera
-	return marker, beam
+
+	local outline = Instance.new("Highlight")
+	outline.Name = "TutorialOutline"
+	outline.FillColor = GUIDE_COLOR
+	outline.OutlineColor = GUIDE_COLOR
+	outline.FillTransparency = 0.8
+	outline.DepthMode = Enum.HighlightDepthMode.Occluded
+	outline.Enabled = false
+	outline.Parent = workspace.CurrentCamera
+	loop(outline, 0.6, { FillTransparency = 0.55, OutlineTransparency = 0.3 })
+	return { marker = marker, arrow = arrow, hand = hand, ripple = ripple, timer = timer, beam = beam, outline = outline }
+end
+
+-- What the outline should wrap: the whole building for town targets, the part itself otherwise
+local function outlineFor(target: BasePart): Instance
+	local model = target:FindFirstAncestorWhichIsA("Model")
+	if model and model.Parent and model.Parent.Name == "TownSquare" then
+		return model
+	end
+	return target
+end
+
+-- A screen-space hand that points down at a HUD button
+local function makePointer(): (ScreenGui, TextLabel)
+	local gui = Instance.new("ScreenGui")
+	gui.Name = "TutorialPointer"
+	gui.ResetOnSpawn = false
+	gui.IgnoreGuiInset = true
+	gui.DisplayOrder = 30
+	gui.Enabled = false
+	local hand = Instance.new("TextLabel")
+	hand.Name = "Hand"
+	hand.BackgroundTransparency = 1
+	hand.AnchorPoint = Vector2.new(0.5, 1)
+	hand.Size = UDim2.fromOffset(64, 64)
+	hand.Font = UI.FONT
+	hand.Text = "👇"
+	hand.TextSize = 72
+	hand.Parent = gui
+	gui.Parent = player:WaitForChild("PlayerGui")
+	return gui, hand
+end
+
+local function findButton(name: string): GuiObject?
+	local found = player:WaitForChild("PlayerGui"):FindFirstChild(name, true)
+	return if found and found:IsA("GuiObject") and found.Visible then found else nil
 end
 
 function TutorialController:KnitStart()
@@ -204,6 +293,11 @@ function TutorialController:KnitStart()
 		return use(step) ~= nil or use(finished)
 	end)
 	player:SetAttribute("TutorialCardInColumn", false)
+	-- the first-join intro (IntroController) covers the screen: no card or guide behind it
+	local introOpen = scope:Value(player:GetAttribute("IntroOpen") == true)
+	table.insert(scope, player:GetAttributeChangedSignal("IntroOpen"):Connect(function()
+		introOpen:set(player:GetAttribute("IntroOpen") == true)
+	end))
 
 	local lastIndex = 0
 	TutorialService.Step:Observe(function(value)
@@ -226,22 +320,18 @@ function TutorialController:KnitStart()
 		return if s then Steps[s.index] else nil
 	end)
 
+	-- Mostly no instructions to read: a meteor step that is waiting for the meteor shows only the time left,
+	-- and steps with a Sub add one small line under the verb
+	local function waitingFor(info: any, meteor: any): boolean
+		return info ~= nil and METEOR_STEPS[info.Id] == true and meteor ~= nil
+			and (meteor.phase == Phase.Countdown or meteor.phase == Phase.Cleanup)
+	end
 	local hint = scope:Computed(function(use)
-		local info = use(current)
-		if not info then
-			return ""
+		local info, meteor = use(current), use(meteorState)
+		if not waitingFor(info, meteor) then
+			return if info and info.Sub then info.Sub else ""
 		end
-		local meteor = use(meteorState)
-		local waiting = meteor and (meteor.phase == Phase.Countdown or meteor.phase == Phase.Cleanup)
-		local left = if meteor then Format.time(meteor.endsAt - use(serverNow)) else ""
-		if info.Id == "meteor_lands" and meteor and meteor.phase == Phase.Countdown then
-			return "It lands in the crater in " .. left .. ". Mine debris while you wait!"
-		end
-		local meteorStep = info.Id == "reach_crater" or info.Id == "mine_node" or info.Id == "hit_core" or info.Id == "core_shards"
-		if meteorStep and waiting then
-			return "The next meteor lands in " .. left .. ". Mine debris while you wait!"
-		end
-		return info.Hint
+		return "⏱ " .. Format.time(meteor.endsAt - use(serverNow))
 	end)
 
 	scope:New("ScreenGui")({
@@ -257,7 +347,7 @@ function TutorialController:KnitStart()
 				end),
 				BackgroundTransparency = 1,
 				Visible = scope:Computed(function(use)
-					return use(shown) and use(showGuide) and use(hud).tutorialVisible
+					return use(shown) and use(showGuide) and not use(introOpen) and use(hud).tutorialVisible
 				end),
 				[Children] = {
 					-- White quest card with a tilted blue ribbon, as in the style references.
@@ -287,24 +377,38 @@ function TutorialController:KnitStart()
 					scope:New("Frame")({
 						Name = "StepSocket", Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1,
 						[Children] = {
-							Cartoon.surface("orange", { radius = 10, edge = 2.5, lip = 3 }),
-							UI.hudIcon(scope, "equipment", { AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(30, 30), ZIndex = 2 }),
+							-- no box behind the step icon: the glyph stands on the card
+							scope:New("TextLabel")({
+								AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(40, 40), ZIndex = 2,
+								BackgroundTransparency = 1, Font = UI.FONT, TextSize = 34,
+								Text = scope:Computed(function(use)
+									local info = use(current)
+									return if info then info.Icon else "🏆"
+								end),
+							}),
 						},
 					}),
 					UI.hudText(scope, {
-						Position = UDim2.fromOffset(64, 38), Size = UDim2.fromOffset(254, 30),
+						Position = UDim2.fromOffset(64, 36), Size = UDim2.fromOffset(254, 44),
 						Text = scope:Computed(function(use)
 							local info = use(current)
-							return if info then info.Text else "You're all set, miner!"
-						end), TextSize = scope:Computed(function(use) return math.max(21, 14 / use(cardScale)) end),
+							return if info then info.Text else "ALL SET!"
+						end), TextSize = scope:Computed(function(use) return math.max(30, 20 / use(cardScale)) end),
 						TextColor3 = Cartoon.INK_BLUE, TextStrokeTransparency = 1,
 						TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
 					}),
 					UI.hudText(scope, {
-						Position = UDim2.fromOffset(64, 68), Size = UDim2.fromOffset(254, 38),
-						Text = hint, TextSize = scope:Computed(function(use) return math.max(14, 11 / use(cardScale)) end),
-						TextColor3 = Cartoon.INK_SOFT, TextStrokeTransparency = 1, TextWrapped = true,
-						TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+						Position = UDim2.fromOffset(64, 78), Size = UDim2.fromOffset(254, 26),
+						Text = hint, TextScaled = true,
+						TextColor3 = Color3.fromRGB(240, 130, 30), TextStrokeTransparency = 1,
+						TextXAlignment = Enum.TextXAlignment.Left,
+						-- shrinks to fit the card's width, so a longer Sub line never spills past the edge
+						[Children] = {
+							scope:New("UITextSizeConstraint")({
+								MinTextSize = 8,
+								MaxTextSize = scope:Computed(function(use) return math.max(20, 14 / use(cardScale)) end),
+							}),
+						},
 					}),
 					scope:New("ImageButton")({
 						Name = "SkipTraining", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 6),
@@ -341,8 +445,12 @@ function TutorialController:KnitStart()
 		},
 	})
 
-	-- World guide: follow the current step's target a few times a second
-	local marker, beam = makeGuide()
+	-- World guide: follow the current step's target a few times a second. While a
+	-- meteor step waits for the meteor, the guide shows debris to mine instead; the
+	-- "watch" step keeps pointing at the crater with the time left over it.
+	local guide = makeGuide()
+	local pointerGui, pointerHand = makePointer()
+	loop(pointerHand, 0.4, { Rotation = 6 })
 	local from: Attachment? = nil
 	local to: Attachment? = nil
 	task.spawn(function()
@@ -352,22 +460,46 @@ function TutorialController:KnitStart()
 			local info = Fusion.peek(current)
 			local character = player.Character
 			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			local target = if info and root and Fusion.peek(showGuide) then targetFor(info.Id, root.Position) else nil
-			if not target or not root then
-				marker.Enabled = false
-				beam.Enabled = false
+			local visible = info ~= nil and root ~= nil and Fusion.peek(showGuide) and not Fusion.peek(introOpen)
+			local action = if info then info.Action else "go"
+			local target: BasePart? = nil
+			local waiting = visible and waitingFor(info, Fusion.peek(meteorState))
+			if visible and root and info then
+				if waiting and info.Id ~= "meteor_lands" then
+					target, action = nearest(debrisRocks(), root.Position), "tap"
+				else
+					target = targetFor(info.Id, root.Position)
+				end
+			end
+			-- HUD steps: a hand points at the button
+			local button = if visible and info and info.Action == "ui" and info.Button then findButton(info.Button) else nil
+			if button then
+				pointerHand.Position = UDim2.fromOffset(button.AbsolutePosition.X + button.AbsoluteSize.X / 2, button.AbsolutePosition.Y + 8)
+			end
+			pointerGui.Enabled = button ~= nil
+			if not target or not root or button then
+				guide.marker.Enabled = false
+				guide.beam.Enabled = false
+				guide.outline.Enabled = false
 				continue
 			end
 			from = attach(from, root, "TutorialFrom")
 			to = attach(to, target, "TutorialTo")
-			beam.Attachment0 = from
-			beam.Attachment1 = to
-			if marker.Adornee ~= target then
-				marker.Adornee = target
-				marker.StudsOffsetWorldSpace = Vector3.new(0, target.Size.Y / 2 + 3, 0)
+			guide.beam.Attachment0 = from
+			guide.beam.Attachment1 = to
+			if guide.marker.Adornee ~= target then
+				guide.marker.Adornee = target
+				guide.marker.StudsOffsetWorldSpace = Vector3.new(0, target.Size.Y / 2 + 4, 0)
 			end
-			marker.Enabled = true
-			beam.Enabled = (target.Position - root.Position).Magnitude > HIDE_BEAM_WITHIN
+			local tapping = action == "tap"
+			guide.arrow.Visible = not tapping
+			guide.hand.Visible = tapping
+			guide.ripple.Visible = tapping
+			guide.timer.Text = if waiting and info and info.Id == "meteor_lands" then Fusion.peek(hint) else ""
+			guide.marker.Enabled = true
+			guide.outline.Adornee = outlineFor(target)
+			guide.outline.Enabled = true
+			guide.beam.Enabled = (target.Position - root.Position).Magnitude > HIDE_BEAM_WITHIN
 		end
 	end)
 end

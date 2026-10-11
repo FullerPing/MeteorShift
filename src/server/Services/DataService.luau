@@ -27,6 +27,7 @@ local Levels = require(ReplicatedStorage.Shared.Levels)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
+local GearMigration = require(script.Parent.Parent.Lib.GearMigration)
 
 local STORE_NAME = "PlayerData_v1"
 local AUTOSAVE_INTERVAL = 60
@@ -102,18 +103,31 @@ local function migrate(data: { [any]: any }): { [any]: any }
 		data.hopperLevel = nil
 		data.version = 2
 	end
-	-- v2 -> v3: the pickaxe and backpack tiers became evolution tiers with stat levels.
+	-- v2 -> v3: the pickaxe and backpack tiers became evolution tiers with levels.
 	-- Everyone starts at the first level of the tier they already own, which is the
-	-- same Mining Power, swing, damage and capacity as before.
+	-- same Mining Power, swing, damage and capacity as before (the v7 step below
+	-- gives a fresh item's level when there are no stats to convert).
 	if (data.version or 1) < 3 then
-		data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier or 1)
-		data.backpackStats = Gear.freshBackpackStats(data.backpackTier or 1)
+		data.pickaxeStats, data.backpackStats = nil, nil
 		data.version = 3
 	end
 	data.pickaxeTier = math.clamp(math.floor(data.pickaxeTier or 1), 1, #Config.Pickaxes)
 	data.backpackTier = math.clamp(math.floor(data.backpackTier or 1), 1, #Config.Backpacks)
-	data.pickaxeStats = Gear.cleanPickaxeStats(data.pickaxeTier, data.pickaxeStats)
-	data.backpackStats = Gear.cleanBackpackStats(data.backpackTier, data.backpackStats)
+	-- v6 -> v7: one level per item instead of four pickaxe stats and the backpack's capacity.
+	-- Surplus Speed, Reach and Crit levels come back as cash (Lib.GearMigration).
+	if (data.version or 1) < 7 then
+		local refund = GearMigration.run(data)
+		if refund > 0 then
+			data.flags = data.flags or {}
+			data.flags.gearRefund = refund -- ShopService tells the player once on join
+		end
+	end
+	-- v7 -> v8: the level restarts at 1 with every tier (Lib.GearMigration)
+	if (data.version or 1) < 8 then
+		GearMigration.toTierLevels(data)
+	end
+	data.pickaxeLevel = Gear.cleanLevel(data.pickaxeTier, data.pickaxeLevel)
+	data.backpackLevel = Gear.cleanLevel(data.backpackTier, data.backpackLevel)
 	-- v5 -> v6 (economy rework): colony perks and the rebirth overflow counter. Nothing is refunded or
 	-- taken: the gear and stations a profile owns stay, only the prices and gates change.
 	data.perks = Perks.clean(data.perks)

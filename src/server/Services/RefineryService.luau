@@ -216,28 +216,31 @@ function RefineryService:UseShared(player: Player)
 end
 
 function RefineryService:_connectShared()
-	local point = WorldMap.refineryPoint(WorldMap.wait())
-	if not point then
+	local map = WorldMap.wait()
+	if not WorldMap.refineryPoint(map) then
 		warn("[RefineryService] TownSquare.Refinery requires its exact UsePoint part")
 		return
 	end
-	local existing = point:FindFirstChild("UseRefinery")
-	local prompt: ProximityPrompt
-	if existing and existing:IsA("ProximityPrompt") then
-		prompt = existing
-	else
-		prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "UseRefinery"
-		prompt.ActionText = "Use refinery"
-		prompt.ObjectText = "Town refinery"
-		prompt.KeyboardKeyCode = Enum.KeyCode.E
-		prompt.HoldDuration = 0
-		prompt.MaxActivationDistance = 14
-		prompt.Parent = point
+	-- the Foundry and, when the map has one, the Commissary: both open the same menu
+	for _, point in WorldMap.refineryPoints(map) do
+		local existing = point:FindFirstChild("UseRefinery")
+		local prompt: ProximityPrompt
+		if existing and existing:IsA("ProximityPrompt") then
+			prompt = existing
+		else
+			prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "UseRefinery"
+			prompt.ActionText = "Use refinery"
+			prompt.ObjectText = if point == WorldMap.refineryPoint(map) then "Town refinery" else "Foundry commissary"
+			prompt.KeyboardKeyCode = Enum.KeyCode.E
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = 14
+			prompt.Parent = point
+		end
+		prompt.Triggered:Connect(function(who)
+			self:UseShared(who)
+		end)
 	end
-	prompt.Triggered:Connect(function(who)
-		self:UseShared(who)
-	end)
 end
 
 -- Transactions require a living character near the shared UsePoint.
@@ -248,7 +251,7 @@ end
 function RefineryService.Client:Deposit(player: Player): number
 	if not remoteReady(player, "deposit", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
-		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to deposit ore.")
+		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry or the Commissary to deposit ore.")
 		return 0
 	end
 	return self.Server:Deposit(player)
@@ -257,7 +260,7 @@ end
 function RefineryService.Client:Claim(player: Player): number
 	if not remoteReady(player, "claim", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
-		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to claim bars.")
+		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry or the Commissary to claim bars.")
 		return 0
 	end
 	return self.Server:Collect(player)

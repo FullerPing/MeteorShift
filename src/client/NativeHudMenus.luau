@@ -7,6 +7,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local HudResources = require(ReplicatedStorage.Shared.HudResources)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Icons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local UI = require(script.Parent.NativeUI)
 local player = Players.LocalPlayer
 local NativeHudMenus = {}
@@ -16,9 +17,11 @@ local PREFERENCES = {
 	{ name = "HudShowEventTips", default = true },
 	{ name = "ReduceCameraShake", default = false },
 	{ name = "ReduceEffects", default = false },
+	{ name = "MusicOn", default = true, label = "Music" },
+	{ name = "SfxOn", default = true, label = "Sound effects" },
 }
-local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "RefineryOpen", "HatchOpen" }
-local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen", "RefineryOpen" }
+local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "RefineryOpen", "HatchOpen" }
+local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen" }
 
 local function anotherMenuOpen(flags: { string }): boolean
 	for _, name in flags do if player:GetAttribute(name) == true then return true end end
@@ -41,6 +44,7 @@ function NativeHudMenus.start()
 	local empty = backpackPanel:WaitForChild("Empty") :: TextLabel
 	local title = backpackPanel:WaitForChild("Title") :: TextLabel
 	local template = backpack:WaitForChild("Templates"):WaitForChild("OreRow") :: Frame
+	local oreImage = (template:WaitForChild("Icon") :: ImageLabel).Image
 	-- The popup is a short list under a slim ribbon: a small red X badge on the
 	-- corner, and rows that shrink to fit instead of scrolling.
 	backpackClose.AnchorPoint, backpackClose.Position, backpackClose.Size = Vector2.zero, UDim2.new(1, -24, 0, -12), UDim2.fromOffset(32, 32)
@@ -53,7 +57,9 @@ function NativeHudMenus.start()
 	if padding then padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 0), UDim.new(0, 0) end
 	empty.Position = UDim2.fromOffset(8, 34)
 	local rowViews: { [string]: Frame } = {}
-	local rows: { HudResources.OreRow } = {}
+	-- raw ore, then the bars you carry (tinted ingots); the sell button on the HUD shows their value
+	type Row = { id: string, name: string, amount: number, bar: boolean? }
+	local rows: { Row } = {}
 	local layout = UI.hudLayout()
 	local function closeSettings() player:SetAttribute("SettingsOpen", false) end
 	local function closeBackpack() player:SetAttribute("BackpackOpen", false) end
@@ -77,21 +83,22 @@ function NativeHudMenus.start()
 		title.Text, empty.Visible = if wide then "Backpack" else "Bag", #rows == 0
 		local visible: { [string]: boolean } = {}
 		for index, resource in rows do
-			visible[resource.id] = true
-			local row = rowViews[resource.id]
+			local key = resource.id .. (if resource.bar then "Bars" else "Ore")
+			visible[key] = true
+			local row = rowViews[key]
 			if not row then
 				row = template:Clone()
-				row.Name, row.Parent = resource.id .. "Ore", inventory
-				rowViews[resource.id] = row
+				row.Name, row.Parent = key, inventory
+				rowViews[key] = row
 			end
 			row.Visible, row.LayoutOrder, row.Size = true, index, UDim2.new(1, 0, 0, rowHeight)
 			local tint = if resource.id == "frost" then Color3.fromRGB(123, 230, 239) elseif resource.id == "crystal" then Color3.fromRGB(221, 161, 255) else UI.HUD_GOLD
 			local textHeight = rowHeight - 4
 			local icon = row:WaitForChild("Icon") :: ImageLabel
-			icon.Visible, icon.ImageColor3 = wide, tint
+			icon.Visible, icon.ImageColor3, icon.Image = wide, tint, if resource.bar then Icons.barStack else oreImage
 			icon.Position, icon.Size = UDim2.fromOffset(0, math.floor((rowHeight - textHeight) / 2)), UDim2.fromOffset(textHeight, textHeight)
 			local kind = row:WaitForChild("Type") :: TextLabel
-			kind.Text, kind.TextColor3 = resource.name, tint
+			kind.Text, kind.TextColor3 = if resource.bar then resource.name .. " bars" else resource.name, tint
 			kind.TextSize = math.floor(textHeight * (if wide then 0.7 else 0.6))
 			kind.Position, kind.Size = UDim2.fromOffset(if wide then textHeight + 6 else 0, 2), UDim2.new(1, -(if wide then textHeight + 56 else 38), 0, textHeight)
 			local amount = row:WaitForChild("Amount") :: TextLabel
@@ -113,16 +120,27 @@ function NativeHudMenus.start()
 		settingsPanel.Size = UDim2.fromOffset(math.max(0, math.min(360, layout.viewport.X - 24)), math.max(0, math.min(350, layout.viewport.Y - layout.inset - 24)))
 		updateBackpack()
 	end
-	for _, preference in PREFERENCES do
+	for index, preference in PREFERENCES do
 		if player:GetAttribute(preference.name) == nil then player:SetAttribute(preference.name, preference.default) end
-		local row = preferences:WaitForChild(preference.name) :: TextButton
-		local value = row:WaitForChild("State") :: TextLabel
+		local row = preferences:FindFirstChild(preference.name) :: TextButton?
+		if not row then
+			-- An older authored Settings menu lacks newer switches: copy the first row for them
+			local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
+			local copy = source:Clone()
+			copy.Name = preference.name
+			copy.LayoutOrder = index
+			local text = copy:FindFirstChild("Label")
+			if text and text:IsA("TextLabel") then text.Text = preference.label or preference.name end
+			copy.Parent = preferences
+			row = copy
+		end
+		local value = (row :: TextButton):WaitForChild("State") :: TextLabel
 		local function update()
 			local enabled = player:GetAttribute(preference.name) == true
 			value.Text = if enabled then "ON" else "OFF"
 			value.BackgroundColor3 = if enabled then UI.GREEN else Color3.fromRGB(29, 30, 35)
 		end
-		row.Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
+		(row :: TextButton).Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
 		player:GetAttributeChangedSignal(preference.name):Connect(update)
 		update()
 	end
@@ -145,7 +163,10 @@ function NativeHudMenus.start()
 	end)
 	UI.onLayoutChanged(updateLayout)
 	Knit.GetService("PlayerStateService").State:Observe(function(state)
-		rows = HudResources.ores(state)
+		rows = HudResources.ores(state) :: { any }
+		for _, bar in HudResources.bars(state) do
+			if bar.amount > 0 then table.insert(rows, { id = bar.id, name = bar.name, amount = bar.amount, bar = true }) end
+		end
 		updateBackpack()
 	end)
 	updateSettingsOpen()

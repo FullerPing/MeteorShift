@@ -4,19 +4,25 @@
 -- applies them. The multiplier is the main inflation lever of the economy (spec §16): tune here.
 
 return {
-	-- Cash for rebirth 1, 2, ... 16, tuned by running Shared.Pacing so the laps take about 13, 16,
-	-- 20 and 24 minutes and then about 25 up to rank 16 (tests/Pacing.spec holds them there).
+	-- Cash for rebirth 1, 2, ... 16, fitted with Shared.Pacing (gear tiers kept through a rebirth and cash
+	-- prices x PriceGrowth per rebirth, 2026-10-10) so the laps take about 13, 18, 23 and 24 minutes and then
+	-- about 25 up to rank 16 (tests/Pacing.spec holds them there). Each cost was searched on its own lap
+	-- with the earlier ones fixed, so lap 2 and 3 settle a little above the 16 and 20 minutes aimed at.
 	-- They are not a clean x5: lap 1 pays for the gear ramp, and the tiers and ores that player
 	-- level opens keep arriving for the first hours. Edit them together with Config.Levels and
 	-- Config.Home, then re-run the model (docs/economy-rework.md).
-	Costs = { 88e3, 1.2e6, 9.6e6, 58e6, 500e6, 2.6e9, 14e9, 67e9, 350e9, 2.2e12, 13e12, 65e12, 300e12, 1.6e15, 7.5e15, 38e15 },
+	Costs = { 68e3, 1.2e6, 12e6, 65e6, 530e6, 2.9e9, 14e9, 69e9, 380e9, 2.6e12, 13e12, 64e12, 340e12, 1.6e15, 8.5e15, 40e15 },
 	CashMult = 5, -- bar sales multiplier gained per rebirth for the listed ranks, multiplicative (x5, x25, x125, ...)
+	-- Cash price inflation per rebirth: gear and production upgrades cost this much more for every rebirth
+	-- (Shared.Rebirth.priceMult). Income grows x5 and prices x3, so a rebirth is worth 5/3 in real terms
+	-- while both sides of the economy read as big numbers. Shard prices and Robux products do not inflate.
+	PriceGrowth = 3,
 
 	-- Past the last listed rank ("Legacy"): the cost keeps growing by CostGrowth per rebirth and the
 	-- multiplier by MultGrowth. Both are far below the x5 of the early ranks so the numbers stop
 	-- racing toward the suffix limit, and cost outpaces the multiplier a little, so laps stretch
 	-- gently instead of the treadmill staying flat forever.
-	Legacy = { CostGrowth = 2.3, MultGrowth = 2 },
+	Legacy = { CostGrowth = 2.3, MultGrowth = 2, PriceGrowth = 1.2 }, -- 2 / 1.2 keeps the same 5/3 ratio
 
 	-- Overstay shards: bar-sale cash you earned after you could first afford the rebirth is
 	-- progress you didn't need. Rebirthing pays min(Cap, round(PerDoubling × log2(1 + r))) shards

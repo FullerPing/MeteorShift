@@ -37,7 +37,7 @@ return function(t: any)
 		t.eq(Equipment.current("backpack", nil).stats.capacity, 50)
 	end)
 	t.test("effective State swing, reach and capacity include owned bonuses", function()
-		local state = { pickaxeTier = 4, backpackTier = 3, pickaxeStats = { power = 40, speed = 40, reach = 40, crit = 40 }, swing = 0.33, reach = 19, capacity = 864 }
+		local state = { pickaxeTier = 4, backpackTier = 3, pickaxeLevel = 40, swing = 0.33, reach = 19, capacity = 864 }
 		local pick = Equipment.current("pickaxe", state)
 		local bag = Equipment.current("backpack", state)
 		t.eq(pick.name, Config.Pickaxes[4].Name)
@@ -65,20 +65,20 @@ return function(t: any)
 		end
 	end)
 	t.test("presentation does not mutate State and clamps out-of-range tiers", function()
-		local state = { pickaxeTier = 999, pickaxeStats = { power = 2 } }
+		local state = { pickaxeTier = 999, pickaxeLevel = 2 }
 		local row = Equipment.current("pickaxe", state)
 		t.eq(row.tier, #Config.Pickaxes)
 		t.eq(state.pickaxeTier, 999)
-		t.eq(state.pickaxeStats.power, 2)
-		t.eq(state.pickaxeStats.speed, nil)
+		t.eq(state.pickaxeLevel, 2)
 	end)
-	t.test("invalid effective numbers and stat levels never reach world signs", function()
-		local pick = Equipment.current("pickaxe", { pickaxeTier = 1, swing = math.huge, reach = -5,
-			pickaxeStats = { power = 0/0, speed = "fast", reach = math.huge, crit = -1 } })
-		t.eq(pick.stats.power, 1)
-		t.eq(pick.stats.swing, 0.6)
-		t.eq(pick.stats.reach, 12)
-		t.eq(pick.stats.critChance, 0)
-		t.eq(Equipment.current("backpack", { backpackTier = 1, capacity = 0/0, backpackStats = false }).stats.capacity, 50)
+	t.test("invalid effective numbers and levels never reach world signs", function()
+		for _, level in { 0/0, "fast", math.huge, -1 } do
+			local pick = Equipment.current("pickaxe", { pickaxeTier = 1, swing = math.huge, reach = -5, pickaxeLevel = level })
+			t.eq(pick.stats.power, 1)
+			t.eq(pick.stats.swing, 0.6)
+			t.eq(pick.stats.reach, 12)
+			t.eq(pick.stats.critChance, 0)
+		end
+		t.eq(Equipment.current("backpack", { backpackTier = 1, capacity = 0/0, backpackLevel = false }).stats.capacity, 50)
 	end)
 end

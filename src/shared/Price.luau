@@ -21,6 +21,12 @@ function Price.text(cash: number, shards: number): string
 	return text
 end
 
+-- A table cash price with the player's price inflation applied (Shared.Rebirth.priceMult),
+-- rounded to whole cash. The server charges it and the client shows it, so both call this.
+function Price.scaled(cost: number, priceMult: number): number
+	return math.floor(cost * priceMult + 0.5)
+end
+
 function Price.canAfford(wallet: Wallet, cash: number, shards: number): boolean
 	return wallet.cash >= cash and wallet.shards >= shards
 end

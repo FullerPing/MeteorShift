@@ -19,6 +19,12 @@ local Config = require(script.Parent.Config)
 local Hud = Config.Hud
 local BackpackPopupMinHeight, BackpackPopupGap = 72, 8
 local NavigationFaceSize, NavigationCaptionBottom = 80, 105
+local PortraitWalletMax = 0.4 -- short portrait phones: the most the wallet beside the foundry button may scale
+local PhoneClockLeft = 188 -- phones in landscape: Roblox's top-bar buttons end before this x
+local PhoneClockScale = 0.45 -- phones in landscape: the clock in the top bar is at most this share of its base size
+local PhoneObjectiveScale = 0.85 -- phones in landscape: the most the clock below the top bar scales to
+local PhoneObjectiveDrop = 0.2 -- phones in landscape: how far the large clock sits from its top-bar spot (0) to below the bar (1)
+local PhoneWalletScale = 0.5 -- phones in landscape: the wallet in the bottom-left corner
 
 -- The personal navigation art has an 80 px face and a caption ending at y=105.
 -- Keep the face's touch rect unchanged while reserving the caption below it.
@@ -27,6 +33,9 @@ local function navigationHeight(width: number, height: number): number
 end
 
 export type Rect = { x: number, y: number, w: number, h: number }
+
+export type Nudge = { x: number?, y: number?, scale: number? }
+export type Edits = { Hidden: { string }?, Nudge: { [string]: Nudge }? }
 
 export type Layout = {
 	viewport: Vector2,
@@ -56,9 +65,15 @@ export type Layout = {
 	eventVisible: boolean, -- a brief notification may reserve the objective slot on tight screens
 	tutorialY: number, -- inset-relative y retained for callers using toGui
 	mine: Rect?, -- touch only
+	fastWalk: Rect?, -- phones in landscape: where SPRINT goes (ORE sits above it); nil lets the button place itself
+	levelAbove: boolean?, -- phones in landscape: the level medal sits above the wallet instead of on its corner
+	objective: Rect?, -- phones in landscape: the clock's larger slot below the top bar (countdown, cooldown and objective)
 	jump: Rect?, -- Roblox's jump button (touch only)
 	thumbstick: Rect?, -- Roblox's thumbstick area (touch only)
 	topBar: Rect,
+	-- set by applyEdits from Config.HudEdit: hidden element names and per-element nudges
+	hidden: { [string]: boolean }?,
+	nudge: { [string]: Nudge }?,
 }
 
 local HudLayout = {}
@@ -141,7 +156,9 @@ function HudLayout.compute(
 	local thumbstick: Rect? = nil
 	local shortPortrait = false
 	local tightPortrait = false
-	local referenceLandscape = false
+	local phoneLandscape = false
+	local fastWalk: Rect? = nil
+	local objective: Rect? = nil
 	local timerVisible, resourcesVisible, backpackVisible = true, true, true
 	local tightNotification: Rect? = nil
 	local function mineForEvent(): Rect?
@@ -173,25 +190,9 @@ function HudLayout.compute(
 				-- The native small-phone joystick is a 74 px circle near the bottom
 				-- left (29, height - 94 in the 844x390 emulator). Protect its travel
 				-- area rather than reserving a 220 px square over the left navigation.
-				-- Larger touch controls and cramped fallback keep the existing reserve.
 				local small = math.min(width, height) <= Hud.Jump.SmallMaxSide
-				local thumbWidth = if small then 160 else Hud.Thumbstick.Width
-				local thumbHeight = if small then 156 else Hud.Thumbstick.Height
-				local mineSize = if small then Hud.Mine.SmallSize else Hud.Mine.LargeSize
-				local rightLimit = math.min(jump.x, jump.x + jump.w - mineSize) - 8
-				local stripScale = (rightLimit - thumbWidth - 8 - 12)
-					/ (cards.Resources.Width + cards.Production.Width + Hud.Backpack.Width)
-				referenceLandscape = width >= 740 and height - thumbHeight - topInset >= 3 * navigationHeight
-					and stripScale >= Hud.MinTouch / cards.Production.Height
-				if referenceLandscape then
-					thumbstick = { x = 0, y = height - thumbHeight, w = thumbWidth, h = thumbHeight }
-				else
-					-- Cramped landscape uses the horizontal row. Reduce only its top
-					-- gap when the personal captions would enter the joystick reserve.
-					local navTop = math.max(topInset, math.min(topInset + row.Top, thumbstick.y - navigationHeight))
-					for _, button in buttons do button.y = navTop end
-					if settings then settings.y = navTop end
-				end
+				thumbstick = { x = 0, y = height - (if small then 156 else Hud.Thumbstick.Height),
+					w = if small then 160 else Hud.Thumbstick.Width, h = if small then 156 else Hud.Thumbstick.Height }
 			end
 		end
 		if portrait then
@@ -223,9 +224,10 @@ function HudLayout.compute(
 				local productionScale = math.min(0.6, (limit - 2 - detailsY) / cards.Production.ExpandedHeight,
 					(width - 24 - 6 - 90) / cards.Production.Width)
 				local rowY = if expanded then detailsY else tutorial.y + tutorial.h + 6
-				local walletScale = (width - 24 - 6 - cards.Production.Width * productionScale) / cards.Resources.Width
+				-- the wallet takes the rest of the row, but no taller than the stack has room for
+				local walletScale = math.min(PortraitWalletMax, (width - 24 - 6 - cards.Production.Width * productionScale) / cards.Resources.Width)
 				local minimumProductionScale = Hud.MinTouch / cards.Production.Height
-				local minimumWalletScale = (width - 24 - 6 - cards.Production.Width * minimumProductionScale) / cards.Resources.Width
+				local minimumWalletScale = math.min(PortraitWalletMax, (width - 24 - 6 - cards.Production.Width * minimumProductionScale) / cards.Resources.Width)
 				if productionScale < minimumProductionScale
 					and detailsY + 2 * Hud.MinTouch <= limit - 2
 					and tutorial.y + tutorial.h + 6 + math.max(Hud.MinTouch, cards.Resources.Height * minimumWalletScale) <= limit - 2 then
@@ -312,80 +314,100 @@ function HudLayout.compute(
 					(limit - 6 - productionY) / productionHeight)
 				production = centred(productionY, cards.Production.Width, productionHeight, productionScale)
 			end
-		elseif referenceLandscape then
+		elseif compact then
+			-- Phones in landscape (the owner's 10 October layout): Gear, Index and Rebirth across the top left with
+			-- Pets and Store down the left edge, settings in the top bar's right corner, the clock centred in the top
+			-- bar, ORE and SPRINT stacked on the right above MINE and jump, the wallet (with the level above it) in
+			-- the bottom-left corner over the joystick area (it takes no touches, so the stick still works through
+			-- it), the foundry centred at the bottom with training above it, and the backpack bottom right, beside
+			-- the jump button.
+			phoneLandscape = true
 			local reservedThumb = thumbstick :: Rect
 			local reservedJump = jump :: Rect
-			local navTop = math.min(topInset + row.Top, reservedThumb.y - 3 * navigationHeight)
-			local navGap = math.max(0, math.min(row.Gap, (reservedThumb.y - navTop - 3 * navigationHeight) / 2))
-			for i, name in { "SHOP", "INDEX", "REBIRTH" } do
-				buttons[name] = { x = 12, y = navTop + (i - 1) * (navigationHeight + navGap), w = row.Width, h = row.Height }
+			local lTop = math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 3 * navigationHeight - 4))
+			local navGap = math.max(0, math.min(2, (reservedThumb.y - lTop - 3 * navigationHeight) / 2))
+			local rowRight
+			local rowBottom: number? = nil -- set when the five buttons run in one row across the top
+			if lTop + 3 * navigationHeight + 2 * navGap <= reservedThumb.y then
+				for i, name in { "SHOP", "INDEX", "REBIRTH" } do
+					buttons[name] = { x = 12 + (i - 1) * (row.Width + row.Gap), y = lTop, w = row.Width, h = row.Height }
+				end
+				buttons.PETS = { x = 12, y = lTop + navigationHeight + navGap, w = row.Width, h = row.Height }
+				buttons.STORE = { x = 12, y = lTop + 2 * (navigationHeight + navGap), w = row.Width, h = row.Height }
+				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
+			elseif math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2)) + 2 * navigationHeight + 2 <= reservedThumb.y then
+				-- smaller phones: too short for the column above the joystick, so two lines instead: Gear, Index and
+				-- Rebirth, then Pets and Store under Gear and Index
+				local top = math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2))
+				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE" } do
+					local column, line = (i - 1) % 3, (i - 1) // 3
+					buttons[name] = { x = 12 + column * (row.Width + row.Gap), y = top + line * (navigationHeight + 2), w = row.Width, h = row.Height }
+				end
+				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
+			else
+				-- too short even for two lines above the joystick: all five across the top instead
+				local navTop = math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - navigationHeight))
+				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE" } do
+					buttons[name] = { x = 12 + (i - 1) * (row.Width + row.Gap), y = navTop, w = row.Width, h = row.Height }
+				end
+				rowRight = 12 + 5 * (row.Width + row.Gap) - row.Gap
+				rowBottom = navTop + navigationHeight
 			end
 			settings = sized(width - 12 - Hud.SettingsSize, math.max(2, topInset - Hud.SettingsSize - 2),
 				Hud.SettingsSize, Hud.SettingsSize, 1)
-			buttons.STORE = { x = settings.x - row.Gap - row.Width, y = settings.y, w = row.Width, h = row.Height }
-			local eventY = math.max(topInset + 6, settings.y + settings.h + 6, buttons.STORE.y + navigationHeight + 6)
-			local eventScale = math.min(0.6,
-				(reservedJump.y - Hud.Mine.Gap - Hud.Mine.MinSize - Hud.Mine.EventGap - eventY) / Hud.EventPanel.Height)
-			eventPanel = sized(width - 12 - Hud.EventPanel.Width * eventScale, eventY,
-				Hud.EventPanel.Width, Hud.EventPanel.Height, eventScale)
-			local timerWidth = 2 * math.min(width / 2 - (12 + row.Width + 12), eventPanel.x - 12 - width / 2)
-			timer = centred(math.max(topInset + 6, Hud.Timer.Top * scale), Hud.Timer.Width, Hud.Timer.Height,
-				math.min(scale, timerWidth / Hud.Timer.Width))
-			local reservedMine = mineForEvent() :: Rect
-			local stripLeft = reservedThumb.x + reservedThumb.w + 8
-			local stripRight = math.min(reservedJump.x, reservedMine.x) - 8
-			local stripScale = math.min(Hud.TouchCardScale,
-				(stripRight - stripLeft - 12) / (cards.Resources.Width + cards.Production.Width + Hud.Backpack.Width))
-			local bottom = height - 6
-			resources = sized(stripLeft, bottom - cards.Resources.Height * stripScale,
-				cards.Resources.Width, cards.Resources.Height, stripScale)
-			production = sized(resources.x + resources.w + 6, bottom - productionHeight * stripScale,
-				cards.Production.Width, productionHeight, stripScale)
-			backpack = sized(production.x + production.w + 6, bottom - Hud.Backpack.Height * stripScale,
-				Hud.Backpack.Width, Hud.Backpack.Height, stripScale)
-			tutorial = centred(math.min(resources.y, backpack.y, production.y) - 6 - training.Height * Hud.TouchCardScale,
-				training.Width, training.Height, Hud.TouchCardScale)
-		elseif compact then
-			local eventScale = 0.7
-			if jump then
-				eventScale = math.min(eventScale,
-					(jump.y - Hud.Mine.Gap - Hud.Mine.MinSize - Hud.Mine.EventGap - topInset - row.Top) / Hud.EventPanel.Height)
+			local settingsRect = settings :: Rect
+			-- the clock: centred in the top bar, clear of Roblox's buttons on the left, the menu row and the gear
+			local leftLimit = math.max(PhoneClockLeft, rowRight + 8)
+			local half = math.min(width / 2 - leftLimit, settingsRect.x - 8 - width / 2)
+			local timerScale = math.min(scale, PhoneClockScale, 2 * half / Hud.Timer.Width)
+			timer = centred(math.max(4, topInset - Hud.Timer.Height * timerScale + 6), Hud.Timer.Width, Hud.Timer.Height, timerScale)
+			-- the objective card only shows when the clock is hidden; keep its slot under the clock
+			eventPanel = centred(timer.y + timer.h + 6, Hud.EventPanel.Width, Hud.EventPanel.Height, 0.5)
+			-- SPRINT with ORE above it, right-aligned with jump, below the gear; MINE fills the gap down to jump
+			local side = Hud.SideButtons
+			local columnTop = math.max(topInset + 6, settingsRect.y + settingsRect.h + 6)
+			local right = reservedJump.x + reservedJump.w
+			local sprint = { x = right - side.Size, y = columnTop + side.Size + side.Gap, w = side.Size, h = side.Size }
+			local mineSize = math.clamp(math.floor(reservedJump.y - Hud.Mine.Gap - (sprint.y + sprint.h + Hud.Mine.EventGap)),
+				Hud.Mine.MinSize, if math.min(width, height) <= Hud.Jump.SmallMaxSide then Hud.Mine.SmallSize else Hud.Mine.LargeSize)
+			mine = { x = right - mineSize, y = reservedJump.y - Hud.Mine.Gap - mineSize, w = mineSize, h = mineSize }
+			if sprint.y + sprint.h > (mine :: Rect).y then
+				-- no room above MINE: the pair moves in beside it
+				sprint.x = (mine :: Rect).x - 8 - side.Size
 			end
-			eventPanel = sized(width - 12 - Hud.EventPanel.Width * eventScale, topInset + row.Top,
-				Hud.EventPanel.Width, Hud.EventPanel.Height, eventScale)
-			local clockLeft = left + navigationWidth + 12
-			local timerScale = math.min(scale, (eventPanel.x - 12 - clockLeft) / Hud.Timer.Width)
-			timer = sized(clockLeft, topInset + row.Top, Hud.Timer.Width, Hud.Timer.Height, timerScale)
-			production = centred(height - 6 - productionHeight * 0.6, cards.Production.Width, productionHeight, 0.6)
-			local walletScale, backpackScale = 0.55, 0.65
-			if expanded then
-				if width < 740 then walletScale, backpackScale = 0.5, 0.55 end
-				local reservedMine = mineForEvent()
-				local rightLimit = if jump then math.min(jump.x - 8, if reservedMine then reservedMine.x - 8 else math.huge) else width - 12
-				-- MINE can be wider than jump when the top inset is small. Fit the
-				-- side cards to that tighter boundary while preserving a 44 px summary.
-				local sideWidth = math.max(cards.Resources.Width * walletScale, Hud.Backpack.Width * backpackScale)
-				local availableSideWidth = rightLimit - Hud.Thumbstick.Width - 8 - 6
-					- cards.Production.Width * Hud.MinTouch / cards.Production.Height - 2
-				local sideFit = math.min(1, availableSideWidth / sideWidth)
-				walletScale *= sideFit
-				backpackScale *= sideFit
-				local productionScale = math.min(0.6,
-					(rightLimit - Hud.Thumbstick.Width - 8 - 6 - math.max(cards.Resources.Width * walletScale, Hud.Backpack.Width * backpackScale))
-						/ cards.Production.Width)
-				production = sized(Hud.Thumbstick.Width + 8, height - 6 - productionHeight * productionScale,
-					cards.Production.Width, productionHeight, productionScale)
-				local sideY = math.max(production.y, eventPanel.y + eventPanel.h + 6)
-				resources = sized(production.x + production.w + 6, sideY, cards.Resources.Width, cards.Resources.Height, walletScale)
-				backpack = sized(resources.x, sideY + resources.h + 6, Hud.Backpack.Width, Hud.Backpack.Height, backpackScale)
-			else
-				production.x = math.max(production.x, Hud.Thumbstick.Width + 8)
-				local rowWidth = cards.Resources.Width * walletScale + 6 + Hud.Backpack.Width * backpackScale
-				local rowY = production.y - 6 - math.max(cards.Resources.Height * walletScale, Hud.Backpack.Height * backpackScale)
-				resources = sized(math.max((width - rowWidth) / 2, Hud.Thumbstick.Width + 8), rowY,
-					cards.Resources.Width, cards.Resources.Height, walletScale)
-				backpack = sized(resources.x + resources.w + 6, rowY, Hud.Backpack.Width, Hud.Backpack.Height, backpackScale)
-				tutorial = centred(rowY - 6 - training.Height * Hud.TouchCardScale, training.Width, training.Height, Hud.TouchCardScale)
+			fastWalk = sprint
+			-- the bottom: wallet in the corner, foundry in the middle, backpack beside the jump button
+			local bottom = height - 6
+			resources = sized(12, bottom - cards.Resources.Height * PhoneWalletScale, cards.Resources.Width, cards.Resources.Height, PhoneWalletScale)
+			local productionScale = if expanded then math.min(0.6, (bottom - (timer.y + timer.h + 6)) / productionHeight) else 0.6
+			production = centred(bottom - productionHeight * productionScale, cards.Production.Width, productionHeight, productionScale)
+			local backpackScale = math.min(0.65, (reservedJump.x - 8 - (production.x + production.w + 8)) / Hud.Backpack.Width)
+			backpack = sized(reservedJump.x - 8 - Hud.Backpack.Width * backpackScale, bottom - Hud.Backpack.Height * backpackScale,
+				Hud.Backpack.Width, Hud.Backpack.Height, backpackScale)
+			tutorial = centred(production.y - 6 - training.Height * Hud.TouchCardScale, training.Width, training.Height, Hud.TouchCardScale)
+			-- the clock (and the objective it turns into while a meteor is down) comes out of the top bar, larger,
+			-- between the menu row and the ORE column and above training (the open foundry keeps it in the bar)
+			if not expanded then
+				local objectiveRight = math.min(sprint.x, right - side.Size) - 12
+				local function fit(left: number, top: number): number
+					return math.min(PhoneObjectiveScale, 2 * math.min(width / 2 - left, objectiveRight - width / 2) / Hud.Timer.Width,
+						(tutorial.y - 4 - top) / Hud.Timer.Height)
+				end
+				-- beside the menu row, or under it when the row runs all the way across (short phones)
+				local objectiveTop = topInset + 4
+				local objectiveScale = fit(rowRight + 12, objectiveTop)
+				local underRow = false
+				if objectiveScale <= timerScale and rowBottom then
+					objectiveTop = rowBottom + 4
+					objectiveScale = fit(12, objectiveTop)
+					underRow = true
+				end
+				if objectiveScale > timerScale then
+					-- the owner's placement: a fifth of the way down from the clock's spot in the top bar, so it rides
+					-- high and may brush Roblox's chat button (under a full-width menu row it stays put)
+					if not underRow then objectiveTop = timer.y + PhoneObjectiveDrop * (objectiveTop - timer.y) end
+					objective = centred(objectiveTop, Hud.Timer.Width, Hud.Timer.Height, objectiveScale)
+				end
 			end
 		else
 			timer.y = topInset + row.Top
@@ -395,7 +417,7 @@ function HudLayout.compute(
 			backpack = sized(width - 12 - Hud.Backpack.Width * scale, eventPanel.y + eventPanel.h + 6,
 				Hud.Backpack.Width, Hud.Backpack.Height, scale)
 		end
-		mine = mineForEvent()
+		if not phoneLandscape then mine = mineForEvent() end
 	else
 		-- Roblox's menu button ends two pixels above the bottom of its top row.
 		-- Match that edge rather than centring in the entire inset strip.
@@ -413,6 +435,10 @@ function HudLayout.compute(
 				cards.Production.Width, productionHeight, productionScale)
 			tutorial = centred(production.y - (training.Height + training.Gap) * scale, training.Width, training.Height, scale)
 		end
+		buttonScale *= Hud.Desktop.ButtonScale
+		-- Short windows shrink the tiles so the whole column still fits between the top bar and the wallet
+		local fitScale = (resources.y - 8 - (topInset + 6)) / (#Hud.DesktopButtonOrder * Hud.Column.Height * NavigationCaptionBottom / NavigationFaceSize)
+		buttonScale = math.max(Hud.MinTouch / Hud.Column.Height, math.min(buttonScale, fitScale))
 		local columnHeight = navigationHeight(Hud.Column.Width * buttonScale, Hud.Column.Height * buttonScale)
 		local columnTop = math.min(Hud.Column.Top * scale,
 			resources.y - #Hud.DesktopButtonOrder * columnHeight - (#Hud.DesktopButtonOrder - 1) * Hud.Column.Gap * buttonScale - 8)
@@ -446,35 +472,47 @@ function HudLayout.compute(
 	local notification = tightNotification or centred(timer.y + timer.h + (if desktop then 50 * scale else 0) + 8,
 		math.min(400, width - 24), notificationHeight, 1)
 	local eventVisible = not tightPortrait and not (activeNotification and touch and portrait and expanded == true)
-	if referenceLandscape then
-		if expanded then
-			notification = { x = width - 12 - 190, y = eventPanel.y, w = 190, h = notificationHeight }
-			eventVisible = not activeNotification
-			if activeNotification and HudLayout.overlaps(timer, notification) then
-				local timerWidth = math.min(timer.w, 2 * (notification.x - 12 - width / 2))
-				timer = centred(timer.y, Hud.Timer.Width, Hud.Timer.Height, timerWidth / Hud.Timer.Width)
+	if phoneLandscape then
+		-- a notice takes the training card's place, or sits under the clock while the foundry is open; it stays
+		-- between the left menu column and the ORE / SPRINT / MINE column
+		local obstacles: { Rect } = { resources, backpack, thumbstick :: Rect, jump :: Rect, mine :: Rect }
+		if fastWalk then
+			table.insert(obstacles, fastWalk)
+			table.insert(obstacles, { x = fastWalk.x, y = fastWalk.y - Hud.SideButtons.Size - Hud.SideButtons.Gap,
+				w = fastWalk.w, h = Hud.SideButtons.Size }) -- ORE
+		end
+		for _, button in buttons do
+			table.insert(obstacles, { x = button.x, y = button.y, w = button.w, h = navigationHeight(button.w, button.h) })
+		end
+		-- the widest centred banner at y that stays clear of everything on either side of it
+		local function place(y: number): Rect
+			local left, right = 12, width - 12
+			for _, o in obstacles do
+				if o.y < y + notificationHeight + 2 and y - 2 < o.y + o.h then
+					if o.x + o.w / 2 < width / 2 then left = math.max(left, o.x + o.w + 8) else right = math.min(right, o.x - 8) end
+				end
 			end
-		else
-			notification = centred(tutorial.y, math.min(400, width - 24), notificationHeight, 1)
+			local w = math.min(400, 2 * math.min(width / 2 - left, right - width / 2))
+			return { x = (width - w) / 2, y = y, w = w, h = notificationHeight }
+		end
+		notification = place(if expanded then eventPanel.y else tutorial.y)
+		if notification.w < 190 then
+			-- the menu row reaches the clock on narrow phones: drop below its captions instead
+			local below = 0
+			for _, button in buttons do below = math.max(below, button.y + navigationHeight(button.w, button.h) + 4) end
+			notification = place(below)
+		end
+		if expanded then
+			eventVisible = false -- the open foundry reaches up to the clock
+			if activeNotification and production.y < notification.y + notification.h + 6 then
+				-- the open foundry scrolls under the notice rather than sliding beneath it
+				local productionBottom = production.y + production.h
+				production.y = notification.y + notification.h + 6
+				production.h = productionBottom - production.y
+			end
 		end
 	elseif portrait then
 		if not tightPortrait then notification.y = if touch and expanded then eventPanel.y else tutorial.y end
-	elseif touch and compact then
-		if expanded then
-			local y = buttons.SHOP.y + navigationHeight(buttons.SHOP.w, buttons.SHOP.h) + 2
-			local pocketBottom = if thumbstick then thumbstick.y else height
-			local pocketHeight = math.min(notificationHeight, pocketBottom - y - 2)
-			local minimumHeight = if rewardNotificationActive then 48 else 24
-			if pocketHeight < minimumHeight then
-				notification = { x = width - 12 - 190, y = eventPanel.y, w = 190, h = notificationHeight }
-				eventVisible = not activeNotification
-			else
-				notification = { x = 12, y = y, w = Hud.Thumbstick.Width - 12, h = pocketHeight }
-			end
-		else
-			local x = Hud.Thumbstick.Width + 8
-			notification = { x = x, y = tutorial.y, w = math.min(400, eventPanel.x - 6 - x), h = notificationHeight }
-		end
 	elseif notification.y < eventPanel.y + eventPanel.h and eventPanel.y < notification.y + notification.h then
 		-- Preserve a centred banner while shortening it before the right objective.
 		notification.w = math.min(notification.w, 2 * (eventPanel.x - 8 - width / 2))
@@ -491,18 +529,19 @@ function HudLayout.compute(
 		leftScale = scale, eventPanel = eventPanel, tutorial = tutorial,
 		tutorialVisible = tutorialVisible, backpack = backpack, backpackVisible = backpackVisible, settings = settings,
 		notification = notification, notificationCompact = notification.h < 40, eventVisible = eventVisible,
-		tutorialY = tutorial.y - topInset, mine = mine, jump = jump, thumbstick = thumbstick,
+		tutorialY = tutorial.y - topInset, mine = mine, jump = jump, thumbstick = thumbstick, fastWalk = fastWalk,
+		levelAbove = phoneLandscape, objective = objective,
 		topBar = { x = 0, y = 0, w = width, h = topInset },
 	}
 end
 
 -- An ore list attached above the backpack HUD. These are screen pixels: the
 -- renderer keeps text and rows readable instead of applying the HUD's scale.
--- Match the anchor's width and fit up to three rows beneath the header. High
--- anchors shrink the height so the list can scroll while retaining a full row.
+-- Match the anchor's width and fit up to six rows (ore, then carried bars) beneath
+-- the header. High anchors shrink the height and the rows shrink to fit.
 function HudLayout.backpackPanel(layout: Layout, rowCount: number?): Rect
 	local margin, gap = 12, BackpackPopupGap
-	local visibleRows = math.clamp(math.floor(rowCount or 3), 1, 3)
+	local visibleRows = math.clamp(math.floor(rowCount or 3), 1, 6)
 	local maxHeight, minHeight = 40 + 28 * visibleRows + 4, BackpackPopupMinHeight
 	local viewport, anchor = layout.viewport, layout.backpack
 	local safeWidth = math.max(1, viewport.X - 2 * margin)
@@ -588,6 +627,54 @@ end
 -- `panelScale`: the unscaled size to give it
 function HudLayout.closeSize(baseSize: number, panelScale: number): number
 	return math.max(baseSize, Hud.MinTouch / panelScale)
+end
+
+-- Config.HudEdit on top of the automatic layout: moves, resizes and hides the named elements. Pure, so the specs can
+-- check it. Elements are named as in Config/HudEdit.luau; names it does not know are ignored.
+local OFFSCREEN = -4000
+
+local function nudged(rect: Rect, nudge: Nudge?): Rect
+	if not nudge then return rect end
+	local s = nudge.scale or 1
+	return { x = rect.x + (nudge.x or 0), y = rect.y + (nudge.y or 0), w = rect.w * s, h = rect.h * s }
+end
+
+-- Where `rect` ends up for `name`, for callers that place an element themselves (the level badge).
+function HudLayout.nudged(layout: Layout, name: string, rect: Rect): Rect
+	return nudged(rect, if layout.nudge then layout.nudge[name] else nil)
+end
+
+function HudLayout.isHidden(layout: Layout, name: string): boolean
+	return layout.hidden ~= nil and layout.hidden[name] == true
+end
+
+function HudLayout.applyEdits(layout: Layout, edits: Edits): Layout
+	local hidden: { [string]: boolean } = {}
+	for _, name in edits.Hidden or {} do hidden[name] = true end
+	local nudge: { [string]: Nudge } = edits.Nudge or {}
+	local result: any = table.clone(layout)
+	result.hidden, result.nudge = hidden, nudge
+	local function move(rect: Rect, name: string): Rect
+		if hidden[name] then return { x = OFFSCREEN, y = OFFSCREEN, w = rect.w, h = rect.h } end
+		return nudged(rect, nudge[name])
+	end
+	local cards = table.clone(layout.leftCards)
+	cards.Resources = nudged(cards.Resources, nudge.Wallet)
+	cards.Production = nudged(cards.Production, nudge.Foundry)
+	result.leftCards = cards
+	result.resourcesVisible = layout.resourcesVisible and not hidden.Wallet
+	result.backpack = nudged(layout.backpack, nudge.Backpack)
+	result.backpackVisible = layout.backpackVisible and not hidden.Backpack
+	result.timer = nudged(layout.timer, nudge.Timer)
+	result.timerVisible = layout.timerVisible and not hidden.Timer
+	result.eventPanel = nudged(layout.eventPanel, nudge.EventPanel)
+	result.eventVisible = layout.eventVisible and not hidden.EventPanel
+	result.notification = nudged(layout.notification, nudge.Toast)
+	local buttons = table.clone(layout.buttons)
+	for name, rect in buttons do buttons[name] = move(rect, name) end
+	result.buttons = buttons
+	if layout.settings then result.settings = move(layout.settings, "Settings") end
+	return result :: Layout
 end
 
 return HudLayout

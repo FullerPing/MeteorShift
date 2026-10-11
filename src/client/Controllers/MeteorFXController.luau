@@ -151,6 +151,7 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	local sound = Instance.new("Sound")
 	sound.SoundId = rumbleEntry.Id
 	sound.Looped = true
+	sound.SoundGroup = Sfx.group("SFX")
 	sound.Volume = rumbleEntry.Volume
 	sound.PlaybackSpeed = Sfx.pitch(rumbleEntry)
 	sound.RollOffMinDistance = geometry.Sound.minDistance
@@ -432,8 +433,97 @@ function MeteorFXController:KnitStart()
 		end
 	end)
 
-	-- Camera shake, applied after the default camera update
-	RunService:BindToRenderStep("MeteorShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
+	-- Landing camera: from LeadTime to CountdownUntil seconds left, look from behind the player at the countdown board
+	-- over the crater (unless a menu is open or the tutorial is still on its first steps); then follow the falling meteor (the streak) down, hold on the impact briefly and blend back to
+	-- the player's camera. Applied after the default camera update.
+	local look = Config.Meteor.LandingCamera
+	local lookWeight, impactAt = 0, -math.huge
+	-- Not while a menu is open, nor before the tutorial reaches its "watch the meteor" step
+	local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen",
+		"HatchOpen", "BackpackOpen", "PerksOpen", "IntroOpen" }
+	local watchStep = 1
+	for index, step in Config.Tutorial.Steps do
+		if step.Id == "meteor_lands" then watchStep = index break end
+	end
+	local tutorialStep: number? = nil -- nil once the tutorial is done or skipped
+	Knit.GetService("TutorialService").Step:Observe(function(value)
+		tutorialStep = if value then value.index else nil
+	end)
+	local function lookAllowed(): boolean
+		if tutorialStep and tutorialStep < watchStep then return false end
+		for _, flag in MENU_FLAGS do
+			if player:GetAttribute(flag) == true then return false end
+		end
+		return true
+	end
+	local lookTarget: Vector3? = nil -- smoothed, so the swing from the board to the meteor is a turn, not a cut
+	local function countdownBoard(): Vector3?
+		local map = WorldMap.find()
+		local timer = map and map:FindFirstChild("Crater") and map.Crater:FindFirstChild("SkyTimer")
+		return if timer and timer:IsA("BasePart") then timer.Position + Vector3.new(0, 4, 0) else nil
+	end
+	MeteorService.Impact:Connect(function(position: Vector3)
+		impactAt = os.clock()
+		lookTarget = position
+	end)
+	RunService:BindToRenderStep("MeteorLook", Enum.RenderPriority.Camera.Value + 1, function(dt)
+		local camera = workspace.CurrentCamera
+		local state = MeteorService.State:Get()
+		local active = false
+		local want: Vector3? = nil
+		if look.Enabled and player:GetAttribute("ReduceCameraShake") ~= true and camera.CameraType == Enum.CameraType.Custom
+			and lookAllowed() then
+			if state and state.phase == Phase.Countdown then
+				local left = state.endsAt - workspace:GetServerTimeNow()
+				if left <= look.LeadTime and left > 0 then
+					active = true
+					want = if left > look.CountdownUntil then countdownBoard() or spawnPoint()
+						elseif streak then streak.Position
+						else spawnPoint()
+				end
+			end
+			if os.clock() - impactAt < look.HoldAfterImpact then
+				active = true
+			end
+		end
+		if want then
+			lookTarget = if lookTarget and lookWeight > 0 then lookTarget:Lerp(want, 1 - math.exp(-dt * look.TurnSpeed)) else want
+		end
+		lookWeight = math.clamp(lookWeight + dt / (if active then look.BlendIn else -look.BlendOut), 0, 1)
+		local character = player.Character
+		local head = character and character:FindFirstChild("Head") :: BasePart?
+		if lookWeight <= 0 or not lookTarget or not head then
+			return
+		end
+		local lookAim = lookTarget
+		local focus = head.Position
+		local flat = Vector3.new(lookTarget.X - focus.X, 0, lookTarget.Z - focus.Z)
+		if flat.Magnitude < 1 then
+			return -- standing under the meteor: nothing sensible to frame
+		end
+		local distance = math.clamp((camera.CFrame.Position - camera.Focus.Position).Magnitude, 8, 24)
+		local right = flat.Unit:Cross(Vector3.yAxis)
+		local position = focus - flat.Unit * distance + right * look.Shoulder + Vector3.new(0, look.Height, 0)
+		-- pull in front of anything behind the player (the Refinery stands right behind the spawn)
+		local blockers = RaycastParams.new()
+		blockers.FilterType = Enum.RaycastFilterType.Exclude
+		blockers.FilterDescendantsInstances = { character :: Instance, camera }
+		local hit = workspace:Raycast(focus, position - focus, blockers)
+		if hit then
+			position = hit.Position + (focus - hit.Position).Unit * 1.5
+		end
+		-- aim at the board or the meteor, but never tilt up more than MaxPitch
+		local toTarget, toAim = lookTarget - position, lookAim - position
+		local horizontal = Vector3.new(toTarget.X, 0, toTarget.Z)
+		local pitch = math.min(math.atan2(toAim.Y, Vector3.new(toAim.X, 0, toAim.Z).Magnitude), math.rad(look.MaxPitch))
+		local direction = horizontal.Unit * math.cos(pitch) + Vector3.new(0, math.sin(pitch), 0)
+		local desired = CFrame.lookAt(position, position + direction)
+		local eased = lookWeight * lookWeight * (3 - 2 * lookWeight)
+		camera.CFrame = camera.CFrame:Lerp(desired, eased)
+	end)
+
+	-- Camera shake, applied after the default camera update and the landing camera
+	RunService:BindToRenderStep("MeteorShake", Enum.RenderPriority.Camera.Value + 2, function(dt)
 		shakeTrauma = math.max(0, shakeTrauma - dt * 0.9)
 		if player:GetAttribute("ReduceCameraShake") == true then return end
 		local amount = math.max(shakeTrauma * shakeTrauma, rumbleLevel * rumbleLevel * 0.25)

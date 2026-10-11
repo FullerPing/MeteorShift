@@ -54,6 +54,7 @@ local MeteorService = Knit.CreateService({
 })
 
 MeteorService.Landed = Signal.new() -- (position: Vector3) at impact
+MeteorService.CoreUnlocked = Signal.new() -- () enough crust broke: the core is open to hit
 -- (meteorType: string, cracked: boolean, secondsToCrack: number?) when the Active
 -- phase ends; secondsToCrack runs from the start of Active, nil when it cooled
 MeteorService.Ended = Signal.new()
@@ -102,6 +103,7 @@ local callTimes: { number } = {}
 -- DevSpawn: the meteor type asked for from the command bar or chat. It
 -- ends a meteor that is still down and comes in StreakLeadTime seconds into its countdown.
 local devNext: Config.MeteorType? = nil
+local meteorsSinceBoss = 0 -- meteors since the last Alien boss (scheduled or called)
 local lastDevSkipRequest: { [Player]: number } = {}
 
 local function now(): number
@@ -151,11 +153,14 @@ end
 -- allow it: the countdown jumps to Config.Monetization.CallMeteor.SetCountdownTo and
 -- the server hears who called it. The meteor type was already picked; a call can't
 -- change it or the loot. Returns whether it went through and, if not, why.
-function MeteorService:CallMeteor(player: Player): (boolean, string?)
+-- With `boss` the called meteor is the Alien boss instead (Call a Boss Meteor): same limits,
+-- and it restarts the count to the next scheduled boss.
+function MeteorService:CallMeteor(player: Player, boss: boolean?): (boolean, string?)
 	local ok, reason = self:CanCallMeteor()
 	if not ok then
 		return false, reason
 	end
+	local bossType = if boss then MeteorConfig.Types[MeteorConfig.Boss.Type] else nil
 	local clock = os.clock()
 	local window = Config.Monetization.CallMeteor.CapWindow
 	for index = #callTimes, 1, -1 do
@@ -165,8 +170,13 @@ function MeteorService:CallMeteor(player: Player): (boolean, string?)
 	end
 	table.insert(callTimes, clock)
 	eventCalled = true
+	if bossType then
+		devNext = bossType -- the loop swaps the picked type for it when the countdown ends
+		meteorsSinceBoss = 0
+		self:_publish({ type = bossType.Id, typeName = bossType.DisplayName, requiredTier = bossType.RequiredTier })
+	end
 	self:SetCountdownRemaining(Config.Monetization.CallMeteor.SetCountdownTo)
-	RewardService:Announce("CallMeteor", player.DisplayName .. " called a meteor!")
+	RewardService:Announce(if bossType then "Boss" else "CallMeteor", player.DisplayName .. (if bossType then " called the Alien boss meteor!" else " called a meteor!"))
 	return true, nil
 end
 
@@ -177,9 +187,7 @@ local function countdownLength(first: boolean): number
 	return if first then MeteorConfig.FirstCountdown else interval
 end
 
--- Meteors since the last Alien boss, and whether anyone here has the rebirths to see one
-local meteorsSinceBoss = 0
-
+-- Whether anyone here has the rebirths to see an Alien boss
 local function bossAllowed(): boolean
 	for _, other in Players:GetPlayers() do
 		local data = PlayerStateService:Get(other)
@@ -320,6 +328,7 @@ function MeteorService:_unlockCore(meteor: Meteor)
 	end
 	self:_publish({ unlocked = true })
 	RewardService:Announce("CoreUnlocked", "The core is exposed! Hit it before it cools!")
+	self.CoreUnlocked:Fire()
 end
 
 -- Variable rewards for breaking a crust node (Config.Hooks): a chance of a shard crumb for the player

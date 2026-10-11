@@ -14,7 +14,12 @@ function IndexLayout.compute(viewport: Vector2, inset: number): Layout
 	local topInset = math.max(0, inset)
 	local availableWidth = math.max(0, viewport.X - 24)
 	local availableHeight = math.max(0, viewport.Y - topInset - 24)
-	local width, height = math.min(740, availableWidth), math.min(620, availableHeight)
+	-- phones in landscape: wider, from just under the top bar (the title ribbon pokes above the panel) to the
+	-- bottom, so more of the scrolling page shows
+	local short = availableWidth >= 540 and availableHeight < 380
+	local panelTop = if short then topInset + 18 else nil
+	if panelTop then availableHeight = math.max(0, viewport.Y - panelTop - 12) end
+	local width, height = math.min(if short then 860 else 740, availableWidth), math.min(620, availableHeight)
 	local padding, tabGap, gap = 12, 8, 12
 	local innerWidth = math.max(0, width - padding * 2)
 	-- Four pixels of card padding on each side, plus the vertical scrollbar.
@@ -25,7 +30,7 @@ function IndexLayout.compute(viewport: Vector2, inset: number): Layout
 	return {
 		panel = {
 			x = (viewport.X - width) / 2,
-			y = topInset + 12 + (availableHeight - height) / 2,
+			y = panelTop or topInset + 12 + (availableHeight - height) / 2,
 			w = width, h = height,
 		},
 		title = { x = padding, y = 8, w = math.max(0, innerWidth - 52), h = 36 },

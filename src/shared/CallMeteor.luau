@@ -13,6 +13,7 @@
 -- (CanCallMeteor / CallMeteor); pure functions only, covered by tests/CallMeteor.spec.
 
 local Monetization = require(script.Parent.Config.Monetization)
+local Meteor = require(script.Parent.Config.Meteor)
 
 local Rules = Monetization.CallMeteor
 
@@ -35,6 +36,15 @@ function CallMeteor.available(
 	end
 	if callsInLastHour >= Rules.HourlyCap then
 		return false, "This server has called enough meteors this hour."
+	end
+	return true, nil
+end
+
+-- The boss meteor (Call a Boss Meteor) needs the same rebirths as the scheduled Alien boss,
+-- so nobody pays for a meteor they can't mine. The second result says why not.
+function CallMeteor.bossUnlocked(rebirths: number): (boolean, string?)
+	if rebirths < Meteor.Boss.MinRebirths then
+		return false, "Reach rebirth " .. Meteor.Boss.MinRebirths .. " to call the boss meteor."
 	end
 	return true, nil
 end

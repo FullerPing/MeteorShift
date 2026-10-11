@@ -7,6 +7,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Price = require(ReplicatedStorage.Shared.Price)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
@@ -44,13 +45,14 @@ function UpgradeService:BuyStation(player: Player, stationId: string): boolean
 		self.Client.Notice:Fire(player, string.format("Reach player level %d for %s Lv %d. Take part in meteors to earn XP.", levelNeeded, stationConfig.Name, current + 1))
 		return false
 	end
-	local shortfall = Price.shortfall(data, nextLevel.Cost, nextLevel.Shards, stationConfig.Name .. " Lv " .. (current + 1))
+	local cost = Price.scaled(nextLevel.Cost, Rebirth.priceMult(data.rebirths))
+	local shortfall = Price.shortfall(data, cost, nextLevel.Shards, stationConfig.Name .. " Lv " .. (current + 1))
 	if shortfall then
 		self.Client.Notice:Fire(player, shortfall)
 		return false
 	end
 
-	data.cash -= nextLevel.Cost
+	data.cash -= cost
 	data.shards -= nextLevel.Shards
 	data.stations[stationId] = current + 1
 	-- TelemetryService hears StationUpgraded and sets flags.firstRefinery with

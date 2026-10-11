@@ -86,7 +86,7 @@ end
 function PlayerStateService:PetSlots(player: Player): number
 	local data = self:Get(player)
 	if not data then return Pets.slots(0, false) end
-	return Pets.slots(data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"), Perks.petSlots(data.perks))
+	return Pets.slots(data.rebirths, MonetizationService:ExtraPetSlots(player) > 0, Perks.petSlots(data.perks))
 end
 
 -- The equipped pets' perks (Shared.Pets): miner, hauler, pack, swift, merchant
@@ -111,9 +111,9 @@ end
 function PlayerStateService:GetPickaxe(player: Player): any
 	local data = self:Get(player)
 	if not data then
-		return Gear.pickaxe(1, Gear.freshPickaxeStats(1))
+		return Gear.pickaxe(1, 1)
 	end
-	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
+	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeLevel)
 	local bonuses = self:GetPetBonuses(player)
 	if bonuses.swift > 0 then
 		pickaxe.Swing *= 1 - bonuses.swift
@@ -125,7 +125,7 @@ end
 -- Backpack capacity: the leveled Capacity, the Bigger Backpack pass and a Pack pet
 function PlayerStateService:GetCapacity(player: Player): number
 	local data = self:Get(player)
-	local base = if data then Gear.capacity(data.backpackTier, data.backpackStats) else Gear.capacity(1, Gear.freshBackpackStats(1))
+	local base = if data then Gear.capacity(data.backpackTier, data.backpackLevel) else Gear.capacity(1, 1)
 	local pack = if data then self:GetPetBonuses(player).pack else 0
 	return base * MonetizationService:BackpackMult(player) * (1 + pack)
 end
@@ -257,8 +257,8 @@ function PlayerStateService:_sendState(player: Player)
 		xpNeeded = Levels.xpToNext(data.level) or 0, -- 0 at the max level
 		pickaxeTier = data.pickaxeTier,
 		backpackTier = data.backpackTier,
-		pickaxeStats = table.clone(data.pickaxeStats), -- stat levels (Shared.Gear)
-		backpackStats = table.clone(data.backpackStats),
+		pickaxeLevel = data.pickaxeLevel, -- gear levels (Shared.Gear)
+		backpackLevel = data.backpackLevel,
 		swing = pickaxe.Swing, -- seconds between swings, as leveled and with a Swift pet
 		reach = pickaxe.Reach, -- studs
 		pets = { -- Shared.Pets: owned with level and XP, the ones out, the slots and their perks
@@ -287,7 +287,8 @@ function PlayerStateService:_sendState(player: Player)
 		perks = table.clone(data.perks), -- Colony Perks: level of each (Shared.Perks)
 		overflow = data.overflow or 0, -- bar-sale cash beyond the next rebirth's cost (overstay shards)
 		index = data.index, -- mineral index: mineral id -> count found (spec §8.2)
-		credits = data.credits, -- unused Call a Meteor credits (spec §9.2)
+		credits = data.credits, -- unused Call a Meteor, Boss Meteor and Rebirth Keep credits (spec §9.2)
+		purchased = { starterPack = data.flags.starterPack == true, extraPetSlot = data.flags.extraPetSlot == true }, -- one-off products
 		overclockLeft = data.overclockLeft, -- seconds of Refinery Overclock left
 		oreBoostLeft = data.oreBoostLeft,
 	})

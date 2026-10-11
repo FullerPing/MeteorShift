@@ -17,17 +17,6 @@ local function cleanTier(kind: string, value: any): number
 	return if finite(value) then math.clamp(math.floor(value), 1, #tiers(kind)) else 1
 end
 
-local function levels(kind: string, tier: number, saved: any): any
-	local settings = if kind == "pickaxe" then Config.Gear.Pickaxe else Config.Gear.Backpack
-	local fresh = Gear.levelsForTier(tier)
-	local out: any = {}
-	for _, stat in settings.Stats do
-		local value = if type(saved) == "table" then saved[stat] else nil
-		out[stat] = if finite(value) and value >= 1 then math.clamp(math.floor(value), 1, Gear.cap(tier)) else fresh
-	end
-	return out
-end
-
 local function effective(value: any, fallback: number): number
 	return if finite(value) and value > 0 then value else fallback
 end
@@ -48,13 +37,13 @@ function WorldEquipment.current(kind: string, state: any): any
 	local snapshot = if type(state) == "table" then state else {}
 	local tier = cleanTier(kind, snapshot[kind .. "Tier"])
 	local item = tiers(kind)[tier]
-	local stats = levels(kind, tier, snapshot[kind .. "Stats"])
+	local level = Gear.cleanLevel(tier, snapshot[kind .. "Level"])
 	if kind == "backpack" then
 		return { tier = tier, name = item.Name, stats = {
-			capacity = effective(snapshot.capacity, Gear.capacity(tier, stats)),
+			capacity = effective(snapshot.capacity, Gear.capacity(tier, level)),
 		} }
 	end
-	local pick = Gear.pickaxe(tier, stats)
+	local pick = Gear.pickaxe(tier, level)
 	local bonuses = if type(snapshot.pets) == "table" and type(snapshot.pets.bonuses) == "table" then snapshot.pets.bonuses else {}
 	local critBonus = if finite(bonuses.crit) and bonuses.crit >= 0 then bonuses.crit else 0
 	return { tier = tier, name = item.Name, stats = {

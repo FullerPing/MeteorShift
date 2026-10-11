@@ -14,7 +14,9 @@ return function(t: any)
 				t.ok(p.x >= 12 and p.y >= inset + 12, "panel clears left and top")
 				t.ok(p.x + p.w <= viewport.X - 12, "panel clears right")
 				t.ok(p.y + p.h <= viewport.Y - 12, "panel clears bottom")
-				t.ok(p.w > 0 and p.w <= 740 and p.h > 0 and p.h <= 620, "bounded panel")
+				-- phones in landscape may widen to 860 (the panel then runs from the top bar to the bottom)
+				local maxWidth = if viewport.X > viewport.Y and viewport.Y - inset < 404 then 860 else 740
+				t.ok(p.w > 0 and p.w <= maxWidth and p.h > 0 and p.h <= 620, "bounded panel")
 			end
 		end
 	end)

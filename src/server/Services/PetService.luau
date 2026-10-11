@@ -23,6 +23,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 
 local PetService = Knit.CreateService({
 	Name = "PetService",
@@ -141,7 +142,7 @@ function PetService:SyncPassPets(player: Player)
 		return
 	end
 	if MonetizationService:PassesResolved(player) then
-		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"), Perks.petSlots(data.perks))
+		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:ExtraPetSlots(player) > 0, Perks.petSlots(data.perks))
 	end
 	for _, def in Config.Pets.List do
 		if def.Pass and not data.pets.owned[def.Id] and MonetizationService:HasPass(player, def.Pass) then
@@ -251,6 +252,35 @@ function PetService.Client:Hatch(player: Player, eggId: string): string?
 	return self.Server:Hatch(player, eggId)
 end
 
+-- Eggs hatch at the Hatchery (Map.TownSquare.Hatchery.<eggId>): one prompt on each egg's plinth
+function PetService:_connectHatchery()
+	local townSquare = WorldMap.wait():FindFirstChild("TownSquare")
+	local hatchery = if townSquare then townSquare:FindFirstChild("Hatchery") else nil
+	if not hatchery then
+		warn("[PetService] Map.TownSquare.Hatchery is missing; eggs can't be hatched")
+		return
+	end
+	for _, egg in Config.Pets.Eggs do
+		local stand = hatchery:FindFirstChild(egg.Id)
+		local anchor = stand and (stand:FindFirstChild("Plinth") or stand:FindFirstChildWhichIsA("BasePart", true))
+		if not (anchor and anchor:IsA("BasePart")) then
+			warn("[PetService] the Hatchery has no stand for " .. egg.Id)
+			continue
+		end
+		local prompt = anchor:FindFirstChildWhichIsA("ProximityPrompt") or Instance.new("ProximityPrompt")
+		prompt.Name = "HatchPrompt"
+		prompt.ActionText = "Hatch (" .. egg.Cost .. " shards)"
+		prompt.ObjectText = egg.Name
+		prompt.HoldDuration = 0.25
+		prompt.MaxActivationDistance = 12
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = anchor
+		prompt.Triggered:Connect(function(player)
+			if not throttled(player) then self:Hatch(player, egg.Id) end
+		end)
+	end
+end
+
 function PetService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	NodeService = Knit.GetService("NodeService")
@@ -274,6 +304,7 @@ function PetService:KnitStart()
 	MonetizationService.PassBought:Connect(function(player: Player)
 		self:SyncPassPets(player)
 	end)
+	task.spawn(function() self:_connectHatchery() end)
 	MonetizationService.PassesReady:Connect(function(player: Player) self:SyncPassPets(player) end)
 	NodeService.Hit:Connect(function(player: Player, kind: string, part: BasePart)
 		self:_award(player, kind)

@@ -14,6 +14,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
+local Intro = require(ReplicatedStorage.Shared.Intro)
 
 local Steps = Config.Tutorial.Steps
 
@@ -22,6 +23,8 @@ local TutorialService = Knit.CreateService({
 	Client = {
 		-- { index, total } for the step to do next, nil when the tutorial is done or skipped
 		Step = Knit.CreateProperty(nil),
+		-- true while the first-join "How to play" intro is still to be shown
+		Intro = Knit.CreateProperty(false),
 	},
 })
 
@@ -40,6 +43,7 @@ function TutorialService:_publish(player: Player)
 	if not data then
 		return
 	end
+	self.Client.Intro:SetFor(player, Intro.shouldShow(data.flags, data.tutorialStep))
 	if data.flags.tutorialDone then
 		self.Client.Step:SetFor(player, nil)
 	else
@@ -68,6 +72,15 @@ function TutorialService:Did(player: Player, stepId: string)
 		data.flags.tutorialDone = true
 	end
 	self:_publish(player)
+end
+
+-- The intro was closed (finished or skipped): never show it again
+function TutorialService.Client:IntroDone(player: Player)
+	local data = PlayerStateService:Get(player)
+	if data and data.flags.introSeen ~= true then
+		data.flags.introSeen = true
+		self.Server:_publish(player)
+	end
 end
 
 function TutorialService.Client:Skip(player: Player)
@@ -129,11 +142,20 @@ function TutorialService:KnitStart()
 		self:_publish(player) -- profiles loaded before this service started (no-op without one)
 	end
 
-	local hitSteps = { Debris = "mine_debris", Crust = "mine_node", Core = "hit_core" }
+	-- Crust hits do not finish "mine_node": it waits until enough nodes broke to open the core
+	local hitSteps = { Debris = "mine_debris", Core = "hit_core" }
 	NodeService.Hit:Connect(function(player, kind)
 		local stepId = hitSteps[kind]
 		if stepId then
 			self:Did(player, stepId)
+		end
+	end)
+	MeteorService.CoreUnlocked:Connect(function()
+		for _, player in Players:GetPlayers() do
+			-- only players who already ran to the crater: a newcomer must not skip the early steps
+			if not self:IsBefore(player, "reach_crater") then
+				self:Did(player, "mine_node")
+			end
 		end
 	end)
 	MeteorService.Landed:Connect(function()

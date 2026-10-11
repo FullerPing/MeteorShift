@@ -32,6 +32,8 @@ local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Price = require(ReplicatedStorage.Shared.Price)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Telemetry = require(script.Parent.Parent.Lib.Telemetry)
 
 local TelemetryService = Knit.CreateService({
@@ -135,13 +137,15 @@ local function act(player: Player)
 	Telemetry.countAction(actions, player)
 end
 
--- The cash and shard sinks of a purchase priced `item` ({ Cost, Shards }).
-function TelemetryService:_purchase(player: Player, item: { Cost: number, Shards: number }, sku: string)
+-- The cash and shard sinks of a purchase priced `item` ({ Cost, Shards }). A table price
+-- (`inflate`) is what the player paid after their rebirths' price inflation.
+function TelemetryService:_purchase(player: Player, item: { Cost: number, Shards: number }, sku: string, inflate: boolean?)
 	local data = PlayerStateService:Get(player)
 	if not data then
 		return
 	end
-	self:economy(player, SINK, CASH, item.Cost, data.cash, SHOP, sku)
+	local cost = if inflate then Price.scaled(item.Cost, Rebirth.priceMult(data.rebirths)) else item.Cost
+	self:economy(player, SINK, CASH, cost, data.cash, SHOP, sku)
 	self:economy(player, SINK, SHARDS, item.Shards, data.shards, SHOP, sku)
 end
 
@@ -234,13 +238,13 @@ function TelemetryService:KnitStart()
 		local list: { any } = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
 		local item = list[tier]
 		if item then
-			self:_purchase(player, item, kind .. "_" .. tier)
+			self:_purchase(player, item, kind .. "_" .. tier, true)
 		end
 	end)
 
-	ShopService.StatUpgraded:Connect(function(player: Player, kind: string, stat: string, level: number, cash: number)
+	ShopService.StatUpgraded:Connect(function(player: Player, kind: string, level: number, cash: number)
 		act(player)
-		self:_purchase(player, { Cost = cash, Shards = 0 }, kind .. "_" .. stat .. "_" .. level)
+		self:_purchase(player, { Cost = cash, Shards = 0 }, kind .. "_level_" .. level)
 	end)
 
 	UpgradeService.StationUpgraded:Connect(function(player: Player, stationId: string, level: number)
@@ -248,7 +252,7 @@ function TelemetryService:KnitStart()
 		local station = Config.Home.Stations[stationId]
 		local item = station and station.Levels[level]
 		if item then
-			self:_purchase(player, item, stationId .. "_" .. level)
+			self:_purchase(player, item, stationId .. "_" .. level, true)
 		end
 		if stationId == "refinery" then
 			self:milestone(player, "firstRefinery", "first_refinery_bought", level)

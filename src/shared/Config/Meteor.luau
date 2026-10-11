@@ -13,6 +13,22 @@ Meteor.CrackedDuration = 5
 Meteor.CooledDuration = 5
 Meteor.CleanupDuration = 5
 Meteor.StreakLeadTime = 10 -- streak is visible for the last N seconds of the countdown
+-- In the last LeadTime seconds the camera swings behind the player: it looks at the countdown board over the crater
+-- until CountdownUntil seconds are left, then turns to follow the falling meteor down, and hands control back
+-- BlendOut seconds after impact. Players can turn it off with the ReduceCameraShake setting. It stays off while a menu
+-- is open and before the tutorial reaches its "meteor_lands" (WATCH!) step.
+Meteor.LandingCamera = {
+	Enabled = true,
+	LeadTime = 5, -- seconds left on the countdown when the camera locks on the board
+	CountdownUntil = 3, -- seconds left when it turns to the falling meteor
+	BlendIn = 1.2,
+	BlendOut = 1.5,
+	TurnSpeed = 3, -- how quickly the view swings from the board to the meteor (higher = snappier)
+	HoldAfterImpact = 1, -- keep looking at the impact this long before blending back
+	Height = 3, -- studs the camera sits above the player's head
+	Shoulder = 3, -- studs to the right, so the player stands to one side of the view
+	MaxPitch = 40, -- degrees the camera may tilt up toward the board or the fireball
+}
 
 -- Shorter countdown while playtesting in Studio. Set to nil to use the real timings.
 Meteor.StudioCountdown = 25 :: number?

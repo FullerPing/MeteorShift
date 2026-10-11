@@ -21,7 +21,7 @@ Perks.List = {
 	headStart = {
 		Id = "headStart",
 		Name = "Head Start",
-		Text = "After a rebirth you start with your pickaxe and backpack %s tier(s) up (never past what your level allows).",
+		Text = "After a rebirth your pickaxe and backpack are at least tier %s above the first (never past what your level allows).",
 		Costs = { 40, 80, 160, 320 },
 		Effect = { 1, 2, 3, 4 },
 	},

@@ -41,8 +41,9 @@
 -- average share of the bonus pool, over the meteors that crack).
 --
 -- Rebirth (spec §8.3, optional, `Options.rebirths`): once cash covers Shared.Rebirth.cost the
--- player relocates: cash, pickaxe, backpack, hopper, conveyor, collection post and carried
--- stock reset, the refinery level and shards stay, and every sale pays Rebirth.multiplier.
+-- player relocates: cash, hopper, conveyor, collection post and carried stock reset, the
+-- pickaxe and backpack tiers, the refinery level and shards stay, every sale pays
+-- Rebirth.multiplier and every cash price is Rebirth.priceMult times dearer.
 -- With `Options.paybackLimit` the player only buys what pays itself back within that many
 -- seconds, so cash can pile up for the rebirth instead of going into slow upgrades.
 -- Pure functions, cheap enough to call from a spec (about 3,600 steps for two hours).
@@ -50,6 +51,7 @@
 local Config = require(script.Parent.Config)
 local Rebirth = require(script.Parent.Rebirth)
 local Gear = require(script.Parent.Gear)
+local Price = require(script.Parent.Price)
 local Hooks = require(script.Parent.Hooks)
 local Levels = require(script.Parent.Levels)
 local Pets = require(script.Parent.Pets)
@@ -148,17 +150,21 @@ local function bonusesFor(drillbotLevel: number?): Pets.Bonuses
 	return Pets.bonuses(saved)
 end
 
-local function oreRate(pickaxeTier: number, backpackTier: number, yield: number, bonuses: Pets.Bonuses): number
-	local pickaxe = Config.Pickaxes[pickaxeTier]
-	local capacity = Config.Backpacks[backpackTier].Capacity
-	local perHit = Pets.oreYield(pickaxe.OrePerHit * yield * Iron.YieldMult, bonuses.yield)
+-- Ore per second for a pickaxe that yields `orePerHit` (before pets) at `swing` seconds a swing and a
+-- backpack of `capacity`. `bonuses` supplies the Yield and Miner pets; Swift is already in `swing`.
+local function oreRateOf(orePerHit: number, swing: number, capacity: number, bonuses: Pets.Bonuses): number
+	local perHit = Pets.oreYield(orePerHit, bonuses.yield)
 	if perHit <= 0 then return 0 end
-	local swing = pickaxe.Swing * (1 - bonuses.swift)
 	local fillSeconds = capacity / perHit * swing / Balance.HitsPerMinuteShare
 	-- Recent validated hits keep the miner active while filling; trips have no target.
 	-- NodeService:PetHit applies Yield to pet ore too, without a backpack detour.
 	local petOre = perHit * bonuses.miner / swing * fillSeconds
 	return (capacity + petOre) / (fillSeconds + Balance.TripSeconds)
+end
+
+local function oreRate(pickaxeTier: number, backpackTier: number, yield: number, bonuses: Pets.Bonuses): number
+	local pickaxe = Config.Pickaxes[pickaxeTier]
+	return oreRateOf(pickaxe.OrePerHit * yield * Iron.YieldMult, pickaxe.Swing * (1 - bonuses.swift), Config.Backpacks[backpackTier].Capacity, bonuses)
 end
 
 -- Ore per second delivered to the hopper, trips included. `yield` scales the ore source.
@@ -201,17 +207,59 @@ local function income(owned: Owned, cycle: number, level: number, mult: number, 
 	return math.min(supply, lineRate(owned)) * price * (mult or 1)
 end
 
+export type IncomeInput = {
+	orePerHit: number, -- ore of one hit on a full-yield node: the pickaxe's, with the 2x Ore pass or an Ore Rush applied
+	swing: number, -- seconds between swings, a Swift pet included
+	capacity: number, -- backpack capacity as played
+	level: number, -- player level, which sets how much of an ore a hit yields
+	pets: Pets.Bonuses,
+	lineRate: number, -- bars per second the conveyor and refinery can make
+	saleMult: number, -- every multiplier on a bar sale (Economy:SaleMultiplier)
+}
+
+export type Income = {
+	perSecond: number, -- expected cash per second of ordinary play
+	bars: number, -- bars per second that actually reach the sale
+	mining: number, -- bars per second the player's mining supplies
+	line: number,
+	limit: string, -- "mining" or "line": what holds the income back
+}
+
+-- A player's expected income from what they own right now, not what they earned so far. It is the
+-- model's long-run `income` for one real loadout: meteors and debris time-weighted over a full event
+-- cycle, capped by the production line, valued at the blended bar price and the sale multiplier.
+-- It counts no bonuses (crates, field rocks), no rebirth plans and no time away.
+function Pacing.expectedIncome(input: IncomeInput): Income
+	local cycle = Pacing.cycleSeconds()
+	local meteorPrice, meteorYield = meteorMix(input.level)
+	local meteor = oreRateOf(input.orePerHit * meteorYield, input.swing, input.capacity, input.pets) * Iron.ActiveDuration
+	local debris = oreRateOf(input.orePerHit * Config.Debris.YieldFraction, input.swing, input.capacity, input.pets)
+		* Balance.DebrisActivityShare
+		* (cycle - Iron.ActiveDuration)
+	local ore = meteor + debris
+	local mining = ore / cycle
+	local price = if ore > 0 then (meteor * meteorPrice + debris * BarPrice) / ore else BarPrice
+	local bars = math.min(mining, input.lineRate)
+	return {
+		perSecond = bars * price * input.saleMult,
+		bars = bars,
+		mining = mining,
+		line = input.lineRate,
+		limit = if mining <= input.lineRate then "mining" else "line",
+	}
+end
+
 type Candidate = { id: string, name: string, cost: number, shards: number, apply: (Owned) -> () }
 
 -- The next level of every track a player buys from.
-local function candidates(owned: Owned, level: number): { Candidate }
+local function candidates(owned: Owned, level: number, priceMult: number): { Candidate }
 	local out: { Candidate } = {}
 	local pickaxe = Config.Pickaxes[owned.pickaxe + 1]
 	if pickaxe and level >= Levels.evolveLevel(pickaxe.Tier) then
 		table.insert(out, {
 			id = "pickaxe" .. pickaxe.Tier,
 			name = pickaxe.Name,
-			cost = Gear.bundleCost("pickaxe", pickaxe.Tier),
+			cost = Gear.bundleCost("pickaxe", pickaxe.Tier, priceMult),
 			shards = pickaxe.Shards,
 			apply = function(o: Owned)
 				o.pickaxe += 1
@@ -223,7 +271,7 @@ local function candidates(owned: Owned, level: number): { Candidate }
 		table.insert(out, {
 			id = "backpack" .. backpack.Tier,
 			name = backpack.Name,
-			cost = Gear.bundleCost("backpack", backpack.Tier),
+			cost = Gear.bundleCost("backpack", backpack.Tier, priceMult),
 			shards = backpack.Shards,
 			apply = function(o: Owned)
 				o.backpack += 1
@@ -238,7 +286,7 @@ local function candidates(owned: Owned, level: number): { Candidate }
 			table.insert(out, {
 				id = stationId .. nextLevel,
 				name = station.Name .. " level " .. nextLevel,
-				cost = level.Cost,
+				cost = Price.scaled(level.Cost, priceMult),
 				shards = level.Shards,
 				apply = function(o: Owned)
 					(o :: any)[stationId] += 1
@@ -255,7 +303,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 	local maxRebirths = if options and options.rebirths then options.rebirths else 0
 	local paybackLimit = if options and options.paybackLimit then options.paybackLimit else math.huge
 	local petBonuses = bonusesFor(if options then options.drillbotLevel else nil)
-	local rebirths, mult = 0, 1
+	local rebirths, mult, priceMult = 0, 1, 1
 	local step = Balance.StepSeconds
 	local cycle = Pacing.cycleSeconds()
 	local owned: Owned = { pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 }
@@ -339,18 +387,18 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 			earned += barsValue * mult
 			bars, barsValue = 0, 0
 			for _, tier in Config.Pickaxes do
-				local price = Gear.bundleCost("pickaxe", tier.Tier)
+				local price = Gear.bundleCost("pickaxe", tier.Tier, priceMult)
 				if price > 0 and earned >= price and result.earnedAt["pickaxe" .. tier.Tier] == nil then
 					result.earnedAt["pickaxe" .. tier.Tier] = time
 				end
 			end
 			for _, tier in Config.Backpacks do
-				local price = Gear.bundleCost("backpack", tier.Tier)
+				local price = Gear.bundleCost("backpack", tier.Tier, priceMult)
 				if price > 0 and earned >= price and result.earnedAt["backpack" .. tier.Tier] == nil then
 					result.earnedAt["backpack" .. tier.Tier] = time
 				end
 			end
-			for _, item in candidates(owned, level) do
+			for _, item in candidates(owned, level, priceMult) do
 				if cash >= item.cost and shards >= item.shards and result.affordableAt[item.id] == nil then
 					result.affordableAt[item.id] = time
 				end
@@ -361,7 +409,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 				local best: Candidate? = nil
 				local bestPayback = math.huge
 				local now = income(owned, cycle, level, mult, petBonuses)
-				for _, item in candidates(owned, level) do
+				for _, item in candidates(owned, level, priceMult) do
 					if item.shards > shards then
 						continue
 					end
@@ -389,10 +437,11 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 			end
 			if rebirths < maxRebirths and cash >= Rebirth.cost(rebirths) then
 				rebirths += 1
-				mult = Rebirth.multiplier(rebirths)
+				mult, priceMult = Rebirth.multiplier(rebirths), Rebirth.priceMult(rebirths)
 				table.insert(result.rebirthTimes, time)
 				cash = 0
-				owned.pickaxe, owned.backpack, owned.hopper, owned.conveyor, owned.collector = 1, 1, 1, 1, 1
+				-- the pickaxe and backpack keep their tiers (Lib.RebirthReset); the production line starts over
+				owned.hopper, owned.conveyor, owned.collector = 1, 1, 1
 				hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
 			end
 		end

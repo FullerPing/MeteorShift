@@ -1,16 +1,16 @@
 --!strict
--- Profile schema v6 (spec §12.4, with the plot production line instead of
--- refinery slots, one pickaxe and backpack leveled by stat: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
+-- Profile schema v8 (spec §12.4, with the plot production line instead of
+-- refinery slots, one pickaxe and backpack with a single level each: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 6,
+	version = 8,
 	cash = 0,
 	shards = 0,
 	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
 	backpackTier = 1,
-	pickaxeStats = { power = 1, speed = 1, reach = 1, crit = 1 }, -- stat levels, 1 to the tier's cap
-	backpackStats = { capacity = 1 },
+	pickaxeLevel = 1, -- one level per item, 1 to the tier's cap; every tier starts over at 1 (Shared.Gear)
+	backpackLevel = 1,
 	-- Pets (Shared.Pets): owned ones with their level and XP, and the ones out (kept through rebirth)
 	pets = { owned = {}, equipped = {}, hatches = {} }, -- hatches: per egg, hatches since the last Epic or better (pity)
 	level = 1, -- player level (Shared.Levels): earned from meteors, kept through rebirth
@@ -40,6 +40,7 @@ return {
 	tutorialStep = 1, -- next tutorial step (spec §11); flags.tutorialDone ends it
 	flags = {
 		tutorialDone = false,
+		introSeen = false, -- the first-join "How to play" intro was closed (Shared/Intro)
 		-- Lifetime analytics milestones (spec §13), set by TelemetryService when logged
 		firstMeteor = false,
 		firstCoreReward = false,
@@ -49,6 +50,8 @@ return {
 	-- not saved here.
 	credits = {
 		callMeteor = 0, -- Call a Meteor purchases that couldn't run yet, usable later
+		bossMeteor = 0, -- the same for Call a Boss Meteor
+		rebirthKeep = 0, -- Rebirth and Keep Everything purchases waiting for the next rebirth
 	},
 	receipts = {}, -- all processed PurchaseIds; do not trim paid-grant idempotency history
 	overclockLeft = 0, -- seconds of Refinery Overclock left, counted down while online

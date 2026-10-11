@@ -1,8 +1,12 @@
 --!strict
 -- Clone the user's authored design. Appearance comes from StarterGui, not a skin.
 local StarterGui = game:GetService("StarterGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local ExactNavButton = {}
 local REFERENCE = "MY index button"
+-- player attributes the full-screen menus set while open
+local MENU_ATTRIBUTES = { "ShopOpen", "PetsOpen", "StoreOpen", "IndexOpen", "RebirthOpen", "RefineryOpen", "SettingsOpen", "PerksOpen", "HatchOpen", "IntroOpen" }
 
 function ExactNavButton.author(parent: Instance, name: string, label: string, icon: string): TextButton
 	local reference = StarterGui:FindFirstChild(REFERENCE)
@@ -63,40 +67,55 @@ end
 -- glossy face, thick ink outline, icon with a drop shadow, caption over the
 -- bottom edge. The authored Design stays inside the button (hidden) so its
 -- icon and caption remain the source of truth and Studio edits still apply.
-local TILE_KINDS = { ShopButton = "orange", RebirthButton = "purple", StoreButton = "green", IndexButton = "blue" }
+-- Experiment: no box around the side-button icons, a bigger icon instead. Set false to bring the tiles back.
+local BOXLESS = true
+local TILE_KINDS ={ ShopButton = "orange", RebirthButton = "purple", StoreButton = "green", IndexButton = "blue", PetsButton = "red" }
 
-local function cartoonTile(button: TextButton, design: Frame)
+-- The prefab buttons no longer carry a "Design" frame (only Gear's still does, and the runtime-authored Pets
+-- button): without one, the icon and caption come from here.
+local TILE_ICONS = { ShopButton = "equipment", RebirthButton = "rebirth", StoreButton = "store", IndexButton = "index", PetsButton = "pets" }
+local TILE_CAPTIONS = { ShopButton = "Gear", RebirthButton = "Rebirth", StoreButton = "Store", IndexButton = "Index", PetsButton = "Pets" }
+
+local function cartoonTile(button: TextButton, design: Frame?)
 	local Cartoon = require(script.Parent.Cartoon)
-	local caption = design:FindFirstChild("Caption") :: TextLabel?
-	local source = design:FindFirstChild("Icon") :: ImageLabel?
+	local caption = if design then design:FindFirstChild("Caption") :: TextLabel? else nil
+	local source = if design then design:FindFirstChild("Icon") :: ImageLabel? else nil
 	local tile = Instance.new("Frame")
 	tile.Name, tile.Size, tile.BackgroundTransparency, tile.ZIndex = "CartoonTile", UDim2.fromOffset(80, 80), 1, 1
 	tile.Active = false
-	Cartoon.surface(TILE_KINDS[button.Name] or "blue", { radius = 16, edge = 3, lip = 5, studs = 0.84, studSize = 27 }).Parent = tile
-	local image = if source then source.Image else ""
-	for index, offset in { Vector2.new(0, 3), Vector2.zero } do
+	if not BOXLESS then
+		Cartoon.surface(TILE_KINDS[button.Name] or "blue", { radius = 16, edge = 3, lip = 5, studs = 0.84, studSize = 27 }).Parent = tile
+	end
+	local image = if source then source.Image else HudIcons[TILE_ICONS[button.Name] or ""] or ""
+	-- Boxless: the icon is drawn big with an ink outline (four offset copies) and a drop shadow instead
+	local glyphSize = if BOXLESS then 74 else 56
+	local layers = if BOXLESS
+		then { Vector2.new(0, 4), Vector2.new(-2, 0), Vector2.new(2, 0), Vector2.new(0, -2), Vector2.new(0, 2), Vector2.zero }
+		else { Vector2.new(0, 3), Vector2.zero }
+	for index, offset in layers do
+		local top = index == #layers
 		local glyph = Instance.new("ImageLabel")
-		glyph.Name = if index == 1 then "IconShadow" else "Icon"
-		glyph.AnchorPoint, glyph.Position = Vector2.new(0.5, 0.5), UDim2.new(0.5, offset.X, 0.42, offset.Y - 4)
-		glyph.Size, glyph.BackgroundTransparency, glyph.ScaleType = UDim2.fromOffset(56, 56), 1, Enum.ScaleType.Fit
+		glyph.Name = if top then "Icon" elseif index == 1 then "IconShadow" else "IconOutline" .. index
+		glyph.AnchorPoint, glyph.Position = Vector2.new(0.5, 0.5), UDim2.new(0.5, offset.X, if BOXLESS then 0.4 else 0.42, offset.Y - 4)
+		glyph.Size, glyph.BackgroundTransparency, glyph.ScaleType = UDim2.fromOffset(glyphSize, glyphSize), 1, Enum.ScaleType.Fit
 		glyph.Image, glyph.ZIndex = image, 2 + index
-		glyph.ImageColor3 = if index == 1 then Cartoon.INK else Color3.new(1, 1, 1)
-		glyph.ImageTransparency = if index == 1 then 0.55 else 0
+		glyph.ImageColor3 = if top then Color3.new(1, 1, 1) else Cartoon.INK
+		glyph.ImageTransparency = if index == 1 then 0.55 elseif top then 0 else (if BOXLESS then 0.1 else 0)
 		glyph.Parent = tile
 	end
 	local label = Instance.new("TextLabel")
 	label.Name, label.BackgroundTransparency = "Caption", 1
-	label.AnchorPoint, label.Position, label.Size = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 52), UDim2.fromOffset(110, 30)
+	label.AnchorPoint, label.Position, label.Size = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, if BOXLESS then 58 else 52), UDim2.fromOffset(110, 30)
 	label.Font, label.TextSize, label.TextColor3 = Cartoon.FONT, 23, Color3.new(1, 1, 1)
-	label.Text, label.ZIndex = if caption then caption.Text else button.Name, 5
+	label.Text, label.ZIndex = if caption then caption.Text else TILE_CAPTIONS[button.Name] or button.Name, 5
 	Cartoon.textStroke(3).Parent = label
 	label.Parent = tile
-	design.Visible = false
+	if design then design.Visible = false end
 	tile.Parent = button
 end
 
 function ExactNavButton.bind(button: TextButton)
-	local design = button:WaitForChild("Design") :: Frame
+	local design = button:FindFirstChild("Design") :: Frame?
 	if not button:FindFirstChild("CartoonTile") then cartoonTile(button, design) end
 	local badge = button:WaitForChild("ReadyBadge") :: Frame
 	if not badge:FindFirstChildOfClass("UIStroke") then
@@ -105,6 +124,19 @@ function ExactNavButton.bind(button: TextButton)
 		badge.Size, badge.Position = UDim2.fromOffset(16, 16), UDim2.new(1, 4, 0, -6)
 		badge.BackgroundColor3 = Color3.fromRGB(255, 60, 80)
 	end
+	-- Each menu lives in its own ScreenGui, so a higher DisplayOrder would draw this tile over another open
+	-- menu: hide the tile (and take no taps) while any full menu is open. Its own controller still hides the
+	-- button outright while its own menu is open.
+	local tile = button:FindFirstChild("CartoonTile") :: Frame?
+	local player = game:GetService("Players").LocalPlayer
+	local function covered()
+		local open = false
+		for _, name in MENU_ATTRIBUTES do if player:GetAttribute(name) == true then open = true; break end end
+		if tile then tile.Visible = not open end
+		button.Interactable = not open
+	end
+	for _, name in MENU_ATTRIBUTES do player:GetAttributeChangedSignal(name):Connect(covered) end
+	covered()
 	local tooltip = button:WaitForChild("Tooltip") :: TextLabel
 	if not tooltip:FindFirstChild("TextOutline") then
 		local Cartoon = require(script.Parent.Cartoon)
@@ -115,7 +147,7 @@ function ExactNavButton.bind(button: TextButton)
 		Cartoon.outlineLabel(tooltip, 2)
 	end
 	return {
-		caption = design:WaitForChild("Caption") :: TextLabel,
+		caption = (button:FindFirstChild("CartoonTile") :: Frame):WaitForChild("Caption") :: TextLabel,
 		tooltip = button:WaitForChild("Tooltip") :: TextLabel,
 		badge = button:WaitForChild("ReadyBadge") :: Frame,
 		scale = button:WaitForChild("LayoutScale") :: UIScale,

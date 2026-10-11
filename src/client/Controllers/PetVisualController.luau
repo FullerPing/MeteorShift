@@ -9,6 +9,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Visuals = require(ReplicatedStorage.Shared.PetVisuals)
 local PetModel = require(script.Parent.Parent.PetModel)
+local Sfx = require(script.Parent.Parent.Sfx)
 
 local player = Players.LocalPlayer
 local PetVisualController = Knit.CreateController({ Name = "PetVisualController" })
@@ -62,6 +63,7 @@ local function petSound(follower: Follower, name: string, id: string, volume: nu
 		sound.Name, sound.SoundId, sound.Volume, sound.PlaybackSpeed = name, id, volume, pitch
 		sound.RollOffMinDistance, sound.RollOffMaxDistance = 3, 16
 		sound.Looped = looped == true
+		sound.SoundGroup = Sfx.group("SFX")
 		sound.Parent = follower.visual.model.PrimaryPart
 		follower.sounds[name] = sound
 	end

@@ -10,6 +10,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local PerksRules = require(ReplicatedStorage.Shared.Perks)
 local NativeUI = require(script.Parent.Parent.NativeUI)
+local Sfx = require(script.Parent.Parent.Sfx)
+local RewardFX = require(script.Parent.Parent.RewardFX)
 local PerksMenu = require(script.Parent.Parent.NativeMenus.Perks)
 local player = Players.LocalPlayer
 local PerksController = Knit.CreateController({ Name = "PerksController" })
@@ -68,7 +70,11 @@ function PerksController:KnitStart()
 			busy = id
 			update()
 			task.spawn(function()
-				pcall(function() return PerkService:Buy(id) end)
+				local ok, bought = pcall(function() return PerkService:Buy(id) end)
+				if ok and bought then
+					Sfx.play("Upgrade", nil, nil, 1.1)
+					RewardFX.burst(Config.RewardFX.Colors.Rebirth, 0.8)
+				end
 				busy = nil
 				update()
 			end)
@@ -92,12 +98,12 @@ function PerksController:KnitStart()
 		end
 	end)
 
-	-- The PERKS button sits in the Rebirth panel header, next to its close button
+	-- The PERKS button sits in the Rebirth panel header, next to its close button. NativeMenus.Rebirth builds it;
+	-- RebirthController swaps that panel into the saved menu and marks it, so wait for the mark.
 	task.spawn(function()
-		local rebirthGui = NativeUI.get("Rebirth")
-		local rebirthPanel = rebirthGui:WaitForChild("Panel") :: Frame
-		local button = NativeUI.button(rebirthPanel, "PerksButton", "PERKS", UDim2.new(1, -156, 0, 4), UDim2.fromOffset(100, 44), NativeUI.GREEN)
-		button.Active, button.Selectable = true, true
+		local rebirthGui = Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Rebirth")
+		while rebirthGui:GetAttribute("RebirthLayout") == nil do rebirthGui:GetAttributeChangedSignal("RebirthLayout"):Wait() end
+		local button = rebirthGui:WaitForChild("Panel"):WaitForChild("PerksButton") :: TextButton
 		button.Activated:Connect(function()
 			player:SetAttribute("PerksOpen", true)
 		end)

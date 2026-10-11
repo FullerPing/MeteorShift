@@ -8,6 +8,9 @@
 -- collection post caps how many bars wait to be picked up (and so how much
 -- offline income piles up). Conveyor and refinery rates are ore per second and track what a
 -- player mines at that stage (docs/balance.md); their prices climb roughly ×3.5 per level.
+-- Hopper and collection post capacity were sized for a 40,000 ore backpack; with the backpack
+-- at 50 to 1,800 they run 2,000 to 500,000 (about ×2.5 per level). Level 1 holds two hours of
+-- the first line and any backpack; the top level holds the 8-hour pass at the fastest line.
 
 local Home = {}
 
@@ -43,12 +46,12 @@ Home.Stations = {
 		Name = "Hopper",
 		Levels = levels({
 			{ 2e3, 0 },
-			{ 8e3, 3e3 },
-			{ 32e3, 36e3 },
-			{ 128e3, 430e3 },
-			{ 512e3, 5.2e6 },
-			{ 2e6, 62e6 },
-			{ 8e6, 690e6 },
+			{ 5e3, 3e3 },
+			{ 12e3, 36e3 },
+			{ 30e3, 430e3 },
+			{ 75e3, 5.2e6 },
+			{ 190e3, 62e6 },
+			{ 500e3, 690e6 },
 		}, "Capacity"),
 	} :: Station,
 	conveyor = {
@@ -84,12 +87,12 @@ Home.Stations = {
 		Name = "Collection Post",
 		Levels = levels({
 			{ 2e3, 0 },
-			{ 8e3, 2.4e3 },
-			{ 32e3, 29e3 },
-			{ 128e3, 324e3 },
-			{ 512e3, 3.9e6 },
-			{ 2e6, 46e6 },
-			{ 8e6, 552e6 },
+			{ 5e3, 2.4e3 },
+			{ 12e3, 29e3 },
+			{ 30e3, 324e3 },
+			{ 75e3, 3.9e6 },
+			{ 190e3, 46e6 },
+			{ 500e3, 552e6 },
 		}, "Capacity"),
 	} :: Station,
 }

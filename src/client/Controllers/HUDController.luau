@@ -26,6 +26,7 @@ local UI = require(script.Parent.Parent.UI)
 local HudView = require(script.Parent.Parent.HudView)
 local NativeHudMenus = require(script.Parent.Parent.NativeHudMenus)
 local Sfx = require(script.Parent.Parent.Sfx)
+local RewardFX = require(script.Parent.Parent.RewardFX)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -211,13 +212,11 @@ function HUDController:KnitStart()
 	UpgradeService.Notice:Connect(showToast)
 	UpgradeService.Upgraded:Connect(function(stationId: string, level: number)
 		local names = { hopper = "Hopper", conveyor = "Conveyor", refinery = "Refinery", collector = "Collection Post" }
-		Sfx.play("Purchase")
 		showToast((names[stationId] or stationId) .. " upgraded to Lv " .. level .. "!")
 	end)
 	ShopService.Notice:Connect(showToast)
 	ShopService.Purchased:Connect(function(kind: string, tier: number)
 		local item = if kind == "pickaxe" then Config.Pickaxes[tier] else Config.Backpacks[tier]
-		Sfx.play("Purchase")
 		if item then
 			showToast("Evolved to the " .. item.Name .. "!")
 		end
@@ -225,7 +224,6 @@ function HUDController:KnitStart()
 	PetService.Notice:Connect(showToast)
 	PetService.Bought:Connect(function(petId: string)
 		local pet = Pets.def(petId)
-		Sfx.play("Purchase")
 		if pet then
 			showToast("You got " .. pet.Name .. "!")
 		end
@@ -241,7 +239,6 @@ function HUDController:KnitStart()
 		end
 	end)
 	LevelService.LevelUp:Connect(function(level: number)
-		Sfx.play("Purchase")
 		showToast("Player level " .. level .. "!")
 	end)
 	-- Personal variable rewards (Config.Hooks): shard crumbs, Golden Node lumps, supply crates, welcome-back finds
@@ -249,16 +246,14 @@ function HUDController:KnitStart()
 		crumb = Color3.fromRGB(150, 230, 255),
 		golden = Color3.fromRGB(255, 214, 64),
 		crate = Color3.fromRGB(139, 240, 195),
+		fieldCash = Color3.fromRGB(255, 214, 64),
 		welcomeBack = Color3.fromRGB(255, 214, 64),
 	}
 	RewardService.Bonus:Connect(function(message)
-		Sfx.play("Purchase")
 		showToast(message.text, BONUS_COLORS[message.kind])
 	end)
-	ShopService.Upgraded:Connect(function(kind: string, stat: string, level: number)
-		local names = if kind == "pickaxe" then Config.Gear.Pickaxe.Names else Config.Gear.Backpack.Names
-		Sfx.play("Purchase")
-		showToast((names[stat] or stat) .. " upgraded to level " .. level .. "!")
+	ShopService.Upgraded:Connect(function(kind: string, level: number)
+		showToast((if kind == "pickaxe" then "Pickaxe" else "Backpack") .. " upgraded to level " .. level .. "!")
 	end)
 
 	-- Clock and core HP polling (cheap: a handful of attribute reads)
@@ -381,6 +376,7 @@ function HUDController:KnitStart()
 				playerState = playerState, cashShown = cashShown, meteorState = meteorState,
 				phase = phase, secondsLeft = secondsLeft, timerText = timerText, timerColor = timerColor, timeProgress = timeProgress,
 				saleBusy = saleBusy, sellBars = sellBars,
+				standing = standing, coreHp = coreHp, coreMaxHp = coreMaxHp, inEvent = inEvent,
 				openRefinery = function() Knit.GetController("RefineryController"):Open() end,
 			}),
 
@@ -490,12 +486,14 @@ function HUDController:KnitStart()
 	})
 
 	self.Gui = ui
+	scope:Observer(playerState):onBind(function() if Fusion.peek(playerState) ~= nil then player:SetAttribute("HudReady", true) end end)
 	NativeHudMenus.start()
 	local showWelcomeBack = require(script.Parent.Parent.NativeWelcomeBack).start(function() whileAway:set(nil) end)
 	scope:Observer(whileAway):onBind(function() showWelcomeBack(Fusion.peek(whileAway)) end)
 
 	-- "+$4.8M" rises off the cash counter on every sale
 	EconomyService.Sold:Connect(function(bars: number, cash: number)
+		Sfx.play("SellCoins")
 		Sfx.play("Sell")
 		showRichToast(HudMessages.sale(bars, cash))
 		local layout = Fusion.peek(hud)
@@ -503,6 +501,17 @@ function HUDController:KnitStart()
 		-- HudView draws the wallet at a 292-wide base; the cash line starts at (62, 56).
 		local currentScale = card.w / 292
 		local cardY = card.y
+		-- coins burst off the player and fly into the wallet
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local camera = workspace.CurrentCamera
+		if root and camera then
+			local point, visible = camera:WorldToViewportPoint(root.Position)
+			local from = if visible then Vector2.new(point.X, point.Y) else camera.ViewportSize / 2
+			local wallet = Vector2.new(card.x + 40 * currentScale, cardY + 68 * currentScale)
+			RewardFX.coins(ui, from, wallet, 4 + math.floor(math.log10(math.max(cash, 1))), Config.HudIcons.coin, function()
+				Sfx.play("OrePickup", nil, nil, 1.6)
+			end)
+		end
 		local floater = Instance.new("TextLabel")
 		floater.BackgroundTransparency = 1
 		floater.Position = UDim2.fromOffset(card.x + 62 * currentScale, cardY + 56 * currentScale)

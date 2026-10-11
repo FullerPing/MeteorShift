@@ -1,21 +1,25 @@
 --!strict
 -- The ORE button: opens a short list of the four ore fields (Config.Debris.Fields) and asks
--- DebrisService to teleport you to the one you pick. It sits just above the FAST WALK button
+-- DebrisService to teleport you to the one you pick. It sits just above the SPRINT button
 -- (FastWalkController places that), hides while a menu is open, and the list closes after a pick.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 local Cartoon = require(script.Parent.Parent.Cartoon)
+local Sfx = require(script.Parent.Parent.Sfx)
+local RewardFX = require(script.Parent.Parent.RewardFX)
 
 local player = Players.LocalPlayer
 local FieldTravelController = Knit.CreateController({ Name = "FieldTravelController" })
 
-local SIZE = 54
-local GAP = 8
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "BackpackOpen" }
+local SIZE = Config.Hud.SideButtons.Size
+local GAP = Config.Hud.SideButtons.Gap
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 local function label(parent: Instance, text: string, size: UDim2, position: UDim2?): TextLabel
 	local item = Instance.new("TextLabel")
@@ -35,6 +39,8 @@ end
 function FieldTravelController:KnitStart()
 	local DebrisService = Knit.GetService("DebrisService")
 	local playerGui = player:WaitForChild("PlayerGui")
+	local scope = Fusion.scoped(Fusion)
+	local hud = UI.hud(scope)
 	local anchor = playerGui:WaitForChild("FastWalk"):WaitForChild("FastWalkButton") :: GuiButton
 
 	local gui = Instance.new("ScreenGui")
@@ -90,7 +96,17 @@ function FieldTravelController:KnitStart()
 		label(row, string.upper(field.Name), UDim2.new(1, -16, 1, -12), UDim2.fromOffset(8, 6))
 		row.Activated:Connect(function()
 			panel.Visible = false
-			task.spawn(function() DebrisService:TravelTo(field.Id) end)
+			task.spawn(function()
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local from = root and root.Position
+				local ok, moved = pcall(function() return DebrisService:TravelTo(field.Id) end)
+				if ok and moved then
+					-- a puff where you were and one where you land
+					Sfx.play("Teleport")
+					if from then RewardFX.poof(from, field.Color) end
+					RewardFX.poofHere(field.Color)
+				end
+			end)
 		end)
 	end
 
@@ -101,12 +117,18 @@ function FieldTravelController:KnitStart()
 		return false
 	end
 	local function refresh()
-		button.Position = UDim2.new(anchor.Position.X.Scale, anchor.Position.X.Offset,
-			anchor.Position.Y.Scale, anchor.Position.Y.Offset - SIZE - GAP)
+		-- Config.HudEdit: "Ore" nudges it from its spot above SPRINT, and hides it
+		local layout = Fusion.peek(hud)
+		local rect = HudLayout.nudged(layout, "Ore", {
+			x = anchor.Position.X.Offset, y = anchor.Position.Y.Offset - SIZE - GAP, w = SIZE, h = SIZE,
+		})
+		button.Position = UDim2.fromOffset(rect.x, rect.y)
+		button.Size = UDim2.fromOffset(rect.w, rect.h)
 		local hidden = panelOpen()
-		button.Visible = not hidden
-		if hidden then panel.Visible = false end
+		button.Visible = not hidden and not HudLayout.isHidden(layout, "Ore")
+		if hidden or not button.Visible then panel.Visible = false end
 	end
+	scope:Observer(hud):onChange(refresh)
 	button.Activated:Connect(function() panel.Visible = not panel.Visible end)
 	anchor:GetPropertyChangedSignal("Position"):Connect(refresh)
 	for _, flag in PANEL_FLAGS do player:GetAttributeChangedSignal(flag):Connect(refresh) end

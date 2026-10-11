@@ -1,7 +1,8 @@
 --!strict
 -- Pickaxe and backpack upgrades (spec §7.1, §7.2, reworked): one of each for the whole
--- game. Stats level up with cash; evolving to the next tier (cash, and Core Shards at the
--- top tiers) raises their cap (Shared.Gear). The server checks the cap and the price.
+-- game. Each has a single level that goes up with cash; evolving to the next tier (cash, and
+-- Core Shards at the top tiers) raises its cap (Shared.Gear). Cash prices carry the player's
+-- rebirth price inflation (Shared.Rebirth.priceMult). The server checks the cap and the price.
 -- Plot station upgrades are UpgradeService.
 --
 -- The shop opens from the HUD. A Pickaxe Shop saved in the town square opens it too
@@ -20,6 +21,8 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Price = require(ReplicatedStorage.Shared.Price)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local EquipmentModels = require(ReplicatedStorage.Shared.EquipmentModels)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Levels = require(ReplicatedStorage.Shared.Levels)
@@ -29,14 +32,14 @@ local ShopService = Knit.CreateService({
 	Name = "ShopService",
 	Client = {
 		Purchased = Knit.CreateSignal(), -- (kind, tier) when an item evolves
-		Upgraded = Knit.CreateSignal(), -- (kind, stat, level) when a stat levels up
+		Upgraded = Knit.CreateSignal(), -- (kind, level) when an item levels up
 		Notice = Knit.CreateSignal(), -- (text)
 		Open = Knit.CreateSignal(), -- () the player used the shop in town
 	},
 })
 
 ShopService.ItemBought = Signal.new() -- (player, kind, tier) when an item evolves
-ShopService.StatUpgraded = Signal.new() -- (player, kind, stat, level, cash) when a stat levels up
+ShopService.StatUpgraded = Signal.new() -- (player, kind, level, cash) when an item levels up
 
 export type Kind = "pickaxe" | "backpack"
 
@@ -80,11 +83,11 @@ function ShopService:ApplyPickaxe(player: Player)
 	end
 end
 
-local STATS_KEY = { pickaxe = "pickaxeStats", backpack = "backpackStats" }
+local LEVEL_KEY = { pickaxe = "pickaxeLevel", backpack = "backpackLevel" }
 
--- Evolves the pickaxe or backpack to its next tier (Shared.Gear): the Gate stat has to be at
+-- Evolves the pickaxe or backpack to its next tier (Shared.Gear): the level has to be at
 -- the tier's cap, then it costs the next tier's cash and Core Shards. Returns true when it went
--- through. Stat levels stay as they are; the new tier raises their cap.
+-- through. The new tier starts over at level 1 and has more levels.
 function ShopService:Evolve(player: Player, kind: Kind): boolean
 	local entry = CATALOG[kind]
 	local data = PlayerStateService:Get(player)
@@ -92,15 +95,14 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 		return false
 	end
 	local current = data[entry.Key] :: number
-	local evolution = Gear.evolution(kind, current, data[STATS_KEY[kind]])
+	local evolution = Gear.evolution(kind, current, data[LEVEL_KEY[kind]], Rebirth.priceMult(data.rebirths))
 	if not evolution then
 		self.Client.Notice:Fire(player, "Your " .. kind .. " is already fully evolved.")
 		return false
 	end
 	local item = entry.List[evolution.tier]
 	if not evolution.ready then
-		local gate = Config.Gear[if kind == "pickaxe" then "Pickaxe" else "Backpack"]
-		self.Client.Notice:Fire(player, string.format("Level %s to %d before evolving to the %s.", string.lower(gate.Names[gate.Gate]), Gear.cap(current), item.Name))
+		self.Client.Notice:Fire(player, string.format("Reach level %d before evolving to the %s.", Gear.cap(current), item.Name))
 		return false
 	end
 	local levelNeeded = Levels.evolveLevel(evolution.tier)
@@ -117,6 +119,7 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 	data.cash -= evolution.cost
 	data.shards -= evolution.shards
 	data[entry.Key] = evolution.tier
+	data[LEVEL_KEY[kind]] = Gear.levelsForTier(evolution.tier)
 	self:ApplyPickaxe(player)
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Purchased:Fire(player, kind, evolution.tier)
@@ -124,15 +127,14 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 	return true
 end
 
--- Buys one level of a stat (Shared.Gear) for cash, up to the tier's cap.
-function ShopService:UpgradeStat(player: Player, kind: Kind, stat: string): boolean
+-- Buys one level (Shared.Gear) for cash, up to the tier's cap.
+function ShopService:UpgradeLevel(player: Player, kind: Kind): boolean
 	local entry = CATALOG[kind]
 	local data = PlayerStateService:Get(player)
 	if not entry or not data then
 		return false
 	end
-	local stats = data[STATS_KEY[kind]]
-	local level = stats[stat]
+	local level = data[LEVEL_KEY[kind]]
 	if type(level) ~= "number" then
 		return false
 	end
@@ -142,7 +144,7 @@ function ShopService:UpgradeStat(player: Player, kind: Kind, stat: string): bool
 		self.Client.Notice:Fire(player, if upcoming then "Evolve to the " .. upcoming.Name .. " to keep leveling this." else "Fully upgraded.")
 		return false
 	end
-	local price = Gear.price(kind, stat, level)
+	local price = Gear.price(kind, tier, level, Rebirth.priceMult(data.rebirths))
 	if not price then
 		return false
 	end
@@ -153,13 +155,13 @@ function ShopService:UpgradeStat(player: Player, kind: Kind, stat: string): bool
 	end
 
 	data.cash -= price
-	stats[stat] = level + 1
+	data[LEVEL_KEY[kind]] = level + 1
 	if kind == "pickaxe" then
 		self:ApplyPickaxe(player) -- the tool tip shows the stats
 	end
 	PlayerStateService:ReplicateNow(player)
-	self.Client.Upgraded:Fire(player, kind, stat, level + 1)
-	self.StatUpgraded:Fire(player, kind, stat, level + 1, price)
+	self.Client.Upgraded:Fire(player, kind, level + 1)
+	self.StatUpgraded:Fire(player, kind, level + 1, price)
 	return true
 end
 
@@ -173,15 +175,15 @@ function ShopService.Client:Evolve(player: Player, kind: Kind): boolean
 	return self.Server:Evolve(player, kind)
 end
 
-function ShopService.Client:Upgrade(player: Player, kind: Kind, stat: string): boolean
-	-- The shop's +10 sends sequential single-level requests, so keep this gate short.
+function ShopService.Client:Upgrade(player: Player, kind: Kind): boolean
+	-- The shop's 10x and MAX send sequential single-level requests, so keep this gate short.
 	local allowed, stamp = RequestGate.check(lastUpgradeRequest[player], os.clock(), 0.02)
 	lastUpgradeRequest[player] = stamp
 	if not allowed then return false end
-	if typeof(kind) ~= "string" or not CATALOG[kind] or typeof(stat) ~= "string" then
+	if typeof(kind) ~= "string" or not CATALOG[kind] then
 		return false
 	end
-	return self.Server:UpgradeStat(player, kind, stat)
+	return self.Server:UpgradeLevel(player, kind)
 end
 
 function ShopService:_connectTownShop()
@@ -282,6 +284,13 @@ function ShopService:KnitStart()
 	end
 	DataService.ProfileLoaded:Connect(function(player)
 		self:ApplyPickaxe(player)
+		-- profiles converted from the four-stat gear (Lib.GearMigration) hear about the refund once
+		local data = PlayerStateService:Get(player)
+		local refund = if data and data.flags then data.flags.gearRefund else nil
+		if type(refund) == "number" and refund > 0 then
+			data.flags.gearRefund = nil
+			self.Client.Notice:Fire(player, string.format("Gear upgrades are now one level. You got %s back for the Speed, Reach and Crit levels you bought.", Format.cash(refund)))
+		end
 	end)
 
 	task.spawn(self._connectTownShop, self)

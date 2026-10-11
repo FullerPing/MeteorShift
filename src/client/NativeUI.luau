@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
+local HudEditConfig = require(ReplicatedStorage.Shared.Config.HudEdit)
 local Sfx = require(script.Parent.Sfx)
 local MenuSkin = require(script.Parent.MenuSkin)
 local NativeUI = {}
@@ -93,6 +94,12 @@ function NativeUI.get(name: string, prepare: ((ScreenGui) -> ())?): ScreenGui
 	end
 	return gui :: ScreenGui
 end
+-- A menu authored in StarterGui is used as is; a place that has none yet gets one built from its NativeMenus module.
+function NativeUI.getOrBuild(name: string, build: () -> ScreenGui, prepare: ((ScreenGui) -> ())?): ScreenGui
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	if not playerGui:FindFirstChild(name) then build().Parent = playerGui end
+	return NativeUI.get(name, prepare)
+end
 function NativeUI.enable(button: GuiButton, enabled: boolean, color: Color3)
 	button.Active, button.Selectable, button.AutoButtonColor = enabled, enabled, enabled
 	button.BackgroundColor3 = if enabled then color else Color3.fromRGB(29, 30, 35)
@@ -103,9 +110,10 @@ function NativeUI.enable(button: GuiButton, enabled: boolean, color: Color3)
 end
 function NativeUI.hudLayout(): HudLayout.Layout
 	local p = Players.LocalPlayer
-	return HudLayout.compute(if workspace.CurrentCamera then workspace.CurrentCamera.ViewportSize else Vector2.new(1280, 720),
+	-- with Config.HudEdit applied, so the menu buttons follow the same moves and hides as the HUD cards
+	return HudLayout.applyEdits(HudLayout.compute(if workspace.CurrentCamera then workspace.CurrentCamera.ViewportSize else Vector2.new(1280, 720),
 		UserInputService.TouchEnabled, GuiService:GetGuiInset().Y, p:GetAttribute("FoundryExpanded") == true,
-		p:GetAttribute("HudNotificationActive") == true, p:GetAttribute("HudRewardNotificationActive") == true)
+		p:GetAttribute("HudNotificationActive") == true, p:GetAttribute("HudRewardNotificationActive") == true), HudEditConfig)
 end
 function NativeUI.onLayoutChanged(callback: (HudLayout.Layout) -> ()): () -> ()
 	local connections: { RBXScriptConnection } = {}

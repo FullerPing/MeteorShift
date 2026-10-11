@@ -1,0 +1,44 @@
+--!strict
+-- What a debris rock pays by the ore field it stands in (Config.Debris.Fields). A rock outside a field, or in an
+-- unknown one, is plain filler: Config.Debris.Hp hits and the default ore at Config.Debris.YieldFraction.
+
+local Debris = require(script.Parent.Config.Debris)
+local FieldTravel = require(script.Parent.FieldTravel)
+local Income = require(script.Parent.Income)
+
+local DebrisField = {}
+
+export type Reward = Debris.Reward
+
+-- The reward of the field named `id`, or nil for filler
+function DebrisField.reward(id: any): Debris.Reward?
+	local field = FieldTravel.find(id)
+	return if field then field.Reward else nil
+end
+
+-- Hits a rock takes to break for the player it is sized for
+function DebrisField.hits(reward: Debris.Reward?): number
+	return if reward then reward.Hp else Debris.Hp
+end
+
+-- Cash a cash rock pays: its seconds of the breaker's expected income, between its floor and its ceiling
+-- (a share of the next rebirth's cost). Zero for any other kind of rock.
+function DebrisField.cash(reward: Debris.Reward?, perSecond: number, rebirthCost: number): number
+	if not reward or reward.Kind ~= "Cash" then
+		return 0
+	end
+	return Income.grant(reward.Seconds or 0, perSecond, reward.CashFloor or 0, rebirthCost * (reward.CeilingShare or 0))
+end
+
+-- The ore and per-hit multiplier a rock drops, with `yieldShare` the part of a full hit the player's level
+-- lets an ore rock's ore yield (Levels.oreYield). A cash rock drops no ore; filler drops the default ore.
+function DebrisField.ore(reward: Debris.Reward?, yieldShare: number): (string?, number)
+	if reward and reward.Kind == "Cash" then
+		return nil, 0
+	elseif reward and reward.Ore then
+		return reward.Ore, (reward.OreMult or Debris.YieldFraction) * yieldShare
+	end
+	return Debris.Ore, Debris.YieldFraction
+end
+
+return DebrisField

@@ -34,6 +34,8 @@ function Settings.build(): ScreenGui
 		{ name = "HudShowEventTips", label = "Meteor objective", enabled = true },
 		{ name = "ReduceCameraShake", label = "Reduce camera shake", enabled = false },
 		{ name = "ReduceEffects", label = "Reduce effects", enabled = false },
+		{ name = "MusicOn", label = "Music", enabled = true },
+		{ name = "SfxOn", label = "Sound effects", enabled = true },
 	} do
 		local row = UI.button(preferences, preference.name, "", UDim2.new(), UDim2.new(1, -6, 0, 44), UI.CARD)
 		row.LayoutOrder = index
@@ -45,7 +47,7 @@ function Settings.build(): ScreenGui
 		UI.surface(value)
 	end
 	local hint = UI.text(preferences, "Hint", "Preferences apply during this session.", UDim2.new(), UDim2.new(1, -6, 0, 40), true)
-	hint.LayoutOrder, hint.TextSize, hint.TextColor3, hint.TextWrapped = 5, 14, UI.MUTED, true
+	hint.LayoutOrder, hint.TextSize, hint.TextColor3, hint.TextWrapped = 99, 14, UI.MUTED, true
 	local open: ImageButton = UI.create("ImageButton", {
 		Name = "OpenSettings", Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(304, 2),
 		Image = "", BackgroundColor3 = UI.CYAN, BorderSizePixel = 0, ZIndex = 1,

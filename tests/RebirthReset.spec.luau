@@ -15,8 +15,7 @@ return function(t: any)
 	local function profile(): any
 		local data = copy(Template)
 		data.cash, data.shards, data.pickaxeTier, data.backpackTier = 25e6, 87, 7, 6
-		data.pickaxeStats = { power = 64, speed = 61, reach = 30, crit = 12 }
-		data.backpackStats = { capacity = 55 }
+		data.pickaxeLevel, data.backpackLevel = 64, 55
 		data.stations = { hopper = 5, conveyor = 6, refinery = 7, collector = 4 }
 		data.backpack = { iron = 40, frost = 5 }
 		data.hopper = { iron = 140, frost = 20 }
@@ -32,14 +31,15 @@ return function(t: any)
 		return data
 	end
 
-	t.test("cash and equipment return to their starter values", function()
+	t.test("cash resets and gear keeps its tier but drops its level to the tier's first", function()
+		local Gear = require(t.shared.Gear)
 		local data = profile()
 		Reset.apply(data, 1000)
 		t.eq(data.cash, 0)
-		t.eq(data.pickaxeTier, 1)
-		t.eq(data.backpackTier, 1)
-		for stat, level in Template.pickaxeStats do t.eq(data.pickaxeStats[stat], level, "pickaxe " .. stat) end
-		t.eq(data.backpackStats.capacity, 1, "backpack capacity level")
+		t.eq(data.pickaxeTier, 7)
+		t.eq(data.backpackTier, 6)
+		t.eq(data.pickaxeLevel, Gear.levelsForTier(7), "pickaxe level")
+		t.eq(data.backpackLevel, Gear.levelsForTier(6), "backpack level")
 		t.eq(data.lastSeen, 1000, "new offline checkpoint")
 	end)
 
@@ -75,6 +75,18 @@ return function(t: any)
 		local after = MineralIndex.titles(data.index)
 		t.eq(#after, #titles)
 		for i, title in titles do t.eq(after[i], title) end
+	end)
+
+	t.test("pets survive: owned, levels, equipped and egg pity", function()
+		local data = profile()
+		data.pets = { owned = { jetWisp = { level = 7, xp = 30 }, pebblePup = { level = 2, xp = 0 } }, equipped = { "jetWisp" }, hatches = { meteorEgg = 9 }, slots = 2 }
+		local pets = data.pets
+		Reset.apply(data, 1000)
+		t.eq(data.pets, pets, "same pets table")
+		t.eq(data.pets.owned.jetWisp.level, 7)
+		t.eq(data.pets.owned.pebblePup.level, 2)
+		t.eq(data.pets.equipped[1], "jetWisp")
+		t.eq(data.pets.hatches.meteorEgg, 9)
 	end)
 
 	t.test("purchased value, preferences and lifetime history are retained", function()
@@ -139,18 +151,48 @@ return function(t: any)
 		t.eq(data.stations.refinery, 7, "the refinery always survives")
 	end)
 
-	t.test("Head Start rebuilds the gear at a higher tier, held to the player level", function()
+	t.test("Head Start is a floor for gear below it, held to the player level, and never lowers owned gear", function()
 		local Levels = require(t.shared.Levels)
 		local data = profile()
+		data.pickaxeTier, data.backpackTier = 1, 2
 		data.perks = { headStart = 4 }
 		data.level = Levels.evolveLevel(5)
 		Reset.apply(data, 1000)
 		t.eq(data.pickaxeTier, 5)
 		t.eq(data.backpackTier, 5)
+		t.eq(data.pickaxeLevel, require(t.shared.Gear).levelsForTier(5), "the level follows the raised tier, not the old one")
 		local low = profile()
+		low.pickaxeTier, low.backpackTier = 1, 1
 		low.perks = { headStart = 4 }
 		low.level = 1
 		Reset.apply(low, 1000)
 		t.eq(low.pickaxeTier, 4, "level 1 can only hold the tiers that are free")
+		local high = profile()
+		high.perks = { headStart = 4 }
+		high.level = 1
+		Reset.apply(high, 1000)
+		t.eq(high.pickaxeTier, 7, "owned gear above the perk's tier is kept")
+	end)
+
+	t.test("keep everything resets nothing except the overstay counter", function()
+		local data = profile()
+		data.overflow = 5000
+		local before = copy(data)
+		Reset.apply(data, 1000, true)
+		t.eq(data.cash, before.cash)
+		t.eq(data.pickaxeLevel, 64)
+		t.eq(data.backpackLevel, 55)
+		t.eq(data.pickaxeTier, 7)
+		t.eq(data.stations.hopper, 5)
+		t.eq(data.stations.conveyor, 6)
+		t.eq(data.backpack.iron, 40)
+		t.eq(data.hopper.iron, 140)
+		t.eq(data.bars.crystal, 12)
+		t.eq(data.decor.bench, true)
+		t.eq(data.progress, 0.9)
+		t.eq(data.overflow, 0, "already paid out as overstay shards")
+		t.eq(data.lastSeen, 1000)
+		t.eq(data.shards, 87)
+		t.eq(data.rebirths, 3, "the caller adds the rebirth")
 	end)
 end

@@ -19,6 +19,52 @@ return function(t: any)
 		t.ok(result.cycle > 5 * 60 and result.cycle < 7 * 60, "cycle " .. result.cycle)
 	end)
 
+	-- A fresh player's loadout, the way Economy:ExpectedIncome reads it from a profile
+	local function fresh(overrides: any?): any
+		local Pets = require(t.shared.Pets)
+		local stations = Config.Home.Stations
+		local input: any = {
+			orePerHit = Config.Pickaxes[1].OrePerHit,
+			swing = Config.Pickaxes[1].Swing,
+			capacity = Config.Backpacks[1].Capacity,
+			level = 1,
+			pets = Pets.bonuses(Pets.fresh()),
+			lineRate = math.min(stations.conveyor.Levels[1].Rate :: number, stations.refinery.Levels[1].Rate :: number),
+			saleMult = 1,
+		}
+		for key, value in overrides or {} do
+			input[key] = value
+		end
+		return input
+	end
+
+	t.test("expected income of a fresh loadout is the model's own income at the start", function()
+		local income = Pacing.expectedIncome(fresh())
+		t.ok(income.perSecond > 0, "positive")
+		t.near(income.perSecond * 60, result.samples[1].incomePerMinute, 1e-6)
+	end)
+
+	t.test("expected income scales with the sale multiplier and with a bigger loadout", function()
+		local base = Pacing.expectedIncome(fresh()).perSecond
+		t.near(Pacing.expectedIncome(fresh({ saleMult = 2.5 })).perSecond, base * 2.5, 1e-9)
+		-- with a line wide enough that mining is the limit, more mining means more income
+		local open = Pacing.expectedIncome(fresh({ lineRate = 1e6 })).perSecond
+		t.ok(Pacing.expectedIncome(fresh({ lineRate = 1e6, capacity = Config.Backpacks[1].Capacity * 4 })).perSecond > open, "a bigger backpack")
+		t.ok(Pacing.expectedIncome(fresh({ lineRate = 1e6, swing = Config.Pickaxes[1].Swing / 2 })).perSecond > open, "a faster swing")
+		t.ok(Pacing.expectedIncome(fresh({ lineRate = 1e6, orePerHit = Config.Pickaxes[1].OrePerHit * 3 })).perSecond > open, "more ore per hit")
+	end)
+
+	t.test("expected income is held back by the slower of mining and the line", function()
+		local slowLine = Pacing.expectedIncome(fresh({ lineRate = 0.001 }))
+		t.eq(slowLine.limit, "line")
+		t.near(slowLine.bars, 0.001, 1e-12)
+		local fastLine = Pacing.expectedIncome(fresh({ lineRate = 1e6 }))
+		t.eq(fastLine.limit, "mining")
+		t.near(fastLine.bars, fastLine.mining, 1e-12)
+		t.ok(fastLine.perSecond > slowLine.perSecond, "a wider line earns more")
+		t.eq(Pacing.expectedIncome(fresh({ orePerHit = 0 })).perSecond, 0, "no ore, no income")
+	end)
+
 	t.test("lifetime sales reach the Steel price within one cycle of the first meteor cycle ending", function()
 		local steel = result.earnedAt.pickaxe2
 		t.ok(steel ~= nil, "Steel never in reach")
@@ -63,6 +109,35 @@ return function(t: any)
 			local gap = run.rebirthTimes[index] - run.rebirthTimes[index - 1]
 			t.ok(gap <= 30 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
 		end
+	end)
+
+	t.test("each rebirth makes the model's cash prices dearer by Rebirth.priceMult", function()
+		local Rebirth = require(t.shared.Rebirth)
+		local Price = require(t.shared.Price)
+		local run = Pacing.simulate(4 * 3600, { rebirths = 3 })
+		t.ok(#run.rebirthTimes >= 3, "only " .. #run.rebirthTimes .. " rebirths in four hours")
+		local base = Config.Home.Stations.conveyor.Levels[2].Cost
+		local first, afterThird
+		for _, purchase in run.purchases do
+			if purchase.id == "conveyor2" then
+				first = first or purchase
+				if purchase.time > run.rebirthTimes[3] then
+					afterThird = afterThird or purchase
+				end
+			end
+		end
+		t.ok(first ~= nil and afterThird ~= nil, "conveyor level 2 is bought before and after the third rebirth")
+		t.eq((first :: any).cost, base)
+		t.eq((afterThird :: any).cost, Price.scaled(base, Rebirth.priceMult(3)))
+	end)
+
+	t.test("gear tiers survive a rebirth in the model, so a lap starts with the pickaxe it ended with", function()
+		local run = Pacing.simulate(3 * 3600, { rebirths = 2 })
+		t.ok(#run.rebirthTimes >= 2, "needs two rebirths")
+		local before = Pacing.sampleAt(run, run.rebirthTimes[1] - 1)
+		local after = Pacing.sampleAt(run, run.rebirthTimes[1] + 60)
+		t.ok(after.owned.pickaxe >= before.owned.pickaxe, "pickaxe tier " .. before.owned.pickaxe .. " fell to " .. after.owned.pickaxe)
+		t.ok(after.owned.backpack >= before.owned.backpack, "backpack tier fell")
 	end)
 
 	t.test("once the Drill Pick unlocks Ice meteors, the Plasma Pick is affordable within 3 hours", function()

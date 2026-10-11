@@ -9,6 +9,10 @@
 -- again when they respawn, and untouched rocks re-pick every RerollInterval so a
 -- player who just joined or upgraded soon finds rocks sized for them. Tougher
 -- rocks get tinted, glowing flecks.
+--
+-- A rock's Field attribute puts it in one of the ore fields (Config.Debris.Fields), which set its hits and
+-- its reward: cash worth a few seconds of the breaker's expected income (Economy:ExpectedIncome), or a
+-- better ore than iron. Rocks outside a field stay plain iron filler.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,8 +20,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local DebrisField = require(ReplicatedStorage.Shared.DebrisField)
 local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
 local FieldTravel = require(ReplicatedStorage.Shared.FieldTravel)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Levels = require(ReplicatedStorage.Shared.Levels)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
 
@@ -30,6 +38,9 @@ local lastTravel: { [Player]: number } = {}
 
 local NodeService
 local ActivityService
+local PlayerStateService
+local EconomyService
+local RewardService
 
 -- Fleck tint by the tier a rock is sized for; tiers 1-2 keep the flecks as built
 local TIER_TINTS: { [number]: Color3 } = {
@@ -44,6 +55,8 @@ local TIER_TINTS: { [number]: Color3 } = {
 type Rock = {
 	Part: BasePart,
 	Id: number,
+	Reward: DebrisField.Reward?, -- what its field pays, nil for filler
+	Hits: number, -- hits to break for the player it is sized for
 	Flecks: { [BasePart]: { Color: Color3, Material: Enum.Material } },
 }
 
@@ -75,7 +88,7 @@ end
 -- Sizes a rock for a pickaxe (its tier tints the flecks, its Power sets the HP).
 local function size(rock: Rock, tier: number, power: number)
 	rock.Part:SetAttribute("Tier", tier)
-	NodeService:SetMaxHp(rock.Id, Config.Debris.Hp * power)
+	NodeService:SetMaxHp(rock.Id, rock.Hits * power)
 	local tint = TIER_TINTS[tier]
 	for fleck, original in rock.Flecks do
 		fleck.Color = tint or original.Color
@@ -83,38 +96,54 @@ local function size(rock: Rock, tier: number, power: number)
 	end
 end
 
--- Brings a grey stone rock into the bright studded look: plastic, tinted toward the colour of its
--- ore flecks, with the map's studs on top. Rocks keep their drops and HP; this is paint only.
+-- Brings a stone rock into the map's look: tinted toward the colour of its ore flecks, smooth (or studded when
+-- Config.Debris.Rock.Studs is on). Rocks keep their drops and HP; this is paint only.
 local function skin(part: BasePart, flecks: { [BasePart]: any })
 	local fleck = next(flecks)
 	if fleck then
 		part.Color = part.Color:Lerp(fleck.Color, Config.Debris.Rock.TintMix)
 	end
-	part.Material = Enum.Material.Plastic
-	StudSkin.apply(part)
+	if Config.Debris.Rock.Studs then
+		part.Material = Enum.Material.Plastic
+		StudSkin.apply(part)
+	else
+		part.Material = Enum.Material.SmoothPlastic
+	end
 end
 
 function DebrisService:_track(part: BasePart)
+	-- only the ore flecks are tinted by tier; other children (rock chunks) keep their colour
 	local flecks = {}
 	for _, child in part:GetDescendants() do
-		if child:IsA("BasePart") then
+		if child:IsA("BasePart") and child.Name == "OreFleck" then
 			flecks[child] = { Color = child.Color, Material = child.Material }
 		end
 	end
 	skin(part, flecks)
 
+	-- The field a rock stands in (its Field attribute) decides its hits and what it pays
+	local reward = DebrisField.reward(part:GetAttribute("Field"))
+	local hits = DebrisField.hits(reward)
 	local rock: Rock
 	local id = NodeService:Register(part, {
 		Kind = "Debris",
-		MaxHp = Config.Debris.Hp,
+		MaxHp = hits,
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
-		-- The tier changes on untouched rerolls and respawns. Read its current value
-		-- (debris always drops the default ore; the tint only shows how tough a rock is).
-		OreFor = function()
-			return DebrisOre.forTier(part:GetAttribute("Tier") :: number?), Config.Debris.YieldFraction
+		-- Filler always drops the default ore (the tier tint only shows how tough a rock is). A field's rock
+		-- drops its field's ore at the breaker's level, or none when it pays cash.
+		OreFor = function(player: Player)
+			if not reward then
+				return DebrisOre.forTier(part:GetAttribute("Tier") :: number?), Config.Debris.YieldFraction
+			end
+			local data = PlayerStateService:Get(player)
+			local share = if reward.Ore then Levels.oreYield(if data then data.level else 1, reward.Ore) else 1
+			return DebrisField.ore(reward, share)
 		end,
-		OnBroken = function()
+		OnBroken = function(player: Player)
+			if reward then
+				self:_payCash(player, reward)
+			end
 			setVisible(part, false)
 			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()
 				if part.Parent then
@@ -124,9 +153,23 @@ function DebrisService:_track(part: BasePart)
 			end)
 		end,
 	})
-	rock = { Part = part, Id = id, Flecks = flecks }
+	rock = { Part = part, Id = id, Reward = reward, Hits = hits, Flecks = flecks }
 	size(rock, pickPickaxe())
 	table.insert(rocks, rock)
+end
+
+-- A cash rock pays the player who broke it a stretch of their own expected income, so it is as big as
+-- their setup is and a veteran can't farm a field of newcomer-sized rocks.
+function DebrisService:_payCash(player: Player, reward: DebrisField.Reward)
+	local data = PlayerStateService:Get(player)
+	if not data then
+		return
+	end
+	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond, Rebirth.cost(data.rebirths))
+	if cash > 0 then
+		PlayerStateService:AddCash(player, cash)
+		RewardService:Bonus(player, "fieldCash", "+" .. Format.cash(cash))
+	end
 end
 
 -- Re-picks the tier of rocks nobody has hit yet.
@@ -181,6 +224,9 @@ end
 function DebrisService:KnitInit()
 	NodeService = Knit.GetService("NodeService")
 	ActivityService = Knit.GetService("ActivityService")
+	PlayerStateService = Knit.GetService("PlayerStateService")
+	EconomyService = Knit.GetService("EconomyService")
+	RewardService = Knit.GetService("RewardService")
 end
 
 function DebrisService:KnitStart()

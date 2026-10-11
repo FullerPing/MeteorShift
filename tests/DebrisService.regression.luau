@@ -19,7 +19,14 @@ modules.DebrisConfig = modules.Config.Debris
 if fs.isFile("src/shared/DebrisOre.luau") then
 	modules.DebrisOre = load("src/shared/DebrisOre.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
 end
+modules.Income = load("src/shared/Income.luau")
+modules.FieldTravel = load("src/shared/FieldTravel.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
+modules.DebrisField = load("src/shared/DebrisField.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" }, FieldTravel = "FieldTravel", Income = "Income" } } })
 modules.MiningPower = { power = function(tier) return 1.25 ^ (tier - 1) end }
+-- the player's level only matters to what an ore rock yields; stubs keep this harness off the economy modules
+modules.Levels = { oreYield = function(level) return if level >= 5 then 1 else 0.5 end }
+modules.Rebirth = { cost = function() return 1000000 end }
+modules.Format = { cash = function(n) return "$" .. n end }
 
 local passed, failed = 0, 0
 local function eq(actual, expected, message)
@@ -30,8 +37,8 @@ local function test(name, fn)
 	if ok then passed += 1 else failed += 1; print("FAIL " .. name .. ": " .. tostring(err)) end
 end
 
-local function fixture(tier)
-	local state = { tier = tier, hp = 1, maxHp = 1, delayed = {} }
+local function fixture(tier, field)
+	local state = { tier = tier, hp = 1, maxHp = 1, delayed = {}, cash = 0, toasts = {}, level = 1, income = 100 }
 	local node = {}
 	function node:Register(_, def) state.def = def; return 17 end
 	function node:SetMaxHp(id, hp) eq(id, 17); state.hp = hp; state.maxHp = hp end
@@ -41,17 +48,26 @@ local function fixture(tier)
 		GetService = function(name)
 			if name == "NodeService" then return node end
 			if name == "ActivityService" then return { GetActivePickaxes = function() return { { Tier = state.tier, Power = 1.25 ^ (state.tier - 1) } } end } end
+			if name == "PlayerStateService" then
+				return {
+					Get = function() return { level = state.level, rebirths = 0 } end,
+					AddCash = function(_, _, amount) state.cash += amount end,
+				}
+			end
+			if name == "EconomyService" then return { ExpectedIncome = function() return { perSecond = state.income } end } end
+			if name == "RewardService" then return { Bonus = function(_, _, kind, text) table.insert(state.toasts, kind .. ":" .. text) end } end
 			error("Unexpected service " .. name)
 		end,
 	}
-	local shared = { Config = "Config", MiningPower = "MiningPower", DebrisOre = "DebrisOre" }
+	local shared = { Config = "Config", MiningPower = "MiningPower", DebrisOre = "DebrisOre", DebrisField = "DebrisField", FieldTravel = "FieldTravel",
+		Levels = "Levels", Rebirth = "Rebirth", Format = "Format" }
 	local service = load("src/server/Services/DebrisService.luau", {
 		game = { GetService = function(_, name) eq(name, "ReplicatedStorage"); return { Packages = { Knit = "Knit" }, Shared = shared } end },
 		task = { delay = function(_, fn) table.insert(state.delayed, fn) end },
 	})
 	local fleck = { Color = roblox.Color3.fromRGB(176, 152, 112), Material = roblox.Enum.Material.Metal, Transparency = 0 }
 	function fleck:IsA(name) return name == "BasePart" end
-	local attrs = {}
+	local attrs = { Field = field }
 	local part = { Parent = true, Transparency = 0, CanQuery = true, CanCollide = true }
 	function part:GetDescendants() return { fleck } end
 	function part:SetAttribute(name, value) attrs[name] = value end
@@ -104,6 +120,55 @@ test("damaged rocks retain their ore until respawn", function()
 	eq(drop(), "iron")
 	eq(part.CanQuery, true)
 	eq(state.hp, 4 * 1.25 ^ 4, "existing tier HP")
+end)
+
+test("a Rust Works rock pays cash, not ore, and takes its field's hits", function()
+	local _, state, part, _, drop = fixture(1, "RustWorks")
+	eq(drop(), nil, "a cash rock drops no ore")
+	eq(state.maxHp, 4, "Rust Works hits")
+	state.def.OnBroken({})
+	eq(state.cash, 300, "three seconds of a 100-a-second income")
+	eq(#state.toasts, 1)
+	eq(part.CanQuery, false)
+	state.delayed[1]()
+	eq(state.maxHp, 4, "respawn keeps the field's hits")
+end)
+
+test("a Frost Yard rock takes more hits and pays more", function()
+	local _, state = fixture(1, "FrostYard")
+	eq(state.maxHp, 10)
+	state.def.OnBroken({})
+	eq(state.cash, 900)
+end)
+
+test("cash scales with the breaker's income", function()
+	local _, state = fixture(1, "RustWorks")
+	state.income = 1000
+	state.def.OnBroken({})
+	eq(state.cash, 3000)
+end)
+
+test("an ore field rock drops its field's ore, cut by a player level short of it, and pays no cash", function()
+	local _, state, _, _, drop = fixture(1, "SulfurRidge")
+	eq(state.maxHp, 16)
+	local ore, mult = drop()
+	eq(ore, "crystal")
+	eq(mult, 0.3 * 0.5, "level 1 is short of crystal")
+	state.level = 5
+	local _, full = drop()
+	eq(full, 0.3, "at the clearance level the yield is whole")
+	state.def.OnBroken({})
+	eq(state.cash, 0, "ore rocks pay no cash")
+end)
+
+test("a rock without a field, or in an unknown one, is plain filler", function()
+	for _, field in { false, "Nowhere" } do
+		local _, state, _, _, drop = fixture(1, field or nil)
+		eq(drop(), "iron")
+		eq(state.maxHp, 4)
+		state.def.OnBroken({})
+		eq(state.cash, 0)
+	end
 end)
 
 if modules.DebrisOre then

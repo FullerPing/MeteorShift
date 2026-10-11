@@ -3,7 +3,13 @@
 
 local Format = {}
 
-local SUFFIXES = { "", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc" }
+-- Rebirth price inflation and the cash multiplier push late-game numbers past a decillion, so the
+-- table runs to the vigintillion (1e63); anything larger reads as the largest value it can show.
+local SUFFIXES = {
+	"", "K", "M", "B", "T", "Qa", "Qi", "Sx", "Sp", "Oc", "No", "Dc",
+	"Ud", "Dd", "Td", "Qad", "Qid", "Sxd", "Spd", "Ocd", "Nod", "Vg",
+}
+local LARGEST = 999.4 * 10 ^ (3 * (#SUFFIXES - 1)) -- "999Vg": rounds to three digits, never four
 
 local function trimZeros(s: string): string
 	if string.find(s, "%.") then
@@ -19,7 +25,7 @@ function Format.number(n: number): string
 		return "0"
 	end
 	local sign = if n < 0 then "-" else ""
-	local abs = math.abs(n)
+	local abs = math.min(math.abs(n), LARGEST)
 	if abs < 1000 then
 		return sign .. tostring(math.floor(abs))
 	end
@@ -45,6 +51,17 @@ end
 
 function Format.cash(n: number): string
 	return "$" .. Format.number(n)
+end
+
+-- A per-second rate: Format.number would floor 0.5 to "0", so small rates keep a decimal. 0.5 -> "0.5", 12 -> "12"
+function Format.rate(n: number): string
+	if n ~= n or n <= 0 then
+		return "0"
+	end
+	if n >= 10 then
+		return Format.number(n)
+	end
+	return trimZeros(string.format("%.1f", n))
 end
 
 -- 125 -> "2:05"

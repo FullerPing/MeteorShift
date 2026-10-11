@@ -7,6 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local AdminGive = require(script.Parent.Lib.AdminGive)
 local Admins = require(script.Parent.Lib.Admins)
 
 Knit.AddServices(script.Parent.Services)
@@ -22,7 +23,7 @@ Knit.Start()
 		-- Config.Pickaxes and Config.Backpacks; nil leaves it as is) and restyles the
 		-- pickaxe. Returns what the player now has.
 		-- game.ServerStorage.DevGear:Invoke(game.Players:GetPlayers()[1], 5, 8)
-		-- (stat levels start at the first level of the tier, as after evolving)
+		-- (the level starts at the first level of the tier, as after evolving)
 		local function setGear(player: Player, pickaxeTier: number?, backpackTier: number?): string
 			local data = PlayerStateService:Get(player)
 			if not data then
@@ -30,12 +31,12 @@ Knit.Start()
 			end
 			if pickaxeTier then
 				data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
-				data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
+				data.pickaxeLevel = Gear.levelsForTier(data.pickaxeTier)
 				ShopService:ApplyPickaxe(player)
 			end
 			if backpackTier then
 				data.backpackTier = math.clamp(math.floor(backpackTier), 1, #Config.Backpacks)
-				data.backpackStats = Gear.freshBackpackStats(data.backpackTier)
+				data.backpackLevel = Gear.levelsForTier(data.backpackTier)
 			end
 			PlayerStateService:ReplicateNow(player)
 			return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)
@@ -60,7 +61,7 @@ Knit.Start()
 				local data = PlayerStateService:Get(player)
 				if pickaxeTier and data then
 					data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
-					data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
+					data.pickaxeLevel = Gear.levelsForTier(data.pickaxeTier)
 					Knit.GetService("ShopService"):ApplyPickaxe(player)
 				end
 				PlayerStateService:ReplicateNow(player)
@@ -106,9 +107,9 @@ Knit.Start()
 				if not data then
 					return nil
 				end
-				local ownTier, ownStats, ownBackpack = data.backpackTier, data.backpackStats, table.clone(data.backpack)
+				local ownTier, ownLevel, ownBackpack = data.backpackTier, data.backpackLevel, table.clone(data.backpack)
 				data.backpackTier = #Config.Backpacks
-				data.backpackStats = { capacity = Gear.cap(#Config.Backpacks) }
+				data.backpackLevel = Gear.cap(#Config.Backpacks)
 				table.clear(data.backpack)
 
 				local result
@@ -129,7 +130,7 @@ Knit.Start()
 
 				-- always give the player their own backpack back
 				data.backpackTier = ownTier
-				data.backpackStats = ownStats
+				data.backpackLevel = ownLevel
 				table.clear(data.backpack)
 				for oreType, n in ownBackpack do
 					data.backpack[oreType] = n
@@ -195,8 +196,9 @@ Knit.Start()
 		-- Dev chat commands, for Studio and for the user ids in Lib.Admins on a live server (anyone
 		-- else typing them is ignored without a reply). The reply shows as a notice on the HUD.
 		--   /meteor <Iron|Ice|Crystal|Alien>   /pickaxe <1-8>   /backpack <1-8>
+		--   /give <player> cash|shards <amount> | pickaxe|backpack <tier> | pet <pet> [level]   (Lib.AdminGive)
 		local TextChatService = game:GetService("TextChatService")
-		local function chatCommand(alias: string, run: (Player, string?) -> string)
+		local function chatCommand(alias: string, run: (Player, string?, string) -> string)
 			local command = Instance.new("TextChatCommand")
 			command.Name = "Dev" .. string.sub(alias, 2)
 			command.PrimaryAlias = alias
@@ -206,7 +208,7 @@ Knit.Start()
 				end
 				local player = Players:GetPlayerByUserId(source.UserId)
 				if player then
-					local reply = run(player, string.match(text, "^%S+%s+(%S+)"))
+					local reply = run(player, string.match(text, "^%S+%s+(%S+)"), text)
 					print("[Dev] " .. player.Name .. " " .. text .. ": " .. reply)
 					ShopService.Client.Notice:Fire(player, reply)
 				end
@@ -223,6 +225,38 @@ Knit.Start()
 		chatCommand("/backpack", function(player, tier)
 			local number = tonumber(tier)
 			return if number then setGear(player, nil, number) else "Usage: /backpack 1-" .. #Config.Backpacks
+		end)
+		-- Gives another player in this server cash, shards, a gear tier or a pet. The giver is told what happened;
+		-- the recipient gets a notice. Gifts only add (AdminGive.apply), so nothing is taken away.
+		chatCommand("/give", function(player, _first, text)
+			local targetName, gift, problem = AdminGive.parse(text)
+			if not targetName or not gift then
+				return problem or AdminGive.Usage
+			end
+			local list = Players:GetPlayers()
+			local selfIndex = table.find(list, player)
+			local index, reason = AdminGive.findPlayer(targetName, list, selfIndex)
+			if not index then
+				return reason or "No such player"
+			end
+			local recipient = list[index]
+			local data = PlayerStateService:Get(recipient)
+			if not data then
+				return recipient.Name .. " has no profile loaded yet"
+			end
+			local result = AdminGive.apply(data, gift, PlayerStateService:PetSlots(recipient))
+			if not result.changed then
+				return recipient.Name .. " " .. result.text
+			end
+			if result.gear then
+				ShopService:ApplyPickaxe(recipient)
+			end
+			PlayerStateService:ReplicateNow(recipient)
+			if recipient ~= player then
+				ShopService.Client.Notice:Fire(recipient, player.DisplayName .. " gave you " .. result.text)
+			end
+			print(string.format("[Give] %s (%d) gave %s (%d) %s", player.Name, player.UserId, recipient.Name, recipient.UserId, result.text))
+			return "Gave " .. recipient.Name .. " " .. result.text
 		end)
 	end)
 	:catch(warn)

@@ -56,7 +56,7 @@ function ActivityService:GetActivePickaxes(): { any }
 	if RunService:IsStudio() and typeof(fake) == "string" then
 		for tier in string.gmatch(fake, "%d+") do
 			local clamped = math.clamp(tonumber(tier) :: number, 1, #Config.Pickaxes)
-			table.insert(pickaxes, Gear.pickaxe(clamped, Gear.freshPickaxeStats(clamped)))
+			table.insert(pickaxes, Gear.pickaxe(clamped, Gear.levelsForTier(clamped)))
 		end
 	end
 	return pickaxes

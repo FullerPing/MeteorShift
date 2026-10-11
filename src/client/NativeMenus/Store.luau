@@ -6,17 +6,22 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local Menu = {}
 local Monetization = Config.Monetization
+local Sections = Config.Store.Sections
 local GOLD, MINT = Color3.fromRGB(255, 219, 100), Color3.fromRGB(139, 240, 195)
 local DARK = Color3.fromRGB(29, 30, 35)
 local ICONS: { [string]: string } = {
 	TwoXOre = "ore", BiggerBackpack = "backpack", OfflineHours = "bars", AutoDeposit = "foundry", VIP = "premium",
-	CallMeteor = "meteor", Overclock = "foundry", TipJar = "premium", PocketChange = "coin", PetTreat = "premium",
-	MiniOverclock = "foundry", OreRush = "ore", PetFeast = "premium", CashBundle = "coin", ExtraPetSlot = "plus",
+	CallMeteor = "meteor", Overclock = "foundry", TipJar = "premium", PocketChange = "coin",
+	MiniOverclock = "foundry", OreRush = "ore", CashBundle = "coin", PetSlot = "plus",
+	TwoXCash = "coin", StarterPack = "bars", PetMax = "pets",
+	BossMeteor = "meteorAlien", Shards50 = "crystal", Shards250 = "crystal", Shards1000 = "crystal", RebirthKeep = "rebirth",
 }
 local ACCENTS: { [string]: Color3 } = {
 	TwoXOre = GOLD, BiggerBackpack = NativeUI.CYAN, OfflineHours = MINT, AutoDeposit = MINT, VIP = GOLD,
-	CallMeteor = NativeUI.ORANGE, Overclock = NativeUI.CYAN, TipJar = MINT, PocketChange = GOLD, PetTreat = NativeUI.CYAN,
-	MiniOverclock = NativeUI.CYAN, OreRush = GOLD, PetFeast = NativeUI.ORANGE, CashBundle = GOLD, ExtraPetSlot = MINT,
+	CallMeteor = NativeUI.ORANGE, Overclock = NativeUI.CYAN, TipJar = MINT, PocketChange = GOLD,
+	MiniOverclock = NativeUI.CYAN, OreRush = GOLD, CashBundle = GOLD, PetSlot = MINT,
+	TwoXCash = GOLD, StarterPack = MINT, PetMax = NativeUI.ORANGE,
+	BossMeteor = NativeUI.ORANGE, Shards50 = NativeUI.CYAN, Shards250 = NativeUI.CYAN, Shards1000 = NativeUI.CYAN, RebirthKeep = MINT,
 }
 
 local function plainBorder(parent: Instance)
@@ -31,10 +36,11 @@ local function icon(parent: Instance, name: string, kind: string, position: UDim
 	}, parent)
 end
 
-local function card(parent: Instance, key: string, order: number, kind: string, definition: any)
+local function card(parent: Instance, key: string, order: number, kind: string, definition: any, wide: boolean)
 	local accent = ACCENTS[key] or NativeUI.CYAN
 	local frame = NativeUI.create("Frame", { Name = key, LayoutOrder = order, Size = UDim2.fromOffset(272, 392), BackgroundColor3 = NativeUI.CARD, BorderSizePixel = 0 }, parent)
 	plainBorder(frame)
+	frame:SetAttribute("Wide", wide)
 	local kindText = NativeUI.text(frame, "Kind", if kind == "pass" then "GAME PASS" else "PRODUCT", UDim2.fromOffset(4, 8), UDim2.new(1, -8, 0, 14), true)
 	kindText.Font, kindText.TextSize, kindText.TextColor3, kindText.TextXAlignment = Enum.Font.GothamBold, 10, accent, Enum.TextXAlignment.Center
 	local well = NativeUI.create("Frame", {
@@ -65,6 +71,7 @@ end
 function Menu.build(): ScreenGui
 	local gui: ScreenGui = NativeUI.create("ScreenGui", { Name = "Store", ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 23 }, nil)
 	gui:SetAttribute("NativePrefab", true)
+	gui:SetAttribute("StoreLayout", 2) -- sectioned page with a tab strip; an older authored copy lacks it
 	local nav = NativeUI.button(gui, "StoreButton", "", UDim2.fromOffset(1112, 502), UDim2.fromOffset(120, 108), Color3.fromRGB(255, 207, 55))
 	NativeUI.create("UIScale", { Name = "LayoutScale", Scale = 1 }, nav)
 	icon(nav, "Icon", "store", UDim2.new(0.13, 0, 0.02, 0), UDim2.fromScale(0.74, 0.74))
@@ -87,15 +94,42 @@ function Menu.build(): ScreenGui
 	close.AnchorPoint = Vector2.new(1, 0)
 	icon(close, "Icon", "close", UDim2.fromOffset(10, 10), UDim2.fromOffset(24, 24)).ZIndex = 5
 	local list = NativeUI.create("ScrollingFrame", {
-		Name = "List", Position = UDim2.fromOffset(14, 112), Size = UDim2.new(1, -28, 1, -126),
-		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.fromOffset(0, 2436), ScrollingDirection = Enum.ScrollingDirection.Y,
-		ScrollBarThickness = 5, ScrollBarImageColor3 = GOLD, VerticalScrollBarInset = Enum.ScrollBarInset.Always,
+		Name = "List", Position = UDim2.fromOffset(14, 112), Size = UDim2.new(1, -28 - 104, 1, -126),
+		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 5, ScrollBarImageColor3 = GOLD,
+		VerticalScrollBarInset = Enum.ScrollBarInset.Always,
 	}, panel)
 	NativeUI.create("UICorner", { CornerRadius = UDim.new(0, 4) }, list)
 	NativeUI.create("UIPadding", { Name = "ListPadding", PaddingLeft = UDim.new(0, 12), PaddingTop = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12) }, list)
-	NativeUI.create("UIGridLayout", { Name = "Grid", FillDirection = Enum.FillDirection.Horizontal, FillDirectionMaxCells = 3, HorizontalAlignment = Enum.HorizontalAlignment.Center, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.fromOffset(272, 392), SortOrder = Enum.SortOrder.LayoutOrder }, list)
-	for order, key in Monetization.PassOrder do card(list, key, order, "pass", Monetization.Passes[key]) end
-	for order, key in Monetization.ProductOrder do card(list, key, #Monetization.PassOrder + order, "product", Monetization.Products[key]) end
+	NativeUI.create("UIListLayout", { Name = "Sections", Padding = UDim.new(0, 16), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, list)
+	-- One titled section per Config.Store entry: its cards sit in a grid under the title
+	for index, section in Sections do
+		local frame = NativeUI.create("Frame", { Name = "Section_" .. section.Id, LayoutOrder = index, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, list)
+		NativeUI.create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, frame)
+		local heading = NativeUI.text(frame, "SectionTitle", "-- " .. section.Title .. " --", UDim2.new(), UDim2.new(1, 0, 0, 40))
+		heading.TextSize, heading.TextXAlignment, heading.LayoutOrder = 32, Enum.TextXAlignment.Center, 0
+		local cards = NativeUI.create("Frame", { Name = "Cards", LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1 }, frame)
+		NativeUI.create("UIGridLayout", { Name = "Grid", FillDirection = Enum.FillDirection.Horizontal, FillDirectionMaxCells = 3, HorizontalAlignment = Enum.HorizontalAlignment.Center, CellPadding = UDim2.fromOffset(12, 12), CellSize = UDim2.fromOffset(272, 392), SortOrder = Enum.SortOrder.LayoutOrder }, cards)
+		for order, key in section.Keys do
+			local pass = Monetization.Passes[key]
+			card(cards, key, order, if pass then "pass" else "product", pass or Monetization.Products[key], section.Style == "wide")
+		end
+	end
+	-- The tab strip on the right: one button per section that has a tab, jumping the page to it
+	local tabs = NativeUI.create("ScrollingFrame", {
+		Name = "Tabs", Position = UDim2.new(1, -14 - 94, 0, 112), Size = UDim2.new(0, 94, 1, -126), BackgroundTransparency = 1, BorderSizePixel = 0,
+		CanvasSize = UDim2.fromOffset(0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.Y,
+	}, panel)
+	NativeUI.create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center }, tabs)
+	NativeUI.create("UIPadding", { PaddingTop = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12) }, tabs)
+	for index, section in Sections do
+		if section.Tab then
+			local tab = NativeUI.create("TextButton", { Name = "Tab_" .. section.Id, LayoutOrder = index, Size = UDim2.fromOffset(88, 64), Text = "", AutoButtonColor = false, BackgroundTransparency = 1, ZIndex = 4 }, tabs)
+			icon(tab, "Icon", section.Icon, UDim2.new(0.5, -17, 0, 5), UDim2.fromOffset(34, 34)).ZIndex = 6
+			local caption = NativeUI.text(tab, "Caption", section.Tab, UDim2.new(0, 0, 1, -22), UDim2.new(1, 0, 0, 18))
+			caption.TextSize, caption.TextXAlignment, caption.ZIndex = 14, Enum.TextXAlignment.Center, 6
+		end
+	end
 	return gui
 end
 

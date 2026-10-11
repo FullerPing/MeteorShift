@@ -16,6 +16,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Aim = require(ReplicatedStorage.Shared.Aim)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Sfx = require(script.Parent.Parent.Sfx)
+local RewardFX = require(script.Parent.Parent.RewardFX)
 
 local player = Players.LocalPlayer
 
@@ -47,13 +48,16 @@ type SparkSlot = { anchor: BasePart, emitter: ParticleEmitter, sound: Sound }
 local sparkPool: { SparkSlot } = {}
 local nextSparkSlot = 1
 local hitVariant = false -- alternates the two hit sounds
+-- Ore pickups in quick succession pop at a rising pitch (resets after a short pause)
+local pickupStreak = 0
+local lastPickup = 0
 local watchedNodes: { [BasePart]: boolean } = {} -- nodes already listening for their Hp to reach 0
 
 local floaters: { BasePart } = {} -- oldest first
 local oreChunks: { BasePart } = {} -- oldest first
 
 -- Any primary menu open blocks mining (each menu sets its own attribute on the player)
-local MENU_FLAGS = { "ShopOpen", "SettingsOpen", "RefineryOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "HatchOpen" }
+local MENU_FLAGS = { "ShopOpen", "SettingsOpen", "RefineryOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "HatchOpen", "IntroOpen" }
 local function menuOpen(): boolean
 	for _, flag in MENU_FLAGS do
 		if player:GetAttribute(flag) then
@@ -229,6 +233,7 @@ local function sparkSlot(): SparkSlot
 		local sound = Instance.new("Sound")
 		sound.SoundId = Config.Sounds.HitA.Id
 		sound.Volume = Config.Sounds.HitA.Volume
+		sound.SoundGroup = Sfx.group("SFX")
 		sound.Parent = anchor
 		anchor.Parent = workspace.CurrentCamera
 
@@ -239,11 +244,11 @@ local function sparkSlot(): SparkSlot
 	return slot :: SparkSlot
 end
 
-local function sparks(position: Vector3, color: Color3)
+local function sparks(position: Vector3, color: Color3, count: number?)
 	local slot = sparkSlot()
 	slot.anchor.Position = position
 	slot.emitter.Color = ColorSequence.new(color, Color3.fromRGB(255, 220, 140))
-	slot.emitter:Emit(14)
+	slot.emitter:Emit(count or 14)
 	hitVariant = not hitVariant
 	local entry = if hitVariant then Config.Sounds.HitA else Config.Sounds.HitB
 	slot.sound.SoundId = entry.Id
@@ -311,6 +316,10 @@ local function oreFlyIn(from: Vector3, amount: number, oreType: string)
 		return
 	end
 	local color = chunkColor(oreType)
+	local now = os.clock()
+	pickupStreak = if now - lastPickup < 1.2 then math.min(pickupStreak + 1, 10) else 0
+	lastPickup = now
+	local pitch = 1 + pickupStreak * 0.06
 	for i = 1, math.clamp(amount, 1, 5) do
 		local chunk = Instance.new("Part")
 		chunk.Anchored = true
@@ -330,6 +339,7 @@ local function oreFlyIn(from: Vector3, amount: number, oreType: string)
 		)
 		tween.Completed:Once(function()
 			untrack(oreChunks, chunk)
+			if i == 1 then Sfx.play("OrePickup", nil, nil, pitch) end
 		end)
 		tween:Play()
 	end
@@ -385,6 +395,7 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 		return
 	end
 	playSlash(tool)
+	Sfx.play("Swing", root)
 
 	local target, hitPoint = findTarget(root, mode)
 	if not target then
@@ -418,6 +429,13 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 		local ok, damage, crit = NodeService:Swing(id)
 		if ok and damage then
 			MiningController.Hit:Fire(target)
+			if crit then
+				-- a crit rings like an anvil, throws a bigger shower of sparks and kicks the camera
+				Sfx.play("CritHit", target)
+				Sfx.play("CritSparkle")
+				sparks(position, Color3.fromRGB(255, 120, 70), 30)
+				RewardFX.critPunch()
+			end
 			-- a crit (Shared.Gear) pops a bigger, redder number
 			floater(
 				position,
@@ -508,6 +526,10 @@ function MiningController:KnitStart()
 			oreFlyIn(part.Position, amount, oreType)
 			-- Rich Vein and Super Vein hits (Config.Hooks) get a bigger, gold number
 			local text = "+" .. Format.number(amount) .. " ore"
+			if jackpot then
+				Sfx.play("Bonus", nil, nil, if jackpot == "super" then 0.9 else 1.1)
+				RewardFX.burst(Config.RewardFX.Colors.Bonus, if jackpot == "super" then 1 else 0.6)
+			end
 			if jackpot == "super" then
 				floater(part.Position + Vector3.new(0, 3, 0), "SUPER VEIN! " .. text, Color3.fromRGB(255, 214, 64), 34)
 			elseif jackpot == "rich" then

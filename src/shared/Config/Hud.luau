@@ -23,8 +23,8 @@ Hud.MinTouch = 44
 Hud.EdgeMargin = 24
 
 -- HUD buttons in top-to-bottom / left-to-right order
-Hud.ButtonOrder = { "SHOP", "INDEX", "REBIRTH", "STORE" }
-Hud.DesktopButtonOrder = { "SHOP", "REBIRTH", "STORE" }
+Hud.ButtonOrder = { "SHOP", "PETS", "INDEX", "REBIRTH", "STORE" }
+Hud.DesktopButtonOrder = { "SHOP", "PETS", "REBIRTH", "STORE" }
 
 -- Mouse layout: the Figma navigation column on the left. Base units, scaled by
 -- the HUD scale, with buttons kept at least MinTouch tall.
@@ -63,7 +63,7 @@ Hud.LeftCards = {
 	Gap = 6,
 	Resources = { Width = 250, Height = 116, Bottom = 18 },
 	Equipment = { Width = 88, Height = 88 },
-	Production = { Width = 400, Height = 82, ExpandedHeight = 322, Bottom = 16 },
+	Production = { Width = 218, Height = 84, ExpandedHeight = 322, Bottom = 16 },
 }
 Hud.Backpack = { Width = 230, Height = 86, Right = 24, Bottom = 18 }
 Hud.Training = { Width = 332, Height = 125, Gap = 14 }
@@ -71,19 +71,22 @@ Hud.SettingsSize = 44
 -- Mouse layouts: the player level badge in the top-left corner under the Roblox
 -- top bar (base units). It shrinks to clear the clock and is dropped below
 -- MinHeight px; touch and cramped screens show the level on the wallet card.
-Hud.Level = { Width = 360, Height = 96, Top = 10, MinHeight = 48 }
+Hud.Level = { Width = 316, Height = 84, Top = 10, MinHeight = 48 }
 
 -- Desktop reference layout. Touch and portrait retain their authored geometry.
 Hud.Desktop = {
+	-- the menu buttons (left column and INDEX on the right) are drawn at this share of their base size
+	ButtonScale = 0.88,
 	Timer = { Width = 560, Height = 108, Top = 28 },
 	LeftCards = {
 		X = 24,
 		Gap = 6,
 		Resources = { Width = 292, Height = 116, Bottom = 18 },
 		Equipment = { Width = 88, Height = 88 },
-		Production = { Width = 550, Height = 116, ExpandedHeight = 356, Bottom = 16 },
+		-- foundry and backpack are drawn at 0.88 of their 300 x 116 and 292 x 116 artwork
+		Production = { Width = 264, Height = 102, ExpandedHeight = 313, Bottom = 16 },
 	},
-	Backpack = { Width = 292, Height = 116, Right = 24, Bottom = 18 },
+	Backpack = { Width = 257, Height = 102, Right = 24, Bottom = 18 },
 }
 
 -- Roblox's own touch controls, which the HUD has to keep clear of. Mirrors TouchGui: the
@@ -120,6 +123,9 @@ Hud.Mine = {
 	FaceTurnRate = 18,
 	FaceHold = 0.35,
 }
+
+-- The round SPRINT button and the ORE button stacked above it (real pixels)
+Hud.SideButtons = { Size = 54, Gap = 8 }
 
 -- Panels (shop, index, rebirth, store): margin kept above and below, and the smallest scale
 Hud.Panel = { Margin = 8, MinScale = 0.35, SideMargin = 12 }

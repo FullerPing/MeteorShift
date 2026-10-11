@@ -17,7 +17,10 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local Pacing = require(ReplicatedStorage.Shared.Pacing)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Refining = require(script.Parent.Parent.Lib.Refining)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local EconomyService = Knit.CreateService({
@@ -43,7 +46,23 @@ function EconomyService:SaleMultiplier(player: Player): number
 	local index = MineralIndex.cashBonus(data.index)
 	local vip = MonetizationService:VIPMult(player)
 	local merchant = 1 + PlayerStateService:GetPetBonuses(player).merchant
-	return rebirth * index * vip * merchant
+	return rebirth * index * vip * merchant * MonetizationService:CashMult(player)
+end
+
+-- What this player is expected to earn per second of ordinary play with the gear, pets, line and
+-- passes they have right now (Shared.Pacing.expectedIncome). Packs and field rocks are sized from it.
+function EconomyService:ExpectedIncome(player: Player): Pacing.Income
+	local data = PlayerStateService:Get(player)
+	local pickaxe = PlayerStateService:GetPickaxe(player)
+	return Pacing.expectedIncome({
+		orePerHit = pickaxe.OrePerHit * MonetizationService:OreMult(player),
+		swing = pickaxe.Swing,
+		capacity = PlayerStateService:GetCapacity(player),
+		level = if data then data.level else 1,
+		pets = PlayerStateService:GetPetBonuses(player),
+		lineRate = if data then Refining.lineRate(data, MonetizationService:RefinerySpeedMult(data), Perks.lineMult(data.perks)) else 0,
+		saleMult = self:SaleMultiplier(player),
+	})
 end
 
 function EconomyService:SellAll(player: Player): number

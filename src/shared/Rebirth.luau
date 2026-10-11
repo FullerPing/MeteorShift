@@ -5,6 +5,9 @@
 --                Config.Rebirth.Costs for ranks 1 to 8, then ×Legacy.CostGrowth per rank
 --   multiplier   the permanent bar sale multiplier `rebirths` give: CashMult^rebirths
 --                (x1, x5, x25, ...) up to the last listed rank, then ×Legacy.MultGrowth per rank
+--   priceMult    the cash price inflation `rebirths` bring to gear and production upgrades:
+--                PriceGrowth^rebirths (x1, x3, x9, ...) up to the last listed rank, then
+--                ×Legacy.PriceGrowth per rank
 --   overstayShards  shards for the cash earned after the rebirth was first affordable
 --
 -- A missing or negative count reads as no rebirths. Pure functions, covered by
@@ -34,6 +37,15 @@ function Rebirth.multiplier(rebirths: number?): number
 		return Config.CashMult ^ n
 	end
 	return Config.CashMult ^ listed * Config.Legacy.MultGrowth ^ (n - listed)
+end
+
+function Rebirth.priceMult(rebirths: number?): number
+	local n = count(rebirths)
+	local listed = #Config.Costs
+	if n <= listed then
+		return Config.PriceGrowth ^ n
+	end
+	return Config.PriceGrowth ^ listed * Config.Legacy.PriceGrowth ^ (n - listed)
 end
 
 -- Shards for the bar-sale cash earned since the rebirth became affordable (`overflow`),
