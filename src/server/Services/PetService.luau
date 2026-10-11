@@ -37,6 +37,7 @@ local PetService = Knit.CreateService({
 })
 
 PetService.PetBought = Signal.new() -- (player, petId)
+PetService.EggHatched = Signal.new() -- (player, eggId, petId, duplicate) after a hatch
 
 local TICK = 0.1
 local IDLE_RETRY = 0.4 -- how soon a miner pet looks again when it found nothing in reach
@@ -131,6 +132,7 @@ function PetService:Hatch(player: Player, eggId: string): string?
 	end
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Hatched:Fire(player, eggId, petId, duplicate)
+	self.EggHatched:Fire(player, eggId, petId, duplicate)
 	return petId
 end
 

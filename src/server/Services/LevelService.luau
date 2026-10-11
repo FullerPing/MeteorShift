@@ -8,6 +8,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Hooks = require(ReplicatedStorage.Shared.Hooks)
@@ -24,6 +25,8 @@ local LevelService = Knit.CreateService({
 		LevelUp = Knit.CreateSignal(), -- (level)
 	},
 })
+
+LevelService.LeveledUp = Signal.new() -- (player, level) after a level is gained
 
 local PlayerStateService
 local NodeService
@@ -68,6 +71,7 @@ function LevelService:AddXp(player: Player, amount: number): number
 	PlayerStateService:Replicate(player)
 	if gained > 0 then
 		self.Client.LevelUp:Fire(player, data.level)
+		self.LeveledUp:Fire(player, data.level)
 		openCrate(player, data)
 	end
 	return awarded
