@@ -6,7 +6,7 @@ local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local ExactNavButton = {}
 local REFERENCE = "MY index button"
 -- player attributes the full-screen menus set while open
-local MENU_ATTRIBUTES = { "ShopOpen", "PetsOpen", "StoreOpen", "IndexOpen", "RebirthOpen", "RefineryOpen", "SettingsOpen", "PerksOpen", "HatchOpen", "IntroOpen" }
+local MENU_ATTRIBUTES = { "ShopOpen", "PetsOpen", "DailyOpen", "StoreOpen", "IndexOpen", "RebirthOpen", "RefineryOpen", "SettingsOpen", "PerksOpen", "HatchOpen", "IntroOpen" }
 
 function ExactNavButton.author(parent: Instance, name: string, label: string, icon: string): TextButton
 	local reference = StarterGui:FindFirstChild(REFERENCE)

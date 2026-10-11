@@ -19,7 +19,7 @@ local FieldTravelController = Knit.CreateController({ Name = "FieldTravelControl
 
 local SIZE = Config.Hud.SideButtons.Size
 local GAP = Config.Hud.SideButtons.Gap
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 local function label(parent: Instance, text: string, size: UDim2, position: UDim2?): TextLabel
 	local item = Instance.new("TextLabel")

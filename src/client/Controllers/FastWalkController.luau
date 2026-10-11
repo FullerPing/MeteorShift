@@ -18,7 +18,7 @@ local player = Players.LocalPlayer
 local FastWalkController = Knit.CreateController({ Name = "FastWalkController" })
 
 local SIZE = 54
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 function FastWalkController:KnitStart()
 	local PlayerStateService = Knit.GetService("PlayerStateService")

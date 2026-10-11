@@ -20,8 +20,8 @@ local PREFERENCES = {
 	{ name = "MusicOn", default = true, label = "Music" },
 	{ name = "SfxOn", default = true, label = "Sound effects" },
 }
-local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "RefineryOpen", "HatchOpen" }
-local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen" }
+local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "RefineryOpen", "HatchOpen" }
+local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen" }
 
 local function anotherMenuOpen(flags: { string }): boolean
 	for _, name in flags do if player:GetAttribute(name) == true then return true end end
@@ -144,6 +144,34 @@ function NativeHudMenus.start()
 		player:GetAttributeChangedSignal(preference.name):Connect(update)
 		update()
 	end
+	-- Daily rewards: a row at the top of Settings and a dot on the gear while something is waiting. Built here, not in
+	-- the saved Settings prefab, so places that already have one get it too.
+	local dailyRow = preferences:FindFirstChild("OpenDaily") :: TextButton?
+	if not dailyRow then
+		local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
+		local copy = source:Clone()
+		copy.Name, copy.LayoutOrder = "OpenDaily", 0
+		local label = copy:FindFirstChild("Label")
+		if label and label:IsA("TextLabel") then label.Text = "Daily rewards" end
+		local value = copy:FindFirstChild("State")
+		if value and value:IsA("TextLabel") then
+			value.Text, value.BackgroundColor3 = "OPEN", UI.ORANGE
+		end
+		copy.Parent = preferences
+		dailyRow = copy
+	end
+	local dot = Instance.new("Frame")
+	dot.Name, dot.Size, dot.AnchorPoint, dot.Position = "DailyDot", UDim2.fromOffset(12, 12), Vector2.new(1, 0), UDim2.new(1, -2, 0, 2)
+	dot.BackgroundColor3, dot.BorderSizePixel, dot.ZIndex, dot.Visible = Color3.fromRGB(255, 80, 80), 0, 10, false
+	Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+	dot.Parent = openSettings
+	local function updateDailyDot() dot.Visible = player:GetAttribute("DailyReady") == true end
+	player:GetAttributeChangedSignal("DailyReady"):Connect(updateDailyDot)
+	updateDailyDot()
+	;(dailyRow :: TextButton).Activated:Connect(function()
+		player:SetAttribute("SettingsOpen", false)
+		player:SetAttribute("DailyOpen", true)
+	end)
 	if player:GetAttribute("SettingsOpen") == nil then player:SetAttribute("SettingsOpen", false) end
 	if player:GetAttribute("BackpackOpen") == nil then player:SetAttribute("BackpackOpen", false) end
 	openSettings.Activated:Connect(function() player:SetAttribute("SettingsOpen", player:GetAttribute("SettingsOpen") ~= true) end)

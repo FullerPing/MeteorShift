@@ -22,7 +22,7 @@ local Monetization = Config.Monetization
 local OfferController = Knit.CreateController({ Name = "OfferController" })
 
 local SIZE, GAP = 54, 8
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 type Offer = { key: string, kind: "pass" | "product", caption: string, icon: string, color: string }
 -- bottom to top in the column, nearest the INDEX button first
