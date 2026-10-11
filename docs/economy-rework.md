@@ -59,6 +59,31 @@ Bought with shards, permanent, panel open from rebirth 1 (PERKS button on the Re
 
 Pet slots are 1 plus 1 per rebirth to 3, one more at rebirth 4, plus the pass and Pet Bond. The Aurora Egg (250 shards, from rebirth 2) rolls Epic 88% / Legendary 12% with a pity of 10.
 
+## Merged gear level and price inflation (2026-10-10)
+
+Specs: `docs/superpowers/specs/2026-10-10-merged-gear-level-design.md` and `2026-10-10-rebirth-price-inflation-design.md`.
+
+- **One gear level.** The pickaxe's Power, Swing, Reach and Crit and the backpack's Capacity are read from a single level per item (`pickaxeLevel`, `backpackLevel`, profile v7). A level costs `Base x 1.12^(level-1)` (pickaxe base 45, backpack 37.5; was 30 / 25 at 1.115 on the gate stat alone). The bundle cost to reach a pickaxe tier rose +33% at tier 2 up to +64% at tier 8.
+- **Rebirth keeps gear tiers**, and resets only the level. The model (`Shared.Pacing`) keeps the pickaxe and backpack tiers through a rebirth.
+- **Price inflation.** Every cash price for gear and production upgrades is `Rebirth.priceMult(rebirths)` times dearer: x3 per rebirth to rank 16, then x1.2 per Legacy rank (cash sales stay x5 and x2). Shard prices and Robux cash packs do not inflate; the packs already pay minutes of income.
+- **Refit costs.** `Config.Rebirth.Costs` was fitted again with the model so the laps run 13, 18, 23, 24 and then about 25 minutes (the aimed 16 and 20 for laps 2 and 3 settle a little higher).
+- **Numbers.** `Format.number` now names suffixes up to the vigintillion (1e63) and clamps anything larger.
+
+## Progression products (2026-10-10)
+
+Owner decision: these are sold on purpose, so the old "never sells shards" rule is gone (`Config.Monetization`, `Shared.Purchases`, `MonetizationService`). Nothing here rolls randomness and eggs still show their odds.
+
+| Product | Where it is sold | Effect |
+|---|---|---|
+| Shards 50 / 250 / 1,000 | Store | Adds that many Core Shards (`ShardPacks`). |
+| Rebirth and Keep Everything | Rebirth menu ("Rebirth, keep everything" button, buys and rebirths in one tap) | Adds a credit (`credits.rebirthKeep`). The next rebirth skips the whole reset: cash, gear levels, production, ore and bars stay, the rebirth count and multipliers still go up (`RebirthReset.apply(data, now, true)`). The Rebirth panel says when a credit is ready, and the keep-everything button works even before the rebirth is affordable (a credit rebirths without the cash). |
+| Call a Boss Meteor | Store | Call a Meteor that forces the Alien boss type (`MeteorService:CallMeteor(player, true)`). Same limits as Call a Meteor, and the buyer needs the boss rebirths (`Shared.CallMeteor.bossUnlocked`). If it can't run, the buyer gets a boss credit (`credits.bossMeteor`) to use from the Store. |
+| Tier-ups (`PickaxeT1`-`T4`, `BackpackT1`-`T4`) | Gear shop only: **EVOLVE NOW R$ price** beside Evolve | Evolves that item one tier with no cash, shards or player level (`Purchases.gearSkip`). The item level must be at its tier cap. If the item already passed that tier by the time the receipt arrives, the buyer gets the cash and shards of that evolve at their rebirth price instead. |
+
+Also sold (same day): **2x Cash** (pass, bar sales x2), **Starter Value Pack** (one per player), **Level Up Pets to Max** (every equipped pet) and **Extra Pet Slot**, which is now a product (`PetSlot`, saved as `flags.extraPetSlot`) instead of the old pass. Tier-ups cover tiers 1 to 7 for both items (14 products).
+
+Ids: every product and pass the owner created in the dashboard is wired (see `tests/Purchases.spec`); Tip Jar, Pet Treat, Pet Feast and the Offline Hours+ pass have no dashboard entry yet and stay at `Id = 0` (off sale). The Store builds a card for any product its saved prefab lacks (`StoreController` clones one), so the prefab export does not have to be regenerated; `tools/build-native-ui.luau` includes them.
+
 ## Verification
 
 `Shared.Pacing` models the economy; `tests/Pacing.spec.luau`, `Levels.spec`, `Rebirth.spec`, `Hooks.spec`, `Perks.spec`, `Refining.spec`, `Rewards.spec`, `RebirthReset.spec` and the others check the rules. The rebirth cost list was tuned with the model to the lap targets above.

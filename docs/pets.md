@@ -30,7 +30,7 @@ Every pet's first perk is its main role. Values grow linearly between the exact 
 
 Miner hits never count toward the podium, core rewards, mineral drops or meteor size. Yield, Scholar and Vault preserve fractions for their existing consumers; Shards rounds the whole payout once. No perk changes mineral or egg odds.
 
-Slots start at one and gain one per rebirth up to three. The fixed 49 Robux ExtraPetSlot pass adds one after that cap, for two to four slots depending on rebirths. Its ownership is checked by the server.
+Slots start at one and gain one per rebirth up to three. The fixed 49 Robux Extra Pet Slot developer product adds one after that cap, for two to four slots depending on rebirths. It is saved on the profile (`flags.extraPetSlot`) and read by the server.
 
 For each role that appears at a rarity, its strongest level 10 value never falls as rarity rises; rarities without that role are skipped. Paid pets beat free pets at level 10 for every role they share. Drillbot's starting Swift value ties Jet Wisp at 8%, then grows higher.
 

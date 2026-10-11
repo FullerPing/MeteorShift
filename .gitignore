@@ -9,3 +9,7 @@ Thumbs.db
 
 # Checkpoint of the game before the improvement pass
 oldmain/
+
+# Scratch and generated output
+.tmp/
+output/

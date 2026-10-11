@@ -1,23 +1,26 @@
 # Fixed purchases
 
-`Config.Monetization` lists every pass and developer product. All IDs remain `0`, so the store says **Not on sale yet** and never requests Marketplace metadata or prompts a purchase. `Robux` records the intended Creator Dashboard price for the new catalog; after IDs are configured, the store reads the live regional price from Roblox.
+`Config.Monetization` lists every pass and developer product. An item whose `Id` is `0` is not on sale: the store says **Not on sale yet** and never requests Marketplace metadata or prompts a purchase. `Robux` records the intended Creator Dashboard price; for items with an id the store reads the live regional price from Roblox.
 
-Nothing bought with Robux rolls a pet, changes odds, grants Core Shards, buys an egg, or hatches one. Shard eggs keep their existing visible odds and pity rules.
+Nothing bought with Robux rolls a pet or changes odds, and nothing hatches an egg. Core Shards are sold as fixed packs and eggs keep their visible odds and pity rules. The progression products (shard packs, tier-ups, boss meteor, Rebirth and Keep Everything) are described in [economy-rework.md](economy-rework.md).
+
+The ids below were created in the Creator Dashboard on 2026-10-10 (passes: `TwoXOre`, `TwoXCash`, `BiggerBackpack`, `AutoDeposit`, `VIP`, `Drillbot`, `SolarPhoenix`; products: everything below except `TipJar`). `OfflineHours` (pass) has no dashboard entry yet.
 
 ## Creator Dashboard catalog
 
 | Kind | Key | Name | Intended Robux | Fixed effect |
 | --- | --- | --- | ---: | --- |
-| Game pass | `Drillbot` | Drillbot Pet | 99 | Drillbot permanently; its three perks follow [pets.md](pets.md). |
-| Game pass | `SolarPhoenix` | Solar Phoenix Pet | 199 | Solar Phoenix permanently; its three perks follow [pets.md](pets.md). |
-| Game pass | `ExtraPetSlot` | Extra Pet Slot | 49 | One permanent extra equipped slot; up to four pets with rebirth slots. |
+| Game pass | `Drillbot` | Drillbot Pet | 129 | Drillbot permanently; its three perks follow [pets.md](pets.md). |
+| Game pass | `SolarPhoenix` | Solar Phoenix Pet | 249 | Solar Phoenix permanently; its three perks follow [pets.md](pets.md). |
+| Game pass | `TwoXCash` | 2x Cash | 129 | Every bar sale pays double (`EconomyService:SaleMultiplier`). |
+| Developer product | `PetSlot` | Extra Pet Slot | 49 | One permanent extra equipped slot, saved as `flags.extraPetSlot`; up to four pets with rebirth slots. |
+| Developer product | `PetMax` | Level Up Pets to Max | 49 | Every pet equipped when the server grants it goes to max level. |
+| Developer product | `StarterPack` | Starter Value Pack | 49 | $ of 10 minutes of line income (cap 30%), two Mini Overclocks, 1,500 XP per equipped pet. One per player (`flags.starterPack`). |
 | Developer product | `TipJar` | Tip Jar | 5 | Confetti, a thank-you toast, and a Supporter chat tag for the current session; no gameplay benefit. |
-| Developer product | `PocketChange` | Pocket Change | 10 | Ten minutes of current line income; minimum $2,000 and maximum 3% of the next rebirth cost. |
-| Developer product | `PetTreat` | Pet Treat | 15 | 1,500 XP to each pet equipped when the server grants the purchase. |
+| Developer product | `PocketChange` | Pocket Change | 19 | Ten minutes of current line income; minimum $2,000 and maximum 30% of the next rebirth cost. |
 | Developer product | `MiniOverclock` | Mini Overclock | 19 | Adds 600 seconds to the existing refinery ×2 online timer. |
-| Developer product | `OreRush` | Ore Rush | 25 | Adds 1,800 seconds of ×2 ore per hit while online. |
-| Developer product | `PetFeast` | Pet Feast | 29 | 6,000 XP to each pet equipped when the server grants the purchase. |
-| Developer product | `CashBundle` | Cash Bundle | 39 | Sixty minutes of current line income; minimum $20,000 and maximum 8% of the next rebirth cost. |
+| Developer product | `OreRush` | Ore Rush | 29 | Adds 1,800 seconds of ×2 ore per hit while online. |
+| Developer product | `CashBundle` | Cash Bundle | 59 | Sixty minutes of current line income; minimum $20,000 and maximum 80% of the next rebirth cost. |
 
 Existing passes (`TwoXOre`, `BiggerBackpack`, `OfflineHours`, `AutoDeposit`, `VIP`) and products (`CallMeteor`, `Overclock`) remain in the catalog. Their prices were not specified by this change. The existing Overclock still adds 1,800 seconds; Call a Meteor keeps its server availability rules and grants a reusable credit when a call cannot run.
 
@@ -53,7 +56,7 @@ A failed save leaves both the grant and its receipt ID together in memory. The n
 In Studio, `ServerStorage.DevProduct` is a runtime-only BindableFunction next to the other dev hooks:
 
 ```lua
-game.ServerStorage.DevProduct:Invoke(game.Players:GetPlayers()[1], "PetTreat")
+game.ServerStorage.DevProduct:Invoke(game.Players:GetPlayers()[1], "PetMax")
 ```
 
 It uses the same grant and save path without a purchase receipt. Each invocation is a new grant, and returns success plus an optional error. If its save fails, the error says that the grant remains in memory; invoking again is another grant. For isolated acceptance checks, enable the temporary Studio-only `DevMemoryStore` attribute before starting the server. Never save profile-mutating QA scripts into the place.

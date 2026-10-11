@@ -9,7 +9,7 @@ The economy follows the Roblox simulator rhythm: millions on day 1, billions wit
 | Target | Model |
 |---|---|
 | Steel Pickaxe in the first 5 minutes | 3:00 |
-| First rebirth ($88K) 10 to 20 minutes in | 14:00 |
+| First rebirth ($68K) 10 to 20 minutes in | 13:00 |
 | Laps lengthen to the fourth rebirth, then hold | 14, 17, 19, 23, then about 25 minutes |
 | Billions | rebirth 6 ($2.6B) at about 2 hours |
 | A level 1 line's 2-hour offline cap, a meaningful welcome back | about $90K |
@@ -18,7 +18,7 @@ The economy follows the Roblox simulator rhythm: millions on day 1, billions wit
 
 ## Model
 
-- **Meteors:** the first impact is `Meteor.FirstCountdown` (90 s) in, then one every full cycle: impact 3 s + active 150 s + end 5 s + cleanup 5 s + countdown 180 s = **343 s**. The type is picked by `Meteor.Types` weights (Iron 60, Ice 25, Crystal 15) and every player mines it; the refinery's clearance by level (below) sets what the ore is worth per line-second. Ice's Refreeze twist and HP multiplier are ignored (they cost the crowd time, not the player's ore); so is Crystal's Resonance. Debris always drops Iron.
+- **Meteors:** the first impact is `Meteor.FirstCountdown` (90 s) in, then one every full cycle: impact 3 s + active 150 s + end 5 s + cleanup 5 s + countdown 180 s = **343 s**. The type is picked by `Meteor.Types` weights (Iron 60, Ice 25, Crystal 15) and every player mines it; the refinery's clearance by level (below) sets what the ore is worth per line-second. Ice's Refreeze twist and HP multiplier are ignored (they cost the crowd time, not the player's ore); so is Crystal's Resonance. Filler debris always drops Iron. The four ore fields (`Debris.Fields`) are bonuses the model leaves out: Rust Works and Frost Yard rocks pay 3 s and 9 s of the breaker's expected income (`Pacing.expectedIncome`), Violet Quarry and Sulfur Ridge drop Frost and Crystal at 0.4 and 0.3 of a hit. Cash packs use the same expected income.
 - **Mining:** the player mines the meteor while it is active and debris between meteors (`Debris.YieldFraction` = a quarter of a hit, `DebrisActivityShare` = 0.5 of that time). Ore rate = backpack / (fill time + `TripSeconds` 40 s), fill time = hits needed x swing / `HitsPerMinuteShare` 0.7. Ore per hit is flat per tier (1, 2, 3, 5, 7, 10, 14, 20) and the backpack tracks it, so a full load is 50 to 90 hits at every stage. Ore goes to the hopper.
 - **Line:** `min(conveyor, refinery)` bars per second, limited by hopper stock and collection post room, same as `Server.Lib.Refining`. Conveyor and refinery rates are ore per second and follow what a player mines at that stage (0.25 at level 1 up to about 18).
 - **Gear:** one pickaxe and one backpack (`Shared.Gear`). A tier is bought as a bundle: the Power (or Capacity) levels up to the tier's cap plus the evolve price (`Gear.bundleCost`). Speed, Reach and Crit levels are the player's own side budget and don't move income in the model.
@@ -42,7 +42,7 @@ Times are minutes. The first lap, from `Pacing.simulate` with the shopping rule 
 | 3 | Conveyor 2, Steel Pickaxe |
 | 4 to 5 | Refinery 3, Conveyor 3, Backpack 3 and 4, Drill Pick, Plasma-tier gear within level gates |
 | 7 | Conveyor 4 |
-| 14 | first rebirth ($88K), then 17, 19, 23, 24, 25 minutes |
+| 14 | first rebirth ($68K), then 18, 23, 24, 26, 25 minutes (gear tiers kept, prices x3 per rebirth) |
 
 Every level gained also opens a Supply Crate (`Config.Hooks.SupplyCrate`): its expected cash, a few tens of seconds of the line's income, is part of the model.
 
@@ -85,5 +85,6 @@ The comparison inherits two approximations of the original model. Swift and Yiel
 ## What changed in this rebase
 
 - Ore per hit 1 to 450 became 1 to 20 (flat per tier), and backpack capacity 50 to 40,000 became 50 to 1,800, so veterans mine more per hit but not hundreds of times more. Everything priced in cash was rescaled to keep the numbers big: bar prices x10 (Iron $50, Frost $1,200, Crystal $30,000) and line, backpack and pickaxe prices re-fitted to the pacing model.
+- Hopper and collection post capacity had stayed at the 40,000 ore backpack scale (2,000 to 8,000,000). It now runs 2,000, 5,000, 12,000, 30,000, 75,000, 190,000 and 500,000: level 1 is unchanged (two hours of the first line, and room for any backpack), and the top level holds the 8-hour pass at the fastest line. Upgrade prices are unchanged. Stock above a lower capacity stays, it just can't grow until it is used.
 - One pickaxe and one backpack replace the eight-item shop (see README, `Shared.Gear`). The bundle prices above include their stat levels.
 - Debris no longer drops Frost (cyan rocks paid a Basic Pickaxe about 6x an Iron meteor per swing).

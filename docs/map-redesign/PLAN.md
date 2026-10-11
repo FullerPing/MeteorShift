@@ -72,7 +72,7 @@ Lighting: bright warm daylight, modest bloom, shorter haze, no heavy depth-of-fi
 
 | Budget | Limit |
 |---|---:|
-| Authored Map parts (excluding transient meteor and local equipment) | ≤1,800 |
+| Authored Map parts (excluding transient meteor and local equipment) | ≤2,200 (raised from 1,800 by the owner, 8 Oct 2026) |
 | Authored Map MeshParts imported from external art | 0 |
 | Shared Refinery parts | ≤180 |
 | Server meteor at runtime | ≤550 parts,36 crust nodes |
