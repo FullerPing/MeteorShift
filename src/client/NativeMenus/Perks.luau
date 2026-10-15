@@ -1,63 +1,62 @@
 --!strict
--- Authoring for the Colony Perks panel (Config.Perks): one card per perk with its level, what the
--- next level does and a BUY button. The runtime binds the cards by name (PerksController).
--- It is opened from a PERKS button on the Rebirth panel.
+-- Authoring for the Colony Perks panel (Config.Perks) in the cartoon light look (MenuTheme): a "Colony Perks" ribbon,
+-- a shard wallet chip, then one white card per perk with its name, a level pill, what the next level does, its price in
+-- shards and a lime BUY button. The runtime binds the cards by name (PerksController). It is opened from a PERKS button
+-- on the Rebirth panel.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local Perks = {}
 
-Perks.ROW_HEIGHT = 92
+Perks.LAYOUT = 2 -- bumped when the controls change; PerksController rebuilds an older copy
+Perks.SIZE = Vector2.new(440, 560)
+Perks.ROW_HEIGHT = 96
 
 function Perks.build(): ScreenGui
-	local gui = NativeUI.menu("ColonyPerks", "Colony Perks", NativeUI.GREEN, 430, 540)
+	local gui, panel = MenuTheme.menu("ColonyPerks", "Colony Perks", "crystal", Perks.SIZE, Perks.LAYOUT)
 	gui.DisplayOrder = 28
-	local panel = gui:WaitForChild("Panel") :: Frame
-	panel.Size = UDim2.new(0, 430, 0.9, 0)
-	NativeUI.create("UISizeConstraint", { MaxSize = Vector2.new(430, 560), MinSize = Vector2.new(280, 280) }, panel)
-	local title = panel:WaitForChild("Title") :: TextLabel
-	title.TextScaled = true
-	NativeUI.create("UITextSizeConstraint", { MinTextSize = 18, MaxTextSize = 28 }, title)
 
-	local wallet = NativeUI.text(panel, "Wallet", "", UDim2.fromOffset(16, 58), UDim2.new(1, -32, 0, 24), true)
-	wallet.TextSize = 16
-	wallet.TextColor3 = NativeUI.MUTED
+	local wallet = MenuTheme.chip(panel, "Wallet", Config.HudIcons.crystal, Palette.SHARD_CHIP)
+	wallet.Position, wallet.Size = UDim2.fromOffset(16, 52), UDim2.fromOffset(200, 34)
 
 	local body = NativeUI.create("ScrollingFrame", {
-		Name = "Body", Position = UDim2.fromOffset(12, 88), Size = UDim2.new(1, -24, 1, -128),
+		Name = "Body", Position = UDim2.fromOffset(14, 96), Size = UDim2.new(1, -28, 1, -144),
 		BackgroundTransparency = 1, BorderSizePixel = 0,
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
 		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4,
-		ScrollBarImageColor3 = NativeUI.MUTED, VerticalScrollBarInset = Enum.ScrollBarInset.Always,
+		ScrollBarImageColor3 = Palette.BLUE_BOTTOM, VerticalScrollBarInset = Enum.ScrollBarInset.Always,
 		ElasticBehavior = Enum.ElasticBehavior.WhenScrollable, ZIndex = 4,
 	}, panel)
 	NativeUI.create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, body)
+	NativeUI.create("UIPadding", { PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3) }, body)
 
 	for order, id in Config.Perks.Order do
-		local card = NativeUI.create("Frame", {
-			Name = id .. "Row", LayoutOrder = order, Size = UDim2.new(1, -8, 0, Perks.ROW_HEIGHT),
-			BackgroundColor3 = NativeUI.CARD, BorderSizePixel = 0, ZIndex = 4,
-		}, body)
-		NativeUI.surface(card, 4, .8)
-		NativeUI.text(card, "Name", Config.Perks.List[id].Name, UDim2.fromOffset(12, 6), UDim2.new(1, -130, 0, 26))
-		NativeUI.text(card, "Level", "", UDim2.new(1, -118, 0, 8), UDim2.fromOffset(106, 22), true).TextXAlignment = Enum.TextXAlignment.Right
-		local text = NativeUI.text(card, "Text", "", UDim2.fromOffset(12, 34), UDim2.new(1, -140, 0, 52), true)
-		text.TextWrapped = true
-		text.TextYAlignment = Enum.TextYAlignment.Top
+		local card = MenuTheme.whiteCard(body, id .. "Row", 12)
+		card.LayoutOrder, card.Size = order, UDim2.new(1, -14, 0, Perks.ROW_HEIGHT)
+		local name = MenuTheme.label(card, "Name", Config.Perks.List[id].Name, 19, Palette.NAVY, MenuTheme.TITLE_FONT)
+		name.Position, name.Size, name.TextTruncate = UDim2.fromOffset(12, 6), UDim2.new(1, -230, 0, 26), Enum.TextTruncate.AtEnd
+		local level = MenuTheme.label(card, "Level", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Right)
+		level.Position, level.Size = UDim2.new(1, -226, 0, 8), UDim2.fromOffset(104, 22)
+		local text = MenuTheme.label(card, "Text", "", 15, Palette.SECOND)
+		text.Position, text.Size = UDim2.fromOffset(12, 34), UDim2.new(1, -140, 0, 56)
+		text.TextWrapped, text.TextYAlignment = true, Enum.TextYAlignment.Top
 		-- the longer perk lines shrink to stay inside the card instead of being cut off
 		text.TextScaled = true
 		NativeUI.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 15 }, text)
-		text.TextColor3 = NativeUI.MUTED
-		local buy = NativeUI.button(card, "Buy", "BUY", UDim2.new(1, -118, 0, 36), UDim2.fromOffset(106, 44), NativeUI.GREEN)
-		buy.TextSize = 16
-		buy.TextWrapped = true
+		-- the price in shards over the button: the owner's crystal and the amount
+		local price = MenuTheme.label(card, "Price", "", 17, Palette.NAVY, MenuTheme.TITLE_FONT, Enum.TextXAlignment.Right)
+		price.Position, price.Size = UDim2.new(1, -118, 0, 6), UDim2.fromOffset(78, 26)
+		MenuTheme.icon(card, "PriceIcon", "crystal", UDim2.new(1, -36, 0, 5), UDim2.fromOffset(26, 26))
+		local buy = MenuTheme.button(card, "Buy", "BUY", "lime", 18)
+		buy.Position, buy.Size = UDim2.new(1, -118, 0, 38), UDim2.fromOffset(106, 50)
 	end
 
-	local footer = NativeUI.text(panel, "Footer", "", UDim2.new(0, 16, 1, -34), UDim2.new(1, -32, 0, 24), true)
-	footer.TextSize = 14
-	footer.TextColor3 = NativeUI.MUTED
+	local footer = MenuTheme.label(panel, "Footer", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	footer.Position, footer.Size, footer.TextWrapped = UDim2.new(0, 16, 1, -44), UDim2.new(1, -32, 0, 30), true
 	return gui
 end
 

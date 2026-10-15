@@ -6,6 +6,7 @@
 -- Everything it makes sits under a frame marked CartoonCustom, which MenuSkin leaves alone.
 local RS = game:GetService("ReplicatedStorage")
 local Palette = require(RS.Shared.MenuPalette)
+local Icons = require(RS.Shared.Config.HudIcons)
 local N = require(script.Parent.NativeUI)
 
 local MenuTheme = {}
@@ -88,6 +89,38 @@ function MenuTheme.panel(parent: Instance, name: string, size: UDim2): Frame
 	MenuTheme.stroke(body, Palette.NAVY, 4)
 	MenuTheme.gradient(body, Palette.BODY_TOP, Palette.BODY_BOTTOM)
 	return panel
+end
+
+-- A whole menu screen in this look, the counterpart of NativeUI.menu: a ScreenGui with a light navy Dimmer, a centred
+-- Panel (body and lip) with the title ribbon (`icon` is a Config.HudIcons key) and the red Close on its corner. `layout` is stored as MenuLayout so a
+-- controller (NativeUI.getFresh) rebuilds a copy saved in the place before the controls changed.
+function MenuTheme.menu(name: string, title: string, icon: string, size: Vector2, layout: number): (ScreenGui, Frame)
+	local gui = N.create("ScreenGui", { Name = name, Enabled = false, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 25,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, nil) :: ScreenGui
+	gui:SetAttribute("NativePrefab", true)
+	gui:SetAttribute("MenuLayout", layout)
+	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY, BackgroundTransparency = 0.8,
+		BorderSizePixel = 0, AutoButtonColor = false, Modal = true }, gui)
+	local panel = MenuTheme.panel(gui, "Panel", UDim2.fromOffset(size.X, size.Y))
+	panel.AnchorPoint, panel.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)
+	-- these menus name their scrolling list Body (bound by name), so the panel's own body slab steps aside
+	;(panel:FindFirstChild("Body") :: Frame).Name = "Slab"
+	MenuTheme.ribbon(panel, title, Icons[icon] or icon)
+	MenuTheme.closeCorner(panel, Icons.close)
+	return gui, panel
+end
+
+-- The owner's icon (Config.HudIcons) as a plain image
+function MenuTheme.icon(parent: Instance, name: string, kind: string, position: UDim2, size: UDim2): ImageLabel
+	return N.create("ImageLabel", { Name = name, Image = Icons[kind] or "", Position = position, Size = size, ZIndex = 5,
+		BackgroundTransparency = 1, BorderSizePixel = 0, ScaleType = Enum.ScaleType.Fit }, parent)
+end
+
+-- A white card with a navy outline: the rows and tiles of the menus
+function MenuTheme.whiteCard(parent: Instance, name: string, radius: number?): Frame
+	local card = MenuTheme.card(parent, name, Palette.WHITE, Palette.DETAIL_TOP, radius or 12)
+	MenuTheme.stroke(card, Palette.NAVY, 2.5)
+	return card
 end
 
 -- A filled block with an optional vertical gradient (top to bottom).

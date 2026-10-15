@@ -11,11 +11,11 @@ return function(t: any)
 		for _, viewport in viewports do
 			for _, inset in { 36, 58 } do
 				local p = IndexLayout.compute(viewport, inset).panel
-				t.ok(p.x >= 12 and p.y >= inset + 12, "panel clears left and top")
+				t.ok(p.x >= 12 and p.y - 24 >= inset, "panel and its title ribbon clear left and top")
 				t.ok(p.x + p.w <= viewport.X - 12, "panel clears right")
-				t.ok(p.y + p.h <= viewport.Y - 12, "panel clears bottom")
+				t.ok(p.y + p.h + 7 <= viewport.Y - 8, "panel and its lip clear bottom")
 				-- phones in landscape may widen to 860 (the panel then runs from the top bar to the bottom)
-				local maxWidth = if viewport.X > viewport.Y and viewport.Y - inset < 404 then 860 else 740
+				local maxWidth = if viewport.X > viewport.Y and viewport.Y - inset - 43 < 380 then 860 else 740
 				t.ok(p.w > 0 and p.w <= maxWidth and p.h > 0 and p.h <= 620, "bounded panel")
 			end
 		end
@@ -25,10 +25,11 @@ return function(t: any)
 		for _, viewport in viewports do
 			for _, inset in { 36, 58 } do
 				local l = IndexLayout.compute(viewport, inset)
-				t.eq(l.close.w, 44)
-				t.eq(l.close.h, 44)
+				t.ok(l.close.w >= 44 and l.close.h >= 44, "close is a touch target")
 				t.ok(l.title.x + l.title.w + 8 <= l.close.x, "title clears close")
-				t.ok(l.close.x + l.close.w <= l.panel.w - l.padding, "close is inside panel")
+				-- Close sits on the corner, half outside the panel; it must stay on screen
+				t.ok(l.panel.x + l.close.x + l.close.w <= viewport.X, "close stays on screen")
+				t.ok(l.panel.y + l.close.y >= inset, "close clears the top bar")
 				t.ok(l.tabs.h >= 44 and l.tabWidth >= 44, "all three filters are touch targets")
 				t.ok(l.tabs.y >= l.close.y + l.close.h + 8, "filters clear header")
 				t.ok(l.tabWidth * 3 + l.tabGap * 2 <= l.tabs.w, "filters fit one rail")
@@ -81,6 +82,6 @@ return function(t: any)
 		t.eq(p.w, 740)
 		t.eq(p.h, 620)
 		t.near(p.x + p.w / 2, 960, 0.01)
-		t.near(p.y + p.h / 2, 569, 0.01)
+		t.near(p.y + p.h / 2, 575.5, 0.01)
 	end)
 end

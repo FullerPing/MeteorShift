@@ -9,6 +9,8 @@ local HudResources = require(ReplicatedStorage.Shared.HudResources)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Icons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local UI = require(script.Parent.NativeUI)
+local SettingsMenu = require(script.Parent.NativeMenus.Settings)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local player = Players.LocalPlayer
 local NativeHudMenus = {}
 local started = false
@@ -30,11 +32,11 @@ end
 
 function NativeHudMenus.start()
 	if started then return end
-	local settings = UI.get("HudSettings")
+	local settings = UI.getFresh("HudSettings", SettingsMenu.build, SettingsMenu.LAYOUT)
 	local backpack = UI.get("BackpackMenu")
 	started = true
 	local settingsPanel = settings:WaitForChild("SettingsPanel") :: Frame
-	UI.fitCentred(settingsPanel, Vector2.new(360, 350))
+	UI.fitCentred(settingsPanel, SettingsMenu.SIZE)
 	local backdrop = settings:WaitForChild("SettingsBackdrop") :: TextButton
 	local openSettings = settings:WaitForChild("OpenSettings") :: ImageButton
 	local settingsClose = settingsPanel:WaitForChild("Close") :: GuiButton
@@ -117,8 +119,6 @@ function NativeHudMenus.start()
 		if button then
 			openSettings.Position, openSettings.Size = UDim2.fromOffset(button.x, button.y), UDim2.fromOffset(button.w, button.h)
 		end
-		settingsPanel.Position = UDim2.new(0.5, 0, 0, layout.inset + 12)
-		settingsPanel.Size = UDim2.fromOffset(math.max(0, math.min(360, layout.viewport.X - 24)), math.max(0, math.min(350, layout.viewport.Y - layout.inset - 24)))
 		updateBackpack()
 	end
 	for index, preference in PREFERENCES do
@@ -139,7 +139,7 @@ function NativeHudMenus.start()
 		local function update()
 			local enabled = player:GetAttribute(preference.name) == true
 			value.Text = if enabled then "ON" else "OFF"
-			value.BackgroundColor3 = if enabled then UI.GREEN else Color3.fromRGB(29, 30, 35)
+			value.BackgroundColor3 = if enabled then Palette.LIME else Palette.GREY_TOP
 		end
 		(row :: TextButton).Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
 		player:GetAttributeChangedSignal(preference.name):Connect(update)
@@ -156,7 +156,7 @@ function NativeHudMenus.start()
 		if label and label:IsA("TextLabel") then label.Text = "Daily rewards" end
 		local value = copy:FindFirstChild("State")
 		if value and value:IsA("TextLabel") then
-			value.Text, value.BackgroundColor3 = "OPEN", UI.ORANGE
+			value.Text, value.BackgroundColor3 = "OPEN", Palette.GOLD_BOTTOM
 		end
 		copy.Parent = preferences
 		dailyRow = copy
@@ -188,7 +188,7 @@ function NativeHudMenus.start()
 		if label and label:IsA("TextLabel") then label.Text = "Enter a code" end
 		local value = copy:FindFirstChild("State")
 		if value and value:IsA("TextLabel") then
-			value.Text, value.BackgroundColor3 = "OPEN", UI.ORANGE
+			value.Text, value.BackgroundColor3 = "OPEN", Palette.GOLD_BOTTOM
 		end
 		copy.Parent = preferences
 		codesRow = copy

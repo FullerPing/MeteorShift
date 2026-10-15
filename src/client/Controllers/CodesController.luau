@@ -10,14 +10,16 @@ local NativeUI = require(script.Parent.Parent.NativeUI)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 local Sfx = require(script.Parent.Parent.Sfx)
 local CodesMenu = require(script.Parent.Parent.NativeMenus.Codes)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local player = Players.LocalPlayer
 local CodesController = Knit.CreateController({ Name = "CodesController" })
 
-local GOOD, BAD = Color3.fromRGB(139, 240, 195), Color3.fromRGB(255, 120, 120)
+local GOOD, BAD = Palette.MET, Palette.UNMET -- colours that read on the light body
 
 function CodesController:KnitStart()
 	local CodesService = Knit.GetService("CodesService")
-	local gui = NativeUI.getOrBuild("CodesMenu", CodesMenu.build)
+	local gui = NativeUI.getFresh("CodesMenu", CodesMenu.build, CodesMenu.LAYOUT)
 	local panel = gui:WaitForChild("Panel") :: Frame
 	NativeUI.fitCentred(panel, Vector2.new(420, 300))
 	local box = panel:WaitForChild("CodeBox") :: TextBox
@@ -46,8 +48,8 @@ function CodesController:KnitStart()
 		if busy then return end
 		local text = box.Text
 		busy = true
-		NativeUI.enable(redeem, false, NativeUI.GREEN)
-		status.Text, status.TextColor3 = "Checking...", NativeUI.MUTED
+		MenuTheme.state(redeem, false, "lime")
+		status.Text, status.TextColor3 = "Checking...", Palette.SECOND
 		task.spawn(function()
 			local ok, accepted, message = pcall(function() return CodesService:Redeem(text) end)
 			if ok and accepted then
@@ -59,7 +61,7 @@ function CodesController:KnitStart()
 				status.Text, status.TextColor3 = if ok then message else "Could not reach the server. Try again.", BAD
 			end
 			busy = false
-			NativeUI.enable(redeem, true, NativeUI.GREEN)
+			MenuTheme.state(redeem, true, "lime")
 		end)
 	end
 	redeem.Activated:Connect(submit)

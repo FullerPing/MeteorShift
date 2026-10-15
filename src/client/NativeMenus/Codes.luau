@@ -1,36 +1,33 @@
 --!strict
--- Authoring for the Codes panel (Config.Codes): a text box and REDEEM, with a line for what happened.
--- CodesController binds everything by name.
+-- Authoring for the Codes panel (Config.Codes) in the cartoon light look (MenuTheme): a "Codes" ribbon, a line about
+-- codes, a white text box and a lime REDEEM, with a line for what happened. CodesController binds everything by name.
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
 local NativeUI = require(script.Parent.Parent.NativeUI)
+local Palette = require(game:GetService("ReplicatedStorage").Shared.MenuPalette)
 local Codes = {}
+Codes.LAYOUT = 2 -- bumped when the controls change; CodesController rebuilds an older copy
 
 function Codes.build(): ScreenGui
-	local gui = NativeUI.menu("CodesMenu", "Codes", NativeUI.CYAN, 420, 300)
+	local gui, panel = MenuTheme.menu("CodesMenu", "Codes", "codes", Vector2.new(420, 300), Codes.LAYOUT)
 	gui.DisplayOrder = 28
-	local panel = gui:WaitForChild("Panel") :: Frame
-	panel.Size = UDim2.new(0.92, 0, 0, 300)
-	NativeUI.create("UISizeConstraint", { MaxSize = Vector2.new(420, 300), MinSize = Vector2.new(280, 280) }, panel)
-	local title = panel:WaitForChild("Title") :: TextLabel
-	title.TextScaled = true
-	NativeUI.create("UITextSizeConstraint", { MinTextSize = 18, MaxTextSize = 28 }, title)
 
-	local hint = NativeUI.text(panel, "Hint", "Enter a code to claim a reward. Every code works once per player.", UDim2.fromOffset(16, 70), UDim2.new(1, -32, 0, 40), true)
-	hint.TextSize, hint.TextWrapped, hint.TextXAlignment = 15, true, Enum.TextXAlignment.Center
+	local hint = MenuTheme.label(panel, "Hint", "Enter a code to claim a reward. Every code works once per player.", 16, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	hint.Position, hint.Size, hint.TextWrapped = UDim2.fromOffset(20, 50), UDim2.new(1, -40, 0, 40), true
 
 	local box = NativeUI.create("TextBox", {
-		Name = "CodeBox", Position = UDim2.fromOffset(16, 118), Size = UDim2.new(1, -32, 0, 52), Text = "", PlaceholderText = "ENTER CODE",
-		PlaceholderColor3 = Color3.fromRGB(120, 134, 160), ClearTextOnFocus = false, Font = NativeUI.FONT, TextSize = 24,
-		TextColor3 = NativeUI.OUTLINE, BackgroundColor3 = Color3.fromRGB(240, 246, 255), BorderSizePixel = 0, ZIndex = 5,
+		Name = "CodeBox", Position = UDim2.fromOffset(20, 98), Size = UDim2.new(1, -40, 0, 54), Text = "", PlaceholderText = "ENTER CODE",
+		PlaceholderColor3 = Palette.GREY_BOTTOM, ClearTextOnFocus = false, Font = MenuTheme.TITLE_FONT, TextSize = 26,
+		TextColor3 = Palette.NAVY, BackgroundColor3 = Palette.WHITE, BorderSizePixel = 0, ZIndex = 5,
 		TextXAlignment = Enum.TextXAlignment.Center,
 	}, panel)
-	NativeUI.create("UICorner", { CornerRadius = UDim.new(0, 12) }, box)
-	NativeUI.create("UIStroke", { Color = NativeUI.OUTLINE, Thickness = 3, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, box)
+	MenuTheme.round(box, 12)
+	MenuTheme.stroke(box, Palette.NAVY, 3)
 
-	local redeem = NativeUI.button(panel, "Redeem", "REDEEM", UDim2.new(0.5, 0, 0, 184), UDim2.fromOffset(200, 48), NativeUI.GREEN)
-	redeem.AnchorPoint, redeem.TextSize = Vector2.new(0.5, 0), 22
+	local redeem = MenuTheme.button(panel, "Redeem", "REDEEM", "lime", 22)
+	redeem.AnchorPoint, redeem.Position, redeem.Size = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 166), UDim2.fromOffset(210, 54)
 
-	local status = NativeUI.text(panel, "Status", "", UDim2.fromOffset(16, 242), UDim2.new(1, -32, 0, 44), true)
-	status.TextSize, status.TextWrapped, status.TextXAlignment = 16, true, Enum.TextXAlignment.Center
+	local status = MenuTheme.label(panel, "Status", "", 16, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	status.Position, status.Size, status.TextWrapped = UDim2.fromOffset(20, 228), UDim2.new(1, -40, 0, 50), true
 	return gui
 end
 

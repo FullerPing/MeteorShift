@@ -12,6 +12,8 @@ MenuFit.PortraitMinWidth = 420 -- a portrait screen narrower than this does
 MenuFit.MinScale = 0.7 -- never smaller, so text stays readable
 MenuFit.ScaleUpRef = Vector2.new(1920, 1080) -- a screen bigger than this draws menus bigger, in proportion
 MenuFit.MaxScale = 3
+MenuFit.RibbonRoom = 28 -- between the top bar and a centred panel: the title ribbon pokes 24 px above it
+MenuFit.FootRoom = 15 -- under a centred panel: its 7 px lip and a margin
 
 function MenuFit.view(viewport: Vector2, inset: number): View
 	local scale = if viewport.Y > viewport.X then viewport.X / MenuFit.PortraitMinWidth
@@ -28,13 +30,13 @@ function MenuFit.centre(view: View, rect: Rect): Vector2
 	return Vector2.new((rect.x + rect.w / 2) * view.scale, (rect.y + rect.h / 2) * view.scale)
 end
 
--- a menu of a natural size, centred under the top bar (its title ribbon pokes 16 px above it) and no bigger than
--- the screen, in virtual pixels
+-- a menu of a natural size, centred under the top bar and no bigger than the screen, in virtual pixels. Room is kept for
+-- the cartoon title ribbon (24 px above the panel, MenuFit.RibbonRoom with a gap) and the lip under it (MenuFit.FootRoom)
 function MenuFit.centred(view: View, natural: Vector2): Rect
-	local top = view.inset + 18
+	local top = view.inset + MenuFit.RibbonRoom
 	local w = math.min(natural.X, math.max(0, view.viewport.X - 24))
-	local h = math.min(natural.Y, math.max(0, view.viewport.Y - top - 12))
-	return { x = (view.viewport.X - w) / 2, y = top + (view.viewport.Y - top - 12 - h) / 2, w = w, h = h }
+	local h = math.min(natural.Y, math.max(0, view.viewport.Y - top - MenuFit.FootRoom))
+	return { x = (view.viewport.X - w) / 2, y = top + (view.viewport.Y - top - MenuFit.FootRoom - h) / 2, w = w, h = h }
 end
 
 return MenuFit

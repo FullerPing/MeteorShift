@@ -14,6 +14,8 @@ local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 local PerksMenu = require(script.Parent.Parent.NativeMenus.Perks)
 local RebirthMenu = require(script.Parent.Parent.NativeMenus.Rebirth)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local player = Players.LocalPlayer
 local PerksController = Knit.CreateController({ Name = "PerksController" })
 
@@ -29,13 +31,9 @@ function PerksController:KnitStart()
 	local PerkService = Knit.GetService("PerkService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local HUDController = Knit.GetController("HUDController")
-	local playerGui = player:WaitForChild("PlayerGui")
-	if not playerGui:FindFirstChild("ColonyPerks") then
-		PerksMenu.build().Parent = playerGui
-	end
-	local gui = NativeUI.get("ColonyPerks")
+	local gui = NativeUI.getFresh("ColonyPerks", PerksMenu.build, PerksMenu.LAYOUT)
 	local panel = gui:WaitForChild("Panel") :: Frame
-	NativeUI.fitCentred(panel, Vector2.new(430, 560))
+	NativeUI.fitCentred(panel, PerksMenu.SIZE)
 	local body = panel:WaitForChild("Body") :: ScrollingFrame
 	local wallet = panel:WaitForChild("Wallet") :: TextLabel
 	local footer = panel:WaitForChild("Footer") :: TextLabel
@@ -45,7 +43,7 @@ function PerksController:KnitStart()
 	local function update()
 		local owned = if state then state.perks else nil
 		local unlocked = state ~= nil and PerksRules.unlocked(state.rebirths)
-		wallet.Text = if state then Format.number(state.shards) .. " Core Shards" else "Loading..."
+		wallet.Text = if state then Format.number(state.shards) .. " Shards" else "Loading..."
 		footer.Text = if unlocked then "Perks are permanent and survive every rebirth." else string.format("Colony Perks open at rebirth %d.", Config.Perks.UnlockRebirths)
 		for _, id in Config.Perks.Order do
 			local def = Config.Perks.List[id]
@@ -59,8 +57,13 @@ function PerksController:KnitStart()
 				;(card:FindFirstChild("Text") :: TextLabel).Text = string.format(def.Text, effectText(id, shownEffect))
 				local buy = card:FindFirstChild("Buy") :: TextButton
 				local enabled = unlocked and cost ~= nil and state ~= nil and state.shards >= cost and busy == nil
-				NativeUI.enable(buy, enabled, NativeUI.GREEN)
-				buy.Text = if not cost then "MAX" elseif busy == id then "..." else "BUY\n" .. cost .. " ◆"
+				MenuTheme.state(buy, enabled, "lime")
+				buy.Text = if not cost then "MAX" elseif busy == id then "..." else "BUY"
+				-- the price in shards above the button, red while you cannot afford it
+				local price = card:FindFirstChild("Price") :: TextLabel
+				price.Text = if cost then Format.number(cost) else ""
+				price.TextColor3 = if cost and state and state.shards < cost then Palette.UNMET else Palette.NAVY
+				;(card:FindFirstChild("PriceIcon") :: ImageLabel).Visible = cost ~= nil
 			end
 		end
 	end

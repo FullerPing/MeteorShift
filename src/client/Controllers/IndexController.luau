@@ -15,11 +15,13 @@ local IndexLayout = require(ReplicatedStorage.Shared.IndexLayout)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
+local IndexMenu = require(script.Parent.Parent.NativeMenus.Index)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 
 local player = Players.LocalPlayer
 local Pages = Config.Index.Pages
 local PageOrder = Config.Index.PageOrder
-local GOLD = Color3.fromRGB(255, 207, 55)
 local IndexController = Knit.CreateController({ Name = "IndexController" })
 
 local function child(parent: Instance, name: string, className: string): any
@@ -41,7 +43,7 @@ function IndexController:KnitStart()
 	local IndexService = Knit.GetService("IndexService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local HUDController = Knit.GetController("HUDController")
-	local gui = NativeUI.get("MineralIndex")
+	local gui = NativeUI.getFresh("MineralIndex", IndexMenu.build, IndexMenu.LAYOUT)
 	local nav: TextButton = child(gui, "IndexButton", "TextButton")
 	local navRefs = ExactNavButton.bind(nav)
 	local badge, tooltip = navRefs.badge, navRefs.tooltip
@@ -100,7 +102,7 @@ function IndexController:KnitStart()
 			local total, found = #page.Minerals, MineralIndex.found(index, pageId)
 			local complete = found >= total
 			local meteor = Config.Meteor.Types[pageId]
-			local glow = if meteor then meteor.GlowColor else NativeUI.ORANGE
+			local glow = if meteor then meteor.GlowColor else Palette.GOLD_BOTTOM
 			local tier = if meteor then meteor.RequiredTier else 1
 			local drops = if tier <= 1 then "Drops for every pickaxe on " .. page.Name .. " meteors"
 				else "Drops only for Tier " .. tier .. "+ pickaxes on " .. page.Name .. " meteors"
@@ -108,25 +110,25 @@ function IndexController:KnitStart()
 			controls.sales.Text = if bonus > 0 then percent(bonus) .. " bar sales" else "No index bonus yet"
 			controls.bestTitle.Text = if best then "Title: " .. best else "Complete a page for a title"
 			controls.found.Text = if complete then "PAGE COMPLETE!" else Format.number(found) .. " / " .. Format.number(total) .. " minerals found"
-			controls.found.TextColor3 = if complete then NativeUI.GREEN else NativeUI.MUTED
+			controls.found.TextColor3 = if complete then Palette.MET else Palette.SECOND
 			controls.fill.Size = UDim2.fromScale(found / math.max(total, 1), 1)
-			controls.fill.BackgroundColor3 = if complete then NativeUI.GREEN else glow
+			controls.fill.BackgroundColor3 = if complete then Palette.LIME_BOTTOM else glow
 			controls.reward.Text = (if complete then "Earned: " else "Complete it for ") .. percent(page.CashBonus)
 				.. " bar sales and the title \"" .. page.Title .. "\"\n" .. drops
 			local tab = tabButtons[pageId]
 			tab.Text = string.upper(page.Name) .. "\n" .. Format.number(found) .. "/" .. Format.number(total)
-			tab.BackgroundColor3 = if selectedPage == pageId then GOLD else NativeUI.CARD
-			tab.TextColor3 = if selectedPage == pageId then NativeUI.OUTLINE else NativeUI.MUTED
+			MenuTheme.tab(tab, selectedPage == pageId)
 			for _, mineral in page.Minerals do
 				local card = controls.minerals[mineral.Id]
 				local count = index[mineral.Id] or 0
 				local known = count > 0
 				card.name.Text = if known then mineral.Name else "???"
-				card.name.TextColor3 = if known then mineral.Color:Lerp(NativeUI.WHITE, 0.35) else NativeUI.MUTED
+				-- names in the mineral's colour, darkened toward navy so they read on the white card
+				card.name.TextColor3 = if known then mineral.Color:Lerp(Palette.NAVY, 0.45) else Palette.SECOND
 				card.found.Text = if known then "Found ×" .. Format.number(count) else "Not found yet"
-				card.found.TextColor3 = if known then NativeUI.GREEN else NativeUI.MUTED
-				card.edge.BackgroundColor3 = if known then mineral.Color:Lerp(Color3.new(0, 0, 0), 0.5) else Color3.fromRGB(20, 14, 12)
-				card.diamond.BackgroundColor3 = if known then mineral.Color else NativeUI.OUTLINE
+				card.found.TextColor3 = if known then Palette.MET else Palette.SECOND
+				card.edge.BackgroundColor3 = if known then mineral.Color:Lerp(Palette.NAVY, 0.5) else Palette.NAVY
+				card.diamond.BackgroundColor3 = if known then mineral.Color else Palette.GREY_BOTTOM
 				card.shine.BackgroundTransparency = if known then 0.45 else 1
 				card.unknown.Visible = not known
 			end
@@ -149,14 +151,14 @@ function IndexController:KnitStart()
 		rect(title, geometry.title)
 		rect(close, geometry.close)
 		rect(tabs, geometry.tabs)
-		title.TextSize = if geometry.narrow then 22 else 26
+		title.Visible = geometry.title.w >= 100
 		tabList.Padding = UDim.new(0, geometry.tabGap)
 		ExactNavButton.layout(nav, layout, "INDEX")
 		for _, pageId in PageOrder do
 			local controls = pageControls[pageId]
 			local total = #Pages[pageId].Minerals
 			local leftWidth = geometry.summaryWidth * (if geometry.narrow then 1 else 0.45)
-			tabButtons[pageId].Size = UDim2.fromOffset(geometry.tabWidth, 44)
+			tabButtons[pageId].Size = UDim2.fromOffset(geometry.tabWidth, geometry.tabs.h)
 			rect(controls.page, geometry.content)
 			controls.page.CanvasSize = UDim2.fromOffset(0, IndexLayout.canvasHeight(geometry, total))
 			controls.bonus.Size = UDim2.fromOffset(geometry.summaryWidth, 44)

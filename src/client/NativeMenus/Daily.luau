@@ -1,93 +1,89 @@
 --!strict
--- Authoring for the Daily Rewards panel (Config.Daily): the 7-day streak with a CLAIM button and shield count,
--- today's quests, the all-done bonus and the weekly quest. DailyController binds everything by name.
+-- Authoring for the Daily Rewards panel (Config.Daily) in the cartoon light look (MenuTheme): a "Daily Rewards" ribbon,
+-- the 7-day streak (days 1 to 6 as white tiles in a 3 x 2 block, day 7 as a tall jackpot tile beside them, each with a
+-- CLAIM button) and the shield line, then today's quests, the all-done bonus and the weekly quest as white rows with a
+-- progress bar and a CLAIM button. DailyController binds everything by name and colours today's tile.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Config = require(ReplicatedStorage.Shared.Config)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local Daily = {}
 
+Daily.LAYOUT = 2 -- bumped when the controls change; DailyController rebuilds an older copy
+Daily.SIZE = Vector2.new(660, 640)
 Daily.QUEST_SLOTS = { "Quest1", "Quest2", "Quest3", "Weekly", "Bonus" }
 
 local TILE_COLUMNS = 3
-local BIG_TILE = Color3.fromRGB(176, 128, 255) -- the day 7 jackpot tile stands apart from the blue ones
 
 local function questRow(body: ScrollingFrame, name: string, order: number)
-	local row = NativeUI.create("Frame", {
-		Name = name, LayoutOrder = order, Size = UDim2.new(1, -8, 0, 78), BackgroundColor3 = NativeUI.CARD,
-		BorderSizePixel = 0, ZIndex = 4,
-	}, body)
-	NativeUI.surface(row, 4, .8)
-	local title = NativeUI.text(row, "Title", "", UDim2.fromOffset(12, 6), UDim2.new(1, -130, 0, 24))
-	title.TextSize, title.TextScaled = 18, true
+	local row = MenuTheme.whiteCard(body, name, 12)
+	row.LayoutOrder, row.Size = order, UDim2.new(1, -14, 0, 84)
+	local title = MenuTheme.label(row, "Title", "", 18, Palette.NAVY, MenuTheme.TITLE_FONT)
+	title.Position, title.Size, title.TextScaled = UDim2.fromOffset(14, 6), UDim2.new(1, -150, 0, 24), true
 	NativeUI.create("UITextSizeConstraint", { MinTextSize = 11, MaxTextSize = 18 }, title)
-	NativeUI.text(row, "Progress", "", UDim2.fromOffset(12, 32), UDim2.new(1, -130, 0, 18), true).TextColor3 = NativeUI.MUTED
-	NativeUI.text(row, "Reward", "", UDim2.fromOffset(12, 52), UDim2.new(1, -130, 0, 18), true).TextColor3 = NativeUI.HUD_GOLD
-	local claim = NativeUI.button(row, "Claim", "CLAIM", UDim2.new(1, -118, 0, 17), UDim2.fromOffset(106, 44), NativeUI.GREEN)
-	claim.TextSize = 16
+	local bar = MenuTheme.bar(row, "Bar", Palette.LIME_BOTTOM)
+	bar.Position, bar.Size = UDim2.fromOffset(14, 36), UDim2.new(1, -250, 0, 12)
+	local progress = MenuTheme.label(row, "Progress", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Right)
+	progress.Position, progress.Size = UDim2.new(1, -230, 0, 31), UDim2.fromOffset(94, 22)
+	local reward = MenuTheme.label(row, "Reward", "", 15, Palette.GOLD_TEXT, MenuTheme.TITLE_FONT)
+	reward.Position, reward.Size = UDim2.fromOffset(14, 56), UDim2.new(1, -150, 0, 22)
+	local claim = MenuTheme.button(row, "Claim", "CLAIM", "face", 17)
+	claim.Position, claim.Size = UDim2.new(1, -126, 0, 16), UDim2.fromOffset(114, 52)
 end
 
 function Daily.build(): ScreenGui
-	local gui = NativeUI.menu("DailyMenu", "Daily Rewards", NativeUI.ORANGE, 640, 600)
+	local gui, panel = MenuTheme.menu("DailyMenu", "Daily Rewards", "daily", Daily.SIZE, Daily.LAYOUT)
 	gui.DisplayOrder = 28
-	local panel = gui:WaitForChild("Panel") :: Frame
-	panel.Size = UDim2.new(0.94, 0, 0.92, 0)
-	NativeUI.create("UISizeConstraint", { MaxSize = Vector2.new(660, 640), MinSize = Vector2.new(300, 300) }, panel)
-	local title = panel:WaitForChild("Title") :: TextLabel
-	title.TextScaled = true
-	NativeUI.create("UITextSizeConstraint", { MinTextSize = 18, MaxTextSize = 28 }, title)
 
 	local body = NativeUI.create("ScrollingFrame", {
-		Name = "Body", Position = UDim2.fromOffset(12, 62), Size = UDim2.new(1, -24, 1, -74),
+		Name = "Body", Position = UDim2.fromOffset(12, 50), Size = UDim2.new(1, -24, 1, -64),
 		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = NativeUI.MUTED,
+		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = Palette.BLUE_BOTTOM,
 		VerticalScrollBarInset = Enum.ScrollBarInset.Always, ElasticBehavior = Enum.ElasticBehavior.WhenScrollable, ZIndex = 4,
 	}, panel)
 	NativeUI.create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, body)
+	NativeUI.create("UIPadding", { PaddingTop = UDim.new(0, 3), PaddingLeft = UDim.new(0, 3) }, body)
 
-	-- The streak card: a heading, the seven reward tiles (days 1 to 6 in a 3 x 2 block, day 7 tall beside them) and
-	-- the shield line. Each tile has its own status button; the controller fills in amounts and states.
+	-- The streak card: a heading, the seven reward tiles and the shield line. Each tile has its own CLAIM button; the
+	-- controller fills in amounts and states.
 	local streak = NativeUI.create("Frame", {
-		Name = "StreakCard", LayoutOrder = 1, Size = UDim2.new(1, -8, 0, 414), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4,
+		Name = "StreakCard", LayoutOrder = 1, Size = UDim2.new(1, -14, 0, 418), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 4,
 	}, body)
-	local heading = NativeUI.text(streak, "Heading", "", UDim2.fromOffset(4, 4), UDim2.new(1, -8, 0, 28))
-	heading.TextXAlignment = Enum.TextXAlignment.Center
-	local grid = NativeUI.create("Frame", { Name = "Days", Position = UDim2.fromOffset(0, 38), Size = UDim2.new(1, 0, 0, 330), BackgroundTransparency = 1, ZIndex = 4 }, streak)
+	local heading = MenuTheme.label(streak, "Heading", "", 20, Palette.NAVY, MenuTheme.TITLE_FONT, Enum.TextXAlignment.Center)
+	heading.Position, heading.Size = UDim2.fromOffset(4, 2), UDim2.new(1, -8, 0, 28)
+	local grid = NativeUI.create("Frame", { Name = "Days", Position = UDim2.fromOffset(0, 36), Size = UDim2.new(1, 0, 0, 334), BackgroundTransparency = 1, ZIndex = 4 }, streak)
 	for index, entry in Config.Daily.Days do
 		local big = index == Config.Daily.CycleLength
 		local column, row = (index - 1) % TILE_COLUMNS, (index - 1) // TILE_COLUMNS
-		local tile = NativeUI.create("Frame", {
-			Name = "Day" .. index, LayoutOrder = index, BackgroundColor3 = if big then BIG_TILE else NativeUI.CARD, BorderSizePixel = 0, ZIndex = 4,
-			Size = if big then UDim2.new(0.25, -6, 1, 0) else UDim2.new(0.25, -6, 0.5, -4),
-			Position = if big then UDim2.fromScale(0.75, 0) else UDim2.new(column * 0.25, 0, row * 0.5, row * 4),
-		}, grid)
-		NativeUI.surface(tile, 4, .8)
-		local title = NativeUI.text(tile, "Title", "Day " .. index, UDim2.fromOffset(0, 6), UDim2.new(1, 0, 0, 24))
-		title.TextXAlignment, title.TextSize, title.TextScaled = Enum.TextXAlignment.Center, 20, true
+		local tile = MenuTheme.whiteCard(grid, "Day" .. index, 14)
+		tile.LayoutOrder = index
+		tile.Size = if big then UDim2.new(0.25, -6, 1, 0) else UDim2.new(0.25, -6, 0.5, -4)
+		tile.Position = if big then UDim2.fromScale(0.75, 0) else UDim2.new(column * 0.25, 0, row * 0.5, row * 4)
+		local title = MenuTheme.label(tile, "Title", "Day " .. index, 20, Palette.NAVY, MenuTheme.TITLE_FONT, Enum.TextXAlignment.Center)
+		title.Position, title.Size, title.TextScaled = UDim2.fromOffset(0, 6), UDim2.new(1, 0, 0, 24), true
 		NativeUI.create("UITextSizeConstraint", { MinTextSize = 11, MaxTextSize = 22 }, title)
-		local iconSize = if big then 112 else 52
-		NativeUI.create("ImageLabel", {
-			Name = "Icon", AnchorPoint = Vector2.new(.5, 0), Position = UDim2.new(.5, 0, 0, if big then 48 else 32), Size = UDim2.fromOffset(iconSize, iconSize),
-			BackgroundTransparency = 1, Image = if entry.Shards > 0 then Config.HudIcons.crystal else Config.HudIcons.coin,
-			ScaleType = Enum.ScaleType.Fit, ZIndex = 5,
-		}, tile)
-		local prize = NativeUI.text(tile, "Prize", "", UDim2.new(.5, 0, 1, -42), UDim2.new(1, -8, 0, if big then 84 else 34))
-		prize.AnchorPoint, prize.TextXAlignment, prize.TextYAlignment = Vector2.new(.5, 1), Enum.TextXAlignment.Center, Enum.TextYAlignment.Center
-		prize.TextWrapped, prize.TextScaled, prize.TextSize = true, true, 16
+		local iconSize = if big then 104 else 48
+		local icon = MenuTheme.icon(tile, "Icon", if entry.Shards > 0 then "crystal" else "coin", UDim2.new(0.5, 0, 0, if big then 44 else 30), UDim2.fromOffset(iconSize, iconSize))
+		icon.AnchorPoint = Vector2.new(0.5, 0)
+		local prize = MenuTheme.label(tile, "Prize", "", 16, Palette.NAVY, MenuTheme.TITLE_FONT, Enum.TextXAlignment.Center)
+		prize.AnchorPoint, prize.Position, prize.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -46), UDim2.new(1, -8, 0, if big then 84 else 34)
+		prize.TextWrapped, prize.TextScaled = true, true
 		NativeUI.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = if big then 20 else 17 }, prize)
-		local claim = NativeUI.button(tile, "Claim", "LOCKED!", UDim2.new(.5, 0, 1, -6), UDim2.new(1, -16, 0, 30), NativeUI.GREEN)
-		claim.AnchorPoint, claim.TextSize = Vector2.new(.5, 1), 16
+		local claim = MenuTheme.button(tile, "Claim", "LOCKED", "face", 16)
+		claim.AnchorPoint, claim.Position, claim.Size = Vector2.new(0.5, 1), UDim2.new(0.5, 0, 1, -6), UDim2.new(1, -14, 0, 38)
 	end
-	local shields = NativeUI.text(streak, "Shields", "", UDim2.fromOffset(4, 372), UDim2.new(1, -8, 0, 40), true)
-	shields.TextSize, shields.TextColor3, shields.TextWrapped, shields.TextXAlignment = 14, NativeUI.MUTED, true, Enum.TextXAlignment.Center
+	local shields = MenuTheme.label(streak, "Shields", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	shields.Position, shields.Size, shields.TextWrapped = UDim2.fromOffset(4, 376), UDim2.new(1, -8, 0, 40), true
 
-	local header = NativeUI.text(body, "QuestHeader", "TODAY'S QUESTS", UDim2.new(), UDim2.new(1, -8, 0, 26))
-	header.LayoutOrder = 2
+	local header = MenuTheme.label(body, "QuestHeader", "TODAY'S QUESTS", 20, Palette.NAVY, MenuTheme.TITLE_FONT)
+	header.LayoutOrder, header.Size = 2, UDim2.new(1, -14, 0, 28)
 	for order, name in Daily.QUEST_SLOTS do
 		questRow(body, name, 2 + order)
 	end
-	local footer = NativeUI.text(body, "Footer", "", UDim2.new(), UDim2.new(1, -8, 0, 24), true)
-	footer.LayoutOrder, footer.TextSize, footer.TextColor3 = 20, 14, NativeUI.MUTED
+	local footer = MenuTheme.label(body, "Footer", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	footer.LayoutOrder, footer.Size = 20, UDim2.new(1, -14, 0, 28)
 	return gui
 end
 

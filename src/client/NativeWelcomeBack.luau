@@ -5,6 +5,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Format = require(ReplicatedStorage.Shared.Format)
 local NativeUI = require(script.Parent.NativeUI)
+local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
+local Menu = require(script.Parent.NativeMenus.WelcomeBack)
 local WelcomeBack = {}
 
 -- Preserve the existing while-away report copy and formatting exactly.
@@ -31,7 +33,7 @@ local function formatReport(report: any): string
 end
 
 function WelcomeBack.start(onDismiss: () -> ()): (any?) -> ()
-	local gui = NativeUI.get("WelcomeBack")
+	local gui = NativeUI.getFresh("WelcomeBack", Menu.build, Menu.LAYOUT)
 	local panel = gui:WaitForChild("Panel") :: Frame
 	local body = panel:WaitForChild("Body") :: ScrollingFrame
 	local reportText = body:WaitForChild("Report") :: TextLabel
@@ -48,10 +50,9 @@ function WelcomeBack.start(onDismiss: () -> ()): (any?) -> ()
 	dimmer.Activated:Connect(dismiss)
 	NativeUI.onLayoutChanged(function(layout)
 		local view = NativeUI.menuView(layout)
-		local width = math.min(390, math.max(1, view.viewport.X - 24))
-		local height = math.min(260, math.max(1, view.viewport.Y - view.inset - 24))
-		NativeUI.place(panel, { x = (view.viewport.X - width) / 2, y = view.inset + (view.viewport.Y - view.inset - height) / 2, w = width, h = height }, view)
-		body.Size = UDim2.new(1, -36, 0, math.max(0, height - 128))
+		local rect = MenuFit.centred(view, Menu.SIZE)
+		NativeUI.place(panel, rect, view)
+		body.Size = UDim2.new(1, -60, 0, math.max(0, rect.h - 164))
 	end)
 	gui.Enabled = false
 	return function(report: any?)

@@ -65,8 +65,9 @@ return function(t: any)
 				local r = MenuFit.centred(view, natural)
 				local k = view.scale
 				t.ok(r.w <= natural.X and r.h <= natural.Y, s[1] .. " no bigger than natural")
-				-- the ribbon pokes 16 px above the panel: keep it under the top bar
-				t.ok((r.y - 16) * k >= s[3] - 0.5, s[1] .. " below the top bar " .. tostring(natural))
+				-- the title ribbon pokes 24 px above the panel and the lip hangs 7 px under it: keep both on screen
+				t.ok((r.y - 24) * k >= s[3] - 0.5, s[1] .. " ribbon below the top bar " .. tostring(natural))
+				t.ok((r.y + r.h + 7) * k <= s[2].Y + 0.5, s[1] .. " lip on screen " .. tostring(natural))
 				t.ok(r.x * k >= 0 and (r.x + r.w) * k <= s[2].X + 0.5, s[1] .. " inside horizontally")
 				t.ok((r.y + r.h) * k <= s[2].Y + 0.5, s[1] .. " inside vertically")
 			end

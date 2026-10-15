@@ -11,6 +11,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Visuals = require(ReplicatedStorage.Shared.PetVisuals)
 local UI = require(script.Parent.Parent.NativeUI)
+local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
+local HatchMenu = require(script.Parent.Parent.NativeMenus.Hatch)
 local Sfx = require(script.Parent.Parent.Sfx)
 local PetModel = require(script.Parent.Parent.PetModel)
 
@@ -103,13 +105,14 @@ function HatchController:KnitStart()
 	local preview: PetModel.Visual? = nil
 	local egg: Model? = nil
 	local nextAt = 0
-	local gui = UI.get("PetHatch")
+	local gui = UI.getFresh("PetHatch", HatchMenu.build, HatchMenu.LAYOUT)
 	local shade = gui:WaitForChild("DismissBackdrop") :: TextButton
 	local panel = gui:WaitForChild("HatchResult") :: Frame
 	local title = panel:WaitForChild("PetName") :: TextLabel
 	local rarity = panel:WaitForChild("Rarity") :: TextLabel
 	local headerClose = panel:WaitForChild("HeaderClose") :: TextButton
 	local viewport = panel:WaitForChild("PetPreview") :: ViewportFrame
+	local well = panel:WaitForChild("PreviewWell") :: Frame
 	-- Cameras may be excluded from StarterGui replication; keep this local to the preview.
 	local camera: Camera = (viewport:FindFirstChild("Camera") or create("Camera", viewport, {
 		Name = "Camera", FieldOfView = 38,
@@ -135,22 +138,26 @@ function HatchController:KnitStart()
 	local function layout()
 		local view = UI.menuView(UI.hudLayout())
 		local size, inset = view.viewport, view.inset
-		local short = size.Y - inset < 430
-		local width = math.min(if short then 600 else 360, size.X - 24)
-		local height = math.min(if short then 260 else 420, size.Y - inset - 24)
-		UI.place(panel, { x = (size.X - width) / 2, y = inset + (size.Y - inset - height) / 2, w = width, h = height }, view)
-		title.Position, title.Size = UDim2.fromOffset(12, 10), UDim2.fromOffset(width - 76, 32)
-		rarity.Position, rarity.Size = UDim2.fromOffset(12, 42), UDim2.fromOffset(width - 76, 20)
-		local previewWidth = if short then 170 else width - 24
-		local previewHeight = if short then height - 124 else math.min(158, height - 230)
-		viewport.Position, viewport.Size = UDim2.fromOffset(12, 66), UDim2.fromOffset(previewWidth, previewHeight)
+		-- short screens: the preview on the left and the perks beside it; otherwise one column. Room is kept above the
+		-- panel for the ribbon and below it for the lip (MenuFit.centred)
+		local short = size.Y - inset < 470
+		local rect = MenuFit.centred(view, if short then Vector2.new(620, 320) else Vector2.new(380, 470))
+		local width, height = rect.w, rect.h
+		UI.place(panel, rect, view)
+		title.Position, title.Size = UDim2.fromOffset(16, 46), UDim2.fromOffset(width - 32, 32)
+		rarity.Position, rarity.Size = UDim2.fromOffset(16, 78), UDim2.fromOffset(width - 32, 22)
+		local top = 104
+		local previewWidth = if short then 210 else width - 32
+		local previewHeight = if short then math.max(60, height - top - 104) else math.max(60, math.min(170, height - top - 190))
+		viewport.Position, viewport.Size = UDim2.fromOffset(16, top), UDim2.fromOffset(previewWidth, previewHeight)
+		well.Position, well.Size = viewport.Position, viewport.Size
 		local raySize = math.min(previewWidth, previewHeight * 1.5)
-		rays.Position, rays.Size = UDim2.fromOffset(12 + previewWidth / 2, 66 + previewHeight / 2), UDim2.fromOffset(raySize, raySize)
-		local textX = if short then 194 else 12
-		local textY = if short then 66 else 66 + previewHeight + 4
-		perks.Position, perks.Size = UDim2.fromOffset(textX, textY), UDim2.fromOffset(width - textX - 12, math.max(36, height - textY - 98))
-		duplicate.Position, duplicate.Size = UDim2.fromOffset(12, height - 90), UDim2.fromOffset(width - 24, 28)
-		close.Position = UDim2.fromOffset(12, height - 56)
+		rays.Position, rays.Size = UDim2.fromOffset(16 + previewWidth / 2, top + previewHeight / 2), UDim2.fromOffset(raySize, raySize)
+		local textX = if short then 16 + previewWidth + 14 else 16
+		local textY = if short then top else top + previewHeight + 8
+		perks.Position, perks.Size = UDim2.fromOffset(textX, textY), UDim2.fromOffset(width - textX - 16, math.max(36, height - textY - 104))
+		duplicate.Position, duplicate.Size = UDim2.fromOffset(16, height - 98), UDim2.fromOffset(width - 32, 28)
+		close.Position, close.Size = UDim2.fromOffset(16, height - 68), UDim2.fromOffset(width - 32, 52)
 	end
 
 	local function clearPreview()

@@ -4,6 +4,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
+local StarterGui = game:GetService("StarterGui")
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
 local HudEditConfig = require(ReplicatedStorage.Shared.Config.HudEdit)
@@ -100,6 +101,15 @@ function NativeUI.getOrBuild(name: string, build: () -> ScreenGui, prepare: ((Sc
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 	if not playerGui:FindFirstChild(name) then build().Parent = playerGui end
 	return NativeUI.get(name, prepare)
+end
+-- Like getOrBuild, but a copy saved in the place (StarterGui) or built earlier whose MenuLayout attribute is not
+-- `layout` is thrown away first, so a redesigned builder wins over an old export.
+function NativeUI.getFresh(name: string, build: () -> ScreenGui, layout: number, prepare: ((ScreenGui) -> ())?): ScreenGui
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local saved = playerGui:FindFirstChild(name)
+	if not saved and StarterGui:FindFirstChild(name) then saved = playerGui:WaitForChild(name, 15) end
+	if saved and saved:GetAttribute("MenuLayout") ~= layout then saved:Destroy() end
+	return NativeUI.getOrBuild(name, build, prepare)
 end
 function NativeUI.enable(button: GuiButton, enabled: boolean, color: Color3)
 	button.Active, button.Selectable, button.AutoButtonColor = enabled, enabled, enabled

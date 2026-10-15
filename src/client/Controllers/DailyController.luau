@@ -12,6 +12,8 @@ local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 local DailyMenu = require(script.Parent.Parent.NativeMenus.Daily)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local player = Players.LocalPlayer
 local DailyController = Knit.CreateController({ Name = "DailyController" })
 
@@ -28,12 +30,30 @@ local function clock(seconds: number): string
 	return string.format("%dh %02dm", seconds // 3600, seconds % 3600 // 60)
 end
 
-local JACKPOT = Color3.fromRGB(176, 128, 255) -- day 7's tile colour, the same as in NativeMenus/Daily
+-- a day tile's fill (a gradient, top to bottom) and outline: today's claim is gold, day 7 a pale violet jackpot, a claimed
+-- day pale green and the rest white
+local TILES = {
+	today = { Palette.GOLD_TOP, Palette.GOLD_BOTTOM, Palette.EVO_EDGE },
+	jackpot = { Color3.fromRGB(246, 236, 255), Color3.fromRGB(214, 190, 250), Color3.fromRGB(150, 110, 220) },
+	claimed = { Palette.BOOST, Color3.fromRGB(212, 240, 192), Palette.BOOST_EDGE },
+	plain = { Palette.WHITE, Palette.DETAIL_TOP, Palette.NAVY },
+}
+local function paintTile(tile: Frame, look: { Color3 })
+	local gradient = tile:FindFirstChildOfClass("UIGradient")
+	if gradient then gradient.Color = ColorSequence.new(look[1], look[2]) end
+	local stroke = tile:FindFirstChildOfClass("UIStroke")
+	if stroke then stroke.Color = look[3] end
+end
+-- a claim button: lime while it can be pressed, blue once done, the plain face while locked
+local function paintClaim(button: GuiButton, ready: boolean, done: boolean)
+	if done then MenuTheme.paint(button, "blue"); button.Active, button.Selectable = false, false
+	else MenuTheme.state(button, ready, "lime") end
+end
 
 -- A day tile's reward: the cash on the first line, then whatever else the day pays
 local function prizeText(entry: any): string
 	local lines = { Format.cash(entry.cash) }
-	if entry.shards > 0 then table.insert(lines, "+" .. entry.shards .. " \u{25C6}") end
+	if entry.shards > 0 then table.insert(lines, "+" .. entry.shards .. " shards") end
 	if entry.petXp > 0 then table.insert(lines, "+" .. entry.petXp .. " pet XP") end
 	if entry.shield > 0 then table.insert(lines, "+1 shield") end
 	return table.concat(lines, "\n")
@@ -41,7 +61,7 @@ end
 
 local function rewardText(cash: number, shards: number, extra: string?): string
 	local parts = { "+" .. Format.cash(cash) }
-	if shards > 0 then table.insert(parts, "+" .. shards .. " ◆") end
+	if shards > 0 then table.insert(parts, "+" .. shards .. " shards") end
 	if extra then table.insert(parts, extra) end
 	return table.concat(parts, "  ")
 end
@@ -49,7 +69,7 @@ end
 function DailyController:KnitStart()
 	local DailyService = Knit.GetService("DailyService")
 	local HUDController = Knit.GetController("HUDController")
-	local gui = NativeUI.getOrBuild("DailyMenu", DailyMenu.build)
+	local gui = NativeUI.getFresh("DailyMenu", DailyMenu.build, DailyMenu.LAYOUT)
 	-- the Daily Rewards button in the HUD's menu row (Shared.HudLayout places it as DAILY); it carries the ready dot
 	local navGui = Instance.new("ScreenGui")
 	navGui.Name, navGui.ResetOnSpawn, navGui.IgnoreGuiInset, navGui.DisplayOrder = "DailyNav", false, true, 24
@@ -58,7 +78,7 @@ function DailyController:KnitStart()
 	local nav = ExactNavButton.author(navGui, "DailyButton", "Daily", Config.HudIcons.daily)
 	local navRefs = ExactNavButton.bind(nav)
 	local panel = gui:WaitForChild("Panel") :: Frame
-	NativeUI.fitCentred(panel, Vector2.new(660, 640))
+	NativeUI.fitCentred(panel, DailyMenu.SIZE)
 	local body = panel:WaitForChild("Body") :: ScrollingFrame
 	local streak = body:WaitForChild("StreakCard") :: Frame
 	local summary: any = nil
@@ -77,20 +97,12 @@ function DailyController:KnitStart()
 			if not tile or not entry then continue end
 			local claimed = index < s.cycleDay or (index == s.cycleDay and s.claimedToday)
 			local today = index == s.cycleDay and not s.claimedToday
-			tile.BackgroundColor3 = if today then NativeUI.ORANGE elseif index == Config.Daily.CycleLength then JACKPOT else NativeUI.CARD
+			paintTile(tile, if today then TILES.today elseif claimed then TILES.claimed
+				elseif index == Config.Daily.CycleLength then TILES.jackpot else TILES.plain)
 			;(tile:WaitForChild("Prize") :: TextLabel).Text = prizeText(entry)
 			local claim = tile:WaitForChild("Claim") :: TextButton
-			if today then
-				NativeUI.enable(claim, not busy, NativeUI.GREEN)
-				claim.Text = "CLAIM"
-			elseif claimed then
-				NativeUI.enable(claim, true, NativeUI.GREEN)
-				claim.Active, claim.AutoButtonColor, claim.Selectable = false, false, false
-				claim.Text = "CLAIMED"
-			else
-				NativeUI.enable(claim, false, NativeUI.GREEN)
-				claim.Text = "LOCKED!"
-			end
+			paintClaim(claim, today and not busy, claimed)
+			claim.Text = if today then "CLAIM" elseif claimed then "CLAIMED" else "LOCKED"
 		end
 		local note = if s.willReset then " Your streak will start over."
 			elseif s.shieldsToUse > 0 then " A shield will cover your missed days."
@@ -108,16 +120,20 @@ function DailyController:KnitStart()
 				;(row:FindFirstChild("Progress") :: TextLabel).Text = if s.bonus.claimed then "Bonus claimed" else "Claim all three to unlock"
 				;(row:FindFirstChild("Reward") :: TextLabel).Text = rewardText(s.bonus.cash, s.bonus.shards)
 				local claimBonus = row:FindFirstChild("Claim") :: TextButton
-				NativeUI.enable(claimBonus, s.bonus.ready and not busy, NativeUI.GREEN)
+				paintClaim(claimBonus, s.bonus.ready and not busy, s.bonus.claimed)
 				claimBonus.Text = if s.bonus.claimed then "DONE" else "CLAIM"
+				local done = 0
+				for _, q in s.quests do if q.claimed then done += 1 end end
+				;((row:FindFirstChild("Bar") :: Frame):FindFirstChild("Fill") :: Frame).Size = UDim2.fromScale(if s.bonus.claimed then 1 else math.clamp(done / math.max(#s.quests, 1), 0, 1), 1)
 			elseif quest then
 				row.Visible = true
 				;(row:FindFirstChild("Title") :: TextLabel).Text = (if name == "Weekly" then "WEEKLY: " else "") .. quest.title
 				;(row:FindFirstChild("Progress") :: TextLabel).Text = string.format("%s / %s", Format.number(quest.progress), Format.number(quest.target))
 				;(row:FindFirstChild("Reward") :: TextLabel).Text = rewardText(quest.cash, quest.shards)
 				local claimQuest = row:FindFirstChild("Claim") :: TextButton
-				NativeUI.enable(claimQuest, quest.ready and not busy, NativeUI.GREEN)
+				paintClaim(claimQuest, quest.ready and not busy, quest.claimed)
 				claimQuest.Text = if quest.claimed then "DONE" else "CLAIM"
+				;((row:FindFirstChild("Bar") :: Frame):FindFirstChild("Fill") :: Frame).Size = UDim2.fromScale(math.clamp(quest.progress / math.max(quest.target, 1), 0, 1), 1)
 			else
 				row.Visible = false
 			end
