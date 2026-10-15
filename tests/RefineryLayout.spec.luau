@@ -1,10 +1,14 @@
 --!strict
 return function(t: any)
 	local Layout = require(t.shared.RefineryLayout)
+	local MenuFit = require(t.shared.MenuFit)
 	t.test("phone refinery retains an inventory row above its footer", function()
 		for _, viewport in { Vector2.new(844, 390), Vector2.new(780, 360), Vector2.new(685, 338), Vector2.new(320, 568), Vector2.new(390, 844) } do
 			for _, inset in { 36, 58, 60 } do
-				local height = math.min(570, viewport.Y - inset - 24)
+				-- RefineryController: on MenuFit's virtual screen, under the top bar, with room for the title ribbon (26)
+				-- and the lip and margin (15)
+				local view = MenuFit.view(viewport, inset)
+				local height = math.min(570, view.viewport.Y - view.inset - 26 - 15)
 				local g = Layout.compute(height)
 				t.ok(g.inventoryHeight >= 44, tostring(viewport) .. " usable inventory row")
 				t.ok(g.list + g.inventoryHeight <= height - 56, "inventory clears footer")

@@ -1,6 +1,8 @@
 --!strict
 -- Keep shop copy readable on phones, with full-size purchase targets in one scrolling page of
--- titled sections (Config.Store). `compute` sizes the panel, the scroll area and the tab strip
+-- titled sections (Config.Store), drawn in the cartoon light look (MenuTheme) with the tab strip down
+-- the left. `compute` sizes and places the panel (always under the top bar, ribbon and lip on the
+-- screen), the scroll area and the tab strip
 -- for a screen; `card` lays out one card at a given width for either card style:
 --   tile: a big icon on top, a chunky title under it, the description, an optional status line
 --         and a tall price button (centred text);
@@ -8,15 +10,21 @@
 --         button across the bottom (left-aligned text).
 local StoreLayout = {}
 
+StoreLayout.RIBBON = 24 -- MenuTheme's title ribbon pokes this far above the panel
+StoreLayout.LIP = 7 -- MenuTheme.LIP: the navy lip along the panel's bottom
+StoreLayout.HEADER = 58 -- the ribbon, the notice line and Close, above the list and the tabs
+
 function StoreLayout.compute(viewport: Vector2, inset: number)
 	local width = math.min(900, math.max(1, viewport.X - 24))
 	local narrow = width < 480
 	-- phones in landscape: the panel runs from just under the top bar (its title ribbon pokes above it) to the
 	-- bottom, with three smaller cards across so a whole row fits and icon-only tabs
 	local short = width >= 480 and viewport.Y - inset < 400
-	local top = if short then inset + 18 else nil
-	local height = if top then math.max(1, viewport.Y - top - 8) else math.min(680, math.max(1, viewport.Y - inset - 24))
-	local tabWidth = if narrow then 0 elseif short then 58 else 94
+	-- the room between the top bar (with the ribbon under it) and the bottom edge (with the lip above it)
+	local room = math.max(1, viewport.Y - inset - StoreLayout.RIBBON - 4 - StoreLayout.LIP - 8)
+	local height = if short then room else math.min(680, room)
+	local top = inset + StoreLayout.RIBBON + 4 + (room - height) / 2
+	local tabWidth = if narrow then 0 elseif short then 64 else 140
 	local gap = if narrow then 10 elseif short then 12 else 16
 	local paddingList = if narrow then 8 else 14
 	local listWidth = width - 28 - (if tabWidth > 0 then tabWidth + 10 else 0)

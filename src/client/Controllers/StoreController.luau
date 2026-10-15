@@ -13,7 +13,7 @@ local StoreLayout = require(ReplicatedStorage.Shared.StoreLayout)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local StoreMenu = require(script.Parent.Parent.NativeMenus.Store)
 local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
-local Cartoon = require(script.Parent.Parent.Cartoon)
+local Theme = require(script.Parent.Parent.MenuTheme)
 local player = Players.LocalPlayer
 local Monetization = Config.Monetization
 local StoreController = Knit.CreateController({ Name = "StoreController" })
@@ -23,24 +23,9 @@ type ProductDetails = { loading: boolean, price: number?, forSale: boolean?, ima
 type Card = {
 	key: string, kind: "pass" | "product", id: number, intendedPrice: number?, details: ProductDetails,
 	frame: Frame, price: TextLabel, title: TextLabel, description: TextLabel, status: TextLabel,
-	well: Frame, icon: ImageLabel, buy: TextButton, accent: Color3,
-	kindLabel: TextLabel, buyLabel: TextLabel, faces: { buy: GuiObject, owned: GuiObject, idle: GuiObject },
+	well: Frame, icon: ImageLabel, buy: TextButton,
+	kindLabel: TextLabel,
 	wide: boolean,
-}
-local GOLD, MINT = Color3.fromRGB(255, 219, 100), Color3.fromRGB(139, 240, 195)
-local ITEM_ICONS: { [string]: string } = {
-	TwoXOre = "ore", BiggerBackpack = "backpack", OfflineHours = "bars", AutoDeposit = "foundry", VIP = "premium",
-	CallMeteor = "meteor", Overclock = "foundry", TipJar = "premium", PocketChange = "coin",
-	MiniOverclock = "foundry", OreRush = "ore", CashBundle = "coin", PetSlot = "plus",
-	TwoXCash = "coin", StarterPack = "bars", PetMax = "pets", StreakShield = "premium",
-	BossMeteor = "meteorAlien", Shards50 = "crystal", Shards250 = "crystal", Shards1000 = "crystal", RebirthKeep = "rebirth",
-}
-local ITEM_ACCENTS: { [string]: Color3 } = {
-	TwoXOre = GOLD, BiggerBackpack = NativeUI.CYAN, OfflineHours = MINT, AutoDeposit = MINT, VIP = GOLD,
-	CallMeteor = NativeUI.ORANGE, Overclock = NativeUI.CYAN, TipJar = MINT, PocketChange = GOLD,
-	MiniOverclock = NativeUI.CYAN, OreRush = GOLD, CashBundle = GOLD, PetSlot = MINT,
-	TwoXCash = GOLD, StarterPack = MINT, PetMax = NativeUI.ORANGE, StreakShield = NativeUI.CYAN,
-	BossMeteor = NativeUI.ORANGE, Shards50 = NativeUI.CYAN, Shards250 = NativeUI.CYAN, Shards1000 = NativeUI.CYAN, RebirthKeep = MINT,
 }
 local BUTTON_TEXT: { [ButtonState]: string } = {
 	buy = "BUY", owned = "OWNED", offsale = "NOT ON SALE YET", unavailable = "UNAVAILABLE", credit = "USE CREDIT", loading = "LOADING",
@@ -76,64 +61,6 @@ local function setUpChatTags()
 	end
 end
 
-local function clearDecor(object: Instance)
-	for _, child in object:GetChildren() do
-		if child:IsA("UIStroke") or child:IsA("UICorner") or child:IsA("UIGradient") or child:IsA("UIPadding") or child.Name == "StudTexture" then
-			child:Destroy()
-		end
-	end
-end
-
-local function outline(label: TextLabel, thickness: number, color: Color3)
-	label.Font, label.TextColor3, label.TextStrokeTransparency = Cartoon.FONT, color, 1
-	local old = label:FindFirstChild("TextOutline")
-	if old then old:Destroy() end
-	Cartoon.textStroke(thickness).Parent = label
-end
-
--- Paint one authored card as a glossy coloured tile: a big floating icon, a
--- chunky title and a tall price button. Names and bindings stay as authored.
-local function styleCard(frame: Frame, well: Frame, icon: ImageLabel, buy: TextButton, kind: string)
-	frame.BackgroundTransparency = 1
-	clearDecor(frame)
-	Cartoon.surface(kind, { radius = 16, edge = 3.5, lip = 6, studs = 0.9, studSize = 34, name = "CardFace" }).Parent = frame
-	well.BackgroundTransparency = 1
-	clearDecor(well)
-	icon.Size, icon.ZIndex = UDim2.fromScale(1, 1), 3
-	local shadow = Instance.new("ImageLabel")
-	shadow.Name, shadow.BackgroundTransparency, shadow.ScaleType = "IconShadow", 1, Enum.ScaleType.Fit
-	shadow.AnchorPoint, shadow.Position, shadow.Size, shadow.ZIndex = Vector2.new(0.5, 0.5), UDim2.new(0.5, 3, 0.5, 5), UDim2.fromScale(1, 1), 2
-	shadow.Image, shadow.ImageColor3, shadow.ImageTransparency = icon.Image, Cartoon.INK, 0.6
-	shadow.Parent = well
-	icon:GetPropertyChangedSignal("Image"):Connect(function() shadow.Image = icon.Image end)
-	for _, name in { "Kind", "Title", "Description", "Status" } do
-		local label = frame:FindFirstChild(name)
-		if label and label:IsA("TextLabel") then
-			outline(label, if name == "Title" then 3.5 else 2, if name == "Status" then Color3.fromRGB(255, 236, 140) else Color3.new(1, 1, 1))
-			label.ZIndex = 5
-		end
-	end
-	local price = frame:FindFirstChild("Price")
-	if price and price:IsA("GuiObject") then price.Visible = false end -- the price is on the button
-	buy.BackgroundTransparency, buy.TextTransparency, buy.TextStrokeTransparency, buy.AutoButtonColor = 1, 1, 1, false
-	clearDecor(buy)
-	local faces = {
-		buy = Cartoon.surface("green", { radius = 14, edge = 3, lip = 5, studs = 0.86, studSize = 30, name = "BuyFace" }),
-		owned = Cartoon.surface("blue", { radius = 14, edge = 3, lip = 5, stripes = false, name = "OwnedFace" }),
-		idle = Cartoon.surface("slate", { radius = 14, edge = 3, lip = 5, stripes = false, name = "IdleFace" }),
-	}
-	for _, face in faces do face.Parent = buy end
-	local label = Instance.new("TextLabel")
-	label.Name, label.BackgroundTransparency, label.ZIndex = "Label", 1, 5
-	label.Position, label.Size = UDim2.fromOffset(10, 0), UDim2.new(1, -20, 1, 0)
-	label.Font, label.TextScaled, label.TextColor3, label.Text = Cartoon.FONT, true, Color3.new(1, 1, 1), buy.Text
-	Cartoon.textStroke(3).Parent = label
-	local limit = Instance.new("UITextSizeConstraint")
-	limit.MaxTextSize, limit.MinTextSize, limit.Parent = 28, 10, label
-	label.Parent = buy
-	return faces, label
-end
-
 local function prompt(kind: "pass" | "product", id: number)
 	if id == 0 then
 		return -- not on sale: never prompt
@@ -158,19 +85,17 @@ function StoreController:KnitStart()
 	local gui = NativeUI.get("Store", function(store)
 		-- The authored copy keeps the owner's STORE nav button, but its panel can predate the sectioned page
 		-- (no tab strip): swap in the panel built by NativeMenus.Store.
-		if store:GetAttribute("StoreLayout") ~= 2 then
+		if store:GetAttribute("StoreLayout") ~= StoreMenu.LAYOUT then
 			local fresh = StoreMenu.build()
 			store:WaitForChild("Panel"):Destroy()
+			-- the dimmer too (the cartoon light menus sit on a light navy wash), moved first so the panel draws over it
+			local oldDimmer = store:FindFirstChild("Dimmer")
+			if oldDimmer then oldDimmer:Destroy() end
+			fresh:WaitForChild("Dimmer").Parent = store
 			fresh:WaitForChild("Panel").Parent = store
 			fresh:Destroy()
-			store:SetAttribute("StoreLayout", 2)
+			store:SetAttribute("StoreLayout", StoreMenu.LAYOUT)
 		end
-		-- The catalog draws its own cartoon cards and tabs; the ribbon goes blue like the reference.
-		local storePanel = store:WaitForChild("Panel")
-		storePanel:WaitForChild("List"):SetAttribute("CartoonCustom", true)
-		storePanel:WaitForChild("Tabs"):SetAttribute("CartoonCustom", true)
-		local header = storePanel:FindFirstChild("MenuHeader")
-		if header and header:IsA("GuiObject") then header.BackgroundColor3 = NativeUI.CYAN end
 	end)
 	local nav = gui:WaitForChild("StoreButton") :: TextButton
 	local navRefs = ExactNavButton.bind(nav)
@@ -254,15 +179,15 @@ function StoreController:KnitStart()
 			card.buy.Text = if card.key == "OreRush" and ownedPasses.TwoXOre then "You own 2x Ore"
 				elseif current == "credit" then BUTTON_TEXT.credit .. " (" .. Format.number(credits(creditKey(card))) .. ")"
 				elseif current == "buy" and info.price ~= nil then "R$ " .. Format.number(info.price) else BUTTON_TEXT[current]
-			card.buyLabel.Text = card.buy.Text
-			card.faces.buy.Visible = current == "buy" or current == "credit"
-			card.faces.owned.Visible = current == "owned"
-			card.faces.idle.Visible = not (current == "buy" or current == "credit" or current == "owned")
-			local enabled = current == "buy" or current == "credit"
-			card.buy.Active, card.buy.Selectable, card.buy.AutoButtonColor = enabled, enabled, enabled
-			card.buy.BackgroundColor3 = if current == "buy" then card.accent elseif current == "owned" or current == "credit" then MINT else Color3.fromRGB(73, 83, 94)
-			card.buy.TextColor3 = if current == "buy" or current == "credit" or current == "owned" then NativeUI.WHITE else NativeUI.MUTED
-			card.icon.Image = info.image or Config.HudIcons[ITEM_ICONS[card.key] or "premium"]
+			-- gold to buy with Robux, lime to use a credit, blue once owned, grey otherwise (MenuTheme's colours mean the same everywhere)
+			if current == "owned" then
+				Theme.paint(card.buy, "blue")
+				card.buy.Active, card.buy.Selectable = false, false
+			else
+				Theme.state(card.buy, current == "buy" or current == "credit", if current == "credit" then "lime" else "gold")
+			end
+			-- the owner's HudIcons art always: a dashboard icon would not match the rest of the menu
+			card.icon.Image = Config.HudIcons[StoreMenu.ICONS[card.key] or "premium"]
 		end
 	end
 	local function loadPrice(card: Card)
@@ -292,14 +217,14 @@ function StoreController:KnitStart()
 		local well = frame:WaitForChild("IconWell") :: Frame
 		local buy = frame:WaitForChild("Buy") :: TextButton
 		local icon = well:WaitForChild("ItemIcon") :: ImageLabel
-		local faces, buyLabel = styleCard(frame, well, icon, buy, color)
+		frame:WaitForChild("Price").Visible = false -- the price is on the button
 		local card: Card = {
 			key = key, kind = kind, id = definition.Id, intendedPrice = definition.Robux,
 			details = { loading = definition.Id ~= 0, forSale = if definition.Id == 0 then false else nil, price = if definition.Id == 0 then definition.Robux else nil },
 			frame = frame, price = frame:WaitForChild("Price") :: TextLabel, title = frame:WaitForChild("Title") :: TextLabel,
 			description = frame:WaitForChild("Description") :: TextLabel, status = frame:WaitForChild("Status") :: TextLabel,
-			well = well, icon = icon, buy = buy, accent = ITEM_ACCENTS[key] or NativeUI.CYAN,
-			kindLabel = frame:WaitForChild("Kind") :: TextLabel, buyLabel = buyLabel, faces = faces,
+			well = well, icon = icon, buy = buy,
+			kindLabel = frame:WaitForChild("Kind") :: TextLabel,
 			wide = frame:GetAttribute("Wide") == true,
 		}
 		table.insert(cards, card)
@@ -317,7 +242,7 @@ function StoreController:KnitStart()
 		end)
 	end
 	-- One titled section per Config.Store entry: bind its cards (styled in the section's colour) and its tab
-	local sectionViews: { { section: any, frame: Frame, title: TextLabel, grid: UIGridLayout, cards: { Card }, tab: TextButton?, caption: TextLabel?, tabIcon: ImageLabel? } } = {}
+	local sectionViews: { { section: any, frame: Frame, title: TextLabel, grid: UIGridLayout, cards: { Card }, tab: TextButton?, caption: string?, tabIcon: ImageLabel? } } = {}
 	local drawScale = 1 -- the panel's UIScale (NativeUI.place)
 	local function jumpTo(frame: GuiObject)
 		-- screen pixels back to the list's own
@@ -327,13 +252,11 @@ function StoreController:KnitStart()
 	for _, section in Config.Store.Sections do
 		local frame = list:WaitForChild("Section_" .. section.Id) :: Frame
 		local cardsFrame = frame:WaitForChild("Cards")
-		local swatch = Cartoon.swatch(section.Color)
 		local view = {
 			section = section, frame = frame, title = frame:WaitForChild("SectionTitle") :: TextLabel,
 			grid = cardsFrame:WaitForChild("Grid") :: UIGridLayout, cards = {} :: { Card },
-			tab = tabs:FindFirstChild("Tab_" .. section.Id) :: TextButton?, caption = nil :: TextLabel?, tabIcon = nil :: ImageLabel?,
+			tab = tabs:FindFirstChild("Tab_" .. section.Id) :: TextButton?, caption = section.Tab, tabIcon = nil :: ImageLabel?,
 		}
-		outline(view.title, 4, swatch.top)
 		for _, key in section.Keys do
 			local before = #cards
 			local pass = Monetization.Passes[key]
@@ -342,13 +265,22 @@ function StoreController:KnitStart()
 		end
 		local tab = view.tab
 		if tab then
-			Cartoon.surface(section.Color, { radius = 12, edge = 3, lip = 4, studs = 0.9, studSize = 30, name = "TabFace" }).Parent = tab
-			view.caption, view.tabIcon = tab:WaitForChild("Caption") :: TextLabel, tab:WaitForChild("Icon") :: ImageLabel
-			outline(view.caption :: TextLabel, 2.5, Color3.new(1, 1, 1))
+			view.tabIcon = tab:WaitForChild("Face"):WaitForChild("Icon") :: ImageLabel
 			tab.Activated:Connect(function() jumpTo(view.frame) end)
 		end
 		table.insert(sectionViews, view)
 	end
+	-- the tab of the section at the top of the page is lit, as the page scrolls
+	local function lightTab()
+		local current = sectionViews[1]
+		for _, view in sectionViews do
+			if view.frame.AbsolutePosition.Y <= list.AbsolutePosition.Y + 40 * drawScale then current = view end
+		end
+		for _, view in sectionViews do
+			if view.tab then Theme.tab(view.tab, view == current) end
+		end
+	end
+	list:GetPropertyChangedSignal("CanvasPosition"):Connect(lightTab)
 	for _, card in cards do loadPrice(card) end
 	local function updateNav()
 		nav.Visible = not open and player:GetAttribute("ShopOpen") ~= true and player:GetAttribute("IndexOpen") ~= true
@@ -411,38 +343,40 @@ function StoreController:KnitStart()
 	NativeUI.onLayoutChanged(function(layout)
 		local view = NativeUI.menuView(layout)
 		local g = StoreLayout.compute(view.viewport, view.inset)
-		local height = g.height
-		-- centred; short phones pin its top just under the top bar
-		local top = g.top or (view.viewport.Y + view.inset - height) / 2
-		NativeUI.place(panel, { x = (view.viewport.X - g.width) / 2, y = top, w = g.width, h = height }, view)
+		-- always under the top bar, with the title ribbon and the lip on the screen (StoreLayout)
+		NativeUI.place(panel, { x = (view.viewport.X - g.width) / 2, y = g.top, w = g.width, h = g.height }, view)
 		drawScale = view.scale
-		subtitle.TextSize = if g.narrow then 12 else 15
-		-- short screens (phones in landscape) give the subtitle one line and the list the room it frees
-		local listY = if g.short then 96 else 112
-		subtitle.Size = UDim2.new(1, -40, 0, if g.short then 26 else 38)
-		list.Position, list.Size = UDim2.fromOffset(14, listY), UDim2.new(0, g.listWidth, 1, -listY - 14)
+		-- the reassurance line sits in the header beside the ribbon, where there is room for it
+		subtitle.Visible = g.width >= 600
+		subtitle.Position, subtitle.Size = UDim2.fromOffset(280, 10), UDim2.new(1, -280 - 52, 0, 34)
+		local listY = StoreLayout.HEADER
+		local listX = 14 + (if g.tabWidth > 0 then g.tabWidth + 10 else 0)
+		local bottom = listY + 14 + 7 -- the panel's padding and lip under the list
+		list.Position, list.Size = UDim2.fromOffset(listX, listY), UDim2.new(0, g.listWidth, 1, -bottom)
 		tabs.Visible = g.tabWidth > 0
-		tabs.Position, tabs.Size = UDim2.new(1, -14 - g.tabWidth, 0, listY), UDim2.new(0, g.tabWidth, 1, -listY - 14)
+		tabs.Position, tabs.Size = UDim2.fromOffset(14, listY), UDim2.new(0, g.tabWidth, 1, -bottom)
 		sectionsLayout.Padding = UDim.new(0, g.gap)
 		listPadding.PaddingLeft, listPadding.PaddingRight = UDim.new(0, g.paddingList), UDim.new(0, g.paddingList)
 		listPadding.PaddingTop, listPadding.PaddingBottom = UDim.new(0, g.paddingList), UDim.new(0, g.paddingList)
-		list.ScrollBarImageColor3, list.ScrollBarThickness = Color3.fromRGB(28, 96, 214), 6
 		for _, view in sectionViews do
 			local style = view.section.Style
 			local columns = StoreLayout.columns(g, style, #view.section.Keys)
 			local c = StoreLayout.card(StoreLayout.cardWidth(g, columns), style, g.short)
 			view.grid.CellSize, view.grid.CellPadding = UDim2.fromOffset(c.cardWidth, c.cardHeight), UDim2.fromOffset(g.gap, g.gap)
 			view.grid.FillDirectionMaxCells = columns
-			view.title.TextSize = if g.narrow then 26 else 34
-			view.title.Size = UDim2.new(1, 0, 0, if g.narrow then 34 else 42)
+			view.title.TextSize = if g.narrow then 20 else 24
+			view.title.Size = UDim2.new(1, 0, 0, if g.narrow then 30 else 34)
 			for _, card in view.cards do applyCard(card, c) end
+			-- a captioned tab on a roomy panel, an icon-only one on a phone in landscape
 			local tab, caption, tabIcon = view.tab, view.caption, view.tabIcon
 			if tab and caption and tabIcon then
-				tab.Size = UDim2.fromOffset(math.max(40, g.tabWidth - 6), if g.tabCaptions then 64 else 54)
-				caption.Visible = g.tabCaptions
-				tabIcon.Position = if g.tabCaptions then UDim2.new(0.5, -17, 0, 5) else UDim2.new(0.5, -17, 0.5, -17)
+				tab.Size = UDim2.fromOffset(math.max(44, g.tabWidth - 4), if g.tabCaptions then 48 else 50)
+				tab.Text = if g.tabCaptions then caption else ""
+				tabIcon.AnchorPoint = if g.tabCaptions then Vector2.new(0, 0.5) else Vector2.new(0.5, 0.5)
+				tabIcon.Position = if g.tabCaptions then UDim2.new(0, 6, 0.5, 0) else UDim2.fromScale(0.5, 0.5)
 			end
 		end
+		lightTab()
 		ExactNavButton.layout(nav, layout, "STORE")
 		if layout.touch then tooltip.Visible = false end
 	end)

@@ -46,7 +46,9 @@ return function(t: any)
 				t.ok(c.statusY + c.statusHeight + c.buttonHeight <= c.cardHeight, style .. " button inside card")
 				t.ok(columns * c.cardWidth + (columns - 1) * g.gap <= g.inner, style .. " row fits")
 			end
-			t.ok(g.height <= size.Y - 58 - 24 or g.top ~= nil, "panel clears top bar")
+			t.ok(g.top - Layout.RIBBON >= 58, tostring(size) .. " the title ribbon clears the top bar")
+			t.ok(g.top + g.height + Layout.LIP <= size.Y, tostring(size) .. " the panel and its lip fit the screen")
+			t.ok(g.height - Layout.HEADER >= 200, tostring(size) .. " the list keeps a usable window")
 			t.ok(g.listWidth + (if g.tabWidth > 0 then g.tabWidth + 10 else 0) <= g.width - 28, "list and tabs fit the panel")
 		end
 	end)

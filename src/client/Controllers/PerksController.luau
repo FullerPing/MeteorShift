@@ -13,6 +13,7 @@ local NativeUI = require(script.Parent.Parent.NativeUI)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 local PerksMenu = require(script.Parent.Parent.NativeMenus.Perks)
+local RebirthMenu = require(script.Parent.Parent.NativeMenus.Rebirth)
 local player = Players.LocalPlayer
 local PerksController = Knit.CreateController({ Name = "PerksController" })
 
@@ -103,7 +104,8 @@ function PerksController:KnitStart()
 	-- RebirthController swaps that panel into the saved menu and marks it, so wait for the mark.
 	task.spawn(function()
 		local rebirthGui = Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Rebirth")
-		while rebirthGui:GetAttribute("RebirthLayout") == nil do rebirthGui:GetAttributeChangedSignal("RebirthLayout"):Wait() end
+		-- the saved menu can carry an older mark (and an older button) until the swap
+		while rebirthGui:GetAttribute("RebirthLayout") ~= RebirthMenu.LAYOUT do rebirthGui:GetAttributeChangedSignal("RebirthLayout"):Wait() end
 		local button = rebirthGui:WaitForChild("Panel"):WaitForChild("PerksButton") :: TextButton
 		button.Activated:Connect(function()
 			player:SetAttribute("PerksOpen", true)

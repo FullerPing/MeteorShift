@@ -9,11 +9,14 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RebirthLayout = require(ReplicatedStorage.Shared.RebirthLayout)
+local ShopLayout = require(ReplicatedStorage.Shared.EquipmentShopLayout)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 local RebirthMenu = require(script.Parent.Parent.NativeMenus.Rebirth)
+local Theme = require(script.Parent.Parent.MenuTheme)
 local player = Players.LocalPlayer
 local RebirthController = Knit.CreateController({ Name = "RebirthController" })
 local wantOpen = false
@@ -39,6 +42,10 @@ function RebirthController:KnitStart()
 		if rebirth:GetAttribute("RebirthLayout") == RebirthMenu.LAYOUT then return end
 		local fresh = RebirthMenu.build()
 		rebirth:WaitForChild("Panel"):Destroy()
+		-- the dimmer too (the cartoon light menus sit on a light navy wash), moved first so the panel draws over it
+		local oldDimmer = rebirth:FindFirstChild("Dimmer")
+		if oldDimmer then oldDimmer:Destroy() end
+		fresh:WaitForChild("Dimmer").Parent = rebirth
 		fresh:WaitForChild("Panel").Parent = rebirth
 		fresh:Destroy()
 		rebirth:SetAttribute("RebirthLayout", RebirthMenu.LAYOUT)
@@ -49,18 +56,23 @@ function RebirthController:KnitStart()
 	local dimmer = gui:WaitForChild("Dimmer") :: TextButton
 	local close = panel:WaitForChild("Close") :: TextButton
 	local content = panel:WaitForChild("Content") :: ScrollingFrame
-	local compare = content:WaitForChild("Compare")
+	local compare = content:WaitForChild("Compare") :: Frame
 	local currentMultiplier = compare:WaitForChild("CurrentBox"):WaitForChild("CurrentMultiplier") :: TextLabel
 	local nextMultiplier = compare:WaitForChild("AfterBox"):WaitForChild("NextMultiplier") :: TextLabel
-	local priceNote = content:WaitForChild("ResetBox"):WaitForChild("PriceNote") :: TextLabel
-	local requirement = content:WaitForChild("Requirement")
+	local priceNote = content:WaitForChild("PriceNote") :: TextLabel
+	local requirement = panel:WaitForChild("Requirement") :: Frame
+	local reqLabel = requirement:WaitForChild("ReqLabel") :: TextLabel
 	local cashProgress = requirement:WaitForChild("CashProgress") :: TextLabel
-	local progressFill = requirement:WaitForChild("ProgressBar"):WaitForChild("Fill") :: Frame
+	local progressBar = requirement:WaitForChild("ProgressBar") :: Frame
+	local progressFill = progressBar:WaitForChild("Fill") :: Frame
 	local percent = requirement:WaitForChild("Percent") :: TextLabel
 	local confirm = panel:WaitForChild("Confirm") :: TextButton
 	local keepButton = panel:WaitForChild("Keep") :: TextButton
-	local divider = panel:WaitForChild("PremiumDivider") :: Frame
+	local keepCard = panel:WaitForChild("KeepCard") :: Frame
+	local perksButton = panel:WaitForChild("PerksButton") :: TextButton
+	local wallet = panel:WaitForChild("Wallet") :: TextLabel
 	local footer = panel:WaitForChild("Footer") :: TextLabel
+	local wide = false
 	local ready = navRefs.badge
 	local tooltip = navRefs.tooltip
 	local state: any = nil
@@ -87,20 +99,22 @@ function RebirthController:KnitStart()
 		nav.Visible = not open and player:GetAttribute("ShopOpen") ~= true and player:GetAttribute("IndexOpen") ~= true and player:GetAttribute("TutorialCardInColumn") ~= true
 		ready.Visible = canAfford
 		ready.BackgroundColor3 = if canAfford then MINT else GOLD
+		percent.TextColor3 = if canAfford then Palette.UP else Palette.NAVY
 		currentMultiplier.Text, nextMultiplier.Text = multiplierText(rebirths), multiplierText(rebirths + 1)
-		priceNote.Text = "Upgrade prices rise ×" .. string.format("%.3g", Rebirth.priceMult(rebirths + 1) / Rebirth.priceMult(rebirths))
+		local gain = Rebirth.multiplier(rebirths + 1) / math.max(Rebirth.multiplier(rebirths), 1e-9)
+		priceNote.Text = "Every bar sells for ×" .. string.format("%.3g", gain) .. " more. Upgrade prices rise ×"
+			.. string.format("%.3g", Rebirth.priceMult(rebirths + 1) / Rebirth.priceMult(rebirths)) .. ", so you come out ahead."
 		local ratio = math.clamp(cash / math.max(cost, 1), 0, 1)
-		cashProgress.Text = Format.cash(cash) .. " / " .. Format.cash(cost)
+		cashProgress.Text = Format.cash(cash) .. " of " .. Format.cash(cost)
+		wallet.Text = Format.cash(cash)
 		progressFill.Size = UDim2.fromScale(ratio, 1)
 		percent.Text = math.floor(ratio * 100) .. "%"
 		local unlock = Rebirth.unlock(rebirths + 1)
 		local bonus = Rebirth.overstayShards(if state then state.overflow or 0 else 0, cost)
 		local keep = state ~= nil and state.credits ~= nil and (state.credits.rebirthKeep or 0) > 0 -- a Keep Everything credit
-		-- grey until you can afford it, green when you can, red while the second press is pending
-		confirm.Active, confirm.Selectable, confirm.AutoButtonColor = canAfford and not busy, canAfford and not busy, canAfford and not busy
+		-- grey until you can afford it, lime when you can, red while the second press is pending
+		Theme.state(confirm, canAfford and not busy, if armed then "red" else "lime")
 		confirm.Text = if busy then "REBIRTHING..." elseif armed then "CONFIRM REBIRTH" else "REBIRTH · " .. Format.cash(cost)
-		confirm.TextColor3 = if busy or not canAfford then NativeUI.MUTED else NativeUI.WHITE
-		confirm.BackgroundColor3 = if busy or not canAfford then Color3.fromRGB(73, 83, 94) elseif armed then NativeUI.RED else NativeUI.GREEN
 		footer.Text = if notice ~= "" then notice elseif busy then "Rebirthing..."
 			elseif armed then "Press again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s. "
 				.. (if keep then "You keep everything this time." else "This can't be undone.")
@@ -108,17 +122,16 @@ function RebirthController:KnitStart()
 			else (if keep then "Keep Everything is ready: nothing resets. " else "")
 				.. (if unlock then "Unlocks: " .. unlock .. ". " else "Index bonuses stay and stack with this multiplier. ")
 				.. (if bonus > 0 then "+" .. bonus .. " bonus shards now." else "Rebirth now: waiting never beats the x5.")
-		footer.TextColor3 = if armed or notice ~= "" then GOLD else NativeUI.MUTED
+		footer.TextColor3 = if armed or notice ~= "" then Palette.UNMET else Palette.SECOND
 		-- "Rebirth without losing anything": usable at any time, even before you can afford the rebirth.
 		-- Uses a credit when you have one, otherwise sells the product
 		local usable = not busy and (keep or keepProduct.Id ~= 0)
-		keepButton.Active, keepButton.Selectable, keepButton.AutoButtonColor = usable, usable, usable
+		Theme.state(keepButton, usable, "gold")
+		-- the wide card already says "Rebirth and Keep Everything", so its button carries just the price
 		keepButton.Text = if busy then "REBIRTHING..."
-			elseif keep then "REBIRTH & KEEP EVERYTHING (1 CREDIT)"
-			elseif keepProduct.Id == 0 then "KEEP EVERYTHING: NOT ON SALE YET"
-			else "REBIRTH & KEEP EVERYTHING · R$" .. Format.number(keepPrice or keepProduct.Robux)
-		keepButton.TextColor3 = if usable then NativeUI.WHITE else NativeUI.MUTED
-		keepButton.BackgroundColor3 = if usable then NativeUI.HUD_GOLD else Color3.fromRGB(73, 83, 94)
+			elseif keep then (if wide then "USE 1 CREDIT" else "KEEP EVERYTHING · 1 CREDIT")
+			elseif keepProduct.Id == 0 then (if wide then "NOT ON SALE YET" else "KEEP EVERYTHING: NOT ON SALE YET")
+			else (if wide then "" else "KEEP EVERYTHING · ") .. "R$ " .. Format.number(keepPrice or keepProduct.Robux)
 
 	end
 	local function setOpen(value: boolean)
@@ -219,17 +232,42 @@ function RebirthController:KnitStart()
 	nav.MouseLeave:Connect(function() hover(false) end)
 	nav.SelectionGained:Connect(function() hover(true) end)
 	nav.SelectionLost:Connect(function() hover(false) end)
+	local function box(node: GuiObject, r: RebirthLayout.Rect)
+		node.Position, node.Size = UDim2.fromOffset(r.x, r.y), UDim2.fromOffset(r.w, r.h)
+	end
+	local perksIcon = perksButton:WaitForChild("Face"):WaitForChild("Icon") :: ImageLabel
 	NativeUI.onLayoutChanged(function(layout)
-		local view = NativeUI.menuView(layout)
-		local geometry = RebirthLayout.compute(view.viewport, view.inset)
-		NativeUI.place(panel, geometry.panel, view)
-		local pad = geometry.padding
-		content.Position, content.Size = UDim2.fromOffset(pad, geometry.contentY), UDim2.new(1, -pad * 2, 0, geometry.contentH)
-		confirm.Position, confirm.Size = UDim2.fromOffset(pad, geometry.confirmY), UDim2.new(1, -pad * 2, 0, geometry.confirmH)
-		footer.Position, footer.Size = UDim2.fromOffset(pad, geometry.footerY), UDim2.new(1, -pad * 2, 0, geometry.footerH)
-		divider.Position, divider.Size = UDim2.fromOffset(pad, geometry.dividerY), UDim2.new(1, -pad * 2, 0, geometry.dividerH)
-		divider.Visible = geometry.dividerH > 0
-		keepButton.Position, keepButton.Size = UDim2.fromOffset(pad, geometry.keepY), UDim2.new(1, -pad * 2, 0, geometry.keepH)
+		-- the Gear Shop's frame on a roomy window, MenuFit's fit on a small screen
+		local view = ShopLayout.view(layout.viewport, layout.inset)
+		local g = RebirthLayout.compute(view.viewport, view.inset, view.wide)
+		wide = g.wide
+		NativeUI.place(panel, g.panel, view)
+		box(content, g.content)
+		box(requirement, g.requirement)
+		box(confirm, g.confirm)
+		box(footer, g.footer)
+		box(keepButton, g.keep)
+		box(perksButton, g.perks)
+		keepCard.Visible, wallet.Visible = g.wide, g.wide
+		box(keepCard, g.keepCard)
+		box(wallet, g.wallet)
+		compare.Size = UDim2.new(1, -6, 0, g.compareH)
+		confirm.TextSize = if g.wide then 26 else 22
+		perksButton.Text = if g.wide then "COLONY PERKS" else "PERKS"
+		perksIcon.Visible = g.wide
+		-- the requirement card: a label, the percent and a bar over the cash line on the wide layout; one slim row on a small screen
+		reqLabel.Visible = g.wide
+		if g.wide then
+			reqLabel.Position, reqLabel.Size = UDim2.fromOffset(12, 8), UDim2.new(0.6, -12, 0, 22)
+			percent.Position, percent.Size = UDim2.new(0.6, 0, 0, 8), UDim2.new(0.4, -12, 0, 22)
+			progressBar.Position, progressBar.Size = UDim2.fromOffset(12, 38), UDim2.new(1, -24, 0, 14)
+			cashProgress.Position, cashProgress.Size = UDim2.fromOffset(12, 58), UDim2.new(1, -24, 0, 22)
+		else
+			cashProgress.Position, cashProgress.Size = UDim2.fromOffset(10, 3), UDim2.new(0.7, -10, 0, 18)
+			percent.Position, percent.Size = UDim2.new(0.7, 0, 0, 3), UDim2.new(0.3, -10, 0, 18)
+			progressBar.Position, progressBar.Size = UDim2.fromOffset(10, g.requirement.h - 15), UDim2.new(1, -20, 0, 9)
+		end
+		update()
 		ExactNavButton.layout(nav, layout, "REBIRTH")
 		if layout.touch then tooltip.Visible = false end
 	end)

@@ -15,6 +15,8 @@ local Rebirth = require(RS.Shared.Rebirth)
 local WorldMap = require(RS.Shared.WorldMap)
 local N = require(script.Parent.Parent.NativeUI)
 local RefineryMenu = require(script.Parent.Parent.NativeMenus.Refinery)
+local Theme = require(script.Parent.Parent.MenuTheme)
+local Palette = require(RS.Shared.MenuPalette)
 local UpgradePanel = require(script.Parent.Parent.UpgradePanel)
 local player = Players.LocalPlayer
 local Controller = Knit.CreateController({ Name = "RefineryController" })
@@ -23,8 +25,9 @@ local ORE_TINTS: { [string]: Color3 } = {
 	iron = Color3.fromRGB(255, 196, 36), frost = Color3.fromRGB(120, 220, 255),
 	crystal = Color3.fromRGB(221, 161, 255), alien = Color3.fromRGB(130, 255, 150),
 }
-local STATUS_RED, STATUS_ICE, STATUS_LIME = Color3.fromRGB(255, 120, 120), Color3.fromRGB(196, 242, 255), Color3.fromRGB(176, 255, 92)
-local AWAY_TEXT = Color3.fromRGB(255, 196, 120)
+-- colours that read on the cartoon light body (Shared.MenuPalette)
+local STATUS_RED, STATUS_ICE, STATUS_LIME = Palette.UNMET, Palette.BLUE_BOTTOM, Palette.UP
+local AWAY_TEXT = Palette.GOLD_TEXT
 -- The server only deposits and claims within reach of the refinery (WorldMap.canUseRefinery); the menu opens anywhere
 local function nearFoundry(): boolean
 	return WorldMap.canUseRefinery(WorldMap.find(), player.Character)
@@ -37,10 +40,10 @@ end
 function Controller:Close() player:SetAttribute("RefineryOpen", false) end
 function Controller:KnitStart()
 	local service, upgrades = Knit.GetService("RefineryService"), Knit.GetService("UpgradeService")
-	local gui = N.getOrBuild("RefineryMenu", RefineryMenu.build, function(menu)
-		local header = menu:WaitForChild("Panel"):FindFirstChild("Header")
-		if header and header:IsA("GuiObject") then header.BackgroundColor3 = N.CYAN end
-	end)
+	-- a copy saved in the place before the cartoon light redesign is replaced by a fresh build
+	local saved = player:WaitForChild("PlayerGui"):FindFirstChild("RefineryMenu")
+	if saved and saved:GetAttribute("RefineryLayout") ~= RefineryMenu.LAYOUT then saved:Destroy() end
+	local gui = N.getOrBuild("RefineryMenu", RefineryMenu.build)
 	self.Gui = gui
 	local p: any = gui.Panel
 	local state: any = nil
@@ -199,7 +202,7 @@ function Controller:KnitStart()
 			end
 			card.Action.Position = UDim2.new(0, 8, 1, if flow then -56 elseif l.minimal then -44 else -52)
 			card.Action.Size = UDim2.new(1, -16, 0, if flow then 48 else 44)
-			N.enable(card.Action, canAct(action), if deposit then N.ORANGE else N.GREEN)
+			Theme.state(card.Action, canAct(action), "lime")
 			card.Action.Text = if transaction == action then (if deposit then "Depositing..." else "Claiming...")
 				elseif not state then "Loading..."
 				elseif not near then "📍 At a Foundry"
@@ -222,8 +225,8 @@ function Controller:KnitStart()
 			p.FlowArrow1.Size, p.FlowArrow2.Size = UDim2.fromOffset(26, 26), UDim2.fromOffset(26, 26)
 		end
 		setPulse("foundry", middle.Icon, flow and line ~= nil and line.refinery.activeOre ~= nil and line.refinery.blocked == nil, 1.1)
-		p.refineTab.BackgroundColor3 = if refining then N.CYAN else N.CARD
-		p.productionTab.BackgroundColor3 = if refining then N.CARD else N.ORANGE
+		Theme.tab(p.refineTab, refining)
+		Theme.tab(p.productionTab, not refining)
 		-- short screens: the wallet chips move up beside the title and the hint line only shows real feedback
 		p.UpgradeWallet.Visible = not refining and not short
 		view.root.Visible = not refining
@@ -293,7 +296,7 @@ function Controller:KnitStart()
 			for _, direction in { -1, 1 } do
 				local button = if direction < 0 then view.PriorityUp else view.PriorityDown
 				local at = table.find(ids, row.id)
-				N.enable(button, not busy and row.ore > 0 and at ~= nil and ids[(at or 0) + direction] ~= nil, N.CYAN)
+				Theme.state(button, not busy and row.ore > 0 and at ~= nil and ids[(at or 0) + direction] ~= nil, "blue")
 				button.Position = UDim2.new(1, if direction < 0 then -96 else -48, 0, if l.compact then 4 else 8)
 			end
 		end
@@ -305,7 +308,7 @@ function Controller:KnitStart()
 			elseif r.blocked == "collector" then (if flow then "STORAGE FULL" else "Storage full · claim bars to resume")
 			elseif not r.activeOre then (if flow then "NEEDS ORE" else "Ready to work · deposit ore above")
 			else (if flow then "REFINING" .. string.char(10) .. ore else "Refining " .. ore)
-		p.Status.TextColor3 = if r and r.blocked == "collector" then STATUS_RED elseif r and r.activeOre then STATUS_LIME elseif flow then STATUS_ICE else N.WHITE
+		p.Status.TextColor3 = if r and r.blocked == "collector" then STATUS_RED elseif r and r.activeOre then STATUS_LIME elseif flow then STATUS_ICE else Palette.NAVY
 		p.Status.TextWrapped = flow
 		p.Status.TextXAlignment = if flow then Enum.TextXAlignment.Center else Enum.TextXAlignment.Left
 		p.Status.TextSize = if flow then 17 else 18
@@ -315,7 +318,7 @@ function Controller:KnitStart()
 			middle.Rate.Text = if line and r and r.activeOre and line.rate > 0 then "Line speed " .. Format.rate(line.rate) .. "/s" else ""
 		else
 			p.Status.Position, p.Status.Size = UDim2.fromOffset(16, l.status), UDim2.new(1, -32, 0, 26)
-			p.Progress.Position, p.Progress.Size = UDim2.fromOffset(16, l.progress), UDim2.new(1, -32, 0, 5)
+			p.Progress.Position, p.Progress.Size = UDim2.fromOffset(16, l.progress), UDim2.new(1, -32, 0, 6)
 		end
 		p.Progress.Visible = refining
 		p.Progress.Fill.Size = UDim2.fromScale(if r and r.activeOre then r.progress or 0 else 0, 1)
@@ -326,7 +329,7 @@ function Controller:KnitStart()
 		p.Empty.Visible, p.Empty.Position = refining and #rows == 0, UDim2.fromOffset(16, l.list)
 		p.ResetPriority.Visible = refining
 		p.ResetPriority.Text = if busy then "Saving..." else "Reset order"
-		N.enable(p.ResetPriority, state ~= nil and not busy, N.CYAN)
+		Theme.state(p.ResetPriority, state ~= nil and not busy, "blue")
 		p.Feedback.Size = UDim2.new(1, if refining then -168 else -32, 0, 44)
 		p.Feedback.Text = if feedback ~= "" then feedback elseif not refining then "Upgrade your line. Balance feeding and smelting speeds."
 			elseif not near then "Walk to the Foundry in town or the Commissary up north to deposit ore and claim bars."
@@ -362,18 +365,15 @@ function Controller:KnitStart()
 	player:GetAttributeChangedSignal("BackpackOpen"):Connect(function() if player:GetAttribute("BackpackOpen") then self:Close() end end)
 	player:GetAttributeChangedSignal("PlotId"):Connect(function() if not player:GetAttribute("PlotId") then self:Close() end end)
 	N.onLayoutChanged(function(hud)
-		-- phones in landscape: wider, and from just under the top bar (the title ribbon pokes 16 px above the
-		-- panel) to the bottom, so the upgrades page has room for its rows
+		-- always under the top bar with the title ribbon (24 px above the panel) and the lip (7 px below it) on the
+		-- screen; phones in landscape: wider and as tall as that allows, so the upgrades page has room for its rows
 		local view = N.menuView(hud)
 		local screen, inset = view.viewport, view.inset
 		short = screen.Y - inset < 400
-		local w, h = math.min(620, screen.X - 24), math.min(570, screen.Y - inset - 24)
-		local top = inset + (screen.Y - inset - h) / 2
-		if short then
-			w = math.min(860, screen.X - 24)
-			top = inset + 18
-			h = math.max(0, screen.Y - top - 8)
-		end
+		local room = math.max(0, screen.Y - inset - 26 - Theme.LIP - 8)
+		local w, h = math.min(620, screen.X - 24), math.min(570, room)
+		if short then w, h = math.min(860, screen.X - 24), room end
+		local top = inset + 26 + (room - h) / 2
 		N.place(p, { x = (screen.X - w) / 2, y = top, w = w, h = h }, view)
 		geometry = Layout.compute(h, w)
 		update()

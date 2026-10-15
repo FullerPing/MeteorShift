@@ -1,180 +1,148 @@
 --!strict
--- The Rebirth menu. Authored in Studio, but RebirthController swaps in this panel when the saved copy predates it (see Menu.LAYOUT).
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Config = require(ReplicatedStorage.Shared.Config)
+-- The Rebirth menu in the owner's "cartoon light" look (MenuTheme / Shared.MenuPalette, like the Gear Shop and Pets):
+-- a blue "Rebirth" ribbon, Close on the corner and the cash chip; the body (the NOW -> AFTER bar value card, the price
+-- note, and what resets / what you keep side by side) scrolls in Content; the requirement card, REBIRTH, the note under
+-- it, the gold "Rebirth and Keep Everything" card and PERKS are separate. Every icon comes from Config.HudIcons.
+-- RebirthController places everything from Shared.RebirthLayout and swaps this panel into the saved menu when the saved
+-- copy's RebirthLayout mark is older than LAYOUT.
+local RS = game:GetService("ReplicatedStorage")
+local Icons = require(RS.Shared.Config.HudIcons)
+local Palette = require(RS.Shared.MenuPalette)
+local N = require(script.Parent.Parent.NativeUI)
+local Theme = require(script.Parent.Parent.MenuTheme)
 
 local Menu = {}
-local WHITE, OUTLINE = Color3.fromRGB(255, 255, 255), Color3.fromRGB(12, 18, 25)
-local PANEL, GREEN = Color3.fromRGB(43, 44, 49), Color3.fromRGB(105, 240, 103)
-local GOLD, MUTED = Color3.fromRGB(255, 219, 100), Color3.fromRGB(211, 228, 240)
+Menu.LAYOUT = 4 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
 
-local function new(className: string, parent: Instance?, props: { [string]: any }): any
-	local object: any = Instance.new(className)
-	for key, value in props do object[key] = value end
-	object.Parent = parent
-	return object
-end
-
-local function border(parent: Instance, radius: number, thickness: number)
-	new("UICorner", parent, { CornerRadius = UDim.new(0, radius) })
-	new("UIStroke", parent, { Color = OUTLINE, Thickness = thickness, ApplyStrokeMode = Enum.ApplyStrokeMode.Border })
-end
-
-local function texture(parent: Instance, radius: number, transparency: number)
-	local image = new("ImageLabel", parent, {
-		Name = "StudTexture", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-		Image = "rbxassetid://6927295847", ImageColor3 = WHITE, ImageTransparency = transparency,
-		ScaleType = Enum.ScaleType.Tile, TileSize = UDim2.fromOffset(128, 128), ZIndex = 0,
-		Active = false, Selectable = false,
-	})
-	new("UICorner", image, { CornerRadius = UDim.new(0, radius) })
-end
-
-local function text(parent: Instance, name: string, props: { [string]: any }): TextLabel
-	local object: TextLabel = new("TextLabel", parent, {
-		Name = name, BackgroundTransparency = 1, Font = Enum.Font.FredokaOne, TextSize = 18,
-		TextColor3 = WHITE, TextStrokeColor3 = OUTLINE, TextStrokeTransparency = 0,
-	})
-	for key, value in props do (object :: any)[key] = value end
-	return object
-end
-
-local function button(parent: Instance, name: string, props: { [string]: any }): TextButton
-	local object: TextButton = new("TextButton", parent, {
-		Name = name, BackgroundColor3 = GREEN, BorderSizePixel = 0, AutoButtonColor = true,
-		Font = Enum.Font.FredokaOne, TextSize = 20, TextColor3 = WHITE, TextStrokeColor3 = OUTLINE,
-		TextStrokeTransparency = 0,
-	})
-	for key, value in props do (object :: any)[key] = value end
-	border(object, 4, 3)
-	new("UIGradient", object, { Rotation = 90, Color = ColorSequence.new(WHITE, Color3.fromRGB(235, 235, 235)) })
-	return object
-end
-
-
-local function icon(parent: Instance, name: string, kind: string, props: { [string]: any })
-	local object = new("ImageLabel", parent, {
-		Name = name, BackgroundTransparency = 1, BorderSizePixel = 0,
-		Image = Config.HudIcons[kind], ScaleType = Enum.ScaleType.Fit,
-	})
-	for key, value in props do object[key] = value end
-	return object
-end
-
-local RED = Color3.fromRGB(255, 101, 106)
-
--- Body copy: GothamMedium, no outline, wraps and grows with its text
-local function body(parent: Instance, name: string, props: { [string]: any }): TextLabel
-	local label = text(parent, name, {
-		Font = Enum.Font.GothamMedium, TextSize = 14, TextWrapped = true, TextStrokeTransparency = 1, TextColor3 = MUTED,
-		TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
-		Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-	})
-	for key, value in props do (label :: any)[key] = value end
-	return label
-end
-
--- A list that grows with its text: a coloured heading over wrapped lines
-local function listBox(parent: Instance, name: string, order: number, heading: string, color: Color3): Frame
-	local frame = new("Frame", parent, {
-		Name = name, LayoutOrder = order, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 1, BorderSizePixel = 0,
-	})
-	new("UIPadding", frame, { PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 4), PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 8) })
-	new("UIListLayout", frame, { Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder })
-	text(frame, "Heading", { LayoutOrder = 1, Size = UDim2.new(1, 0, 0, 22), Text = heading, TextSize = 18, TextColor3 = color, TextXAlignment = Enum.TextXAlignment.Left })
-	return frame
-end
-
--- One side of the before/after comparison: a small caption over a big multiplier
-local function multiplierBox(parent: Instance, name: string, valueName: string, caption: string, position: UDim2, valueColor: Color3, maxSize: number): TextLabel
-	local frame = new("Frame", parent, {
-		Name = name, Position = position, Size = UDim2.new(0.38, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(67, 69, 77), BorderSizePixel = 0,
-	})
-	border(frame, 6, 3)
-	text(frame, "Caption", { Position = UDim2.fromOffset(0, 6), Size = UDim2.new(1, 0, 0, 20), Text = caption, TextSize = 14 })
-	local value = text(frame, valueName, { Position = UDim2.fromOffset(6, 28), Size = UDim2.new(1, -12, 1, -34), Text = "", TextScaled = true, TextColor3 = valueColor })
-	new("UITextSizeConstraint", value, { MinTextSize = 18, MaxTextSize = maxSize })
+-- One side of the NOW -> AFTER card: a small caption over a big multiplier
+local function side(parent: Instance, name: string, valueName: string, caption: string, captionColor: Color3, maxSize: number): TextLabel
+	local frame = N.create("Frame", { Name = name, BackgroundTransparency = 1, Size = UDim2.fromScale(0.4, 1), ZIndex = 4 }, parent)
+	local top = Theme.label(frame, "Caption", caption, 14, captionColor, nil, Enum.TextXAlignment.Center)
+	top.Position, top.Size = UDim2.fromOffset(0, 30), UDim2.new(1, 0, 0, 18)
+	local value = Theme.label(frame, valueName, "", maxSize, Palette.NAVY, Theme.TITLE_FONT, Enum.TextXAlignment.Center)
+	value.Position, value.Size, value.TextScaled = UDim2.fromOffset(0, 50), UDim2.new(1, 0, 1, -58), true
+	N.create("UITextSizeConstraint", { MinTextSize = 16, MaxTextSize = maxSize }, value)
 	return value
 end
 
-function Menu.build(): ScreenGui
-	local gui: ScreenGui = new("ScreenGui", nil, {
-		Name = "Rebirth", ResetOnSpawn = false, IgnoreGuiInset = true,
-		ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 22,
-	})
-	gui:SetAttribute("NativePrefab", true)
-	gui:SetAttribute("RebirthLayout", Menu.LAYOUT)
-	local nav = button(gui, "RebirthButton", { Text = "", Position = UDim2.fromOffset(1112, 382), Size = UDim2.fromOffset(120, 108), BackgroundColor3 = GREEN })
-	new("UIScale", nav, { Name = "LayoutScale", Scale = 1 })
-	texture(nav, 4, 0.75)
-	icon(nav, "Icon", "rebirth", { AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.02), Size = UDim2.fromScale(0.74, 0.74) })
-	text(nav, "Caption", { Text = "REBIRTH", Position = UDim2.fromScale(0, 0.70), Size = UDim2.fromScale(1, 0.30), TextSize = 18 })
-	local badge = new("Frame", nav, { Name = "ReadyBadge", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 4), Size = UDim2.fromOffset(9, 9), BackgroundColor3 = Color3.fromRGB(139, 240, 195), BorderSizePixel = 0, Visible = false })
-	new("UICorner", badge, { CornerRadius = UDim.new(0, 9) })
-	text(nav, "Tooltip", { Text = "REBIRTH", Position = UDim2.new(1, 8, 0.5, -16), Size = UDim2.fromOffset(102, 32), TextSize = 14, BackgroundTransparency = 0, BackgroundColor3 = Color3.fromRGB(28, 72, 105), Visible = false, ZIndex = 2 })
-	new("TextButton", gui, {
-		Name = "Dimmer", Size = UDim2.fromScale(1, 1), BackgroundColor3 = OUTLINE, BackgroundTransparency = 0.25,
-		Text = "", AutoButtonColor = false, BorderSizePixel = 0, Visible = false, ZIndex = 2, Modal = true,
-	})
-	local panel = new("Frame", gui, {
-		Name = "Panel", Position = UDim2.fromOffset(420, 40), Size = UDim2.fromOffset(440, 640),
-		BackgroundColor3 = PANEL, BorderSizePixel = 0, Visible = false, ZIndex = 3, Active = true,
-	})
-	border(panel, 6, 4)
-	texture(panel, 6, 0.85)
-	local header = new("Frame", panel, { Name = "MenuHeader", Size = UDim2.new(1, 0, 0, 56), BackgroundColor3 = GREEN, BorderSizePixel = 0, ZIndex = 0, Active = false, Selectable = false })
-	new("UICorner", header, { CornerRadius = UDim.new(0, 6) })
-	texture(header, 6, 0.75)
-	new("Frame", header, { Name = "Divider", AnchorPoint = Vector2.new(0, 1), Position = UDim2.fromScale(0, 1), Size = UDim2.new(1, 0, 0, 4), BackgroundColor3 = OUTLINE, BorderSizePixel = 0, ZIndex = 0 })
-	icon(panel, "HeaderIcon", "rebirth", { Position = UDim2.fromOffset(20, 17), Size = UDim2.fromOffset(38, 38), ZIndex = 5 })
-	text(panel, "Title", { Position = UDim2.fromOffset(66, 12), Size = UDim2.new(1, -230, 0, 38), Text = "REBIRTH", TextSize = 26, TextXAlignment = Enum.TextXAlignment.Left })
-	local close = button(panel, "Close", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 8), Size = UDim2.fromOffset(44, 44), Text = "", BackgroundColor3 = Color3.fromRGB(235, 70, 70) })
-	icon(close, "Icon", "close", { Position = UDim2.fromOffset(12, 12), Size = UDim2.fromOffset(20, 20) })
-	-- PerksController wires this one up
-	button(panel, "PerksButton", { Position = UDim2.new(1, -156, 0, 8), Size = UDim2.fromOffset(100, 44), Text = "PERKS", TextSize = 18 })
-
-	-- The scrolling body: the reward first, then the consequences and the progress
-	local content = new("ScrollingFrame", panel, {
-		Name = "Content", Position = UDim2.fromOffset(16, 68), Size = UDim2.new(1, -32, 0, 380), CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
-		BackgroundTransparency = 1, BorderSizePixel = 0, ScrollingDirection = Enum.ScrollingDirection.Y,
-		ScrollBarThickness = 3, ScrollBarImageColor3 = GOLD, VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar,
-	})
-	new("UIListLayout", content, { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center })
-	text(content, "Headline", { LayoutOrder = 1, Size = UDim2.new(1, -4, 0, 26), Text = "INCREASE YOUR BAR VALUE", TextSize = 20 })
-
-	local compare = new("Frame", content, { Name = "Compare", LayoutOrder = 2, Size = UDim2.new(1, -4, 0, 88), BackgroundTransparency = 1 })
-	multiplierBox(compare, "CurrentBox", "CurrentMultiplier", "CURRENT", UDim2.new(), WHITE, 40)
-	text(compare, "Arrow", { Position = UDim2.fromScale(0.38, 0), Size = UDim2.fromScale(0.24, 1), Text = "→", Font = Enum.Font.GothamBold, TextSize = 40, TextColor3 = GOLD, TextStrokeTransparency = 1 })
-	multiplierBox(compare, "AfterBox", "NextMultiplier", "AFTER", UDim2.fromScale(0.62, 0), GREEN, 64)
-
-	local keep = listBox(content, "KeepBox", 3, "✓ YOU KEEP", GREEN)
-	body(keep, "Body", { LayoutOrder = 2, Text = "Pets · Core shards · Index bonuses · Pickaxe & backpack tiers · Colony perks" })
-	-- The exact things RebirthReset.apply clears (Station Memory keeps part of the line level, Head Start a gear tier)
-	local resets = listBox(content, "ResetBox", 4, "RESETS", RED)
-	body(resets, "Body", { LayoutOrder = 2, Text = "Cash · Pickaxe & backpack upgrades · Carried, hopper & post ore and bars · Placed decor · Production line level" })
-	body(resets, "PriceNote", { LayoutOrder = 3, Text = "Upgrade prices rise", TextColor3 = RED })
-
-	local requirement = new("Frame", content, { Name = "Requirement", LayoutOrder = 5, Size = UDim2.new(1, -4, 0, 48), BackgroundTransparency = 1 })
-	text(requirement, "ReqLabel", { Size = UDim2.new(0.5, 0, 0, 20), Text = "Rebirth requirement", Font = Enum.Font.GothamMedium, TextSize = 14, TextStrokeTransparency = 1, TextColor3 = MUTED, TextXAlignment = Enum.TextXAlignment.Left })
-	text(requirement, "CashProgress", { Position = UDim2.fromScale(0.5, 0), Size = UDim2.new(0.5, 0, 0, 20), Text = "", TextSize = 16, TextXAlignment = Enum.TextXAlignment.Right })
-	local bar = new("Frame", requirement, { Name = "ProgressBar", Position = UDim2.fromOffset(0, 28), Size = UDim2.new(1, -52, 0, 12), BackgroundColor3 = PANEL, BorderSizePixel = 0 })
-	new("Frame", bar, { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = GREEN, BorderSizePixel = 0, ZIndex = 2 })
-	text(requirement, "Percent", { AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 22), Size = UDim2.fromOffset(46, 24), Text = "0%", TextSize = 16, TextXAlignment = Enum.TextXAlignment.Right })
-
-	-- Pinned below the body. The main action is grey until it can be used; the premium one is gold and a little lighter.
-	local confirm = button(panel, "Confirm", { Position = UDim2.fromOffset(16, 462), Size = UDim2.new(1, -32, 0, 50), Text = "REBIRTH", TextScaled = true })
-	new("UITextSizeConstraint", confirm, { MinTextSize = 15, MaxTextSize = 24 })
-	text(panel, "Footer", { Position = UDim2.fromOffset(16, 516), Size = UDim2.new(1, -32, 0, 34), Font = Enum.Font.GothamMedium, TextSize = 14, TextWrapped = true, TextStrokeTransparency = 1, TextColor3 = MUTED, Text = "" })
-	local divider = new("Frame", panel, { Name = "PremiumDivider", Position = UDim2.fromOffset(16, 554), Size = UDim2.new(1, -32, 0, 18), BackgroundTransparency = 1 })
-	new("Frame", divider, { Name = "SkinLineLeft", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), Size = UDim2.new(0.5, -48, 0, 2), BackgroundColor3 = GOLD, BackgroundTransparency = 0.3, BorderSizePixel = 0 })
-	new("Frame", divider, { Name = "SkinLineRight", AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.fromScale(1, 0.5), Size = UDim2.new(0.5, -48, 0, 2), BackgroundColor3 = GOLD, BackgroundTransparency = 0.3, BorderSizePixel = 0 })
-	text(divider, "Label", { Size = UDim2.fromScale(1, 1), Text = "PREMIUM", TextSize = 14, TextColor3 = GOLD })
-	local keepButton = button(panel, "Keep", { Position = UDim2.fromOffset(16, 580), Size = UDim2.new(1, -32, 0, 44), Text = "REBIRTH & KEEP EVERYTHING", TextScaled = true, BackgroundColor3 = GOLD })
-	new("UITextSizeConstraint", keepButton, { MinTextSize = 11, MaxTextSize = 18 })
-	return gui
+-- What resets or what you keep: a pale card with a heading and one row per line, each with the owner's icon
+local function list(parent: Instance, name: string, order: number, heading: string, headingColor: Color3, fill: Color3, edge: Color3, rows: { { string } })
+	local box = Theme.card(parent, name, fill, nil, 12)
+	box.LayoutOrder, box.ZIndex = order, 3
+	Theme.stroke(box, edge, 2)
+	local title = Theme.label(box, "Heading", heading, 16, headingColor)
+	title.Position, title.Size = UDim2.fromOffset(12, 8), UDim2.new(1, -24, 0, 20)
+	for index, row in rows do
+		local line = N.create("Frame", { Name = "Row" .. index, BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 6 + index * 28),
+			Size = UDim2.new(1, -20, 0, 24), ZIndex = 4 }, box)
+		N.create("ImageLabel", { Name = "Icon", Image = Icons[row[1]], BackgroundTransparency = 1, Size = UDim2.fromOffset(24, 24),
+			ScaleType = Enum.ScaleType.Fit, ImageColor3 = if row[1] == "pets" then Palette.BLUE_BOTTOM else Palette.WHITE, ZIndex = 5 }, line)
+		local text = Theme.label(line, "Text", row[2], 15, Palette.NAVY)
+		text.Position, text.Size, text.TextTruncate = UDim2.fromOffset(32, -3), UDim2.new(1, -32, 1, 6), Enum.TextTruncate.AtEnd
+	end
 end
 
-Menu.LAYOUT = 3 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
+function Menu.build(): ScreenGui
+	local gui = N.create("ScreenGui", { Name = "Rebirth", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 22,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, nil) :: ScreenGui
+	gui:SetAttribute("NativePrefab", true)
+	gui:SetAttribute("RebirthLayout", Menu.LAYOUT)
+
+	-- the nav tile on the HUD (the owner's tile is cloned over this by ExactNavButton)
+	local nav = N.button(gui, "RebirthButton", "", UDim2.fromOffset(1112, 382), UDim2.fromOffset(120, 108), N.GREEN)
+	N.create("UIScale", { Name = "LayoutScale", Scale = 1 }, nav)
+	N.create("ImageLabel", { Name = "Icon", Image = Icons.rebirth, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0),
+		Position = UDim2.fromScale(0.5, 0.02), Size = UDim2.fromScale(0.74, 0.74), ScaleType = Enum.ScaleType.Fit, ZIndex = 5 }, nav)
+	local caption = N.text(nav, "Caption", "REBIRTH", UDim2.fromScale(0, 0.7), UDim2.fromScale(1, 0.3))
+	caption.TextXAlignment, caption.TextScaled = Enum.TextXAlignment.Center, true
+	local badge = N.create("Frame", { Name = "ReadyBadge", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 4),
+		Size = UDim2.fromOffset(9, 9), BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, Visible = false }, nav)
+	Theme.round(badge, 9)
+	local tooltip = N.text(nav, "Tooltip", "REBIRTH", UDim2.new(1, 8, 0.5, -16), UDim2.fromOffset(102, 32))
+	tooltip.Visible, tooltip.ZIndex = false, 2
+
+	-- the screen behind the menu: 20% navy, as behind the Gear Shop
+	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY,
+		BackgroundTransparency = 0.8, BorderSizePixel = 0, AutoButtonColor = false, Visible = false, Modal = true }, gui)
+	local p = Theme.panel(gui, "Panel", UDim2.fromOffset(760, 475)) :: any
+	p.AnchorPoint, p.Position, p.Visible = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5), false
+	Theme.ribbon(p, "Rebirth", Icons.rebirth)
+	Theme.closeCorner(p, Icons.close)
+	Theme.chip(p, "Wallet", Icons.coin, Palette.CASH_CHIP).Text = "$0"
+
+	-- the scrolling body
+	local content = N.create("ScrollingFrame", { Name = "Content", Size = UDim2.fromOffset(440, 396), BackgroundTransparency = 1, BorderSizePixel = 0,
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = Palette.BLUE_BOTTOM,
+		ScrollingDirection = Enum.ScrollingDirection.Y, VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar, ZIndex = 3 }, p)
+	N.create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }, content)
+
+	-- the reward: BAR VALUE, NOW x1 -> AFTER x5
+	local compare = Theme.card(content, "Compare", Palette.WHITE, Palette.DETAIL_BOTTOM, 14)
+	compare.LayoutOrder, compare.Size, compare.ZIndex = 1, UDim2.new(1, -6, 0, 150), 3
+	Theme.stroke(compare, Palette.NAVY, 3)
+	local heading = Theme.label(compare, "Headline", "BAR VALUE", 16, Palette.NAVY, nil, Enum.TextXAlignment.Center)
+	heading.Position, heading.Size = UDim2.fromOffset(0, 8), UDim2.new(1, 0, 0, 20)
+	side(compare, "CurrentBox", "CurrentMultiplier", "NOW", Palette.SECOND, 48).Parent.Position = UDim2.fromScale(0.04, 0)
+	local after = side(compare, "AfterBox", "NextMultiplier", "AFTER REBIRTH", Palette.UP, 64)
+	after.Parent.Position = UDim2.fromScale(0.56, 0)
+	after.TextColor3 = Palette.WHITE
+	Theme.ink(after, true, 4)
+	-- the arrow between them: a lime shaft and a diamond head, outlined in navy (no icon in HudIcons is an arrow)
+	local arrow = N.create("Frame", { Name = "Arrow", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
+		Position = UDim2.new(0.5, 0, 0.5, 14), Size = UDim2.fromOffset(50, 34), ZIndex = 5 }, compare)
+	local shaft = N.create("Frame", { Name = "Shaft", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5),
+		Size = UDim2.fromOffset(32, 14), BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 5 }, arrow)
+	Theme.round(shaft, 4)
+	Theme.stroke(shaft, Palette.NAVY, 2.5)
+	local head = N.create("Frame", { Name = "Head", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+		Size = UDim2.fromOffset(24, 24), Rotation = 45, BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 6 }, arrow)
+	Theme.round(head, 4)
+	Theme.stroke(head, Palette.NAVY, 2.5)
+	local note = Theme.label(content, "PriceNote", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	note.LayoutOrder, note.Size, note.AutomaticSize, note.TextWrapped = 2, UDim2.new(1, -6, 0, 0), Enum.AutomaticSize.Y, true
+
+	-- what resets and what you keep, side by side (RebirthReset.apply: tiers, pets, shards, perks and index rewards survive)
+	local lists = N.create("Frame", { Name = "Lists", LayoutOrder = 3, BackgroundTransparency = 1, Size = UDim2.new(1, -6, 0, 152), ZIndex = 3 }, content)
+	N.create("UIGridLayout", { CellSize = UDim2.new(0.5, -6, 1, 0), CellPadding = UDim2.fromOffset(12, 0), SortOrder = Enum.SortOrder.LayoutOrder }, lists)
+	list(lists, "ResetBox", 1, "RESETS", Palette.UNMET, Color3.fromRGB(255, 246, 247), Color3.fromRGB(242, 184, 194),
+		{ { "coin", "Cash" }, { "equipment", "Gear levels" }, { "foundry", "Production line level" }, { "ore", "Ore and bars" } })
+	list(lists, "KeepBox", 2, "YOU KEEP", Palette.UP, Color3.fromRGB(244, 252, 238), Color3.fromRGB(184, 226, 156),
+		{ { "pets", "Pets" }, { "crystal", "Shards and perks" }, { "index", "Index bonuses" }, { "premium", "Gear tiers and passes" } })
+
+	-- the requirement: the cost, a bar and how far along you are
+	local requirement = Theme.card(p, "Requirement", Palette.WHITE, Palette.DETAIL_BOTTOM, 12)
+	Theme.stroke(requirement, Palette.NAVY, 3)
+	Theme.label(requirement, "ReqLabel", "REQUIREMENT", 16, Palette.NAVY)
+	Theme.label(requirement, "Percent", "0%", 16, Palette.UP, Theme.TITLE_FONT, Enum.TextXAlignment.Right)
+	local cash = Theme.label(requirement, "CashProgress", "", 15, Palette.SECOND)
+	cash.TextScaled = true
+	N.create("UITextSizeConstraint", { MinTextSize = 9, MaxTextSize = 15 }, cash)
+	Theme.bar(requirement, "ProgressBar", Palette.LIME_BOTTOM)
+
+	Theme.button(p, "Confirm", "REBIRTH", "lime", 26)
+	local footer = Theme.label(p, "Footer", "", 13, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	footer.TextWrapped, footer.TextScaled = true, true
+	N.create("UITextSizeConstraint", { MinTextSize = 9, MaxTextSize = 14 }, footer)
+
+	-- the premium card: gold, under the main action and lighter than it
+	local keepCard = Theme.card(p, "KeepCard", Palette.EVO_TOP, Palette.EVO_BOTTOM, 14)
+	Theme.stroke(keepCard, Palette.EVO_EDGE, 3)
+	N.create("ImageLabel", { Name = "Icon", Image = Icons.premium, BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 8),
+		Size = UDim2.fromOffset(28, 28), ScaleType = Enum.ScaleType.Fit, ZIndex = 4 }, keepCard)
+	local keepTitle = Theme.label(keepCard, "Heading", "Rebirth and Keep Everything", 16, Palette.NAVY)
+	keepTitle.Position, keepTitle.Size, keepTitle.TextScaled = UDim2.fromOffset(44, 8), UDim2.new(1, -52, 0, 28), true
+	N.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 16 }, keepTitle)
+	local keepBody = Theme.label(keepCard, "Body", "Keeps cash, gear, production, ore and bars. The multiplier still goes up.", 13, Palette.GOLD_TEXT)
+	keepBody.Position, keepBody.Size, keepBody.TextWrapped = UDim2.fromOffset(12, 36), UDim2.new(1, -24, 0, 34), true
+	keepBody.TextYAlignment = Enum.TextYAlignment.Top
+	Theme.button(p, "Keep", "KEEP EVERYTHING", "gold", 18).ZIndex = 6
+
+	-- PerksController wires this one up
+	local perks = Theme.button(p, "PerksButton", "COLONY PERKS", "blue", 18)
+	local face = perks:FindFirstChild("Face") :: Frame
+	N.create("ImageLabel", { Name = "Icon", Image = Icons.crystal, BackgroundTransparency = 1, AnchorPoint = Vector2.new(0, 0.5),
+		Position = UDim2.new(0, 8, 0.5, 0), Size = UDim2.fromOffset(26, 26), ScaleType = Enum.ScaleType.Fit, ZIndex = 8 }, face)
+	return gui
+end
 
 return Menu

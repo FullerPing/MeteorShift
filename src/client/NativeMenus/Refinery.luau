@@ -1,12 +1,16 @@
 --!strict
--- The Foundry window. REFINE shows the production line as three cards (ore hopper -> foundry -> finished bars) with the
--- refining order underneath; UPGRADES shows the production line upgrade view. RefineryController fills and positions everything.
+-- The Foundry window in the owner's "cartoon light" look (MenuTheme / Shared.MenuPalette, like the Gear Shop and Pets):
+-- a blue "Foundry" ribbon and Close on the corner, REFINE / UPGRADES tabs, then REFINE shows the production line as three
+-- cards (ore hopper -> foundry -> finished bars, with drawn arrows between them) and the refining order under them;
+-- UPGRADES shows the production line upgrade view (UpgradePanel, added by the controller). Every icon comes from
+-- Config.HudIcons. RefineryController fills and positions everything; a built copy older than LAYOUT is rebuilt.
 local RS = game:GetService("ReplicatedStorage")
-local N = require(script.Parent.Parent.NativeUI)
 local Config = require(RS.Shared.Config)
+local Palette = require(RS.Shared.MenuPalette)
+local N = require(script.Parent.Parent.NativeUI)
+local Theme = require(script.Parent.Parent.MenuTheme)
 local Refinery = {}
-
-local GOLD = Color3.fromRGB(255, 219, 100)
+Refinery.LAYOUT = 2 -- bumped when the controls change; RefineryController rebuilds an older copy
 
 local function icon(parent: Instance, name: string, kind: string, position: UDim2, size: UDim2): ImageLabel
 	return N.create("ImageLabel", {
@@ -15,90 +19,124 @@ local function icon(parent: Instance, name: string, kind: string, position: UDim
 	}, parent)
 end
 
-local function meter(parent: Instance, name: string, color: Color3): Frame
-	local track = N.create("Frame", { Name = name, Size = UDim2.new(1, -24, 0, 12), BackgroundColor3 = N.OUTLINE, BorderSizePixel = 0, ZIndex = 3 }, parent)
-	N.create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = color, BorderSizePixel = 0, ZIndex = 4 }, track)
-	return track
+local function text(parent: Instance, name: string, value: string, size: number, color: Color3, title: boolean?): TextLabel
+	local label = Theme.label(parent, name, value, size, color, if title then Theme.TITLE_FONT else nil)
+	label.TextTruncate = Enum.TextTruncate.AtEnd
+	return label
 end
 
-local function chip(parent: Instance, name: string, kind: string): Frame
-	local frame = N.create("Frame", { Name = name, Size = UDim2.fromOffset(142, 32), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 3, Visible = false }, parent)
-	N.surface(frame)
-	icon(frame, "Icon", kind, UDim2.fromOffset(6, 3), UDim2.fromOffset(26, 26))
-	local amount = N.text(frame, "Amount", "0", UDim2.fromOffset(36, 0), UDim2.new(1, -42, 1, 0))
-	amount.TextSize = 18
+-- A wallet chip on the UPGRADES page: a pale fill, a navy outline, the owner's icon and the Amount
+local function chip(parent: Instance, name: string, kind: string, fill: Color3): Frame
+	local frame = N.create("Frame", { Name = name, Size = UDim2.fromOffset(142, 32), BackgroundColor3 = fill, BorderSizePixel = 0, ZIndex = 4,
+		Visible = false }, parent)
+	Theme.round(frame, 10)
+	Theme.stroke(frame, Palette.NAVY, 2.5)
+	icon(frame, "Icon", kind, UDim2.fromOffset(4, 2), UDim2.fromOffset(28, 28))
+	local amount = text(frame, "Amount", "0", 17, Palette.NAVY, true)
+	amount.Position, amount.Size = UDim2.fromOffset(36, 0), UDim2.new(1, -42, 1, 0)
+	return frame
+end
+
+-- The arrow between two cards: a lime shaft and a diamond head, outlined in navy, drawn to any square size
+local function arrow(parent: Instance, name: string): Frame
+	local frame = N.create("Frame", { Name = name, BackgroundTransparency = 1, Size = UDim2.fromOffset(26, 26), Visible = false, ZIndex = 5 }, parent)
+	local shaft = N.create("Frame", { Name = "Shaft", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromScale(0.62, 0.42),
+		BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 5 }, frame)
+	Theme.round(shaft, 3)
+	Theme.stroke(shaft, Palette.NAVY, 2)
+	local head = N.create("Frame", { Name = "Head", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.66, 0.5), Size = UDim2.fromScale(0.56, 0.56),
+		Rotation = 45, BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 6 }, frame)
+	Theme.round(head, 3)
+	Theme.stroke(head, Palette.NAVY, 2)
 	return frame
 end
 
 function Refinery.build(): ScreenGui
-	local gui = N.menu("RefineryMenu", "Foundry", N.ORANGE, 620, 570)
-	local p = gui.Panel :: any
-	p.Header.Size = UDim2.new(1, 0, 0, 44)
-	icon(p, "HeaderIcon", "foundry", UDim2.fromOffset(18, 4), UDim2.fromOffset(38, 38))
-	p.Title.Position, p.Title.Size = UDim2.fromOffset(64, 4), UDim2.new(1, -120, 0, 36)
-	p.Title.TextSize = 26
-	p.Close.Position = UDim2.new(1, -48, 0, 0)
-	N.button(p, "refineTab", "REFINE", UDim2.fromOffset(16, 48), UDim2.new(.5, -20, 0, 44), N.CYAN)
-	N.button(p, "productionTab", "UPGRADES", UDim2.new(.5, 4, 0, 48), UDim2.new(.5, -20, 0, 44), N.ORANGE)
+	local gui = N.create("ScreenGui", { Name = "RefineryMenu", Enabled = false, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 25,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, nil) :: ScreenGui
+	gui:SetAttribute("NativePrefab", true)
+	gui:SetAttribute("RefineryLayout", Refinery.LAYOUT)
+	-- the screen behind the menu: 20% navy, as behind the Gear Shop
+	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY, BackgroundTransparency = 0.8,
+		BorderSizePixel = 0, AutoButtonColor = false, Modal = true }, gui)
+	local p = Theme.panel(gui, "Panel", UDim2.fromOffset(620, 570)) :: any
+	p.AnchorPoint, p.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)
+	Theme.ribbon(p, "Foundry", Config.HudIcons.foundry)
+	Theme.closeCorner(p, Config.HudIcons.close)
+	local refineTab = Theme.button(p, "refineTab", "REFINE", "tabOn", 18)
+	refineTab.Position, refineTab.Size = UDim2.fromOffset(16, 50), UDim2.new(0.5, -20, 0, 46)
+	local productionTab = Theme.button(p, "productionTab", "UPGRADES", "tabOff", 18)
+	productionTab.Position, productionTab.Size = UDim2.new(0.5, 4, 0, 50), UDim2.new(0.5, -20, 0, 46)
 
 	-- the two ends of the line: what you can put in (ore from the backpack) and what you can take out (finished bars)
 	for i, action in { "deposit", "claim" } do
 		local deposit = action == "deposit"
-		local card = N.create("Frame", { Name = action .. "Card", BackgroundColor3 = N.CARD, BorderSizePixel = 0,
-			Position = UDim2.new((i - 1) * .5, if i == 1 then 16 else 4, 0, 108), Size = UDim2.new(.5, -20, 0, 116), ZIndex = 3 }, p)
-		N.surface(card)
+		local card = Theme.card(p, action .. "Card", Palette.WHITE, Palette.DETAIL_BOTTOM, 14)
+		card.Position, card.Size = UDim2.new((i - 1) * .5, if i == 1 then 16 else 4, 0, 108), UDim2.new(.5, -20, 0, 116)
+		Theme.stroke(card, Palette.NAVY, 3)
 		icon(card, "Icon", if deposit then "ore" else "bars", UDim2.fromOffset(10, 8), UDim2.fromOffset(46, 46))
-		local caption = N.text(card, "Caption", if deposit then "ORE HOPPER" else "FINISHED BARS", UDim2.fromOffset(62, 10), UDim2.new(1, -72, 0, 22))
-		caption.TextSize, caption.TextColor3 = 16, GOLD
-		N.text(card, "Hint", if deposit then "in your backpack" else "ready to claim", UDim2.fromOffset(62, 32), UDim2.new(1, -72, 0, 18), true).TextSize = 16
-		N.text(card, "Quantity", "0", UDim2.fromOffset(12, 60), UDim2.new(1, -24, 0, 44)).TextSize = 38
-		local track = meter(card, "Meter", if deposit then N.ORANGE else GOLD)
-		track.Position = UDim2.fromOffset(12, 112)
-		N.text(card, "MeterText", "", UDim2.fromOffset(12, 128), UDim2.new(1, -24, 0, 18), true).TextSize = 16
-		N.button(card, "Action", if deposit then "Deposit ore" else "Claim bars", UDim2.new(0, 8, 1, -52), UDim2.new(1, -16, 0, 44), if deposit then N.ORANGE else N.GREEN)
+		local caption = text(card, "Caption", if deposit then "ORE HOPPER" else "FINISHED BARS", 16, Palette.NAVY, true)
+		caption.Position, caption.Size = UDim2.fromOffset(62, 10), UDim2.new(1, -72, 0, 22)
+		local hint = text(card, "Hint", if deposit then "in your backpack" else "ready to claim", 14, Palette.GOLD_TEXT)
+		hint.Position, hint.Size = UDim2.fromOffset(62, 32), UDim2.new(1, -72, 0, 18)
+		local quantity = text(card, "Quantity", "0", 38, Palette.NAVY, true)
+		quantity.Position, quantity.Size = UDim2.fromOffset(12, 60), UDim2.new(1, -24, 0, 44)
+		local meter = Theme.bar(card, "Meter", if deposit then Palette.BAR_FILL else Palette.GOLD_BOTTOM)
+		meter.Position, meter.Size = UDim2.fromOffset(12, 112), UDim2.new(1, -24, 0, 12)
+		local meterText = text(card, "MeterText", "", 14, Palette.SECOND)
+		meterText.Position, meterText.Size = UDim2.fromOffset(12, 128), UDim2.new(1, -24, 0, 18)
+		local button = Theme.button(card, "Action", if deposit then "Deposit ore" else "Claim bars", "lime", 18)
+		button.Position, button.Size = UDim2.new(0, 8, 1, -52), UDim2.new(1, -16, 0, 44)
 	end
 
-	-- the middle of the line: the foundry itself, its status and progress
-	local middle = N.create("Frame", { Name = "FoundryCard", BackgroundColor3 = N.CARD, BorderSizePixel = 0, Visible = false, ZIndex = 3 }, p)
-	N.surface(middle)
+	-- the middle of the line: the foundry itself (a warm card), its status and progress
+	local middle = Theme.card(p, "FoundryCard", Color3.fromRGB(255, 246, 232), Color3.fromRGB(255, 222, 182), 14)
+	middle.Visible = false
+	Theme.stroke(middle, Palette.NAVY, 3)
 	icon(middle, "Icon", "foundry", UDim2.fromOffset(40, 10), UDim2.fromOffset(72, 72))
-	local rate = N.text(middle, "Rate", "", UDim2.fromOffset(8, 176), UDim2.new(1, -16, 0, 22), true)
-	rate.TextXAlignment, rate.TextSize = Enum.TextXAlignment.Center, 16
-	for index = 1, 2 do
-		local arrow = N.text(p, "FlowArrow" .. index, "→", UDim2.fromOffset(0, 0), UDim2.fromOffset(26, 26))
-		arrow.TextSize, arrow.TextColor3, arrow.TextXAlignment, arrow.Visible = 30, GOLD, Enum.TextXAlignment.Center, false
-	end
+	local rate = text(middle, "Rate", "", 14, Palette.UP)
+	rate.Position, rate.Size, rate.TextXAlignment = UDim2.fromOffset(8, 176), UDim2.new(1, -16, 0, 22), Enum.TextXAlignment.Center
+	arrow(p, "FlowArrow1")
+	arrow(p, "FlowArrow2")
 
-	N.text(p, "Status", "Ready to work · deposit ore above", UDim2.fromOffset(16, 240), UDim2.new(1, -32, 0, 26)).TextSize = 18
-	local progress = N.create("Frame", { Name = "Progress", Position = UDim2.fromOffset(16, 271), Size = UDim2.new(1, -32, 0, 5), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 4 }, p)
-	N.create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = N.GREEN, BorderSizePixel = 0, ZIndex = 5 }, progress)
-	N.text(p, "Totals", "REFINING ORDER", UDim2.fromOffset(16, 284), UDim2.new(1, -32, 0, 22), true).TextSize = 16
-	local function list(name: string, y: number, height: number)
-		local frame = N.create("ScrollingFrame", { Name = name, Position = UDim2.fromOffset(16, y), Size = UDim2.new(1, -32, 0, height), BackgroundTransparency = 1,
-			BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4, ZIndex = 3 }, p)
-		N.create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, frame)
-		return frame
-	end
-	list("Inventory", 316, 198)
-	local empty = N.text(p, "Empty", "Nothing queued yet. Mine ore in the fields, then deposit it here.", UDim2.fromOffset(16, 316), UDim2.new(1, -32, 0, 44), true)
-	empty.TextWrapped, empty.TextSize, empty.TextXAlignment = true, 17, Enum.TextXAlignment.Center
-	local feedback = N.text(p, "Feedback", "Mine ore, deposit it, claim the bars, then sell them at the Trading Post.", UDim2.new(0, 16, 1, -54), UDim2.new(1, -168, 0, 44), true)
-	feedback.TextWrapped, feedback.TextSize = true, 15
-	N.button(p, "ResetPriority", "Reset order", UDim2.new(1, -144, 1, -54), UDim2.fromOffset(128, 44), N.CYAN).TextSize = 13
+	local status = text(p, "Status", "Ready to work · deposit ore above", 18, Palette.NAVY, true)
+	status.Position, status.Size = UDim2.fromOffset(16, 240), UDim2.new(1, -32, 0, 26)
+	local progress = Theme.bar(p, "Progress", Palette.LIME_BOTTOM)
+	progress.Position, progress.Size = UDim2.fromOffset(16, 271), UDim2.new(1, -32, 0, 6)
+	local totals = text(p, "Totals", "REFINING ORDER", 16, Palette.NAVY, true)
+	totals.Position, totals.Size = UDim2.fromOffset(16, 284), UDim2.new(1, -32, 0, 22)
+	local list = N.create("ScrollingFrame", { Name = "Inventory", Position = UDim2.fromOffset(16, 316), Size = UDim2.new(1, -32, 0, 198),
+		BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = Palette.BLUE_BOTTOM, ZIndex = 3 }, p)
+	N.create("UIListLayout", { Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	local empty = Theme.label(p, "Empty", "Nothing queued yet. Mine ore in the fields, then deposit it here.", 16, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	empty.Position, empty.Size, empty.TextWrapped = UDim2.fromOffset(16, 316), UDim2.new(1, -32, 0, 44), true
+	local feedback = Theme.label(p, "Feedback", "Mine ore, deposit it, claim the bars, then sell them at the Trading Post.", 14, Palette.SECOND)
+	feedback.Position, feedback.Size, feedback.TextWrapped = UDim2.new(0, 16, 1, -58), UDim2.new(1, -168, 0, 44), true
+	local reset = Theme.button(p, "ResetPriority", "Reset order", "blue", 15)
+	reset.Position, reset.Size = UDim2.new(1, -144, 1, -60), UDim2.fromOffset(128, 46)
 
 	-- UPGRADES page: the wallet on the right; RefineryController adds the line view (UpgradePanel) below
-	N.text(p, "UpgradeWallet", "Your production line", UDim2.fromOffset(16, 100), UDim2.new(1, -32, 0, 24), true)
-	chip(p, "CashChip", "coin")
-	chip(p, "ShardChip", "crystal")
+	local wallet = text(p, "UpgradeWallet", "Your production line", 18, Palette.NAVY, true)
+	wallet.Position, wallet.Size = UDim2.fromOffset(16, 100), UDim2.new(1, -32, 0, 24)
+	chip(p, "CashChip", "coin", Palette.CASH_CHIP)
+	chip(p, "ShardChip", "crystal", Palette.SHARD_CHIP)
 
+	-- one row of the refining order: the ore's bars, its name and amounts, and two buttons to move it up or down
 	local templates = N.create("Folder", { Name = "Templates" }, gui)
-	local row = N.create("Frame", { Name = "OreRow", Visible = false, Size = UDim2.new(1, -4, 0, 60), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 3 }, templates)
-	N.surface(row)
+	local row = Theme.card(templates, "OreRow", Palette.WHITE, Palette.DETAIL_TOP, 10)
+	row.Visible, row.Size = false, UDim2.new(1, -4, 0, 60)
+	row:SetAttribute(Theme.CUSTOM, true) -- it sits outside the panel until it is cloned: keep MenuSkin off it
+	Theme.stroke(row, Palette.LEVEL_EDGE, 2)
 	icon(row, "Icon", "barStack", UDim2.fromOffset(8, 8), UDim2.fromOffset(40, 40))
-	N.text(row, "Type", "Iron", UDim2.fromOffset(56, 6), UDim2.new(1, -160, 0, 22)).TextSize = 16
-	N.text(row, "Amount", "", UDim2.fromOffset(56, 30), UDim2.new(1, -160, 0, 22), true).TextSize = 15
-	N.button(row, "PriorityUp", "↑", UDim2.new(1, -96, 0, 8), UDim2.fromOffset(44, 44), N.CYAN)
-	N.button(row, "PriorityDown", "↓", UDim2.new(1, -48, 0, 8), UDim2.fromOffset(44, 44), N.CYAN)
+	local kind = text(row, "Type", "Iron", 17, Palette.NAVY, true)
+	kind.Position, kind.Size = UDim2.fromOffset(56, 6), UDim2.new(1, -160, 0, 22)
+	local amount = text(row, "Amount", "", 14, Palette.SECOND)
+	amount.Position, amount.Size = UDim2.fromOffset(56, 30), UDim2.new(1, -160, 0, 22)
+	local up = Theme.button(row, "PriorityUp", "↑", "blue", 22)
+	up.Position, up.Size = UDim2.new(1, -96, 0, 8), UDim2.fromOffset(44, 44)
+	local down = Theme.button(row, "PriorityDown", "↓", "blue", 22)
+	down.Position, down.Size = UDim2.new(1, -48, 0, 8), UDim2.fromOffset(44, 44)
 	return gui
 end
 return Refinery
