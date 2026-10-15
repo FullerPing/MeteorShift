@@ -37,14 +37,19 @@ function PerksController:KnitStart()
 	local body = panel:WaitForChild("Body") :: ScrollingFrame
 	local wallet = panel:WaitForChild("Wallet") :: TextLabel
 	local footer = panel:WaitForChild("Footer") :: TextLabel
+	local back = panel:WaitForChild("Back") :: TextButton
+	local function tint(color: Color3, text: string): string
+		return string.format("<font color=\"#%s\">%s</font>", color:ToHex(), text)
+	end
 	local state: any = nil
 	local busy: string? = nil
 
 	local function update()
 		local owned = if state then state.perks else nil
 		local unlocked = state ~= nil and PerksRules.unlocked(state.rebirths)
-		wallet.Text = if state then Format.number(state.shards) .. " Shards" else "Loading..."
-		footer.Text = if unlocked then "Perks are permanent and survive every rebirth." else string.format("Colony Perks open at rebirth %d.", Config.Perks.UnlockRebirths)
+		wallet.Text = if state then Format.number(state.shards) else "..."
+		footer.Text = if unlocked then "Bought with Core Shards. Every perk is kept through every rebirth."
+			else string.format("Colony Perks open at rebirth %d. Every perk is kept through every rebirth.", Config.Perks.UnlockRebirths)
 		for _, id in Config.Perks.Order do
 			local def = Config.Perks.List[id]
 			local card = body:FindFirstChild(id .. "Row") :: Frame?
@@ -52,18 +57,29 @@ function PerksController:KnitStart()
 				local level = PerksRules.level(owned, id)
 				local max = PerksRules.maxLevel(id)
 				local cost = PerksRules.nextCost(owned, id)
-				local shownEffect = def.Effect[math.min(level + 1, max)]
-				;(card:FindFirstChild("Level") :: TextLabel).Text = string.format("Level %d / %d", level, max)
-				;(card:FindFirstChild("Text") :: TextLabel).Text = string.format(def.Text, effectText(id, shownEffect))
+				-- a dot per level, lime once bought
+				local dots = card:FindFirstChild("Dots")
+				for step = 1, max do
+					local dot = dots and dots:FindFirstChild("Dot" .. step) :: Frame?
+					if dot then dot.BackgroundColor3 = if step <= level then Palette.LIME_BOTTOM else Palette.BAR_TRACK end
+				end
+				-- what it does: now -> next (only next before the first level, only now at the top)
+				local now = if level > 0 then effectText(id, def.Effect[level]) else nil
+				local nextUp = if level < max then effectText(id, def.Effect[level + 1]) else nil
+				local shown = if now and nextUp then tint(Palette.SECOND, now) .. " " .. tint(Palette.UP, "→ " .. nextUp)
+					elseif nextUp then tint(Palette.UP, nextUp) else tint(Palette.UP, now or "")
+				local line = string.format(def.Text, shown)
+				if cost and state and state.shards < cost and unlocked then
+					line ..= "\n" .. tint(Palette.UNMET, Format.number(cost - state.shards) .. " more shards needed")
+				end
+				;(card:FindFirstChild("Text") :: TextLabel).Text = line
+				-- the button carries the price in shards; grey while you cannot buy it
 				local buy = card:FindFirstChild("Buy") :: TextButton
 				local enabled = unlocked and cost ~= nil and state ~= nil and state.shards >= cost and busy == nil
 				MenuTheme.state(buy, enabled, "lime")
-				buy.Text = if not cost then "MAX" elseif busy == id then "..." else "BUY"
-				-- the price in shards above the button, red while you cannot afford it
-				local price = card:FindFirstChild("Price") :: TextLabel
-				price.Text = if cost then Format.number(cost) else ""
-				price.TextColor3 = if cost and state and state.shards < cost then Palette.UNMET else Palette.NAVY
-				;(card:FindFirstChild("PriceIcon") :: ImageLabel).Visible = cost ~= nil
+				buy.Text = if not cost then "MAX" elseif busy == id then "..." else Format.number(cost)
+				local icon = buy:FindFirstChild("Face") and (buy :: any).Face:FindFirstChild("Icon")
+				if icon then icon.Visible = cost ~= nil end
 			end
 		end
 	end
@@ -88,6 +104,11 @@ function PerksController:KnitStart()
 
 	NativeUI.bindOpen(gui, "PerksOpen", function()
 		player:SetAttribute("PerksOpen", false)
+	end)
+	-- back to the Rebirth panel this menu opens from
+	back.Activated:Connect(function()
+		player:SetAttribute("PerksOpen", false)
+		Knit.GetController("RebirthController"):Open()
 	end)
 	PlayerStateService.State:Observe(function(value)
 		state = value

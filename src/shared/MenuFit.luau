@@ -39,4 +39,14 @@ function MenuFit.centred(view: View, natural: Vector2): Rect
 	return { x = (view.viewport.X - w) / 2, y = top + (view.viewport.Y - top - MenuFit.FootRoom - h) / 2, w = w, h = h }
 end
 
+-- a menu drawn whole, the way its mockup draws it: centred like MenuFit.centred, and where the screen has no room for its
+-- natural size it is drawn smaller still (the returned view's scale) instead of cut short. For small fixed dialogs.
+function MenuFit.whole(view: View, natural: Vector2): (View, Rect)
+	local roomW = math.max(1, view.viewport.X - 24)
+	local roomH = math.max(1, view.viewport.Y - view.inset - MenuFit.RibbonRoom - MenuFit.FootRoom)
+	local shrink = math.min(1, roomW / natural.X, roomH / natural.Y)
+	local whole = { viewport = view.viewport / shrink, inset = view.inset / shrink, scale = view.scale * shrink }
+	return whole, MenuFit.centred(whole, natural)
+end
+
 return MenuFit

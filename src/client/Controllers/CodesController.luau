@@ -21,11 +21,21 @@ function CodesController:KnitStart()
 	local CodesService = Knit.GetService("CodesService")
 	local gui = NativeUI.getFresh("CodesMenu", CodesMenu.build, CodesMenu.LAYOUT)
 	local panel = gui:WaitForChild("Panel") :: Frame
-	NativeUI.fitCentred(panel, Vector2.new(420, 300))
+	NativeUI.fitWhole(panel, CodesMenu.SIZE)
 	local box = panel:WaitForChild("CodeBox") :: TextBox
 	local redeem = panel:WaitForChild("Redeem") :: TextButton
-	local status = panel:WaitForChild("Status") :: TextLabel
+	local result = panel:WaitForChild("Result") :: Frame
+	local status = result:WaitForChild("Status") :: TextLabel
 	local busy = false
+	-- the result strip: soft while checking, green when the code paid, pink when it did not; hidden when empty
+	local function show(text: string, mood: "wait" | "good" | "bad")
+		result.Visible = text ~= ""
+		status.Text = text
+		status.TextColor3 = if mood == "good" then GOOD elseif mood == "bad" then BAD else Palette.SECOND
+		result.BackgroundColor3 = if mood == "good" then Palette.BOOST elseif mood == "bad" then Palette.ALERT else Palette.WHITE
+		local edge = result:FindFirstChildOfClass("UIStroke")
+		if edge then edge.Color = if mood == "good" then Palette.BOOST_EDGE elseif mood == "bad" then Palette.ALERT_EDGE else Palette.DIVIDER end
+	end
 
 	-- the HUD button, in its own screen like the Daily one
 	local navGui = Instance.new("ScreenGui")
@@ -49,16 +59,16 @@ function CodesController:KnitStart()
 		local text = box.Text
 		busy = true
 		MenuTheme.state(redeem, false, "lime")
-		status.Text, status.TextColor3 = "Checking...", Palette.SECOND
+		show("Checking...", "wait")
 		task.spawn(function()
 			local ok, accepted, message = pcall(function() return CodesService:Redeem(text) end)
 			if ok and accepted then
 				box.Text = ""
-				status.Text, status.TextColor3 = message, GOOD
+				show(message, "good")
 				Sfx.play("Upgrade", nil, nil, 1.1)
 				RewardFX.burst(Config.RewardFX.Colors.Rebirth, 0.8)
 			else
-				status.Text, status.TextColor3 = if ok then message else "Could not reach the server. Try again.", BAD
+				show(if ok then message else "Could not reach the server. Try again.", "bad")
 			end
 			busy = false
 			MenuTheme.state(redeem, true, "lime")
@@ -74,7 +84,7 @@ function CodesController:KnitStart()
 		player:SetAttribute("CodesOpen", false)
 	end)
 	player:GetAttributeChangedSignal("CodesOpen"):Connect(function()
-		if player:GetAttribute("CodesOpen") == true then status.Text = "" end
+		if player:GetAttribute("CodesOpen") == true then show("", "wait") end
 	end)
 end
 

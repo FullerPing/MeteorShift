@@ -181,6 +181,16 @@ function NativeUI.fitCentred(panel: GuiObject, natural: Vector2)
 		NativeUI.place(panel, MenuFit.centred(view, natural), view)
 	end)
 end
+-- A fixed-design menu drawn whole (MenuFit.whole): smaller still where the screen has no room for it
+function NativeUI.fitWhole(panel: GuiObject, natural: Vector2)
+	for _, child in panel:GetChildren() do
+		if child:IsA("UISizeConstraint") then child:Destroy() end
+	end
+	NativeUI.onLayoutChanged(function(hud)
+		local view, rect = MenuFit.whole(NativeUI.menuView(hud), natural)
+		NativeUI.place(panel, rect, view)
+	end)
+end
 function NativeUI.bindOpen(gui: ScreenGui, attribute: string, close: () -> ())
 	local p = Players.LocalPlayer
 	local function update() gui.Enabled = p:GetAttribute(attribute) == true end

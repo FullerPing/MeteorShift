@@ -9,6 +9,9 @@ local GuiService = game:GetService("GuiService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
 local Visuals = require(ReplicatedStorage.Shared.PetVisuals)
 local UI = require(script.Parent.Parent.NativeUI)
 local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
@@ -109,7 +112,12 @@ function HatchController:KnitStart()
 	local shade = gui:WaitForChild("DismissBackdrop") :: TextButton
 	local panel = gui:WaitForChild("HatchResult") :: Frame
 	local title = panel:WaitForChild("PetName") :: TextLabel
-	local rarity = panel:WaitForChild("Rarity") :: TextLabel
+	local rarityTag = panel:WaitForChild("RarityTag") :: Frame
+	local rarity = rarityTag:WaitForChild("Rarity") :: TextLabel
+	local newTag = panel:WaitForChild("NewTag") :: Frame
+	local perkTemplate = panel:WaitForChild("PerkTemplate") :: Frame
+	local equip = panel:WaitForChild("Equip") :: TextButton
+	local again = panel:WaitForChild("Again") :: TextButton
 	local headerClose = panel:WaitForChild("HeaderClose") :: TextButton
 	local viewport = panel:WaitForChild("PetPreview") :: ViewportFrame
 	local well = panel:WaitForChild("PreviewWell") :: Frame
@@ -119,8 +127,7 @@ function HatchController:KnitStart()
 		CFrame = CFrame.lookAt(Vector3.new(0, 0.5, 6.2), Vector3.zero),
 	})) :: Camera
 	local world = viewport:WaitForChild("WorldModel") :: WorldModel
-	local perks = panel:WaitForChild("PetPerks") :: ScrollingFrame
-	local perkText = perks:WaitForChild("PerkText") :: TextLabel
+	local perks = panel:WaitForChild("PetPerks") :: Frame
 	local duplicate = panel:WaitForChild("Duplicate") :: TextLabel
 	local close = panel:WaitForChild("Close") :: TextButton
 	local flash = gui:WaitForChild("RarityFlash") :: Frame
@@ -135,29 +142,29 @@ function HatchController:KnitStart()
 	local raysScale = create("UIScale", rays, {}) :: UIScale
 	local nextTick = 0
 
+	-- the mockup's panel, drawn whole (smaller where the screen is short); the rays centre on the preview well
 	local function layout()
-		local view = UI.menuView(UI.hudLayout())
-		local size, inset = view.viewport, view.inset
-		-- short screens: the preview on the left and the perks beside it; otherwise one column. Room is kept above the
-		-- panel for the ribbon and below it for the lip (MenuFit.centred)
-		local short = size.Y - inset < 470
-		local rect = MenuFit.centred(view, if short then Vector2.new(620, 320) else Vector2.new(380, 470))
-		local width, height = rect.w, rect.h
+		local view, rect = MenuFit.whole(UI.menuView(UI.hudLayout()), HatchMenu.SIZE)
 		UI.place(panel, rect, view)
-		title.Position, title.Size = UDim2.fromOffset(16, 46), UDim2.fromOffset(width - 32, 32)
-		rarity.Position, rarity.Size = UDim2.fromOffset(16, 78), UDim2.fromOffset(width - 32, 22)
-		local top = 104
-		local previewWidth = if short then 210 else width - 32
-		local previewHeight = if short then math.max(60, height - top - 104) else math.max(60, math.min(170, height - top - 190))
-		viewport.Position, viewport.Size = UDim2.fromOffset(16, top), UDim2.fromOffset(previewWidth, previewHeight)
-		well.Position, well.Size = viewport.Position, viewport.Size
-		local raySize = math.min(previewWidth, previewHeight * 1.5)
-		rays.Position, rays.Size = UDim2.fromOffset(16 + previewWidth / 2, top + previewHeight / 2), UDim2.fromOffset(raySize, raySize)
-		local textX = if short then 16 + previewWidth + 14 else 16
-		local textY = if short then top else top + previewHeight + 8
-		perks.Position, perks.Size = UDim2.fromOffset(textX, textY), UDim2.fromOffset(width - textX - 16, math.max(36, height - textY - 104))
-		duplicate.Position, duplicate.Size = UDim2.fromOffset(16, height - 98), UDim2.fromOffset(width - 32, 28)
-		close.Position, close.Size = UDim2.fromOffset(16, height - 68), UDim2.fromOffset(width - 32, 52)
+		local w = HatchMenu.WELL
+		local raySize = w.h * 1.5
+		rays.Position, rays.Size = UDim2.fromOffset(rect.w / 2, w.y + w.h / 2), UDim2.fromOffset(raySize, raySize)
+	end
+
+	-- SKIP while the egg wobbles; EQUIP and AGAIN once the pet shows
+	local busy = false
+	local function showActions(revealedNow: boolean)
+		close.Visible = not revealedNow
+		equip.Visible, again.Visible = revealedNow, revealedNow
+		local hatch = active
+		if not revealedNow or not hatch then return end
+		local equipped = state and state.pets and table.find(state.pets.equipped or {}, hatch.petId) ~= nil
+		equip.Text = if equipped then "EQUIPPED" else "EQUIP"
+		MenuTheme.state(equip, not equipped and not busy, "lime")
+		local egg = Pets.egg(hatch.eggId)
+		local cost = if egg then egg.Cost else 0
+		again.Text = "AGAIN · " .. Format.number(cost)
+		MenuTheme.state(again, egg ~= nil and state ~= nil and (state.shards or 0) >= cost and not busy, "blue")
 	end
 
 	local function clearPreview()
@@ -188,17 +195,27 @@ function HatchController:KnitStart()
 		local owned = state and state.pets and state.pets.owned and state.pets.owned[hatch.petId]
 		local level = if owned then owned.level else 1
 		local rarityDef = Config.Pets.Rarities[def.Rarity]
-		rarity.TextColor3 = rarityDef.Color
-		title.Text, rarity.Text = def.Name, rarityDef.Name .. "  ·  Level " .. tostring(level)
-		local lines = {}
-		for _, perk in Pets.perksOf(def, level) do
+		-- the rarity: a pill in its colour, the well tinted toward it
+		rarityTag.BackgroundColor3 = rarityDef.Color
+		rarity.TextColor3 = Palette.WHITE
+		MenuTheme.ink(rarity, true, 2)
+		title.Text, rarity.Text = def.Name, string.upper(rarityDef.Name) .. "  ·  LV " .. tostring(level)
+		MenuTheme.gradient(well, rarityDef.Color:Lerp(Palette.WHITE, 0.85), rarityDef.Color:Lerp(Palette.WHITE, 0.45))
+		MenuTheme.stroke(well, rarityDef.Color:Lerp(Palette.NAVY, 0.25), 2.5)
+		for _, old in perks:GetChildren() do
+			if old:IsA("Frame") then old:Destroy() end
+		end
+		for order, perk in Pets.perksOf(def, level) do
 			local role = Config.Pets.Roles[perk.role]
 			local percent = string.format("%.2f", perk.value * 100):gsub("0+$", ""):gsub("%.$", "") .. "%"
-			table.insert(lines, role.Name .. ": " .. string.format(role.Text, percent))
+			local pill = perkTemplate:Clone()
+			pill.Name, pill.LayoutOrder, pill.Visible = "Perk" .. order, order, true
+			;(pill:FindFirstChild("Label") :: TextLabel).Text = string.upper(role.Name) .. " " .. percent
+			pill.Parent = perks
 		end
-		perkText.Text = table.concat(lines, "\n\n")
-		duplicate.Text = if hatch.duplicate then "Duplicate: +" .. tostring(Config.Pets.DuplicateXp) .. " XP" else "Added to your collection"
-		close.Text = "CONTINUE  ·  TAP OR ESC"
+		newTag.Visible = not hatch.duplicate
+		duplicate.Text = if hatch.duplicate then "Duplicate! +" .. tostring(Config.Pets.DuplicateXp) .. " pet XP" else def.Blurb
+		showActions(true)
 		preview = PetModel.clone(hatch.petId, level)
 		if preview then
 			PetModel.reduce(preview, reduced)
@@ -228,8 +245,17 @@ function HatchController:KnitStart()
 		PetVisualController:ReserveHatchPreview(true)
 		active, startedAt, revealed = hatch, os.clock(), false
 		layout()
-		title.Text, rarity.Text = "Hatching...", (Pets.egg(hatch.eggId) or { Name = "Pet" }).Name
-		perkText.Text, duplicate.Text, close.Text = "", "Tap or Escape to skip", "SKIP"
+		title.Text, rarity.Text = "Hatching...", string.upper((Pets.egg(hatch.eggId) or { Name = "Pet" }).Name)
+		rarityTag.BackgroundColor3, rarity.TextColor3 = Palette.WHITE, Palette.NAVY
+		MenuTheme.ink(rarity, false)
+		MenuTheme.gradient(well, Palette.WELL_TOP, Palette.WELL_BOTTOM)
+		MenuTheme.stroke(well, Palette.WELL_EDGE, 2.5)
+		for _, old in perks:GetChildren() do
+			if old:IsA("Frame") then old:Destroy() end
+		end
+		newTag.Visible = false
+		duplicate.Text, close.Text = "Tap or Escape to skip", "SKIP"
+		showActions(false)
 		shade.Visible, shade.Active, viewport.Visible = true, true, true
 		flash.BackgroundTransparency = 1
 		gui.Enabled = true
@@ -241,6 +267,28 @@ function HatchController:KnitStart()
 		if reduced then reveal() end
 	end
 
+	equip.Activated:Connect(function()
+		local hatch = active
+		if not hatch or busy or not equip.Active then return end
+		busy = true
+		showActions(true)
+		task.spawn(function()
+			pcall(function() return PetService:Equip(hatch.petId) end)
+			busy = false
+			-- the State snapshot follows the equip shortly; show it as equipped now
+			if active == hatch then
+				equip.Text = "EQUIPPED"
+				MenuTheme.state(equip, false, "lime")
+				MenuTheme.state(again, true, "blue")
+			end
+		end)
+	end)
+	again.Activated:Connect(function()
+		local hatch = active
+		if not hatch or busy or not again.Active then return end
+		dismiss()
+		task.spawn(function() pcall(function() return PetService:Hatch(hatch.eggId) end) end)
+	end)
 	shade.Activated:Connect(dismiss)
 	close.Activated:Connect(dismiss)
 	headerClose.Activated:Connect(dismiss)
@@ -282,7 +330,8 @@ function HatchController:KnitStart()
 			Sfx.play("HatchTick", nil, nil, 1 + elapsed * 0.15)
 		end
 		if rays.Visible then rays.Rotation = (elapsed * 25) % 360 end
-		if elapsed >= 4.5 then dismiss() end
+		-- the result stays a while so EQUIP and AGAIN can be pressed; it never blocks play (the shade lifts above)
+		if elapsed >= 9 then dismiss() end
 	end)
 	player:SetAttribute("HatchOpen", false)
 	player:SetAttribute("HatchVisible", false)

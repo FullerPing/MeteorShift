@@ -12,7 +12,7 @@ local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 
 local Menu = {}
-Menu.LAYOUT = 4 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
+Menu.LAYOUT = 5 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
 
 -- One side of the NOW -> AFTER card: a small caption over a big multiplier
 local function side(parent: Instance, name: string, valueName: string, caption: string, captionColor: Color3, maxSize: number): TextLabel
@@ -75,6 +75,8 @@ function Menu.build(): ScreenGui
 		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = Palette.BLUE_BOTTOM,
 		ScrollingDirection = Enum.ScrollingDirection.Y, VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar, ZIndex = 3 }, p)
 	N.create("UIListLayout", { Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder }, content)
+	-- the scroll clips at its edges: room so the cards' outlines are not cut off at the top and sides
+	N.create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 2), PaddingBottom = UDim.new(0, 4) }, content)
 
 	-- the reward: BAR VALUE, NOW x1 -> AFTER x5
 	local compare = Theme.card(content, "Compare", Palette.WHITE, Palette.DETAIL_BOTTOM, 14)

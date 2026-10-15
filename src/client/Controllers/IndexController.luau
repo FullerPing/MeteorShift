@@ -35,6 +35,11 @@ local function rect(object: GuiObject, box: IndexLayout.Rect)
 	object.Size = UDim2.fromOffset(box.w, box.h)
 end
 
+local function tier(pageId: string): number
+	local meteor = Config.Meteor.Types[pageId]
+	return if meteor then meteor.RequiredTier else 1
+end
+
 local function percent(fraction: number): string
 	return "+" .. Format.number(math.floor(fraction * 100 + 0.5)) .. "%"
 end
@@ -49,10 +54,19 @@ function IndexController:KnitStart()
 	local badge, tooltip = navRefs.badge, navRefs.tooltip
 	local dimmer: TextButton = child(gui, "Dimmer", "TextButton")
 	local panel: Frame = child(gui, "Panel", "Frame")
-	local title: TextLabel = child(panel, "Title", "TextLabel")
 	local close: TextButton = child(panel, "Close", "TextButton")
+	local chip: TextLabel = child(panel, "Bonus", "TextLabel")
 	local tabs: Frame = child(panel, "Tabs", "Frame")
 	local tabList: UIListLayout = child(tabs, "List", "UIListLayout")
+	local side: ScrollingFrame = child(panel, "Side", "ScrollingFrame")
+	local pageCard: Frame = child(side, "PageCard", "Frame")
+	local count: Frame = child(pageCard, "Count", "Frame")
+	local sideControls = {
+		name = child(pageCard, "PageName", "TextLabel"), found = child(count, "FoundCount", "TextLabel"),
+		fill = child(child(pageCard, "Progress", "Frame"), "Fill", "Frame"), caption = child(pageCard, "RewardCaption", "TextLabel"),
+		reward = child(pageCard, "Reward", "TextLabel"), title = child(pageCard, "RewardTitle", "TextLabel"),
+		drops = child(pageCard, "Drops", "TextLabel"), best = child(child(side, "TitleCard", "Frame"), "BestTitle", "TextLabel"),
+	}
 	local repeatTemplate: TextLabel = child(gui, "RepeatToastTemplate", "TextLabel")
 	local pageControls: { [string]: any } = {}
 	local tabButtons: { [string]: TextButton } = {}
@@ -63,8 +77,6 @@ function IndexController:KnitStart()
 
 	for _, pageId in PageOrder do
 		local page: ScrollingFrame = child(panel, pageId .. "Page", "ScrollingFrame")
-		local bonus: Frame = child(page, "Bonus", "Frame")
-		local progress: Frame = child(page, "Progress", "Frame")
 		local cards: Frame = child(page, "Cards", "Frame")
 		local minerals: { [string]: any } = {}
 		for _, mineral in Pages[pageId].Minerals do
@@ -78,10 +90,7 @@ function IndexController:KnitStart()
 			}
 		end
 		pageControls[pageId] = {
-			page = page, bonus = bonus, sales = child(bonus, "SalesBonus", "TextLabel"), bestTitle = child(bonus, "BestTitle", "TextLabel"),
-			name = child(page, "PageName", "TextLabel"), found = child(page, "FoundCount", "TextLabel"), progress = progress,
-			fill = child(progress, "Fill", "Frame"), reward = child(page, "Reward", "TextLabel"), cards = cards,
-			grid = child(cards, "Grid", "UIGridLayout"), footer = child(page, "Footer", "TextLabel"), minerals = minerals,
+			page = page, cards = cards, grid = child(cards, "Grid", "UIGridLayout"), footer = child(page, "Footer", "TextLabel"), minerals = minerals,
 		}
 		tabButtons[pageId] = child(tabs, pageId .. "Tab", "TextButton")
 	end
@@ -96,28 +105,32 @@ function IndexController:KnitStart()
 		local bonus = MineralIndex.cashBonus(index) - 1
 		local titles = MineralIndex.titles(index)
 		local best = titles[#titles]
+		chip.Text = if bonus > 0 then percent(bonus) .. " bar sales" else "No bonus yet"
+		sideControls.best.Text = best or "None yet"
+		sideControls.best.TextColor3 = if best then Palette.BLUE_BOTTOM else Palette.SECOND
 		for _, pageId in PageOrder do
 			local page = Pages[pageId]
 			local controls = pageControls[pageId]
 			local total, found = #page.Minerals, MineralIndex.found(index, pageId)
 			local complete = found >= total
-			local meteor = Config.Meteor.Types[pageId]
-			local glow = if meteor then meteor.GlowColor else Palette.GOLD_BOTTOM
-			local tier = if meteor then meteor.RequiredTier else 1
-			local drops = if tier <= 1 then "Drops for every pickaxe on " .. page.Name .. " meteors"
-				else "Drops only for Tier " .. tier .. "+ pickaxes on " .. page.Name .. " meteors"
 			controls.page.Visible = selectedPage == pageId
-			controls.sales.Text = if bonus > 0 then percent(bonus) .. " bar sales" else "No index bonus yet"
-			controls.bestTitle.Text = if best then "Title: " .. best else "Complete a page for a title"
-			controls.found.Text = if complete then "PAGE COMPLETE!" else Format.number(found) .. " / " .. Format.number(total) .. " minerals found"
-			controls.found.TextColor3 = if complete then Palette.MET else Palette.SECOND
-			controls.fill.Size = UDim2.fromScale(found / math.max(total, 1), 1)
-			controls.fill.BackgroundColor3 = if complete then Palette.LIME_BOTTOM else glow
-			controls.reward.Text = (if complete then "Earned: " else "Complete it for ") .. percent(page.CashBonus)
-				.. " bar sales and the title \"" .. page.Title .. "\"\n" .. drops
 			local tab = tabButtons[pageId]
-			tab.Text = string.upper(page.Name) .. "\n" .. Format.number(found) .. "/" .. Format.number(total)
+			tab.Text = string.upper(page.Name) .. " " .. Format.number(found) .. "/" .. Format.number(total)
 			MenuTheme.tab(tab, selectedPage == pageId)
+			if selectedPage == pageId then
+				-- the side column follows the selected page
+				local meteor = Config.Meteor.Types[pageId]
+				local tier = if meteor then meteor.RequiredTier else 1
+				sideControls.name.Text = string.upper(page.Name) .. " PAGE"
+				sideControls.found.Text = Format.number(found) .. " / " .. Format.number(total)
+				sideControls.fill.Size = UDim2.fromScale(found / math.max(total, 1), 1)
+				sideControls.fill.BackgroundColor3 = if complete then Palette.LIME_BOTTOM else Palette.BAR_FILL
+				sideControls.caption.Text = if complete then "PAGE COMPLETE! YOU EARNED" else "COMPLETE IT FOR"
+				sideControls.reward.Text = percent(page.CashBonus) .. " bar sales"
+				sideControls.title.Text = string.format("and the title <font color=\"#%s\">%s</font>", Palette.GOLD_TEXT:ToHex(), page.Title)
+				sideControls.drops.Text = if tier <= 1 then "Drops for every pickaxe on " .. page.Name .. " meteors."
+					else "Drops only for Tier " .. tier .. "+ pickaxes on " .. page.Name .. " meteors."
+			end
 			for _, mineral in page.Minerals do
 				local card = controls.minerals[mineral.Id]
 				local count = index[mineral.Id] or 0
@@ -125,8 +138,12 @@ function IndexController:KnitStart()
 				card.name.Text = if known then mineral.Name else "???"
 				-- names in the mineral's colour, darkened toward navy so they read on the white card
 				card.name.TextColor3 = if known then mineral.Color:Lerp(Palette.NAVY, 0.45) else Palette.SECOND
-				card.found.Text = if known then "Found ×" .. Format.number(count) else "Not found yet"
+				card.found.Text = if known then "Found ×" .. Format.number(count)
+					elseif tier(pageId) > 1 then "Not found yet. Drops for Tier " .. tier(pageId) .. "+ pickaxes."
+					else "Not found yet"
 				card.found.TextColor3 = if known then Palette.MET else Palette.SECOND
+				-- an unknown mineral's card is greyed
+				MenuTheme.gradient(card.card, if known then Palette.WHITE else Palette.OFF_TOP, if known then Palette.DETAIL_BOTTOM else Palette.OFF_BOTTOM)
 				card.edge.BackgroundColor3 = if known then mineral.Color:Lerp(Palette.NAVY, 0.5) else Palette.NAVY
 				card.diamond.BackgroundColor3 = if known then mineral.Color else Palette.GREY_BOTTOM
 				card.shine.BackgroundTransparency = if known then 0.45 else 1
@@ -148,35 +165,30 @@ function IndexController:KnitStart()
 		local view = NativeUI.menuView(layout)
 		local geometry = IndexLayout.compute(view.viewport, view.inset)
 		NativeUI.place(panel, geometry.panel, view)
-		rect(title, geometry.title)
 		rect(close, geometry.close)
 		rect(tabs, geometry.tabs)
-		title.Visible = geometry.title.w >= 100
+		rect(chip, geometry.chip)
+		chip.Visible = geometry.chip.w > 0
+		rect(side, geometry.side)
+		side.Visible = geometry.side.w > 0
 		tabList.Padding = UDim.new(0, geometry.tabGap)
 		ExactNavButton.layout(nav, layout, "INDEX")
 		for _, pageId in PageOrder do
 			local controls = pageControls[pageId]
 			local total = #Pages[pageId].Minerals
-			local leftWidth = geometry.summaryWidth * (if geometry.narrow then 1 else 0.45)
+			local cardsW = geometry.grid.w - IndexLayout.Scrollbar
 			tabButtons[pageId].Size = UDim2.fromOffset(geometry.tabWidth, geometry.tabs.h)
-			rect(controls.page, geometry.content)
+			rect(controls.page, geometry.grid)
 			controls.page.CanvasSize = UDim2.fromOffset(0, IndexLayout.canvasHeight(geometry, total))
-			controls.bonus.Size = UDim2.fromOffset(geometry.summaryWidth, 44)
-			controls.name.Size = UDim2.fromOffset(leftWidth, 26)
-			controls.found.Size = UDim2.fromOffset(leftWidth, 20)
-			controls.progress.Size = UDim2.fromOffset(leftWidth, 6)
-			controls.reward.Position = if geometry.narrow then UDim2.fromOffset(4, 130) else UDim2.fromOffset(4 + geometry.summaryWidth * 0.5, 56)
-			controls.reward.Size = UDim2.fromOffset(geometry.summaryWidth * (if geometry.narrow then 1 else 0.5), 66)
-			controls.cards.Position = UDim2.fromOffset(4, geometry.cardsY)
-			controls.cards.Size = UDim2.fromOffset(geometry.summaryWidth, IndexLayout.gridHeight(geometry, total))
+			controls.cards.Size = UDim2.fromOffset(cardsW, IndexLayout.gridHeight(geometry, total))
 			controls.grid.FillDirectionMaxCells = geometry.columns
 			controls.grid.CellSize = UDim2.fromOffset(geometry.cardWidth, geometry.cardHeight)
 			controls.grid.CellPadding = UDim2.fromOffset(geometry.gap, geometry.gap)
 			for _, mineral in Pages[pageId].Minerals do
 				controls.minerals[mineral.Id].card.Size = UDim2.fromOffset(geometry.cardWidth, geometry.cardHeight)
 			end
-			controls.footer.Position = UDim2.fromOffset(4, geometry.cardsY + IndexLayout.gridHeight(geometry, total) + 12)
-			controls.footer.Size = UDim2.fromOffset(geometry.summaryWidth, 64)
+			controls.footer.Position = UDim2.fromOffset(4, 12 + IndexLayout.gridHeight(geometry, total))
+			controls.footer.Size = UDim2.fromOffset(cardsW, 48)
 		end
 		refreshButton()
 	end

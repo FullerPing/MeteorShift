@@ -293,4 +293,70 @@ function MenuTheme.divider(parent: Instance, name: string): Frame
 	return N.create("Frame", { Name = name, Size = UDim2.new(1, 0, 0, 2), BackgroundColor3 = Palette.DIVIDER, BorderSizePixel = 0, ZIndex = 4 }, parent)
 end
 
+-- The mockups' three card kinds (2026-10-15). `box`: white fading to pale blue with a navy outline, the main cards.
+function MenuTheme.box(parent: Instance, name: string): Frame
+	local card = MenuTheme.card(parent, name, Palette.WHITE, Palette.DETAIL_BOTTOM, 14)
+	MenuTheme.stroke(card, Palette.NAVY, 3)
+	return card
+end
+
+-- `soft`: plain white with a pale outline, for lists and notes
+function MenuTheme.soft(parent: Instance, name: string): Frame
+	local card = MenuTheme.card(parent, name, Palette.WHITE, nil, 12)
+	MenuTheme.stroke(card, Palette.DIVIDER, 2)
+	return card
+end
+
+-- `gold`: the warm gold card (rewards, the premium offer)
+function MenuTheme.goldCard(parent: Instance, name: string): Frame
+	local card = MenuTheme.card(parent, name, Palette.EVO_TOP, Palette.EVO_BOTTOM, 14)
+	MenuTheme.stroke(card, Palette.EVO_EDGE, 3)
+	return card
+end
+
+-- A pale well holding one of the owner's icons (Icon) over a soft ellipse. `look` is "blue", "gold" or "warm".
+local WELLS = {
+	blue = { Palette.WELL_TOP, Palette.WELL_BOTTOM, Palette.WELL_EDGE },
+	gold = { Palette.GOLD_WELL_TOP, Palette.GOLD_WELL_BOTTOM, Palette.EVO_EDGE },
+	warm = { Palette.WARM_TOP, Palette.WARM_BOTTOM, Palette.WARM_EDGE },
+}
+function MenuTheme.iconWell(parent: Instance, name: string, kind: string, look: string?): Frame
+	local colours = WELLS[look or "blue"] or WELLS.blue
+	local frame = MenuTheme.card(parent, name, colours[1], colours[2], 14)
+	MenuTheme.stroke(frame, colours[3], 2.5)
+	local ellipse = N.create("Frame", { Name = "Shadow", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.86),
+		Size = UDim2.fromScale(0.56, 0.09), BackgroundColor3 = colours[3], BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 3 }, frame)
+	MenuTheme.round(ellipse, 100)
+	local icon = MenuTheme.icon(frame, "Icon", kind, UDim2.fromScale(0.5, 0.48), UDim2.fromScale(0.76, 0.76))
+	icon.AnchorPoint, icon.ZIndex = Vector2.new(0.5, 0.5), 4
+	N.create("UIAspectRatioConstraint", { AspectRatio = 1 }, icon)
+	return frame
+end
+
+-- A level dot: a small circle outlined in navy, lime when `on`
+function MenuTheme.dot(parent: Instance, name: string, on: boolean): Frame
+	local dot = N.create("Frame", { Name = name, Size = UDim2.fromOffset(12, 12), BorderSizePixel = 0, ZIndex = 5,
+		BackgroundColor3 = if on then Palette.LIME_BOTTOM else Palette.BAR_TRACK }, parent)
+	MenuTheme.round(dot, 6)
+	MenuTheme.stroke(dot, Palette.NAVY, 2)
+	return dot
+end
+
+-- Puts one of the owner's icons (Icon) on a chunky button's face, left of its text: "[shard] 80", "[rebirth] REBIRTH"
+function MenuTheme.withIcon(button: GuiButton, kind: string, size: number?): ImageLabel
+	local face = button:FindFirstChild("Face") :: Frame
+	local label = face:FindFirstChild("Label") :: TextLabel
+	local px = size or 24
+	local icon = face:FindFirstChild("Icon") :: ImageLabel?
+	if not icon then
+		icon = N.create("ImageLabel", { Name = "Icon", BackgroundTransparency = 1, BorderSizePixel = 0, AnchorPoint = Vector2.new(0, 0.5),
+			ScaleType = Enum.ScaleType.Fit, ZIndex = 8, Active = false }, face)
+	end
+	local image = icon :: ImageLabel
+	image.Image, image.Position, image.Size = Icons[kind] or kind, UDim2.new(0, 8, 0.5, 0), UDim2.fromOffset(px, px)
+	local padding = label:FindFirstChildOfClass("UIPadding")
+	if padding then padding.PaddingLeft = UDim.new(0, px + 12) end
+	return image
+end
+
 return MenuTheme

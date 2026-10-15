@@ -16,6 +16,22 @@ return function(t: any)
 		{ "360x640", Vector2.new(360, 640), 58 },
 	}
 
+	t.test("a whole menu keeps its natural size and is drawn smaller where it does not fit", function()
+		for _, screen in screens do
+			local view = MenuFit.view(screen[2], screen[3])
+			for _, natural in { Vector2.new(560, 400), Vector2.new(540, 520), Vector2.new(860, 572) } do
+				local whole, rect = MenuFit.whole(view, natural)
+				t.near(rect.w, natural.X, 0.01)
+				t.near(rect.h, natural.Y, 0.01)
+				-- on the real screen: the ribbon clears the top bar, the lip the bottom, the sides the edges
+				t.ok((rect.y - 24) * whole.scale >= screen[3] - 0.01, screen[1] .. " ribbon clears the top bar")
+				t.ok((rect.y + rect.h + 7) * whole.scale <= screen[2].Y + 0.01, screen[1] .. " lip on screen")
+				t.ok(rect.x * whole.scale >= 0 and (rect.x + rect.w) * whole.scale <= screen[2].X + 0.01, screen[1] .. " sides on screen")
+				t.ok(whole.scale <= view.scale + 1e-6, "never drawn larger than the menu's view")
+			end
+		end
+	end)
+
 	t.test("desktop windows draw menus at full size", function()
 		local view = MenuFit.view(Vector2.new(1280, 720), 58)
 		t.eq(view.scale, 1)

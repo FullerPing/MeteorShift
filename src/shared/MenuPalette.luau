@@ -88,6 +88,14 @@ MenuPalette.PREMIUM_EDGE = rgb(185, 138, 230)
 MenuPalette.PREMIUM_TEXT = rgb(118, 58, 178)
 MenuPalette.XP_FILL = rgb(88, 183, 237)
 MenuPalette.UNSEEN = rgb(214, 224, 234) -- the "?" cover on pets you have not found
+-- the menu redesign mockups (2026-10-15): the foundry's warm well, the gold card's divider, the red notice strip
+MenuPalette.WARM_TOP = rgb(255, 233, 201)
+MenuPalette.WARM_BOTTOM = rgb(255, 194, 122)
+MenuPalette.WARM_EDGE = rgb(232, 154, 60)
+MenuPalette.GOLD_DIVIDER = rgb(235, 203, 132)
+MenuPalette.ALERT = rgb(255, 246, 247)
+MenuPalette.ALERT_EDGE = rgb(242, 184, 194)
+MenuPalette.ORANGE_FILL = rgb(240, 138, 36) -- a bar that is full or capped
 
 -- WCAG relative luminance and contrast ratio of two colours
 local function linear(channel: number): number

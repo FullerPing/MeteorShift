@@ -10,7 +10,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Icons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local UI = require(script.Parent.NativeUI)
 local SettingsMenu = require(script.Parent.NativeMenus.Settings)
-local Palette = require(ReplicatedStorage.Shared.MenuPalette)
+local MenuTheme = require(script.Parent.MenuTheme)
 local player = Players.LocalPlayer
 local NativeHudMenus = {}
 local started = false
@@ -121,46 +121,23 @@ function NativeHudMenus.start()
 		end
 		updateBackpack()
 	end
-	for index, preference in PREFERENCES do
+	-- each switch row (a Frame in a section card, named after its attribute) has a chunky Toggle: lime ON, pale OFF
+	for _, preference in PREFERENCES do
 		if player:GetAttribute(preference.name) == nil then player:SetAttribute(preference.name, preference.default) end
-		local row = preferences:FindFirstChild(preference.name) :: TextButton?
-		if not row then
-			-- An older authored Settings menu lacks newer switches: copy the first row for them
-			local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
-			local copy = source:Clone()
-			copy.Name = preference.name
-			copy.LayoutOrder = index
-			local text = copy:FindFirstChild("Label")
-			if text and text:IsA("TextLabel") then text.Text = preference.label or preference.name end
-			copy.Parent = preferences
-			row = copy
-		end
-		local value = (row :: TextButton):WaitForChild("State") :: TextLabel
+		local row = preferences:FindFirstChild(preference.name, true) :: Frame
+		local toggle = row:WaitForChild("Toggle") :: TextButton
 		local function update()
 			local enabled = player:GetAttribute(preference.name) == true
-			value.Text = if enabled then "ON" else "OFF"
-			value.BackgroundColor3 = if enabled then Palette.LIME else Palette.GREY_TOP
+			toggle.Text = if enabled then "ON" else "OFF"
+			MenuTheme.paint(toggle, if enabled then "lime" else "tabOff")
 		end
-		(row :: TextButton).Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
+		toggle.Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
 		player:GetAttributeChangedSignal(preference.name):Connect(update)
 		update()
 	end
-	-- Daily rewards: a row at the top of Settings and a dot on the gear while something is waiting. Built here, not in
-	-- the saved Settings prefab, so places that already have one get it too.
-	local dailyRow = preferences:FindFirstChild("OpenDaily") :: TextButton?
-	if not dailyRow then
-		local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
-		local copy = source:Clone()
-		copy.Name, copy.LayoutOrder = "OpenDaily", -2
-		local label = copy:FindFirstChild("Label")
-		if label and label:IsA("TextLabel") then label.Text = "Daily rewards" end
-		local value = copy:FindFirstChild("State")
-		if value and value:IsA("TextLabel") then
-			value.Text, value.BackgroundColor3 = "OPEN", Palette.GOLD_BOTTOM
-		end
-		copy.Parent = preferences
-		dailyRow = copy
-	end
+	-- Daily rewards and Codes: the two buttons under the switches, and a dot on the gear while a daily reward is waiting
+	local dailyRow = settingsPanel:WaitForChild("OpenDaily") :: TextButton
+	local codesRow = settingsPanel:WaitForChild("OpenCodes") :: TextButton
 	local dot = Instance.new("Frame")
 	dot.Name, dot.Size, dot.AnchorPoint, dot.Position = "DailyDot", UDim2.fromOffset(12, 12), Vector2.new(1, 0), UDim2.new(1, -2, 0, 2)
 	dot.BackgroundColor3, dot.BorderSizePixel, dot.ZIndex, dot.Visible = Color3.fromRGB(255, 80, 80), 0, 10, false
@@ -170,30 +147,22 @@ function NativeHudMenus.start()
 	player:GetAttributeChangedSignal("DailyReady"):Connect(updateDailyDot)
 	updateDailyDot()
 	-- Daily Rewards waits for the first-session tutorial (DailyController sets DailyUnlocked when it is over)
-	local openDailyRow = dailyRow :: TextButton
-	local function updateDailyRow() openDailyRow.Visible = player:GetAttribute("DailyUnlocked") == true end
+	local openDailyRow = dailyRow
+	local function updateDailyRow()
+		-- before Daily opens, Codes takes the whole row
+		local unlocked = player:GetAttribute("DailyUnlocked") == true
+		openDailyRow.Visible = unlocked
+		codesRow.Position = if unlocked then UDim2.new(0.5, 6, 1, -78) else UDim2.new(0, 18, 1, -78)
+		codesRow.Size = if unlocked then UDim2.new(0.5, -24, 0, 56) else UDim2.new(1, -36, 0, 56)
+	end
 	player:GetAttributeChangedSignal("DailyUnlocked"):Connect(updateDailyRow)
 	updateDailyRow()
 	openDailyRow.Activated:Connect(function()
 		player:SetAttribute("SettingsOpen", false)
 		player:SetAttribute("DailyOpen", true)
 	end)
-	-- Codes: a row under Daily rewards, for the screens with no room for the HUD button
-	local codesRow = preferences:FindFirstChild("OpenCodes") :: TextButton?
-	if not codesRow then
-		local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
-		local copy = source:Clone()
-		copy.Name, copy.LayoutOrder = "OpenCodes", -1
-		local label = copy:FindFirstChild("Label")
-		if label and label:IsA("TextLabel") then label.Text = "Enter a code" end
-		local value = copy:FindFirstChild("State")
-		if value and value:IsA("TextLabel") then
-			value.Text, value.BackgroundColor3 = "OPEN", Palette.GOLD_BOTTOM
-		end
-		copy.Parent = preferences
-		codesRow = copy
-	end
-	;(codesRow :: TextButton).Activated:Connect(function()
+	-- Codes, also for the screens with no room for the HUD button
+	codesRow.Activated:Connect(function()
 		player:SetAttribute("SettingsOpen", false)
 		player:SetAttribute("CodesOpen", true)
 	end)
