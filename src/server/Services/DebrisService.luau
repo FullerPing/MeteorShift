@@ -45,6 +45,7 @@ local ActivityService
 local PlayerStateService
 local EconomyService
 local RewardService
+local TelemetryService
 
 -- Fleck tint by the tier a rock is sized for; tiers 1-2 keep the flecks as built
 local TIER_TINTS: { [number]: Color3 } = {
@@ -174,6 +175,7 @@ function DebrisService:_payCash(player: Player, reward: DebrisField.Reward)
 	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond, Rebirth.cost(data.rebirths))
 	if cash > 0 then
 		PlayerStateService:AddCash(player, cash)
+		TelemetryService:earned(player, "field_cash", cash, 0)
 		RewardService:Bonus(player, "fieldCash", "+" .. Format.cash(cash))
 	end
 end
@@ -217,6 +219,7 @@ function DebrisService:TravelTo(player: Player, id: any): boolean
 	if not spot then return false end
 	character:PivotTo(CFrame.new(spot))
 	root.AssemblyLinearVelocity = Vector3.zero
+	TelemetryService:custom(player, "field_travel", 1, { id })
 	return true
 end
 
@@ -233,6 +236,7 @@ function DebrisService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	EconomyService = Knit.GetService("EconomyService")
 	RewardService = Knit.GetService("RewardService")
+	TelemetryService = Knit.GetService("TelemetryService")
 end
 
 function DebrisService:KnitStart()

@@ -27,22 +27,39 @@
 -- * Tutorial funnel steps, which TutorialService sends through :funnel.
 -- * Monetization (spec §9): "pass_bought" when a game pass is bought in game
 --   (field = pass key) and "product_bought" per granted developer product receipt
---   (fields = product key, outcome: "called", "credited" or "granted").
+--   (fields = product key, outcome: "called", "credited" or "granted"). "purchase_prompt" every time a
+--   pass or product prompt closes (fields = key, "pass"/"product", "bought"/"closed"): prompts vs buys is
+--   the conversion rate of each offer.
+-- * session_start on every profile load (Lib.Telemetry.sessionStart): value = days since the last session,
+--   fields = days-away bucket ("new" for a first join), rebirth stage, tutorial state. With player_left this
+--   gives D1/D7 return and how long each stage plays.
+-- * meteor_participation per player in the server when a meteor event ends: value = their hits on it,
+--   fields = meteor type, outcome and role (core, crust or none). meteor_event_seconds_to_core joins the summary.
+-- * Progression: level_up (value = level, field = rebirth stage), egg_hatched (fields = egg, rarity,
+--   new/duplicate), perk_bought (value = perk level, field = perk), index_page_completed (field = page),
+--   field_travel (field = ore field, from DebrisService). Egg and perk shards are logged as sinks.
+-- * Reward sources through :earned: daily streak, quests, codes and field rocks' cash (their services call it).
+-- * menu_opened per player and menu every ActionsInterval (value = opens), reported by the client's
+--   TelemetryController through Client.MenuOpened, checked against Config.Telemetry.Menus and capped.
 
 local AnalyticsService = game:GetService("AnalyticsService")
+local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local Pets = require(ReplicatedStorage.Shared.Pets)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Telemetry = require(script.Parent.Parent.Lib.Telemetry)
 
 local TelemetryService = Knit.CreateService({
 	Name = "TelemetryService",
-	Client = {},
+	Client = {
+		MenuOpened = Knit.CreateSignal(), -- client -> server: (menuName) a menu in Config.Telemetry.Menus opened
+	},
 })
 
 local CASH = "Cash"
@@ -64,6 +81,13 @@ local joinedAt: { [Player]: number } = {}
 -- players who left still count. Reset when a meteor lands.
 local nodeHitters: { [number]: boolean } = {}
 local coreHitters: { [number]: boolean } = {}
+-- Each player's hits on the current meteor (crust and core), for meteor_participation
+local participation: { [Player]: Telemetry.Participation } = {}
+local landedAt: number? = nil
+local coreOpenedAfter: number? = nil -- seconds from the landing to the core opening, this event
+-- Menu opens this window: per player and menu, plus each player's total for the cap
+local menuOpens: { [Player]: { [string]: number } } = {}
+local menuTotals: { [Player]: number } = {}
 
 local function call(method: string, fn: () -> ())
 	local ok, err = pcall(fn)
@@ -139,6 +163,17 @@ function TelemetryService:milestone(player: Player, flag: string, name: string, 
 	return true
 end
 
+-- Cash and shards a reward handed out (daily streak, quests, codes, field cash), as economy sources.
+-- Call after the currency was added so the ending balance includes it.
+function TelemetryService:earned(player: Player, sku: string, cash: number, shards: number)
+	local data = PlayerStateService:Get(player)
+	if not data then
+		return
+	end
+	self:economy(player, SOURCE, CASH, cash, data.cash, GAMEPLAY, sku)
+	self:economy(player, SOURCE, SHARDS, shards, data.shards, GAMEPLAY, sku)
+end
+
 local function act(player: Player)
 	Telemetry.countAction(actions, player)
 end
@@ -166,13 +201,20 @@ function TelemetryService:_eventEnded(meteorType: string, cracked: boolean, seco
 			NodeHitters = count(nodeHitters),
 			CoreHitters = count(coreHitters),
 			SecondsToCrack = secondsToCrack,
+			SecondsToCore = coreOpenedAfter,
 		})
 		for _, row in rows do
 			self:custom(reporter, row.Name, row.Value, row.Fields)
 		end
 	end
+	for _, player in players do
+		local row = Telemetry.participation(meteorType, cracked, participation[player])
+		self:custom(player, row.Name, row.Value, row.Fields)
+	end
 	table.clear(nodeHitters)
 	table.clear(coreHitters)
+	table.clear(participation)
+	coreOpenedAfter = nil
 end
 
 function TelemetryService:_logActions()
@@ -189,6 +231,24 @@ function TelemetryService:_logActions()
 		end
 	end
 	table.clear(rocksMined)
+	for player, menus in menuOpens do
+		if player.Parent then
+			for menu, n in menus do
+				self:custom(player, "menu_opened", n, { menu })
+			end
+		end
+	end
+	table.clear(menuOpens)
+	table.clear(menuTotals)
+end
+
+-- A purchase prompt closed: logs which offer it was and whether it sold
+function TelemetryService:_prompt(player: Player?, kind: "pass" | "product", id: number, purchased: boolean)
+	local list: any = if kind == "pass" then Config.Monetization.Passes else Config.Monetization.Products
+	local key = Telemetry.keyForId(list, id)
+	if player and key then
+		self:custom(player, "purchase_prompt", 1, { key, kind, if purchased then "bought" else "closed" })
+	end
 end
 
 function TelemetryService:KnitInit()
@@ -206,18 +266,35 @@ function TelemetryService:KnitStart()
 	local RebirthService = Knit.GetService("RebirthService")
 	local MonetizationService = Knit.GetService("MonetizationService")
 	local DebrisService = Knit.GetService("DebrisService")
+	local DataService = Knit.GetService("DataService")
+	local LevelService = Knit.GetService("LevelService")
+	local PetService = Knit.GetService("PetService")
+	local PerkService = Knit.GetService("PerkService")
+	local IndexService = Knit.GetService("IndexService")
 
 	NodeService.Hit:Connect(function(player: Player, kind: string)
 		act(player)
 		if kind == "Crust" or kind == "Core" then
 			local set = if kind == "Core" then coreHitters else nodeHitters
 			set[player.UserId] = true
+			local part = participation[player] or { Hits = 0, Core = false }
+			participation[player] = part
+			part.Hits += 1
+			part.Core = part.Core or kind == "Core"
 			self:milestone(player, "firstMeteor", "first_meteor_joined")
 		end
 	end)
 	MeteorService.Landed:Connect(function()
 		table.clear(nodeHitters)
 		table.clear(coreHitters)
+		table.clear(participation)
+		landedAt = os.clock()
+		coreOpenedAfter = nil
+	end)
+	MeteorService.CoreUnlocked:Connect(function()
+		if landedAt then
+			coreOpenedAfter = os.clock() - landedAt
+		end
 	end)
 	MeteorService.Ended:Connect(function(meteorType: string, cracked: boolean, secondsToCrack: number?)
 		self:_eventEnded(meteorType, cracked, secondsToCrack)
@@ -282,6 +359,64 @@ function TelemetryService:KnitStart()
 		self:custom(player, "product_bought", 1, { productKey, outcome })
 	end)
 
+	local function sessionStart(player: Player, profile: any)
+		local data = profile.Data
+		local row = Telemetry.sessionStart(profile.SeenBefore or 0, os.time(), data.rebirths, data.flags.tutorialDone == true)
+		self:custom(player, row.Name, row.Value, row.Fields)
+	end
+	DataService.ProfileLoaded:Connect(sessionStart)
+	-- (a profile can load before this service starts: the in-memory store doesn't yield)
+	for _, player in Players:GetPlayers() do
+		local profile = DataService:GetProfile(player)
+		if profile then sessionStart(player, profile) end
+	end
+
+	LevelService.LeveledUp:Connect(function(player: Player, level: number)
+		local data = PlayerStateService:Get(player)
+		self:custom(player, "level_up", level, { Telemetry.stage(if data then data.rebirths else 0) })
+	end)
+
+	PetService.EggHatched:Connect(function(player: Player, eggId: string, petId: string, duplicate: boolean)
+		act(player)
+		local pet = Pets.def(petId)
+		self:custom(player, "egg_hatched", 1, { eggId, if pet then pet.Rarity else "unknown", if duplicate then "duplicate" else "new" })
+		local egg = Pets.egg(eggId)
+		if egg then
+			self:_purchase(player, { Cost = 0, Shards = egg.Cost }, "egg_" .. eggId)
+		end
+	end)
+
+	PerkService.PerkBought:Connect(function(player: Player, perkId: string, level: number, shards: number)
+		act(player)
+		self:custom(player, "perk_bought", level, { perkId })
+		self:_purchase(player, { Cost = 0, Shards = shards }, "perk_" .. perkId)
+	end)
+
+	IndexService.PageCompleted:Connect(function(player: Player, pageId: string)
+		self:custom(player, "index_page_completed", 1, { pageId })
+	end)
+
+	MarketplaceService.PromptGamePassPurchaseFinished:Connect(function(player: Player, passId: number, purchased: boolean)
+		self:_prompt(player, "pass", passId, purchased)
+	end)
+	MarketplaceService.PromptProductPurchaseFinished:Connect(function(userId: number, productId: number, purchased: boolean)
+		self:_prompt(Players:GetPlayerByUserId(userId), "product", productId, purchased)
+	end)
+
+	self.Client.MenuOpened:Connect(function(player: Player, name: any)
+		if not Telemetry.knownMenu(Config.Telemetry.Menus, name) then
+			return
+		end
+		local total = (menuTotals[player] or 0) + 1
+		if total > Config.Telemetry.MenuOpensCap then
+			return
+		end
+		menuTotals[player] = total
+		local menus = menuOpens[player] or {}
+		menuOpens[player] = menus
+		Telemetry.countAction(menus, name :: string)
+	end)
+
 	DebrisService.RockBroken:Connect(function(player: Player, field: string)
 		local fields = rocksMined[player] or {}
 		rocksMined[player] = fields
@@ -299,6 +434,9 @@ function TelemetryService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		actions[player] = nil
 		rocksMined[player] = nil
+		menuOpens[player] = nil
+		menuTotals[player] = nil
+		participation[player] = nil
 		local started = joinedAt[player]
 		joinedAt[player] = nil
 		if started then

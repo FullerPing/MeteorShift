@@ -46,6 +46,7 @@ function CodesService:Redeem(player: Player, text: any): (boolean, string)
 	local reward = Codes.reward(def, perSecond, Rebirth.cost(data.rebirths) * Config.Codes.CashCeilingShare)
 	if reward.cash > 0 then PlayerStateService:AddCash(player, reward.cash) end
 	if reward.shards > 0 then PlayerStateService:AddShards(player, reward.shards) end
+	TelemetryService:earned(player, "code", reward.cash, reward.shards)
 	local parts = {}
 	if reward.cash > 0 then table.insert(parts, "+" .. Format.cash(reward.cash)) end
 	if reward.shards > 0 then table.insert(parts, "+" .. reward.shards .. " \u{25C6}") end

@@ -41,6 +41,7 @@ export type Profile = {
 	Data: typeof(Template),
 	Loaded: number, -- os.time() when loaded
 	Memory: boolean, -- true when running on the in-memory fallback
+	SeenBefore: number, -- Data.lastSeen as loaded (0 for a new player); RefineryService moves lastSeen up on load
 }
 
 local DataService = Knit.CreateService({
@@ -271,7 +272,7 @@ function DataService:_load(player: Player)
 	if not player.Parent then
 		-- Left while loading: give the lock back
 		if store then
-			write({ Player = player, Data = data or deepCopy(Template), Loaded = os.time(), Memory = false }, true)
+			write({ Player = player, Data = data or deepCopy(Template), Loaded = os.time(), Memory = false, SeenBefore = 0 }, true)
 		end
 		return
 	end
@@ -284,6 +285,7 @@ function DataService:_load(player: Player)
 		Data = profileData :: any,
 		Loaded = os.time(),
 		Memory = store == nil,
+		SeenBefore = profileData.lastSeen or 0,
 	}
 	profiles[player] = profile
 	self.ProfileLoaded:Fire(player, profile)

@@ -69,10 +69,11 @@ local function markDirty(player: Player)
 	dirty[player] = true
 end
 
--- Adds cash, shards and pet XP, then says so in the reward feed
-local function pay(player: Player, data: any, label: string, cash: number, shards: number, petXp: number?)
+-- Adds cash, shards and pet XP, then says so in the reward feed (and to analytics as `sku`)
+local function pay(player: Player, data: any, sku: string, label: string, cash: number, shards: number, petXp: number?)
 	if cash > 0 then PlayerStateService:AddCash(player, cash) end
 	if shards > 0 then PlayerStateService:AddShards(player, shards) end
+	TelemetryService:earned(player, sku, cash, shards)
 	if petXp and petXp > 0 then
 		for _, petId in data.pets.equipped do
 			local entry = data.pets.owned[petId]
@@ -101,7 +102,7 @@ function DailyService:ClaimLogin(player: Player): boolean
 	local cycleDay = Daily.cycleDay(result.streak)
 	local reward = Daily.reward(cycleDay, perSecond, ceiling)
 	Daily.addFreeShield(data.daily, reward.shield)
-	pay(player, data, "Day " .. cycleDay .. " streak", reward.cash, reward.shards, reward.petXp)
+	pay(player, data, "daily_login", "Day " .. cycleDay .. " streak", reward.cash, reward.shards, reward.petXp)
 	if result.shieldsUsed > 0 then
 		self.Client.Notice:Fire(player, string.format("A streak shield covered %d missed day%s.", result.shieldsUsed, if result.shieldsUsed == 1 then "" else "s"))
 	elseif result.reset then
@@ -120,7 +121,7 @@ function DailyService:ClaimQuest(player: Player, slot: string): boolean
 	local id = Daily.claimQuest(data.daily, slot)
 	if not id then return false end
 	local reward = Daily.questReward(id, perSecond, ceiling) :: { cash: number, shards: number }
-	pay(player, data, "Quest complete", reward.cash, reward.shards)
+	pay(player, data, if slot == "w" then "weekly_quest" else "daily_quest", "Quest complete", reward.cash, reward.shards)
 	TelemetryService:custom(player, "quest_claimed", 1, { if slot == "w" then "weekly" else "daily", id })
 	PlayerStateService:ReplicateNow(player)
 	self:Publish(player)
@@ -131,7 +132,7 @@ function DailyService:ClaimBonus(player: Player): boolean
 	local data, perSecond, ceiling = context(player)
 	if not data or not Daily.claimBonus(data.daily) then return false end
 	local reward = Daily.bonusReward(perSecond, ceiling)
-	pay(player, data, "All daily quests done", reward.cash, reward.shards)
+	pay(player, data, "quest_bonus", "All daily quests done", reward.cash, reward.shards)
 	TelemetryService:custom(player, "quest_claimed", 1, { "bonus", "all" })
 	PlayerStateService:ReplicateNow(player)
 	self:Publish(player)
