@@ -72,7 +72,7 @@ function Perks.petSlots(owned: Owned?): number
 	return Perks.effect(owned, "petBond")
 end
 
--- Station Memory: the level a station is rebuilt at after a rebirth (1 keeps nothing)
+-- Station Memory: the level the production line is rebuilt at after a rebirth (1 keeps nothing)
 function Perks.keptStation(owned: Owned?, level: number): number
 	local keep = Perks.effect(owned, "stationMemory")
 	return math.max(1, 1 + math.floor((math.max(level, 1) - 1) * keep + 1e-9))

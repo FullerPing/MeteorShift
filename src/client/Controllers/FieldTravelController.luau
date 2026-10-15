@@ -19,7 +19,7 @@ local FieldTravelController = Knit.CreateController({ Name = "FieldTravelControl
 
 local SIZE = Config.Hud.SideButtons.Size
 local GAP = Config.Hud.SideButtons.Gap
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 local function label(parent: Instance, text: string, size: UDim2, position: UDim2?): TextLabel
 	local item = Instance.new("TextLabel")
@@ -119,7 +119,8 @@ function FieldTravelController:KnitStart()
 	local function refresh()
 		-- Config.HudEdit: "Ore" nudges it from its spot above SPRINT, and hides it
 		local layout = Fusion.peek(hud)
-		local rect = HudLayout.nudged(layout, "Ore", {
+		-- desktop gives it a spot in line with the backpack (layout.ore); elsewhere it sits above SPRINT
+		local rect = HudLayout.nudged(layout, "Ore", if layout.ore then table.clone(layout.ore) else {
 			x = anchor.Position.X.Offset, y = anchor.Position.Y.Offset - SIZE - GAP, w = SIZE, h = SIZE,
 		})
 		button.Position = UDim2.fromOffset(rect.x, rect.y)

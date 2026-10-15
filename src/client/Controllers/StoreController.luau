@@ -318,8 +318,10 @@ function StoreController:KnitStart()
 	end
 	-- One titled section per Config.Store entry: bind its cards (styled in the section's colour) and its tab
 	local sectionViews: { { section: any, frame: Frame, title: TextLabel, grid: UIGridLayout, cards: { Card }, tab: TextButton?, caption: TextLabel?, tabIcon: ImageLabel? } } = {}
+	local drawScale = 1 -- the panel's UIScale (NativeUI.place)
 	local function jumpTo(frame: GuiObject)
-		local y = frame.AbsolutePosition.Y - list.AbsolutePosition.Y + list.CanvasPosition.Y - listPadding.PaddingTop.Offset
+		-- screen pixels back to the list's own
+		local y = (frame.AbsolutePosition.Y - list.AbsolutePosition.Y) / drawScale + list.CanvasPosition.Y - listPadding.PaddingTop.Offset
 		list.CanvasPosition = Vector2.new(0, math.max(0, y))
 	end
 	for _, section in Config.Store.Sections do
@@ -407,15 +409,20 @@ function StoreController:KnitStart()
 		card.buy.Size = UDim2.fromOffset(c.cardWidth - 2 * c.padding, c.buttonHeight)
 	end
 	NativeUI.onLayoutChanged(function(layout)
-		local g = StoreLayout.compute(layout.viewport, layout.inset)
+		local view = NativeUI.menuView(layout)
+		local g = StoreLayout.compute(view.viewport, view.inset)
 		local height = g.height
-		-- the panel is centred (AnchorPoint 0.5); short phones pin its top just under the top bar
-		panel.Position = if g.top then UDim2.new(0.5, 0, 0, g.top + height / 2) else UDim2.new(0.5, 0, 0.5, layout.inset / 2)
-		panel.Size = UDim2.fromOffset(g.width, height)
+		-- centred; short phones pin its top just under the top bar
+		local top = g.top or (view.viewport.Y + view.inset - height) / 2
+		NativeUI.place(panel, { x = (view.viewport.X - g.width) / 2, y = top, w = g.width, h = height }, view)
+		drawScale = view.scale
 		subtitle.TextSize = if g.narrow then 12 else 15
-		list.Position, list.Size = UDim2.fromOffset(14, 112), UDim2.new(0, g.listWidth, 1, -126)
+		-- short screens (phones in landscape) give the subtitle one line and the list the room it frees
+		local listY = if g.short then 96 else 112
+		subtitle.Size = UDim2.new(1, -40, 0, if g.short then 26 else 38)
+		list.Position, list.Size = UDim2.fromOffset(14, listY), UDim2.new(0, g.listWidth, 1, -listY - 14)
 		tabs.Visible = g.tabWidth > 0
-		tabs.Position, tabs.Size = UDim2.new(1, -14 - g.tabWidth, 0, 112), UDim2.new(0, g.tabWidth, 1, -126)
+		tabs.Position, tabs.Size = UDim2.new(1, -14 - g.tabWidth, 0, listY), UDim2.new(0, g.tabWidth, 1, -listY - 14)
 		sectionsLayout.Padding = UDim.new(0, g.gap)
 		listPadding.PaddingLeft, listPadding.PaddingRight = UDim.new(0, g.paddingList), UDim.new(0, g.paddingList)
 		listPadding.PaddingTop, listPadding.PaddingBottom = UDim.new(0, g.paddingList), UDim.new(0, g.paddingList)

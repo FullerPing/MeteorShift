@@ -33,6 +33,6 @@ return {
 	UnderLevelFloor = 0.4,
 
 	-- Player level needed to evolve the pickaxe or backpack to each tier, and to buy the
-	-- same-numbered conveyor and refinery level.
+	-- same-numbered production line level (Shared.Line).
 	EvolveLevel = { 1, 1, 1, 1, 10, 16, 24, 34 },
 }

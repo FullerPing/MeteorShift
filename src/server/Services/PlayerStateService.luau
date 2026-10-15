@@ -216,10 +216,10 @@ function PlayerStateService:_sendState(player: Player)
 	if not data then
 		return
 	end
-	if data.stations == nil then
+	if data.line == nil then
 		if not warnedNoStations then
 			warnedNoStations = true
-			warn("[PlayerStateService] profile has no stations table; State not sent")
+			warn("[PlayerStateService] profile has no production line level; State not sent")
 		end
 		return
 	end
@@ -237,16 +237,17 @@ function PlayerStateService:_sendState(player: Player)
 		refineryBlocked = "hopper"
 	end
 	local line = {
-		hopper = { level = data.stations.hopper, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data, vaultMult) },
-		conveyor = { level = data.stations.conveyor, rate = Refining.conveyorRate(data) * lineMult },
+		level = data.line, -- one level for the whole line (Shared.Line); each station repeats it
+		hopper = { level = data.line, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data, vaultMult) },
+		conveyor = { level = data.line, rate = Refining.conveyorRate(data) * lineMult },
 		refinery = {
-			level = data.stations.refinery,
+			level = data.line,
 			rate = Refining.refineryRate(data, speedMult) * lineMult,
 			activeOre = RefineryQueue.nextOre(data.hopper, data.refinePriority),
 			progress = math.clamp(data.progress or 0, 0, 1),
 			blocked = refineryBlocked,
 		},
-		collector = { level = data.stations.collector, amount = sum(data.bin), capacity = Refining.collectorCapacity(data, vaultMult) },
+		collector = { level = data.line, amount = sum(data.bin), capacity = Refining.collectorCapacity(data, vaultMult) },
 		rate = Refining.lineRate(data, speedMult, lineMult),
 	}
 

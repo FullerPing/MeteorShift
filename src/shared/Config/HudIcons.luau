@@ -27,4 +27,6 @@ return table.freeze({
 	close = "rbxassetid://125219065228703",
 	pets = "rbxassetid://16380908271", -- white paw, generated (assets/hud/pets.png)
 	chat = "rbxassetid://96092458492519",
+	daily = "rbxassetid://14895349065", -- owner's Daily Rewards button icon
+	codes = "rbxassetid://2293247108", -- owner's Codes button icon
 })

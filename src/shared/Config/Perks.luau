@@ -28,7 +28,7 @@ Perks.List = {
 	stationMemory = {
 		Id = "stationMemory",
 		Name = "Station Memory",
-		Text = "A rebirth keeps %s of your hopper, conveyor and collection post levels.",
+		Text = "A rebirth keeps %s of your production line level.",
 		Costs = { 30, 60, 120, 240 },
 		Effect = { 0.25, 0.5, 0.75, 1 },
 	},

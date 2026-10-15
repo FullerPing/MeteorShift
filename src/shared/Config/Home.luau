@@ -3,20 +3,17 @@
 --
 --   hopper -> conveyor -> refinery -> collection post
 --
--- and each of the four stations upgrades on its own. Ore flows at the slower of
--- the conveyor and the refinery; the hopper caps how much ore waits, the
--- collection post caps how many bars wait to be picked up (and so how much
+-- and the whole line upgrades as one: a line level (Home.Line, Shared.Line) sets every station's
+-- row below. Ore flows at the slower of the conveyor and the refinery; the hopper caps how much
+-- ore waits, the collection post caps how many bars wait to be picked up (and so how much
 -- offline income piles up). Conveyor and refinery rates are ore per second and track what a
--- player mines at that stage (docs/balance.md); their prices climb roughly ×3.5 per level.
--- Hopper and collection post capacity were sized for a 40,000 ore backpack; with the backpack
--- at 50 to 1,800 they run 2,000 to 500,000 (about ×2.5 per level). Level 1 holds two hours of
--- the first line and any backpack; the top level holds the 8-hour pass at the fastest line.
+-- player mines at that stage (docs/balance.md). Hopper and collection post capacity run
+-- 2,000 to 1,250,000 (about ×2.5 per level). Level 1 holds two hours of the first line and any
+-- backpack; level 7 already holds the 8-hour pass at the fastest line.
 
 local Home = {}
 
 export type Level = {
-	Cost: number,
-	Shards: number, -- kept at 0: shards buy Colony Perks, not production
 	Capacity: number?, -- hopper (ore), collector (bars)
 	Rate: number?, -- conveyor and refinery (ore per second)
 }
@@ -27,73 +24,45 @@ export type Station = {
 	Levels: { Level },
 }
 
-local function levels(list: { { number } }, key: string): { Level }
+local function levels(list: { number }, key: string): { Level }
 	local out = {}
-	for index, row in list do
-		local level: any = { Cost = row[2], Shards = row[3] or 0 }
-		level[key] = row[1]
-		out[index] = level
+	for index, value in list do
+		out[index] = { [key] = value } :: any
 	end
 	return out
 end
 
+-- The one production upgrade. Costs[n] is the cash to raise the line to level n (times the
+-- rebirth price inflation, Shared.Rebirth.priceMult); level n also needs player level
+-- Config.Levels.EvolveLevel[n] (levels 5 to 8). A level costs what the conveyor and refinery
+-- levels used to cost together, since those two set the line's speed; the hopper and collection
+-- post capacity come with it. Shards buy Colony Perks (Config.Perks), not production.
+Home.Line = {
+	Name = "Production Line",
+	Costs = { 0, 840, 3.2e3, 11.9e3, 45e3, 177e3, 645e3, 2.5e6 },
+}
+
+-- What each station does at each line level (index = line level)
 Home.Stations = {
-	-- { stat, cash cost }. Shards no longer buy production (economy rework, S1): the
-	-- levels 5 to 8 of the conveyor and refinery are gated by player level instead
-	-- (Config.Levels.EvolveLevel), and Colony Perks (Config.Perks) are what shards are for.
 	hopper = {
 		Id = "hopper",
 		Name = "Hopper",
-		Levels = levels({
-			{ 2e3, 0 },
-			{ 5e3, 3e3 },
-			{ 12e3, 36e3 },
-			{ 30e3, 430e3 },
-			{ 75e3, 5.2e6 },
-			{ 190e3, 62e6 },
-			{ 500e3, 690e6 },
-		}, "Capacity"),
+		Levels = levels({ 2e3, 5e3, 12e3, 30e3, 75e3, 190e3, 500e3, 1.25e6 }, "Capacity"),
 	} :: Station,
 	conveyor = {
 		Id = "conveyor",
 		Name = "Conveyor",
-		Levels = levels({
-			{ 0.3, 0 },
-			{ 0.8, 360 },
-			{ 1.6, 1.4e3 },
-			{ 3, 5.4e3 },
-			{ 5, 19e3 },
-			{ 8, 77e3 },
-			{ 12, 275e3 },
-			{ 18, 1.1e6 },
-		}, "Rate"),
+		Levels = levels({ 0.3, 0.8, 1.6, 3, 5, 8, 12, 18 }, "Rate"),
 	} :: Station,
 	refinery = {
 		Id = "refinery",
 		Name = "Refinery",
-		Levels = levels({
-			{ 0.25, 0 },
-			{ 0.7, 480 },
-			{ 1.4, 1.8e3 },
-			{ 2.6, 6.5e3 },
-			{ 4.5, 26e3 },
-			{ 7, 100e3 },
-			{ 11, 370e3 },
-			{ 16, 1.4e6 },
-		}, "Rate"),
+		Levels = levels({ 0.25, 0.7, 1.4, 2.6, 4.5, 7, 11, 16 }, "Rate"),
 	} :: Station,
 	collector = {
 		Id = "collector",
 		Name = "Collection Post",
-		Levels = levels({
-			{ 2e3, 0 },
-			{ 5e3, 2.4e3 },
-			{ 12e3, 29e3 },
-			{ 30e3, 324e3 },
-			{ 75e3, 3.9e6 },
-			{ 190e3, 46e6 },
-			{ 500e3, 552e6 },
-		}, "Capacity"),
+		Levels = levels({ 2e3, 5e3, 12e3, 30e3, 75e3, 190e3, 500e3, 1.25e6 }, "Capacity"),
 	} :: Station,
 }
 

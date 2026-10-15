@@ -9,7 +9,7 @@ return function(t: any)
 
 	local function freshData(hopper: { [string]: number }, bin: { [string]: number })
 		return {
-			stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 },
+			line = 1,
 			hopper = hopper,
 			bin = bin,
 			progress = 0,
@@ -139,8 +139,8 @@ return function(t: any)
 	end)
 
 	t.test("the refinery runs at full speed whatever the player's level", function()
-		local low = { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = { crystal = 5 }, bin = {}, level = 1 }
-		local high = { stations = low.stations, hopper = { crystal = 5 }, bin = {}, level = 50 }
+		local low = { line = 1, hopper = { crystal = 5 }, bin = {}, level = 1 }
+		local high = { line = low.line, hopper = { crystal = 5 }, bin = {}, level = 50 }
 		local _, lowBars = Refining.run(low, 20)
 		local _, highBars = Refining.run(high, 20)
 		t.eq(lowBars, highBars)
@@ -148,7 +148,7 @@ return function(t: any)
 	end)
 
 	t.test("an Efficient Line multiplier speeds the line up", function()
-		local function data() return { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = { iron = 1000 }, bin = {} } end
+		local function data() return { line = 1, hopper = { iron = 1000 }, bin = {} } end
 		t.near(Refining.lineRate(data(), 1, 1.2), Refining.lineRate(data(), 1, 1) * 1.2, 1e-9)
 	end)
 end

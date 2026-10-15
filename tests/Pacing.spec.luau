@@ -116,17 +116,17 @@ return function(t: any)
 		local Price = require(t.shared.Price)
 		local run = Pacing.simulate(4 * 3600, { rebirths = 3 })
 		t.ok(#run.rebirthTimes >= 3, "only " .. #run.rebirthTimes .. " rebirths in four hours")
-		local base = Config.Home.Stations.conveyor.Levels[2].Cost
+		local base = Config.Home.Line.Costs[2]
 		local first, afterThird
 		for _, purchase in run.purchases do
-			if purchase.id == "conveyor2" then
+			if purchase.id == "line2" then
 				first = first or purchase
 				if purchase.time > run.rebirthTimes[3] then
 					afterThird = afterThird or purchase
 				end
 			end
 		end
-		t.ok(first ~= nil and afterThird ~= nil, "conveyor level 2 is bought before and after the third rebirth")
+		t.ok(first ~= nil and afterThird ~= nil, "line level 2 is bought before and after the third rebirth")
 		t.eq((first :: any).cost, base)
 		t.eq((afterThird :: any).cost, Price.scaled(base, Rebirth.priceMult(3)))
 	end)
@@ -156,8 +156,8 @@ return function(t: any)
 		t.ok(at30.owned.backpack >= 3, "backpack tier " .. at30.owned.backpack)
 	end)
 
-	t.test("by 30 minutes a refinery upgrade is bought", function()
-		t.ok(at30.owned.refinery >= 2, "refinery level " .. at30.owned.refinery)
+	t.test("by 30 minutes a production line upgrade is bought", function()
+		t.ok(at30.owned.line >= 2, "line level " .. at30.owned.line)
 	end)
 
 	t.test("sales cover the gear owned (no free lunch), and millions come within the hour", function()

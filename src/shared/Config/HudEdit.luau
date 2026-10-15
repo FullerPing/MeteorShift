@@ -13,7 +13,7 @@
 --   Timer       the meteor clock, top centre
 --   EventPanel  the "break the crust / strike the core" card
 --   Toast       the notification line (Nudge only, so messages are never lost)
---   SHOP PETS INDEX REBIRTH STORE   the menu buttons (SHOP is labelled GEAR)
+--   SHOP PETS INDEX REBIRTH STORE DAILY   the menu buttons (SHOP is labelled GEAR; DAILY is Daily Rewards)
 --   Settings    the settings gear (touch screens)
 --   FastWalk    the SPRINT button (the ORE button follows it)
 --   Ore         the ORE button, on top of wherever FastWalk is

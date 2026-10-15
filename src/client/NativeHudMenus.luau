@@ -20,8 +20,8 @@ local PREFERENCES = {
 	{ name = "MusicOn", default = true, label = "Music" },
 	{ name = "SfxOn", default = true, label = "Sound effects" },
 }
-local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "RefineryOpen", "HatchOpen" }
-local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen" }
+local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "RefineryOpen", "HatchOpen" }
+local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen" }
 
 local function anotherMenuOpen(flags: { string }): boolean
 	for _, name in flags do if player:GetAttribute(name) == true then return true end end
@@ -34,6 +34,7 @@ function NativeHudMenus.start()
 	local backpack = UI.get("BackpackMenu")
 	started = true
 	local settingsPanel = settings:WaitForChild("SettingsPanel") :: Frame
+	UI.fitCentred(settingsPanel, Vector2.new(360, 350))
 	local backdrop = settings:WaitForChild("SettingsBackdrop") :: TextButton
 	local openSettings = settings:WaitForChild("OpenSettings") :: ImageButton
 	local settingsClose = settingsPanel:WaitForChild("Close") :: GuiButton
@@ -150,7 +151,7 @@ function NativeHudMenus.start()
 	if not dailyRow then
 		local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
 		local copy = source:Clone()
-		copy.Name, copy.LayoutOrder = "OpenDaily", 0
+		copy.Name, copy.LayoutOrder = "OpenDaily", -2
 		local label = copy:FindFirstChild("Label")
 		if label and label:IsA("TextLabel") then label.Text = "Daily rewards" end
 		local value = copy:FindFirstChild("State")
@@ -168,9 +169,33 @@ function NativeHudMenus.start()
 	local function updateDailyDot() dot.Visible = player:GetAttribute("DailyReady") == true end
 	player:GetAttributeChangedSignal("DailyReady"):Connect(updateDailyDot)
 	updateDailyDot()
-	;(dailyRow :: TextButton).Activated:Connect(function()
+	-- Daily Rewards waits for the first-session tutorial (DailyController sets DailyUnlocked when it is over)
+	local openDailyRow = dailyRow :: TextButton
+	local function updateDailyRow() openDailyRow.Visible = player:GetAttribute("DailyUnlocked") == true end
+	player:GetAttributeChangedSignal("DailyUnlocked"):Connect(updateDailyRow)
+	updateDailyRow()
+	openDailyRow.Activated:Connect(function()
 		player:SetAttribute("SettingsOpen", false)
 		player:SetAttribute("DailyOpen", true)
+	end)
+	-- Codes: a row under Daily rewards, for the screens with no room for the HUD button
+	local codesRow = preferences:FindFirstChild("OpenCodes") :: TextButton?
+	if not codesRow then
+		local source = preferences:WaitForChild(PREFERENCES[1].name) :: TextButton
+		local copy = source:Clone()
+		copy.Name, copy.LayoutOrder = "OpenCodes", -1
+		local label = copy:FindFirstChild("Label")
+		if label and label:IsA("TextLabel") then label.Text = "Enter a code" end
+		local value = copy:FindFirstChild("State")
+		if value and value:IsA("TextLabel") then
+			value.Text, value.BackgroundColor3 = "OPEN", UI.ORANGE
+		end
+		copy.Parent = preferences
+		codesRow = copy
+	end
+	;(codesRow :: TextButton).Activated:Connect(function()
+		player:SetAttribute("SettingsOpen", false)
+		player:SetAttribute("CodesOpen", true)
 	end)
 	if player:GetAttribute("SettingsOpen") == nil then player:SetAttribute("SettingsOpen", false) end
 	if player:GetAttribute("BackpackOpen") == nil then player:SetAttribute("BackpackOpen", false) end

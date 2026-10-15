@@ -27,12 +27,14 @@ local function buildView(parent: Instance)
 	local function frame(name: string, size: UDim2, position: UDim2, color: Color3, owner: Instance): Frame
 		return make("Frame", name, { Size = size, Position = position, BackgroundColor3 = color, BorderSizePixel = 0 }, owner)
 	end
+	-- FredokaOne with a chunky ink outline (a UIStroke, much bolder than TextStroke), like the HUD
 	local function label(name: string, text: string, size: UDim2, position: UDim2, owner: Instance): TextLabel
-		return make("TextLabel", name, {
+		local item = make("TextLabel", name, {
 			Size = size, Position = position, Text = text, BackgroundTransparency = 1,
-			Font = Enum.Font.FredokaOne, TextSize = 24, TextColor3 = white,
-			TextStrokeColor3 = ink, TextStrokeTransparency = 0,
+			Font = Enum.Font.FredokaOne, TextSize = 24, TextColor3 = white, TextStrokeTransparency = 1,
 		}, owner)
+		make("UIStroke", "TextInk", { Color = ink, Thickness = 2.5, LineJoinMode = Enum.LineJoinMode.Round }, item)
+		return item
 	end
 	local function picture(name: string, owner: Instance): ImageLabel
 		return make("ImageLabel", name, {
@@ -121,23 +123,59 @@ local function buildView(parent: Instance)
 	shineGradient.Rotation = 0
 	shineGradient.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.5, 0), NumberSequenceKeypoint.new(1, 1) })
 	logo.ClipsDescendants = true
-	local panel = frame("ProgressPanel", UDim2.fromOffset(720, 150), UDim2.fromScale(.5, .86), Color3.fromRGB(12, 40, 112), root)
+	-- Centre piece: the four meteor types take turns popping in on a slowly turning sunburst
+	local hero = frame("Hero", UDim2.fromOffset(220, 220), UDim2.fromScale(.5, .55), white, root)
+	hero.AnchorPoint = Vector2.new(.5, .5)
+	hero.BackgroundTransparency = 1
+	local rays = frame("Rays", UDim2.fromScale(2.2, 2.2), UDim2.fromScale(.5, .5), white, hero)
+	rays.AnchorPoint = Vector2.new(.5, .5)
+	rays.BackgroundTransparency = 1
+	for i = 1, 8 do
+		local ray = frame("Ray" .. i, UDim2.fromScale(.16, 1), UDim2.fromScale(.5, .5), white, rays)
+		ray.AnchorPoint = Vector2.new(.5, .5)
+		ray.Rotation = (i - 1) * 22.5
+		local shade = gradient(ray, Color3.fromRGB(255, 252, 214), Color3.fromRGB(255, 252, 214))
+		shade.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(.3, .72),
+			NumberSequenceKeypoint.new(.5, .5), NumberSequenceKeypoint.new(.7, .72), NumberSequenceKeypoint.new(1, 1),
+		})
+	end
+	local glow = frame("Glow", UDim2.fromScale(1, 1), UDim2.fromScale(.5, .5), white, hero)
+	glow.AnchorPoint = Vector2.new(.5, .5)
+	rounded(glow, 1000)
+	local glowShade = make("UIGradient", "Gradient", { Color = ColorSequence.new(Color3.fromRGB(255, 246, 190)) }, glow)
+	glowShade.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, .35), NumberSequenceKeypoint.new(1, .35) })
+	local heroArt = frame("Art", UDim2.fromScale(1.1, 1.1), UDim2.fromScale(.5, .5), Color3.fromRGB(184, 118, 84), hero)
+	heroArt.AnchorPoint = Vector2.new(.5, .5)
+	heroArt.BackgroundTransparency = 1
+	rounded(heroArt, 1000) -- the plain rock drawn until the meteor art has loaded
+	local heroPop = make("UIScale", "Pop", { Scale = 1 }, heroArt)
+	local heroSprite = picture("Sprite", heroArt)
+	local heroName = label("Name", "", UDim2.new(1.6, 0, 0, 34), UDim2.new(-.3, 0, 1, 2), hero)
+	heroName.TextScaled = true
+	heroName.TextColor3 = gold
+	make("UITextSizeConstraint", "TextLimit", { MaxTextSize = 30, MinTextSize = 14 }, heroName)
+	-- The progress card: a white body on a navy lip with an ink outline, like the game's menus
+	local panel = frame("ProgressPanel", UDim2.fromOffset(720, 150), UDim2.fromScale(.5, .86), Color3.fromRGB(22, 58, 150), root)
 	panel.AnchorPoint = Vector2.new(.5, .5)
-	rounded(panel, 16)
-	outline(panel, 3)
-	local panelFace = frame("Face", UDim2.new(1, 0, 1, -7), UDim2.new(), Color3.fromRGB(22, 72, 190), panel)
-	rounded(panelFace, 16)
-	gradient(panelFace, Color3.fromRGB(56, 138, 240), Color3.fromRGB(22, 72, 190))
-	local status = label("Status", "Waking up the crater...", UDim2.new(1, -110, 0, 32), UDim2.fromOffset(18, 10), panelFace)
+	rounded(panel, 22)
+	outline(panel, 4)
+	local panelFace = frame("Face", UDim2.new(1, 0, 1, -8), UDim2.new(), white, panel)
+	rounded(panelFace, 22)
+	gradient(panelFace, white, Color3.fromRGB(214, 236, 255))
+	local status = label("Status", "Waking up the crater...", UDim2.new(1, -120, 0, 32), UDim2.fromOffset(20, 10), panelFace)
 	status.TextXAlignment = Enum.TextXAlignment.Left
 	status.TextScaled = true
-	make("UITextSizeConstraint", "TextLimit", { MaxTextSize = 24, MinTextSize = 12 }, status)
-	local percent = label("Percent", "0%", UDim2.fromOffset(70, 32), UDim2.new(1, -86, 0, 10), panelFace)
+	make("UITextSizeConstraint", "TextLimit", { MaxTextSize = 26, MinTextSize = 12 }, status)
+	local percent = label("Percent", "0%", UDim2.fromOffset(90, 34), UDim2.new(1, -108, 0, 9), panelFace)
 	percent.TextXAlignment = Enum.TextXAlignment.Right
 	percent.TextColor3 = gold
-	local track = frame("Track", UDim2.new(1, -36, 0, 34), UDim2.fromOffset(18, 52), Color3.fromRGB(22, 72, 190), panelFace)
+	percent.TextSize = 28
+	local track = frame("Track", UDim2.new(1, -40, 0, 34), UDim2.fromOffset(20, 52), Color3.fromRGB(22, 50, 118), panelFace)
 	rounded(track, 20)
 	outline(track, 3)
+	local trackShade = gradient(track, Color3.fromRGB(14, 32, 86), Color3.fromRGB(34, 70, 150))
+	trackShade.Rotation = 90
 	local fillClip = frame("FillClip", UDim2.fromScale(1, 1), UDim2.new(), white, track)
 	fillClip.BackgroundTransparency = 1
 	fillClip.ClipsDescendants = true
@@ -145,9 +183,9 @@ local function buildView(parent: Instance)
 	local fill = frame("Fill", UDim2.fromScale(0, 1), UDim2.new(), Color3.fromRGB(50, 196, 30), fillClip)
 	rounded(fill, 20)
 	gradient(fill, Color3.fromRGB(178, 255, 74), Color3.fromRGB(50, 196, 30))
-	local topShine = frame("TopShine", UDim2.new(1, -6, .4, 0), UDim2.fromOffset(3, 3), white, fill)
+	local topShine = frame("TopShine", UDim2.new(1, -10, .36, 0), UDim2.fromOffset(5, 3), white, fill)
 	rounded(topShine, 12)
-	topShine.BackgroundTransparency = .7
+	topShine.BackgroundTransparency = .55
 	local gloss = frame("Gloss", UDim2.fromScale(1, 1), UDim2.new(), white, fill)
 	rounded(gloss, 20)
 	local glossGradient = gradient(gloss, white, white)
@@ -160,28 +198,32 @@ local function buildView(parent: Instance)
 		NumberSequenceKeypoint.new(.75, 1), NumberSequenceKeypoint.new(1, 1),
 	})
 	local pickaxe = picture("Pickaxe", track)
-	pickaxe.Size = UDim2.fromOffset(38, 38)
+	pickaxe.Size = UDim2.fromOffset(52, 52)
 	pickaxe.AnchorPoint = Vector2.new(.5, .5)
-	local pickFallback = label("PickaxeFallback", "⛏", UDim2.fromOffset(38, 38), UDim2.new(), track)
+	pickaxe.ZIndex = 3
+	local pickFallback = label("PickaxeFallback", "⛏", UDim2.fromOffset(44, 44), UDim2.new(), track)
 	pickFallback.AnchorPoint = Vector2.new(.5, .5)
-	pickFallback.TextSize = 32
-	local tipChip = frame("TipChip", UDim2.fromOffset(48, 28), UDim2.fromOffset(18, 104), gold, panelFace)
-	rounded(tipChip, 8)
-	outline(tipChip, 2)
+	pickFallback.TextSize = 34
+	pickFallback.ZIndex = 3
+	local tipChip = frame("TipChip", UDim2.fromOffset(52, 28), UDim2.fromOffset(20, 104), gold, panelFace)
+	rounded(tipChip, 9)
+	outline(tipChip, 2.5)
 	gradient(tipChip, gold, Color3.fromRGB(255, 178, 30))
 	local tipTitle = label("TipTitle", "TIP", UDim2.fromScale(1, 1), UDim2.new(), tipChip)
 	tipTitle.TextSize = 18
-	tipTitle.TextColor3 = ink
-	tipTitle.TextStrokeTransparency = 1
-	local tip = label("Tip", "Mine the glowing rocks between meteors.", UDim2.new(1, -100, 0, 30), UDim2.fromOffset(78, 103), panelFace)
+	tipTitle.TextColor3 = ink;
+	(tipTitle:FindFirstChild("TextInk") :: UIStroke).Enabled = false
+	local tip = label("Tip", "Mine the glowing rocks between meteors.", UDim2.new(1, -104, 0, 30), UDim2.fromOffset(82, 103), panelFace)
 	tip.TextXAlignment = Enum.TextXAlignment.Left
 	tip.TextTruncate = Enum.TextTruncate.AtEnd
+	tip.TextColor3 = Color3.fromRGB(22, 50, 118);
+	(tip:FindFirstChild("TextInk") :: UIStroke).Enabled = false
 	tip.TextSize = 22
 	local flash = frame("DismissFlash", UDim2.fromScale(1, 1), UDim2.new(), white, root)
 	flash.BackgroundTransparency = 1
 	flash.ZIndex = 20
 	-- Lower right, after SKIP_AFTER seconds: ends the screen early through the normal fade (see the runtime below)
-	local SKIP_AFTER = 4
+	local SKIP_AFTER = 2
 	local skip = make("TextButton", "Skip", {
 		Size = UDim2.fromOffset(110, 42), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -20, 1, -20),
 		Text = "SKIP", Font = Enum.Font.FredokaOne, TextSize = 22, TextColor3 = ink, AutoButtonColor = true,
@@ -193,6 +235,8 @@ local function buildView(parent: Instance)
 	local view: any = { Root = root, Panel = panel, Logo = logo, Status = status, Percent = percent, Tip = tip, Flash = flash, Skip = skip }
 	-- buildView runs before the runtime section declares `config`, so keep our own copy here.
 	local settings: any = nil
+	local heroMeteors: { { image: string, name: string } } = {}
+	local HERO_SECONDS = 1.6 -- each meteor type stays this long
 	function view:setAssets(config: any, icons: any)
 		settings = config
 		backdrop.Image = config.Background or ""
@@ -201,6 +245,12 @@ local function buildView(parent: Instance)
 		meteorSprite.Image = icons.meteor or ""
 		pickaxe.Image = icons.equipment or ""
 		for _, cloud in clouds do cloud.sprite.Image = config.Cloud or "" end
+		heroMeteors = {
+			{ image = icons.meteor or "", name = "IRON METEOR" },
+			{ image = icons.meteorIce or "", name = "ICE METEOR" },
+			{ image = icons.meteorCrystal or "", name = "CRYSTAL METEOR" },
+			{ image = icons.meteorAlien or "", name = "ALIEN METEOR" },
+		}
 	end
 	local function loaded(image: ImageLabel): boolean
 		-- Never hide the image itself: an invisible ImageLabel is not requested, so IsLoaded would stay false.
@@ -228,11 +278,10 @@ local function buildView(parent: Instance)
 		fill.Visible = progress > 0
 		tip.Text = tipText
 		tip.TextSize = if compact then 18 else 22
-		tip.Position = UDim2.fromOffset(78, if compact then 89 else 103)
-		tipChip.Position = UDim2.fromOffset(18, if compact then 90 else 104)
-		track.Position = UDim2.fromOffset(18, if compact then 45 else 52)
+		tip.Position = UDim2.fromOffset(82, if compact then 89 else 103)
+		tipChip.Position = UDim2.fromOffset(20, if compact then 90 else 104)
+		track.Position = UDim2.fromOffset(20, if compact then 45 else 52)
 		tip.TextTransparency = tipAlpha
-		tip.TextStrokeTransparency = tipAlpha
 		-- SKIP sits in the lower right corner; where the panel reaches that far (phones) it moves up above the panel
 		local skipW, skipH, skipMargin = if compact then 92 else 110, if compact then 36 else 42, 20
 		skip.Size = UDim2.fromOffset(skipW, skipH)
@@ -252,6 +301,16 @@ local function buildView(parent: Instance)
 		-- A background with the logo painted in (LogoBaked) replaces the live logo and the drifting clouds, which would cover it.
 		local baked = settings ~= nil and settings.LogoBaked == true and loaded(backdrop)
 		logo.Visible = not baked
+		-- Crop centres the picture, so a screen wider than the art (phones, ultrawide) cuts the painted logo off the top.
+		-- A baked picture is scaled to cover the screen and pinned to the top instead, so only the bottom is trimmed.
+		if baked then
+			local art = (settings and settings.BackgroundSize) or Vector2.new(2048, 1152)
+			local cover = math.max(size.X / art.X, size.Y / art.Y)
+			backdrop.ScaleType = Enum.ScaleType.Stretch
+			backdrop.AnchorPoint = Vector2.new(.5, 0)
+			backdrop.Position = UDim2.fromScale(.5, 0)
+			backdrop.Size = UDim2.fromOffset(art.X * cover, art.Y * cover)
+		end
 		local hasWordmark = loaded(wordmark)
 		logoText.Visible = not hasWordmark
 		ribbon.Visible = not hasWordmark
@@ -317,6 +376,35 @@ local function buildView(parent: Instance)
 			chip.BackgroundTransparency = impact
 			chip.Ink.Transparency = impact
 		end
+		-- On the painted sky the meteor types take the empty middle instead of one meteor crossing the screen
+		hero.Visible = fly
+		meteor.Visible = not fly
+		if fly then
+			trail.Visible = false
+			local art = (settings and settings.BackgroundSize) or Vector2.new(2048, 1152)
+			local cover = math.max(size.X / art.X, size.Y / art.Y)
+			local logoBottom = art.Y * cover * .33 -- the painted logo ends about a third of the way down the art
+			local panelTop = panel.Position.Y.Offset - panelHeight * .5
+			local nameH = if compact then 26 else 34
+			local room = panelTop - logoBottom - nameH - 24
+			local heroSize = math.clamp(math.min(room * .95, size.X * .24), 80, 240)
+			hero.Size = UDim2.fromOffset(heroSize, heroSize)
+			hero.Position = UDim2.fromOffset(size.X * .5, logoBottom + 8 + (room - nameH) * .5 + (if reduced then 0 else math.sin(elapsed * math.pi / 1.1) * 5))
+			heroName.Size = UDim2.new(1.6, 0, 0, nameH)
+			rays.Visible = not reduced and heroSize > 90
+			rays.Rotation = elapsed * 14
+			local count = math.max(#heroMeteors, 1)
+			local index = if reduced then 1 else math.floor(elapsed / HERO_SECONDS) % count + 1
+			local entry = heroMeteors[index]
+			heroSprite.Image = if entry then entry.image else ""
+			heroName.Text = if entry then entry.name else ""
+			-- pop in with a little overshoot, then hold
+			local t = if reduced then 1 else math.clamp((elapsed % HERO_SECONDS) / .35, 0, 1)
+			heroPop.Scale = 1 + 2.7 * (t - 1) ^ 3 + 1.7 * (t - 1) ^ 2
+			heroArt.Rotation = if reduced then 0 else math.sin(elapsed * math.pi / 1.6) * 6
+			local hasHero = loaded(heroSprite)
+			heroArt.BackgroundTransparency = if hasHero then 1 else 0
+		end
 	end
 	return view
 end
@@ -329,7 +417,7 @@ local RunService = game:GetService("RunService")
 local ContentProvider = game:GetService("ContentProvider")
 local started = os.clock()
 local alive, finishing, skipRequested = true, false, false
-local maxShow, minShow, tipSeconds, assetTimeout = 25, 2.5, 4.5, 12
+local maxShow, minShow, tipSeconds, assetTimeout = 20, 1.5, 3.5, 5
 local player: Player? = Players.LocalPlayer
 local gui = Instance.new("ScreenGui")
 gui.Name = "CraterworksLoading"
@@ -487,40 +575,38 @@ local ok, startupError = pcall(function()
 					table.insert(list, id)
 				end
 			end
+			-- What the first screen shows: the loading art, then the HUD icons. The screen waits for these
+			-- (up to AssetTimeout), all requested at once in small parallel batches, not one by one.
 			for _, id in { config.Background, config.Wordmark, config.Cloud, config.Trail } do addId(id) end
 			for _, id in config.Preload do addId(id) end
 			for _, id in icons do addId(id) end
-			local meshCount = 0
+			local assetStarted, done = os.clock(), 0
+			local BATCH = 8
+			local batches = math.max(1, math.ceil(#list / BATCH))
+			for first = 1, #list, BATCH do
+				spawnOwned(function()
+					local batch = table.move(list, first, math.min(first + BATCH - 1, #list), 1, {})
+					pcall(function() ContentProvider:PreloadAsync(batch) end)
+					done += 1
+					if alive then progress:setStage("assets", done / batches) end
+				end)
+			end
+			if #list == 0 then progress:setStage("assets", 1) end
+			while alive and done < batches and #list > 0 and os.clock() - assetStarted < assetTimeout do task.wait(.05) end
+			if alive then progress:setStage("assets", 1) end
+			-- Pet and art meshes are only needed once their menus open: warm them up in the background,
+			-- outliving this screen, instead of holding the player at the loading bar.
+			local meshes: { Instance } = {}
 			for _, name in { "PetModels", "MeshArt" } do
 				local container = ReplicatedStorage:FindFirstChild(name)
 				if container then
 					for _, child in container:GetDescendants() do
-						if child:IsA("MeshPart") and meshCount < 300 then
-							table.insert(list, child)
-							meshCount += 1
-						end
+						if child:IsA("MeshPart") and #meshes < 300 then table.insert(meshes, child) end
 					end
 				end
 			end
-			local assetStarted, completed = os.clock(), false
-			local preloadThread: thread? = nil
-			spawnOwned(function()
-				local processed = 0
-				for _, asset in list do
-					if not alive then return end
-					-- Count completed input items (callbacks can fire multiple times per mesh).
-					pcall(function() ContentProvider:PreloadAsync({ asset }) end)
-					processed += 1
-					if alive then progress:setStage("assets", processed / math.max(1, #list)) end
-				end
-				completed = true
-				if alive then progress:setStage("assets", 1) end
-			end)
-			preloadThread = threads[#threads]
-			while alive and not completed and os.clock() - assetStarted < assetTimeout do task.wait(.05) end
-			if alive and not completed then
-				if preloadThread and coroutine.status(preloadThread) ~= "dead" then pcall(task.cancel, preloadThread) end
-				progress:setStage("assets", 1)
+			if #meshes > 0 then
+				task.spawn(function() pcall(function() ContentProvider:PreloadAsync(meshes) end) end)
 			end
 		end)
 		-- Missing/broken config simply uses the already-visible fallback until the deadline.

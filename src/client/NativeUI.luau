@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
+local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
 local HudEditConfig = require(ReplicatedStorage.Shared.Config.HudEdit)
 local Sfx = require(script.Parent.Sfx)
 local MenuSkin = require(script.Parent.MenuSkin)
@@ -110,9 +111,13 @@ function NativeUI.enable(button: GuiButton, enabled: boolean, color: Color3)
 end
 function NativeUI.hudLayout(): HudLayout.Layout
 	local p = Players.LocalPlayer
+	-- Studio QA: a PreviewViewport attribute (Vector2) lays the menus out for that screen as a touch device
+	local preview = p:GetAttribute("PreviewViewport")
+	local viewport = if typeof(preview) == "Vector2" then preview
+		elseif workspace.CurrentCamera then workspace.CurrentCamera.ViewportSize else Vector2.new(1280, 720)
 	-- with Config.HudEdit applied, so the menu buttons follow the same moves and hides as the HUD cards
-	return HudLayout.applyEdits(HudLayout.compute(if workspace.CurrentCamera then workspace.CurrentCamera.ViewportSize else Vector2.new(1280, 720),
-		UserInputService.TouchEnabled, GuiService:GetGuiInset().Y, p:GetAttribute("FoundryExpanded") == true,
+	return HudLayout.applyEdits(HudLayout.compute(viewport,
+		UserInputService.TouchEnabled or typeof(preview) == "Vector2", GuiService:GetGuiInset().Y, p:GetAttribute("FoundryExpanded") == true,
 		p:GetAttribute("HudNotificationActive") == true, p:GetAttribute("HudRewardNotificationActive") == true), HudEditConfig)
 end
 function NativeUI.onLayoutChanged(callback: (HudLayout.Layout) -> ()): () -> ()
@@ -128,7 +133,7 @@ function NativeUI.onLayoutChanged(callback: (HudLayout.Layout) -> ()): () -> ()
 	table.insert(connections, workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(bindCamera))
 	table.insert(connections, UserInputService:GetPropertyChangedSignal("TouchEnabled"):Connect(update))
 	table.insert(connections, GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(update))
-	for _, name in { "FoundryExpanded", "HudNotificationActive", "HudRewardNotificationActive" } do
+	for _, name in { "FoundryExpanded", "HudNotificationActive", "HudRewardNotificationActive", "PreviewViewport" } do
 		table.insert(connections, Players.LocalPlayer:GetAttributeChangedSignal(name):Connect(update))
 	end
 	bindCamera()
@@ -136,6 +141,35 @@ function NativeUI.onLayoutChanged(callback: (HudLayout.Layout) -> ()): () -> ()
 		if cameraConnection then cameraConnection:Disconnect() end
 		for _, connection in connections do connection:Disconnect() end
 	end
+end
+-- Menus on small screens: lay out for `view.viewport` / `view.inset` (Shared.MenuFit), then place the panel with
+-- `place`, which centres it where that virtual rect lands and draws it at `view.scale`.
+function NativeUI.menuView(hud: HudLayout.Layout): MenuFit.View
+	return MenuFit.view(hud.viewport, hud.inset)
+end
+function NativeUI.place(panel: GuiObject, rect: MenuFit.Rect, view: MenuFit.View)
+	local centre = MenuFit.centre(view, rect)
+	panel.AnchorPoint = Vector2.new(0.5, 0.5)
+	panel.Position = UDim2.fromOffset(centre.X, centre.Y)
+	panel.Size = UDim2.fromOffset(rect.w, rect.h)
+	local scale = panel:FindFirstChild("MenuFit") :: UIScale?
+	if not scale then
+		local made = Instance.new("UIScale")
+		made.Name, made.Parent = "MenuFit", panel
+		scale = made
+	end
+	(scale :: UIScale).Scale = view.scale
+end
+-- A fixed-size menu, centred under the top bar and drawn smaller where the screen is
+function NativeUI.fitCentred(panel: GuiObject, natural: Vector2)
+	-- the fit decides the size now; an authored size constraint would fight the draw scale
+	for _, child in panel:GetChildren() do
+		if child:IsA("UISizeConstraint") then child:Destroy() end
+	end
+	NativeUI.onLayoutChanged(function(hud)
+		local view = NativeUI.menuView(hud)
+		NativeUI.place(panel, MenuFit.centred(view, natural), view)
+	end)
 end
 function NativeUI.bindOpen(gui: ScreenGui, attribute: string, close: () -> ())
 	local p = Players.LocalPlayer

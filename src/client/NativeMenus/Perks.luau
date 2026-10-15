@@ -46,6 +46,9 @@ function Perks.build(): ScreenGui
 		local text = NativeUI.text(card, "Text", "", UDim2.fromOffset(12, 34), UDim2.new(1, -140, 0, 52), true)
 		text.TextWrapped = true
 		text.TextYAlignment = Enum.TextYAlignment.Top
+		-- the longer perk lines shrink to stay inside the card instead of being cut off
+		text.TextScaled = true
+		NativeUI.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 15 }, text)
 		text.TextColor3 = NativeUI.MUTED
 		local buy = NativeUI.button(card, "Buy", "BUY", UDim2.new(1, -118, 0, 36), UDim2.fromOffset(106, 44), NativeUI.GREEN)
 		buy.TextSize = 16

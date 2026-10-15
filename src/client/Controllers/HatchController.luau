@@ -133,14 +133,12 @@ function HatchController:KnitStart()
 	local nextTick = 0
 
 	local function layout()
-		local current = workspace.CurrentCamera
-		local size = if current then current.ViewportSize else Vector2.new(390, 844)
-		local inset = GuiService:GetGuiInset().Y
+		local view = UI.menuView(UI.hudLayout())
+		local size, inset = view.viewport, view.inset
 		local short = size.Y - inset < 430
 		local width = math.min(if short then 600 else 360, size.X - 24)
 		local height = math.min(if short then 260 else 420, size.Y - inset - 24)
-		panel.Size = UDim2.fromOffset(width, height)
-		panel.Position = UDim2.fromOffset(size.X / 2, inset + (size.Y - inset) / 2)
+		UI.place(panel, { x = (size.X - width) / 2, y = inset + (size.Y - inset - height) / 2, w = width, h = height }, view)
 		title.Position, title.Size = UDim2.fromOffset(12, 10), UDim2.fromOffset(width - 76, 32)
 		rarity.Position, rarity.Size = UDim2.fromOffset(12, 42), UDim2.fromOffset(width - 76, 20)
 		local previewWidth = if short then 170 else width - 24

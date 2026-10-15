@@ -6,7 +6,7 @@ The internal menus are plain, script-free ScreenGuis authored in StarterGui. The
 
 | Builder | StarterGui ScreenGui |
 |---|---|
-| `Shop` | `GearShop` (pickaxe and backpack only: name, preview, level and stat card, quantity and Upgrade; the next evolution opens as `EvolvePanel` beside it, or stacks under the controls on a narrow screen) |
+| `Shop` | `GearShop` (pickaxe and backpack only: name, preview, level and stat card, quantity strip and Upgrade; the next evolution is the `EvolvePanel` column on the panel's right, or stacks under the controls on a narrow screen) |
 | `Pets` | `PetsMenu` (PETS, EGGS and INDEX tabs) |
 | `Refinery` | `RefineryMenu` |
 | `Index` | `MineralIndex` |
@@ -30,6 +30,8 @@ These ten menus and the owner's `MY index button` source form the ten ScreenGui 
 ## Menu appearance
 
 Menus use charcoal studded bodies, bright accent headers, modest rectangular cards, thick near-black outlines, white outlined FredokaOne headings/actions and red X close buttons. Body copy uses GothamMedium. The shared native surface helper adds one passive tiled ImageLabel per surface, using `rbxassetid://6927295847` with a 128 × 128 tile size. It sits behind content and does not receive input.
+
+**The Gear Shop is the exception: it uses the light "toy" look** (a translucent pale body, a sky-blue header bar, one grey-blue card, pale preview wells, an orange evolution banner, navy outlines with a thick lip under each chunky button, FredokaOne text, lime for the selected quantity and for buttons you can press, a plain pale face for ones you cannot). The colours are in `Shared.MenuPalette` (with the contrast pairs `tests/MenuPalette.spec` checks), the builders in `src/client/MenuTheme.luau`. `Panel` and `EvolvePanel` carry the attribute `CartoonCustom = true`, which `MenuSkin` skips, so the other menus keep the cartoon skin until they are moved over one at a time. It is a copy of the owner's Framewisp "Gear-Shop-Light" frame: one 760 x 501 panel drawn at 64% of the screen's width or 75% of its height, whichever is smaller (`EquipmentShopLayout.view`), with the evolution as its right column (`ShopController` parents `EvolvePanel` into `Panel` on a wide window). Screens too small for that (the scale would be under 0.75) get a single 560-wide column fitted by `MenuFit`, with the evolution stacked under the controls. The panel body is 72% opaque (`MenuPalette.BODY_ALPHA`) and the screen behind the menu is dimmed at 20% alpha (`Dimmer`, transparency 0.8). The next evolution's cost is on the EVOLVE button ("EVOLVE · $250"), so the body has two requirement rows (gear level with a progress bar, player level) and no Cost row.
 
 The prefab exposes the visual properties directly in Studio. Controllers still own live text, quantities, availability, selection, visibility and responsive positioning; changes to those properties can be replaced by a runtime refresh. Button design does not change server purchase, inventory or progression rules.
 

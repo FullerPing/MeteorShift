@@ -17,6 +17,8 @@ return function(t: any)
 		{ name = "780x360", size = Vector2.new(780, 360), touch = true },
 		{ name = "1334x750", size = Vector2.new(1334, 750), touch = true },
 		{ name = "1920x1080", size = Vector2.new(1920, 1080), touch = false },
+		{ name = "2560x1440", size = Vector2.new(2560, 1440), touch = false },
+		{ name = "3840x2160", size = Vector2.new(3840, 2160), touch = false },
 		{ name = "1196x679 desktop", size = Vector2.new(1196, 679), touch = false, inset = 58 },
 		-- a small desktop window, the other place the column meets the screen edge
 		{ name = "1280x600 mouse", size = Vector2.new(1280, 600), touch = false },
@@ -45,6 +47,14 @@ return function(t: any)
 		return { x = button.x, y = button.y, w = button.w, h = math.max(button.h, button.w * 105 / 80) }
 	end
 
+	t.test("the HUD keeps its size up to 1080p and grows in proportion past it", function()
+		t.eq(HudLayout.scale(Vector2.new(1440, 810)), 1)
+		t.eq(HudLayout.scale(Vector2.new(1920, 1080)), 1)
+		t.near(HudLayout.scale(Vector2.new(2560, 1440)), 4 / 3, 0.001)
+		t.eq(HudLayout.scale(Vector2.new(3840, 2160)), 2)
+		t.eq(HudLayout.scale(Vector2.new(7680, 4320)), Hud.ScaleUpMax)
+	end)
+
 	t.test("desktop meteor banner and plot tag leave room for notifications", function()
 		for _, size in { Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(960, 540), Vector2.new(800, 450) } do
 			for _, expanded in { false, true } do
@@ -62,6 +72,85 @@ return function(t: any)
 				end
 			end
 		end
+	end)
+
+	t.test("every layout places a Daily Rewards button, except a phone too narrow for one more in its row", function()
+		for _, v in viewports do
+			local l = HudLayout.compute(v.size, v.touch, v.inset)
+			-- six 44 px faces with 2 px gaps, the gear and the 12 px margins need 344 px across
+			local tooNarrow = v.size.X < v.size.Y and v.size.X < 344
+			t.eq(l.buttons.DAILY == nil, tooNarrow, v.name .. " DAILY button")
+		end
+	end)
+
+	t.test("on a desktop window Daily Rewards sits right above Index when there is room, else ends the left column", function()
+		local above, column = 0, 0
+		for _, size in { Vector2.new(1920, 1080), Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(1280, 600), Vector2.new(960, 540), Vector2.new(800, 450) } do
+			local l = HudLayout.compute(size, false, 58)
+			local daily, index, store = l.buttons.DAILY, l.buttons.INDEX, l.buttons.STORE
+			if daily.x == index.x then
+				above += 1
+				t.ok(daily.y + personalButtonBounds(daily).h <= index.y + 1e-6, tostring(size) .. " Daily is above Index")
+			else
+				column += 1
+				t.eq(daily.x, store.x, tostring(size) .. " Daily is in the left column")
+				t.ok(daily.y > store.y, tostring(size) .. " Daily is below Store")
+			end
+		end
+		t.ok(above >= 1, "the above-Index placement is exercised (" .. column .. " windows fell back to the column)")
+	end)
+
+	local desktopSizes = { Vector2.new(1920, 1080), Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(1280, 600), Vector2.new(960, 540), Vector2.new(800, 450) }
+
+	t.test("on a desktop window Codes sits right under Index, or ends the left column when the stack will not fit", function()
+		local under = 0
+		for _, size in desktopSizes do
+			local l = HudLayout.compute(size, false, 58)
+			local codes, index, store = l.buttons.CODES, l.buttons.INDEX, l.buttons.STORE
+			t.ok(codes ~= nil, tostring(size) .. " has a CODES button")
+			if codes and codes.x == index.x then
+				under += 1
+				t.ok(codes.y >= index.y + personalButtonBounds(index).h - 1e-6, tostring(size) .. " Codes is under Index")
+				t.ok(codes.y - (index.y + personalButtonBounds(index).h) <= 4, tostring(size) .. " Codes is right under Index")
+			elseif codes then
+				t.eq(codes.x, store.x, tostring(size) .. " Codes is in the left column")
+			end
+		end
+		t.ok(under >= 1, "the under-Index placement is exercised")
+	end)
+
+	t.test("on desktop SPRINT and ORE sit in line with the backpack, to its left, unless the window is too narrow", function()
+		local inLine = 0
+		for _, size in desktopSizes do
+			local l = HudLayout.compute(size, false, 58)
+			local sprint, ore, pack = l.fastWalk, l.ore, l.backpack
+			local context = tostring(size)
+			t.eq(sprint == nil, ore == nil, context .. " SPRINT and ORE are placed together or left to place themselves")
+			if sprint and ore then
+				inLine += 1
+				t.near(sprint.y + sprint.h / 2, pack.y + pack.h / 2, 1e-6, context .. " SPRINT is level with the backpack")
+				t.near(ore.y + ore.h / 2, pack.y + pack.h / 2, 1e-6, context .. " ORE is level with the backpack")
+				t.ok(sprint.x + sprint.w <= pack.x and ore.x + ore.w <= sprint.x, context .. " ORE, SPRINT, backpack run left to right")
+				for name, rect in { SPRINT = sprint, ORE = ore } do
+					t.ok(HudLayout.inside(rect, screen(size)), context .. " " .. name .. " on screen")
+					local others = { foundry = l.leftCards.Production, wallet = l.leftCards.Resources, backpack = pack }
+					if l.tutorialVisible then others.training = l.tutorial end
+					for otherName, other in others do
+						t.ok(not HudLayout.overlaps(rect, other), context .. " " .. name .. " clears " .. otherName)
+					end
+					for buttonName, button in l.buttons do
+						t.ok(not HudLayout.overlaps(rect, personalButtonBounds(button)), context .. " " .. name .. " clears " .. buttonName)
+					end
+				end
+			end
+		end
+		t.ok(inLine >= 4, "most desktop windows get the in-line placement (" .. inLine .. ")")
+	end)
+
+	t.test("phones keep SPRINT and ORE where they were", function()
+		local l = HudLayout.compute(Vector2.new(844, 390), true, 36)
+		t.ok(l.fastWalk ~= nil, "phone landscape still places SPRINT")
+		t.eq(l.ore, nil, "ORE stays above SPRINT on phones")
 	end)
 
 	t.test("personal navigation captions clear visible cards, neighbours and movement", function()
@@ -627,7 +716,8 @@ return function(t: any)
 	end)
 
 	t.test("backpack popup height follows visible ore rows and caps future inventories", function()
-		local l = HudLayout.compute(Vector2.new(1440, 810), false)
+		-- a big window: the Daily / Index / Codes stack leaves the popup its full six rows
+		local l = HudLayout.compute(Vector2.new(1920, 1080), false)
 		for _, fixture in { { count = 0, height = 72 }, { count = 1, height = 72 }, { count = 2, height = 100 }, { count = 3, height = 128 }, { count = 6, height = 212 }, { count = 9, height = 212 } } do
 			local popup = HudLayout.backpackPanel(l, fixture.count)
 			t.eq(popup.h, fixture.height, "ore rows=" .. fixture.count)

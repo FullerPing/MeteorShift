@@ -3,6 +3,7 @@
 -- Panel bounds are screen pixels; everything else is local to the panel.
 local Config = require(script.Parent.Config.Pets)
 local Pets = require(script.Parent.Pets)
+local EquipmentShopLayout = require(script.Parent.EquipmentShopLayout)
 
 export type Rect = { x: number, y: number, w: number, h: number }
 export type Layout = {
@@ -21,15 +22,35 @@ export type Layout = {
 	-- PETS and INDEX tabs: a card grid beside (or above) the detail panel
 	summaryH: number, -- the equipped line and bonus banner (PETS) or the discovery bar (INDEX) above the grid and detail
 	list: Rect,
-	detail: Rect,
+	detail: Rect, -- the detail column: its banner pokes 6 px above it on the wide layout
+	action: Rect, -- the equip / put away button, under the detail
+	more: Rect, -- "More slots: ..." under the grid (zero-sized where there is no room)
 	cellW: number,
 	cellH: number,
 	columns: number,
+	wide: boolean, -- the cartoon light mockup's frame, the same size as the Gear Shop's
 }
 
 local PetsLayout = {}
 
-function PetsLayout.compute(viewport: Vector2, inset: number): Layout
+-- The wide layout: the owner's mockup on the Gear Shop's frame (EquipmentShopLayout.view decides when there is room), the
+-- body 760 x 475 with the ribbon poking above it. Everything is local to the body.
+local function wideLayout(viewport: Vector2): Layout
+	local W, H, R = EquipmentShopLayout.WIDE_W, EquipmentShopLayout.WIDE_H, EquipmentShopLayout.RIBBON
+	return {
+		panel = { x = (viewport.X - W) / 2, y = (viewport.Y - H) / 2 + R, w = W, h = H - R },
+		narrow = false, compact = false, padding = 22, gap = 8, headerH = 52, tabsY = 61, tabsH = 42,
+		contentY = 113, contentH = 307, footerY = 420, footerH = 36, summaryH = 82,
+		list = { x = 22, y = 203, w = 440, h = 190 },
+		detail = { x = 493, y = 113, w = 245, h = 296 },
+		action = { x = 493, y = 420, w = 245, h = 42 },
+		more = { x = 22, y = 396, w = 440, h = 20 },
+		cellW = 136, cellH = 168, columns = 3, wide = true,
+	}
+end
+
+function PetsLayout.compute(viewport: Vector2, inset: number, wide: boolean?): Layout
+	if wide then return wideLayout(viewport) end
 	local topInset = math.max(0, inset)
 	local availableW = math.max(0, viewport.X - 24)
 	local availableH = math.max(0, viewport.Y - topInset - 24)
@@ -56,21 +77,23 @@ function PetsLayout.compute(viewport: Vector2, inset: number): Layout
 	local summaryH = if snug then 40 else 66
 	local bodyY, bodyH = contentY + summaryH + gap, math.max(0, contentH - summaryH - gap)
 	local list: Rect, detail: Rect
+	local actionH = 44
 	if narrow then
 		local listH = math.floor(bodyH * 0.46)
 		list = { x = padding, y = bodyY, w = innerW, h = listH }
-		detail = { x = padding, y = bodyY + listH + gap, w = innerW, h = math.max(0, bodyH - listH - gap) }
+		detail = { x = padding, y = bodyY + listH + gap, w = innerW, h = math.max(0, bodyH - listH - gap * 2 - actionH) }
 	else
 		local listW = math.floor((innerW - gap) * 0.55)
 		list = { x = padding, y = bodyY, w = listW, h = bodyH }
-		detail = { x = padding + listW + gap, y = bodyY, w = innerW - listW - gap, h = bodyH }
+		detail = { x = padding + listW + gap, y = bodyY, w = innerW - listW - gap, h = math.max(0, bodyH - gap - actionH) }
 	end
+	local action = { x = detail.x, y = detail.y + detail.h + gap, w = detail.w, h = actionH }
 	local columns = math.max(1, math.floor((list.w - 16 + gap) / (cellW + gap)))
 	return {
 		panel = { x = (viewport.X - w) / 2, y = panelTop or topInset + 12 + (availableH - h) / 2, w = w, h = h },
 		narrow = narrow, compact = compact, padding = padding, gap = gap, headerH = headerH, tabsY = tabsY, tabsH = tabsH,
 		contentY = contentY, contentH = contentH, footerY = footerY, footerH = footerH, summaryH = summaryH,
-		list = list, detail = detail, cellW = cellW, cellH = cellH, columns = columns,
+		list = list, detail = detail, action = action, more = { x = 0, y = 0, w = 0, h = 0 }, cellW = cellW, cellH = cellH, columns = columns, wide = false,
 	}
 end
 

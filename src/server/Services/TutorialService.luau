@@ -189,7 +189,7 @@ function TutorialService:KnitStart()
 	ShopService.StatUpgraded:Connect(function(player)
 		self:Did(player, "buy")
 	end)
-	UpgradeService.StationUpgraded:Connect(function(player)
+	UpgradeService.LineUpgraded:Connect(function(player)
 		self:Did(player, "buy")
 	end)
 

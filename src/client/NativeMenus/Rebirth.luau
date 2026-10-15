@@ -149,10 +149,10 @@ function Menu.build(): ScreenGui
 	multiplierBox(compare, "AfterBox", "NextMultiplier", "AFTER", UDim2.fromScale(0.62, 0), GREEN, 64)
 
 	local keep = listBox(content, "KeepBox", 3, "✓ YOU KEEP", GREEN)
-	body(keep, "Body", { LayoutOrder = 2, Text = "Pets · Foundry levels · Core shards · Index bonuses · Pickaxe & backpack tiers · Colony perks" })
-	-- The exact things RebirthReset.apply clears (Station Memory and Head Start can keep part of the last two)
+	body(keep, "Body", { LayoutOrder = 2, Text = "Pets · Core shards · Index bonuses · Pickaxe & backpack tiers · Colony perks" })
+	-- The exact things RebirthReset.apply clears (Station Memory keeps part of the line level, Head Start a gear tier)
 	local resets = listBox(content, "ResetBox", 4, "RESETS", RED)
-	body(resets, "Body", { LayoutOrder = 2, Text = "Cash · Pickaxe & backpack upgrades · Carried, hopper & post ore and bars · Placed decor · Hopper, Conveyor & Collection Post levels" })
+	body(resets, "Body", { LayoutOrder = 2, Text = "Cash · Pickaxe & backpack upgrades · Carried, hopper & post ore and bars · Placed decor · Production line level" })
 	body(resets, "PriceNote", { LayoutOrder = 3, Text = "Upgrade prices rise", TextColor3 = RED })
 
 	local requirement = new("Frame", content, { Name = "Requirement", LayoutOrder = 5, Size = UDim2.new(1, -4, 0, 48), BackgroundTransparency = 1 })
@@ -175,6 +175,6 @@ function Menu.build(): ScreenGui
 	return gui
 end
 
-Menu.LAYOUT = 2 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
+Menu.LAYOUT = 3 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
 
 return Menu

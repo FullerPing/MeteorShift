@@ -1,122 +1,150 @@
 --!strict
--- The Pets menu: equip pets and read their benefits (MY PETS) and browse every pet in the game (PET INDEX).
--- Eggs hatch at the Hatchery's prompts (PetService). PetsController binds the named controls and places everything from Shared.PetsLayout.
+-- The Pets menu, from the owner's "cartoon light" mockup (2026-10-13; MenuTheme / Shared.MenuPalette), the Gear Shop's twin:
+-- a blue "Pets" ribbon, Close on the corner, the Core Shards chip, two tabs, then MY PETS (the equipped count, the TEAM BOOST
+-- strip and a grid of pet cards) or PET INDEX (every pet, found or not), the selected pet's column on the right (a blue name
+-- banner, a rarity pill, the preview, level and XP, the perks) with its action under it, and a hint strip at the bottom.
+-- Eggs hatch at the Hatchery's prompts (PetService). PetsController binds the named controls and places everything from
+-- Shared.PetsLayout.
 local RS = game:GetService("ReplicatedStorage")
 local Config = require(RS.Shared.Config)
 local Icons = require(RS.Shared.Config.HudIcons)
+local Palette = require(RS.Shared.MenuPalette)
 local PetsLayout = require(RS.Shared.PetsLayout)
 local N = require(script.Parent.Parent.NativeUI)
+local Theme = require(script.Parent.Parent.MenuTheme)
 local Pets = {}
-Pets.LAYOUT = 2 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
+Pets.LAYOUT = 4 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
 
-local function viewport(parent: Instance, name: string): ViewportFrame
-	return N.create("ViewportFrame", { Name = name, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0,
-		Ambient = Color3.fromRGB(195, 201, 220), LightColor = Color3.fromRGB(255, 240, 216), LightDirection = Vector3.new(1, -1, 2), ZIndex = 4 }, parent)
-end
-
--- One pet tile: a model preview, its name and level, a rarity accent, a lime tick while it is out, a blue ring while it is
--- selected and a "?" cover for pets you have not found.
+-- One pet tile: a white card with a preview well tinted by rarity, the name and level under it, a lime "EQUIPPED" tab on its
+-- top edge while it is out, a blue ring while it is selected and a "?" cover for pets you have not found.
 local function petCard(parent: Instance, id: string, order: number)
-	local card = N.create("Frame", { Name = "pet_" .. id, LayoutOrder = order, Size = UDim2.fromOffset(150, 172), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 3 }, parent)
-	N.surface(card)
-	local well = N.create("Frame", { Name = "Well", Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -70), BackgroundColor3 = N.PANEL, BorderSizePixel = 0, ZIndex = 3 }, card)
-	viewport(well, "Preview")
-	local name = N.text(card, "PetLabel", "", UDim2.new(0, 4, 1, -60), UDim2.new(1, -8, 0, 22))
-	name.TextSize, name.TextXAlignment, name.TextTruncate = 16, Enum.TextXAlignment.Center, Enum.TextTruncate.AtEnd
-	local level = N.text(card, "Level", "", UDim2.new(0, 4, 1, -38), UDim2.new(1, -8, 0, 18), true)
-	level.TextSize, level.TextXAlignment, level.Font = 13, Enum.TextXAlignment.Center, N.FONT
-	-- "Skin..." names are left alone by the shared menu skin
-	local accent = N.create("Frame", { Name = "SkinRarity", AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -9), Size = UDim2.new(0.45, 0, 0, 6),
-		BackgroundColor3 = N.WHITE, BorderSizePixel = 0, ZIndex = 5 }, card)
-	N.create("UICorner", { CornerRadius = UDim.new(0.5, 0) }, accent)
-	local badge = N.create("TextLabel", { Name = "Equipped", Text = "✓ EQUIPPED", Size = UDim2.fromOffset(88, 20), Position = UDim2.fromOffset(6, 6), Visible = false,
-		BackgroundColor3 = N.GREEN, Font = N.FONT, TextSize = 12, TextColor3 = N.WHITE, BorderSizePixel = 0, ZIndex = 8 }, card)
-	N.create("UICorner", { CornerRadius = UDim.new(0.5, 0) }, badge)
-	local lock = N.create("Frame", { Name = "Lock", Position = UDim2.fromOffset(8, 8), Size = UDim2.new(1, -16, 1, -70), BackgroundColor3 = Color3.fromRGB(20, 22, 28), BackgroundTransparency = 0.05, Visible = false, BorderSizePixel = 0, ZIndex = 9 }, card)
-	N.create("UICorner", { CornerRadius = UDim.new(0, 4) }, lock)
-	local mark = N.text(lock, "Mark", "?", UDim2.new(), UDim2.fromScale(1, 1))
-	mark.TextSize, mark.TextXAlignment, mark.ZIndex = 44, Enum.TextXAlignment.Center, 10
-	local ring = N.create("Frame", { Name = "SelectRing", Position = UDim2.fromOffset(-5, -5), Size = UDim2.new(1, 10, 1, 10), BackgroundTransparency = 1, Visible = false, ZIndex = 11 }, card)
-	N.create("UICorner", { CornerRadius = UDim.new(0, 14) }, ring)
-	N.create("UIStroke", { Color = Color3.fromRGB(46, 170, 255), Thickness = 4, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, ring)
+	local card = N.create("Frame", { Name = "pet_" .. id, LayoutOrder = order, Size = UDim2.fromOffset(136, 168), BackgroundColor3 = Palette.WHITE,
+		BorderSizePixel = 0, ZIndex = 3 }, parent)
+	Theme.round(card, 14)
+	Theme.stroke(card, Palette.NAVY, 3)
+	local well = Theme.well(card, "Well", Palette.WELL_TOP, Palette.WELL_BOTTOM, Palette.WELL_EDGE, Palette.WELL_EDGE, 0.6, 0.84)
+	well.Position, well.Size, well.ZIndex = UDim2.fromOffset(8, 10), UDim2.new(1, -16, 1, -64), 4
+	local name = Theme.label(card, "PetLabel", "", 18, Palette.NAVY, nil, Enum.TextXAlignment.Center)
+	name.Position, name.Size, name.TextTruncate, name.TextScaled = UDim2.new(0, 4, 1, -52), UDim2.new(1, -8, 0, 24), Enum.TextTruncate.AtEnd, true
+	N.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 18 }, name)
+	local level = Theme.label(card, "Level", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	level.Position, level.Size = UDim2.new(0, 4, 1, -28), UDim2.new(1, -8, 0, 18)
+	local badge = Theme.card(card, "Equipped", Palette.LIME_TOP, Palette.LIME_BOTTOM, 8)
+	badge.AnchorPoint, badge.Position, badge.Size, badge.Visible, badge.ZIndex = Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0, 2), UDim2.fromOffset(104, 22), false, 9
+	Theme.stroke(badge, Palette.NAVY, 2)
+	local tick = Theme.label(badge, "Label", "✓ EQUIPPED", 13, Palette.NAVY, nil, Enum.TextXAlignment.Center)
+	tick.Size, tick.ZIndex = UDim2.fromScale(1, 1), 10
+	local lock = Theme.card(card, "Lock", Palette.UNSEEN, nil, 12)
+	lock.Position, lock.Size, lock.Visible, lock.ZIndex = UDim2.fromOffset(8, 10), UDim2.new(1, -16, 1, -64), false, 9
+	local mark = Theme.label(lock, "Mark", "?", 44, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	mark.Size, mark.ZIndex = UDim2.fromScale(1, 1), 10
+	local ring = N.create("Frame", { Name = "SelectRing", Position = UDim2.fromOffset(-5, -5), Size = UDim2.new(1, 10, 1, 10), BackgroundTransparency = 1,
+		Visible = false, ZIndex = 11 }, card)
+	Theme.round(ring, 18)
+	Theme.stroke(ring, Palette.BLUE_BOTTOM, 3)
 	N.create("TextButton", { Name = "Select", Text = "", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 12 }, card)
 	return card
 end
 
 local function petGrid(parent: Instance, name: string, ids: { string }): ScrollingFrame
 	local list = N.create("ScrollingFrame", { Name = name, BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromOffset(300, 200),
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4, ZIndex = 3 }, parent)
-	N.create("UIGridLayout", { CellSize = UDim2.fromOffset(150, 172), CellPadding = UDim2.fromOffset(10, 10), SortOrder = Enum.SortOrder.LayoutOrder }, list)
-	-- room for the selection ring, which sits outside each card
-	N.create("UIPadding", { PaddingLeft = UDim.new(0, 8), PaddingTop = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), PaddingBottom = UDim.new(0, 10) }, list)
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Palette.BLUE_BOTTOM, ZIndex = 3 }, parent)
+	N.create("UIGridLayout", { CellSize = UDim2.fromOffset(136, 168), CellPadding = UDim2.fromOffset(8, 12), SortOrder = Enum.SortOrder.LayoutOrder }, list)
+	-- room for the selection ring and the EQUIPPED tab, which sit outside each card
+	N.create("UIPadding", { PaddingLeft = UDim.new(0, 6), PaddingTop = UDim.new(0, 14), PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 10) }, list)
 	for order, id in ids do petCard(list, id, order) end
 	return list
 end
 
 -- A perk line in the detail: the role on the left, its value on the right
 local function perkRow(parent: Instance, index: number)
-	local row = N.create("Frame", { Name = "Perk" .. index, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 24), ZIndex = 3 }, parent)
-	N.text(row, "Role", "", UDim2.new(), UDim2.new(0.6, 0, 1, 0), true).TextSize = 15
-	local value = N.text(row, "Value", "", UDim2.fromScale(0.5, 0), UDim2.fromScale(0.5, 1))
-	value.TextSize, value.TextXAlignment = 17, Enum.TextXAlignment.Right
+	local row = N.create("Frame", { Name = "Perk" .. index, BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), ZIndex = 4 }, parent)
+	local role = Theme.label(row, "Role", "", 15, Palette.NAVY)
+	role.Size = UDim2.fromScale(0.6, 1)
+	local value = Theme.label(row, "Value", "", 15, Palette.UP, nil, Enum.TextXAlignment.Right)
+	value.Position, value.Size = UDim2.fromScale(0.4, 0), UDim2.fromScale(0.6, 1)
 end
 
 function Pets.build(): ScreenGui
-	local gui = N.menu("PetsMenu", "Pets", N.GREEN, 860, 620)
-	gui.DisplayOrder = 20
+	local gui = N.create("ScreenGui", { Name = "PetsMenu", Enabled = false, ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 20,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, nil)
+	gui:SetAttribute("NativePrefab", true)
 	gui:SetAttribute("PetsLayout", Pets.LAYOUT)
-	local p = gui.Panel :: any
+	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY,
+		BackgroundTransparency = .8, BorderSizePixel = 0, AutoButtonColor = false, Modal = true, Visible = false }, gui)
+	local p = Theme.panel(gui, "Panel", UDim2.fromOffset(760, 475)) :: any
+	p.Visible = false
 	local nav = N.button(gui, "PetsButton", "", UDim2.fromOffset(14, 170), UDim2.fromOffset(64, 64), N.GREEN)
 	N.create("ImageLabel", { Name = "Icon", Image = Icons.pets, BackgroundTransparency = 1, Size = UDim2.fromScale(.7, .6), Position = UDim2.fromScale(.15, .05), ScaleType = Enum.ScaleType.Fit, ZIndex = 5 }, nav)
-	N.text(p, "Wallet", "0 shards", UDim2.new(1, -290, 0, 12), UDim2.fromOffset(230, 30), true)
-	-- two centred tabs: the pets you own, and the full index
-	local tabs = N.create("Frame", { Name = "Tabs", BackgroundTransparency = 1, Position = UDim2.fromOffset(12, 60), Size = UDim2.new(1, -24, 0, 40), ZIndex = 3 }, p)
-	for i, id in { "pets", "index" } do
-		local tab = N.button(tabs, id .. "Tab", if id == "pets" then "MY PETS" else "PET INDEX", UDim2.new((i - 1) / 2, if i == 1 then 0 else 4, 0, 0), UDim2.new(1 / 2, -4, 1, 0), N.CARD)
-		tab.TextSize = 16
+
+	Theme.ribbon(p, "Pets", Icons.pets)
+	Theme.closeCorner(p, Icons.close)
+	Theme.chip(p, "Wallet", Icons.crystal, Palette.SHARD_CHIP).Text = "0"
+	local tabs = N.create("Frame", { Name = "Tabs", BackgroundTransparency = 1, Size = UDim2.fromOffset(440, 42), ZIndex = 3 }, p)
+	for _, id in { "pets", "index" } do
+		Theme.button(tabs, id .. "Tab", if id == "pets" then "MY PETS" else "PET INDEX", if id == "pets" then "tabOn" else "tabOff", 18)
 	end
 
-	-- MY PETS: how many are out and the bonuses they give, above everything you own
+	-- MY PETS: the heading and equipped count, the TEAM BOOST strip, then everything you own
 	local petsScreen = N.create("Frame", { Name = "PetsScreen", BackgroundTransparency = 1, Size = UDim2.fromOffset(400, 300), ZIndex = 3 }, p)
-	local slots = N.create("Frame", { Name = "Slots", BackgroundTransparency = 1, Size = UDim2.new(1, 0, 0, 22), ZIndex = 3 }, petsScreen)
-	N.text(slots, "Title", "Equipped: 0 / 1", UDim2.new(), UDim2.fromScale(1, 1)).TextSize = 16
-	local bonusBar = N.create("Frame", { Name = "BonusBar", Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 36), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 3 }, petsScreen)
-	local bonuses = N.text(bonusBar, "Bonuses", "", UDim2.new(), UDim2.fromScale(1, 1), true)
-	bonuses.RichText, bonuses.TextTruncate, bonuses.TextSize = true, Enum.TextTruncate.AtEnd, 14
+	Theme.label(petsScreen, "Heading", "Your pets!", 24, Palette.NAVY, Theme.TITLE_FONT)
+	local count = Theme.pill(petsScreen, "EquipPill", Palette.EQUIP_PILL, Palette.EQUIP_EDGE, Palette.NAVY, 14)
+	count.Size = UDim2.fromOffset(126, 24)
+	local boost = Theme.card(petsScreen, "BonusBar", Palette.BOOST, nil, 10)
+	boost.ZIndex = 3
+	Theme.stroke(boost, Palette.BOOST_EDGE, 2)
+	local boostLabel = Theme.label(boost, "Label", "TEAM BOOST", 13, Palette.BOOST_TEXT)
+	boostLabel.Position, boostLabel.Size = UDim2.fromOffset(12, 0), UDim2.new(0, 110, 1, 0)
+	local bonuses = Theme.label(boost, "Bonuses", "", 16, Palette.UP)
+	bonuses.Position, bonuses.Size, bonuses.RichText, bonuses.TextTruncate = UDim2.fromOffset(122, 0), UDim2.new(1, -130, 1, 0), true, Enum.TextTruncate.AtEnd
 	petGrid(petsScreen, "List", (function() local ids = {} for _, def in Config.Pets.List do table.insert(ids, def.Id) end return ids end)())
-	N.text(petsScreen, "Empty", "No pets yet. Hatch an egg at the Hatchery in town!", UDim2.fromOffset(0, 110), UDim2.new(1, 0, 0, 60), true).TextWrapped = true
+	local empty = Theme.label(petsScreen, "Empty", "No pets yet. Hatch an egg at the Hatchery in town!", 16, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	empty.TextWrapped = true
 
 	-- PET INDEX: every pet in the game, found or not
 	local index = N.create("Frame", { Name = "IndexScreen", BackgroundTransparency = 1, Size = UDim2.fromOffset(400, 300), ZIndex = 3 }, p)
-	N.text(index, "Progress", "DISCOVERED 0/0", UDim2.fromOffset(0, 0), UDim2.new(1, 0, 0, 22)).TextSize = 16
-	local bar = N.create("Frame", { Name = "ProgressBar", Position = UDim2.fromOffset(0, 26), Size = UDim2.new(1, 0, 0, 12), BackgroundColor3 = N.PANEL, BorderSizePixel = 0, ZIndex = 3 }, index)
-	N.create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = N.GREEN, BorderSizePixel = 0, ZIndex = 4 }, bar)
+	Theme.label(index, "Heading", "Pet index", 24, Palette.NAVY, Theme.TITLE_FONT)
+	Theme.label(index, "Progress", "DISCOVERED 0/0", 14, Palette.SECOND, nil, Enum.TextXAlignment.Right)
+	Theme.bar(index, "ProgressBar", Palette.LIME_BOTTOM)
 	petGrid(index, "List", PetsLayout.indexOrder())
 
-	-- Detail: the selected pet. Its body scrolls where the screen is short; the action stays pinned below it.
-	local detail = N.create("Frame", { Name = "Detail", Size = UDim2.fromOffset(300, 300), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 3 }, p)
-	N.surface(detail)
-	local body = N.create("ScrollingFrame", { Name = "Body", Position = UDim2.fromOffset(10, 8), Size = UDim2.new(1, -20, 1, -64), BackgroundTransparency = 1, BorderSizePixel = 0,
-		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 4, ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 3 }, detail)
-	local name = N.text(body, "PetName", "", UDim2.new(), UDim2.new(1, 0, 0, 28))
-	name.TextSize, name.TextXAlignment, name.TextTruncate = 24, Enum.TextXAlignment.Center, Enum.TextTruncate.AtEnd
-	local rarity = N.text(body, "Rarity", "", UDim2.fromOffset(0, 28), UDim2.new(1, 0, 0, 18), true)
-	rarity.TextSize, rarity.TextXAlignment, rarity.Font = 14, Enum.TextXAlignment.Center, N.FONT
-	local well = N.create("Frame", { Name = "PreviewWell", Position = UDim2.fromOffset(0, 52), Size = UDim2.fromOffset(120, 120), BackgroundColor3 = N.PANEL, BorderSizePixel = 0, ZIndex = 3 }, body)
-	N.surface(well); viewport(well, "Preview")
-	N.text(body, "Level", "", UDim2.fromOffset(0, 180), UDim2.new(0.5, 0, 0, 18), true).TextSize = 14
-	local xpText = N.text(body, "XpText", "", UDim2.fromScale(0.5, 0), UDim2.new(0.5, 0, 0, 18), true)
-	xpText.TextSize, xpText.TextXAlignment = 13, Enum.TextXAlignment.Right
-	local xp = N.create("Frame", { Name = "XpBar", Position = UDim2.fromOffset(0, 202), Size = UDim2.new(1, 0, 0, 12), BackgroundColor3 = N.PANEL, BorderSizePixel = 0, ZIndex = 3 }, body)
-	N.create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = N.CYAN, BorderSizePixel = 0, ZIndex = 4 }, xp)
-	for i = 1, 3 do perkRow(body, i) end
-	local how = N.button(body, "HowButton", "How bonuses work ▼", UDim2.fromOffset(0, 300), UDim2.new(1, 0, 0, 30), N.CARD)
-	how.TextSize = 14
-	local perkText = N.text(body, "PerkText", "", UDim2.fromOffset(0, 336), UDim2.new(1, -4, 0, 0), true)
-	perkText.RichText, perkText.TextWrapped, perkText.AutomaticSize, perkText.TextYAlignment, perkText.TextSize = true, true, Enum.AutomaticSize.Y, Enum.TextYAlignment.Top, 14
-	N.button(detail, "Action", "", UDim2.new(0, 10, 1, -52), UDim2.new(1, -20, 0, 44), N.GREEN)
+	-- under the grid: where more slots come from, and the hint strip that also carries notices
+	Theme.label(p, "MoreSlots", "More slots: Rebirths · Pet Bond · Extra Pet Slot", 13, Palette.MUTED)
+	local hint = Theme.card(p, "Hint", Palette.INFO, nil, 10)
+	hint.ZIndex = 3
+	local dot = Theme.card(hint, "Dot", Palette.INFO_DOT, nil, 100)
+	dot.AnchorPoint, dot.Position, dot.Size, dot.ZIndex = Vector2.new(0, 0.5), UDim2.new(0, 10, 0.5, 0), UDim2.fromOffset(20, 20), 4
+	local i = Theme.label(dot, "I", "i", 15, Palette.WHITE, nil, Enum.TextXAlignment.Center)
+	i.Size, i.ZIndex = UDim2.fromScale(1, 1), 5
+	local footer = Theme.label(hint, "Footer", "", 16, Palette.NAVY)
+	footer.Position, footer.Size, footer.TextWrapped, footer.TextScaled = UDim2.fromOffset(40, 0), UDim2.new(1, -48, 1, 0), true, true
+	N.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 16 }, footer)
 
-	N.text(p, "Footer", "", UDim2.new(0, 12, 1, -52), UDim2.new(1, -24, 0, 40), true).TextWrapped = true
+	-- Detail: the selected pet. A blue name banner over a pale card; the body scrolls where the column is short.
+	local detail = N.create("Frame", { Name = "Detail", Size = UDim2.fromOffset(245, 296), BackgroundTransparency = 1, ZIndex = 3 }, p)
+	local card = Theme.card(detail, "Card", Palette.DETAIL_TOP, Palette.DETAIL_BOTTOM, 14)
+	card.ZIndex = 2
+	Theme.stroke(card, Palette.WELL_EDGE, 3)
+	local banner = Theme.button(detail, "Banner", "", "blue", 20)
+	banner.Active, banner.Selectable, banner.ZIndex = false, false, 4
+	local name = Theme.label(detail, "PetName", "", 20, Palette.WHITE, Theme.TITLE_FONT, Enum.TextXAlignment.Center)
+	name.TextScaled, name.ZIndex = true, 9
+	N.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 20 }, name)
+	Theme.ink(name, true, 2.5)
+	local body = N.create("ScrollingFrame", { Name = "Body", BackgroundTransparency = 1, BorderSizePixel = 0, CanvasSize = UDim2.new(),
+		AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = Palette.BLUE_BOTTOM,
+		ScrollingDirection = Enum.ScrollingDirection.Y, ZIndex = 3 }, detail)
+	Theme.pill(body, "Rarity", Palette.PREMIUM, Palette.PREMIUM_EDGE, Palette.PREMIUM_TEXT, 13)
+	Theme.well(body, "PreviewWell", Palette.WELL_TOP, Palette.WELL_BOTTOM, Palette.WELL_EDGE, Palette.WELL_EDGE, 0.6, 0.86)
+	Theme.label(body, "Level", "", 15, Palette.NAVY)
+	Theme.label(body, "XpText", "", 13, Palette.SECOND, nil, Enum.TextXAlignment.Right)
+	Theme.bar(body, "XpBar", Palette.XP_FILL)
+	for n = 1, 3 do perkRow(body, n) end
+	Theme.button(body, "HowButton", "How bonuses work ▼", "tabOff", 14)
+	local perkText = Theme.label(body, "PerkText", "", 14, Palette.NAVY)
+	perkText.RichText, perkText.TextWrapped, perkText.AutomaticSize, perkText.TextYAlignment = true, true, Enum.AutomaticSize.Y, Enum.TextYAlignment.Top
+	Theme.button(p, "Action", "", "lime", 20)
 	return gui
 end
 

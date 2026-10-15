@@ -18,6 +18,7 @@ local Config = require(script.Parent.Config)
 
 local Hud = Config.Hud
 local BackpackPopupMinHeight, BackpackPopupGap = 72, 8
+local BackpackPopupDailyHeight = 40 + 28 * 3 + 4 -- header and three ore rows: what Daily Rewards above Index must leave
 local NavigationFaceSize, NavigationCaptionBottom = 80, 105
 local PortraitWalletMax = 0.4 -- short portrait phones: the most the wallet beside the foundry button may scale
 local PhoneClockLeft = 188 -- phones in landscape: Roblox's top-bar buttons end before this x
@@ -65,7 +66,8 @@ export type Layout = {
 	eventVisible: boolean, -- a brief notification may reserve the objective slot on tight screens
 	tutorialY: number, -- inset-relative y retained for callers using toGui
 	mine: Rect?, -- touch only
-	fastWalk: Rect?, -- phones in landscape: where SPRINT goes (ORE sits above it); nil lets the button place itself
+	fastWalk: Rect?, -- where SPRINT goes: phones in landscape (ORE sits above it) and desktop (ORE sits on its left); nil lets the button place itself
+	ore: Rect?, -- desktop: where ORE goes, in line with the backpack; nil puts it above SPRINT
 	levelAbove: boolean?, -- phones in landscape: the level medal sits above the wallet instead of on its corner
 	objective: Rect?, -- phones in landscape: the clock's larger slot below the top bar (countdown, cooldown and objective)
 	jump: Rect?, -- Roblox's jump button (touch only)
@@ -79,11 +81,14 @@ export type Layout = {
 local HudLayout = {}
 
 function HudLayout.scale(viewport: Vector2): number
-	return math.clamp(
+	local base = math.clamp(
 		math.min(viewport.X / Hud.ScaleRefWidth, viewport.Y / Hud.ScaleRefHeight),
 		Hud.ScaleMin,
 		Hud.ScaleMax
 	)
+	-- past 1080p the HUD grows with the screen, so a 1440p or 4K screen sees it the size a 1080p one does
+	local up = math.min(viewport.X / Hud.ScaleUpRef.X, viewport.Y / Hud.ScaleUpRef.Y)
+	return math.max(base, math.min(up, Hud.ScaleUpMax))
 end
 
 -- Two rects overlap when they share area (touching edges do not count)
@@ -158,6 +163,7 @@ function HudLayout.compute(
 	local tightPortrait = false
 	local phoneLandscape = false
 	local fastWalk: Rect? = nil
+	local ore: Rect? = nil
 	local objective: Rect? = nil
 	local timerVisible, resourcesVisible, backpackVisible = true, true, true
 	local tightNotification: Rect? = nil
@@ -176,12 +182,21 @@ function HudLayout.compute(
 		local row = Hud.TouchRow
 		local navigationHeight = navigationHeight(row.Width, row.Height)
 		buttonScale = row.Height / Hud.Column.Height
-		local navigationWidth = #Hud.ButtonOrder * (row.Width + row.Gap) + Hud.SettingsSize
-		local left = if portrait then (width - navigationWidth) / 2 else 12
-		for i, name in Hud.ButtonOrder do
-			buttons[name] = { x = left + (i - 1) * (row.Width + row.Gap), y = topInset + row.Top, w = row.Width, h = row.Height }
+		-- Daily Rewards and Codes join the row when they fit, with the gaps closed up to 2 px on a narrow phone; a screen
+		-- without room for one keeps the Settings rows (and, for Daily, the join popup) as its way in
+		local order = table.clone(Hud.ButtonOrder)
+		-- (Codes only in portrait: a landscape row that long would push the gear into the clock)
+		for _, extra in if portrait then { "DAILY", "CODES" } else { "DAILY" } do
+			if width - 24 - (#order + 1) * (row.Width + 2) - Hud.SettingsSize < 0 then break end
+			table.insert(order, extra)
 		end
-		settings = sized(left + #Hud.ButtonOrder * (row.Width + row.Gap), topInset + row.Top,
+		local rowGap = math.clamp((width - 24 - Hud.SettingsSize) / #order - row.Width, 2, row.Gap)
+		local navigationWidth = #order * (row.Width + rowGap) + Hud.SettingsSize
+		local left = if portrait then (width - navigationWidth) / 2 else 12
+		for i, name in order do
+			buttons[name] = { x = left + (i - 1) * (row.Width + rowGap), y = topInset + row.Top, w = row.Width, h = row.Height }
+		end
+		settings = sized(left + #order * (row.Width + rowGap), topInset + row.Top,
 			Hud.SettingsSize, Hud.SettingsSize, 1)
 		if touch then
 			jump = HudLayout.jumpRect(viewport)
@@ -333,24 +348,27 @@ function HudLayout.compute(
 					buttons[name] = { x = 12 + (i - 1) * (row.Width + row.Gap), y = lTop, w = row.Width, h = row.Height }
 				end
 				buttons.PETS = { x = 12, y = lTop + navigationHeight + navGap, w = row.Width, h = row.Height }
+				-- Daily Rewards sits beside Pets, under Index, and Codes beside Store
+				buttons.DAILY = { x = 12 + (row.Width + row.Gap), y = lTop + navigationHeight + navGap, w = row.Width, h = row.Height }
+				buttons.CODES = { x = 12 + (row.Width + row.Gap), y = lTop + 2 * (navigationHeight + navGap), w = row.Width, h = row.Height }
 				buttons.STORE = { x = 12, y = lTop + 2 * (navigationHeight + navGap), w = row.Width, h = row.Height }
 				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
 			elseif math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2)) + 2 * navigationHeight + 2 <= reservedThumb.y then
 				-- smaller phones: too short for the column above the joystick, so two lines instead: Gear, Index and
-				-- Rebirth, then Pets and Store under Gear and Index
+				-- Rebirth, then Pets, Store and Daily under them
 				local top = math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2))
-				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE" } do
+				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE", "DAILY" } do
 					local column, line = (i - 1) % 3, (i - 1) // 3
 					buttons[name] = { x = 12 + column * (row.Width + row.Gap), y = top + line * (navigationHeight + 2), w = row.Width, h = row.Height }
 				end
 				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
 			else
-				-- too short even for two lines above the joystick: all five across the top instead
+				-- too short even for two lines above the joystick: all six across the top instead (Codes waits for Settings)
 				local navTop = math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - navigationHeight))
-				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE" } do
+				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE", "DAILY" } do
 					buttons[name] = { x = 12 + (i - 1) * (row.Width + row.Gap), y = navTop, w = row.Width, h = row.Height }
 				end
-				rowRight = 12 + 5 * (row.Width + row.Gap) - row.Gap
+				rowRight = 12 + 6 * (row.Width + row.Gap) - row.Gap
 				rowBottom = navTop + navigationHeight
 			end
 			settings = sized(width - 12 - Hud.SettingsSize, math.max(2, topInset - Hud.SettingsSize - 2),
@@ -437,13 +455,35 @@ function HudLayout.compute(
 		end
 		buttonScale *= Hud.Desktop.ButtonScale
 		-- Short windows shrink the tiles so the whole column still fits between the top bar and the wallet
-		local fitScale = (resources.y - 8 - (topInset + 6)) / (#Hud.DesktopButtonOrder * Hud.Column.Height * NavigationCaptionBottom / NavigationFaceSize)
-		buttonScale = math.max(Hud.MinTouch / Hud.Column.Height, math.min(buttonScale, fitScale))
+		local niceScale = buttonScale
+		local function fitted(count: number): number
+			local fit = (resources.y - 8 - (topInset + 6)) / (count * Hud.Column.Height * NavigationCaptionBottom / NavigationFaceSize)
+			return math.max(Hud.MinTouch / Hud.Column.Height, math.min(niceScale, fit))
+		end
+		-- The right-hand stack: Daily Rewards above Index, Codes under it, below the gear and leaving the ore popup
+		-- above the backpack three rows. Whatever does not fit ends the left column instead (Codes first). The
+		-- objective card is not counted: with the clock shown (always, on desktop) the clock carries the objective
+		-- and the card is never drawn.
+		local stackFloor = math.max(topInset + 6, if settings then settings.y + settings.h + 8 else 0)
+		local function stackIndexY(candidate: number, daily: boolean, codes: boolean): number?
+			local face = navigationHeight(Hud.Column.Width * candidate, Hud.Column.Height * candidate)
+			local lowest = stackFloor + (if daily then face + 2 else 0)
+			local highest = backpack.y - 2 * BackpackPopupGap - BackpackPopupDailyHeight - face - (if codes then face + 2 else 0)
+			if lowest > highest then return nil end
+			return math.clamp(height * 0.48 - Hud.Column.Height * candidate / 2, lowest, highest)
+		end
+		local order = table.clone(Hud.DesktopButtonOrder)
+		local stackDaily, stackCodes = true, true
+		if not stackIndexY(fitted(#order), true, true) then stackCodes = false end
+		if not stackCodes and not stackIndexY(fitted(#order), true, false) then stackDaily = false end
+		if not stackDaily then table.insert(order, "DAILY") end
+		if not stackCodes then table.insert(order, "CODES") end
+		buttonScale = fitted(#order)
 		local columnHeight = navigationHeight(Hud.Column.Width * buttonScale, Hud.Column.Height * buttonScale)
 		local columnTop = math.min(Hud.Column.Top * scale,
-			resources.y - #Hud.DesktopButtonOrder * columnHeight - (#Hud.DesktopButtonOrder - 1) * Hud.Column.Gap * buttonScale - 8)
+			resources.y - #order * columnHeight - (#order - 1) * Hud.Column.Gap * buttonScale - 8)
 		local buttonY = columnTop
-		for _, name in Hud.DesktopButtonOrder do
+		for _, name in order do
 			buttons[name] = {
 				x = Hud.Column.Left * scale,
 				y = buttonY,
@@ -454,16 +494,31 @@ function HudLayout.compute(
 			-- can round a touching pair into an apparent sub-pixel overlap.
 			buttonY = buttons[name].y + columnHeight + Hud.Column.Gap * buttonScale
 		end
+		local indexTop = if stackDaily then stackIndexY(buttonScale, stackDaily, stackCodes) else nil
 		buttons.INDEX = sized(width - (Hud.EdgeMargin + Hud.Column.Width) * buttonScale,
-			math.max(height * 0.48 - Hud.Column.Height * buttonScale / 2, eventPanel.y + eventPanel.h + 8),
+			indexTop or math.max(height * 0.48 - Hud.Column.Height * buttonScale / 2, eventPanel.y + eventPanel.h + 8),
 			Hud.Column.Width, Hud.Column.Height, buttonScale)
 		local index = buttons.INDEX
-		local indexBottom = index.y + navigationHeight(index.w, index.h)
-		if backpack.y - indexBottom - 2 * BackpackPopupGap < BackpackPopupMinHeight then
+		local indexHeight = navigationHeight(index.w, index.h)
+		if stackDaily then
+			buttons.DAILY = { x = index.x, y = index.y - indexHeight - 2, w = index.w, h = index.h }
+			if stackCodes then buttons.CODES = { x = index.x, y = index.y + indexHeight + 2, w = index.w, h = index.h } end
+			-- the objective card is only a fallback for a hidden clock and is never drawn here; should it ever be, it
+			-- sits beside the stack instead of behind it
+			eventPanel.x = math.min(eventPanel.x, index.x - eventPanel.w - 8)
+		elseif backpack.y - (index.y + indexHeight) - 2 * BackpackPopupGap < BackpackPopupMinHeight then
 			-- Short desktop windows need the Index above the attached ore popup.
 			-- Keep its full authored caption, then place the objective underneath.
 			index.y = math.max(topInset + 6, settings.y + settings.h + 8)
-			eventPanel.y = math.max(eventPanel.y, index.y + navigationHeight(index.w, index.h) + 8)
+			eventPanel.y = math.max(eventPanel.y, index.y + indexHeight + 8)
+		end
+		-- SPRINT and ORE run in line with the backpack, on its left, leaving the right edge to the menu stack. A window
+		-- so narrow that the pair would reach the foundry leaves them to place themselves above the backpack instead.
+		local side = Hud.SideButtons
+		local sprintSpot = { x = backpack.x - 8 - side.Size, y = backpack.y + (backpack.h - side.Size) / 2, w = side.Size, h = side.Size }
+		local oreSpot = { x = sprintSpot.x - side.Gap - side.Size, y = sprintSpot.y, w = side.Size, h = side.Size }
+		if not HudLayout.overlaps(oreSpot, production) and not HudLayout.overlaps(oreSpot, tutorial) then
+			fastWalk, ore = sprintSpot, oreSpot
 		end
 	end
 	-- Notifications use real pixels, independent of card scale. The reward line
@@ -529,7 +584,7 @@ function HudLayout.compute(
 		leftScale = scale, eventPanel = eventPanel, tutorial = tutorial,
 		tutorialVisible = tutorialVisible, backpack = backpack, backpackVisible = backpackVisible, settings = settings,
 		notification = notification, notificationCompact = notification.h < 40, eventVisible = eventVisible,
-		tutorialY = tutorial.y - topInset, mine = mine, jump = jump, thumbstick = thumbstick, fastWalk = fastWalk,
+		tutorialY = tutorial.y - topInset, mine = mine, jump = jump, thumbstick = thumbstick, fastWalk = fastWalk, ore = ore,
 		levelAbove = phoneLandscape, objective = objective,
 		topBar = { x = 0, y = 0, w = width, h = topInset },
 	}

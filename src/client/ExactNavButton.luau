@@ -6,7 +6,7 @@ local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local ExactNavButton = {}
 local REFERENCE = "MY index button"
 -- player attributes the full-screen menus set while open
-local MENU_ATTRIBUTES = { "ShopOpen", "PetsOpen", "DailyOpen", "StoreOpen", "IndexOpen", "RebirthOpen", "RefineryOpen", "SettingsOpen", "PerksOpen", "HatchOpen", "IntroOpen" }
+local MENU_ATTRIBUTES = { "ShopOpen", "PetsOpen", "DailyOpen", "CodesOpen", "StoreOpen", "IndexOpen", "RebirthOpen", "RefineryOpen", "SettingsOpen", "PerksOpen", "HatchOpen", "IntroOpen" }
 
 function ExactNavButton.author(parent: Instance, name: string, label: string, icon: string): TextButton
 	local reference = StarterGui:FindFirstChild(REFERENCE)
@@ -69,12 +69,12 @@ end
 -- icon and caption remain the source of truth and Studio edits still apply.
 -- Experiment: no box around the side-button icons, a bigger icon instead. Set false to bring the tiles back.
 local BOXLESS = true
-local TILE_KINDS ={ ShopButton = "orange", RebirthButton = "purple", StoreButton = "green", IndexButton = "blue", PetsButton = "red" }
+local TILE_KINDS ={ ShopButton = "orange", RebirthButton = "purple", StoreButton = "green", IndexButton = "blue", PetsButton = "red", DailyButton = "gold", CodesButton = "blue" }
 
 -- The prefab buttons no longer carry a "Design" frame (only Gear's still does, and the runtime-authored Pets
 -- button): without one, the icon and caption come from here.
-local TILE_ICONS = { ShopButton = "equipment", RebirthButton = "rebirth", StoreButton = "store", IndexButton = "index", PetsButton = "pets" }
-local TILE_CAPTIONS = { ShopButton = "Gear", RebirthButton = "Rebirth", StoreButton = "Store", IndexButton = "Index", PetsButton = "Pets" }
+local TILE_ICONS = { ShopButton = "equipment", RebirthButton = "rebirth", StoreButton = "store", IndexButton = "index", PetsButton = "pets", DailyButton = "daily", CodesButton = "codes" }
+local TILE_CAPTIONS = { ShopButton = "Gear", RebirthButton = "Rebirth", StoreButton = "Store", IndexButton = "Index", PetsButton = "Pets", DailyButton = "Daily", CodesButton = "Codes" }
 
 local function cartoonTile(button: TextButton, design: Frame?)
 	local Cartoon = require(script.Parent.Cartoon)

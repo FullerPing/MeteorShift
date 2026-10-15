@@ -47,4 +47,5 @@ return {
 	Leaderboards = LeaderboardsConfig,
 	Daily = require(script.Daily),
 	Badges = require(script.Badges),
+	Codes = require(script.Codes),
 }

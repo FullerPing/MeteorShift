@@ -24,6 +24,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Line = require(ReplicatedStorage.Shared.Line)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
@@ -128,6 +129,13 @@ local function migrate(data: { [any]: any }): { [any]: any }
 	end
 	data.pickaxeLevel = Gear.cleanLevel(data.pickaxeTier, data.pickaxeLevel)
 	data.backpackLevel = Gear.cleanLevel(data.backpackTier, data.backpackLevel)
+	-- v10 -> v11: the four station levels became one production line level, the best of the
+	-- four, so nothing already bought is lost (Shared.Line)
+	if (data.version or 1) < 11 then
+		data.line = Line.fromStations(data.stations)
+		data.stations = nil
+	end
+	data.line = Line.clean(data.line)
 	-- v5 -> v6 (economy rework): colony perks and the rebirth overflow counter. Nothing is refunded or
 	-- taken: the gear and stations a profile owns stay, only the prices and gates change.
 	data.perks = Perks.clean(data.perks)

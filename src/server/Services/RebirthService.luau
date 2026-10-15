@@ -3,8 +3,8 @@
 -- REBIRTH panel; the server re-checks the price (Shared.Rebirth.cost) against the
 -- player's cash.
 --
--- Rebirth resets cash, gear stat levels, all ore/bars, other production upgrades and décor (Colony Perks
--- can keep or head-start parts of that, Lib.RebirthReset). Pickaxe and backpack tiers, pets, refinery level, Core Shards, perks
+-- Rebirth resets cash, gear stat levels, all ore/bars, the production line level and décor (Colony Perks
+-- can keep or head-start parts of that, Lib.RebirthReset). Pickaxe and backpack tiers, pets, Core Shards, perks
 -- and mineral-index rewards survive. Bar-sale cash earned beyond the rebirth's cost pays overstay
 -- shards (Shared.Rebirth.overstayShards), and each rank announces what it unlocks. Purchased value,
 -- preferences and lifetime history are retained independently of gameplay resets.

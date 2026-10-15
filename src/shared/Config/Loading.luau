@@ -1,9 +1,9 @@
 --!strict
 return table.freeze({
-	MinShow = 2.5,
-	MaxShow = 25,
-	TipSeconds = 4.5,
-	AssetTimeout = 12,
+	MinShow = 1.5, -- long enough to read the logo, short enough not to feel like a wait
+	MaxShow = 20,
+	TipSeconds = 3.5,
+	AssetTimeout = 5, -- the loading art and HUD icons only; meshes keep loading after the screen closes
 	Weights = { engine = .15, assets = .45, state = .25, hud = .15 },
 	-- Owner uploads assets/marketing/v2/loading/*.png and supplies Image IDs.
 	-- Empty or unavailable images use the built-in sky, title and shape art.

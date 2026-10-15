@@ -17,15 +17,17 @@ Daily.StartShields = 1
 Daily.ShieldCap = 3 -- free shield gains stop here; shields you buy are kept above it
 Daily.DailyCount = 3
 
--- Minutes of income, Core Shards, XP for each equipped pet, and free shields on each day of the cycle
+-- Minutes of income, Core Shards, XP for each equipped pet, and free shields on each day of the cycle.
+-- The first days are small on purpose: a new player earns about 25 cash a second, so the first claim must not
+-- be able to buy the early pickaxe tiers outright (day 1 is about 40 seconds of play, not a skip).
 Daily.Days = {
+	{ Minutes = 0.5, Shards = 0, PetXp = 0, Shield = 0 },
+	{ Minutes = 2, Shards = 0, PetXp = 0, Shield = 0 },
+	{ Minutes = 4, Shards = 10, PetXp = 0, Shield = 0 },
+	{ Minutes = 6, Shards = 0, PetXp = 0, Shield = 0 },
 	{ Minutes = 10, Shards = 0, PetXp = 0, Shield = 0 },
 	{ Minutes = 15, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 20, Shards = 10, PetXp = 0, Shield = 0 },
-	{ Minutes = 25, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 30, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 40, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 60, Shards = 40, PetXp = 300, Shield = 1 },
+	{ Minutes = 30, Shards = 40, PetXp = 300, Shield = 1 },
 } :: { Day }
 
 -- Events: crustHit (a validated hit on a meteor crust node), meteorJoin (first hit of each meteor), coreCrack

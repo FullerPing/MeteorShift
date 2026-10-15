@@ -1,9 +1,8 @@
 --!strict
 -- The Foundry window. REFINE shows the production line as three cards (ore hopper -> foundry -> finished bars) with the
--- refining order underneath; UPGRADES shows the station upgrade view. RefineryController fills and positions everything.
+-- refining order underneath; UPGRADES shows the production line upgrade view. RefineryController fills and positions everything.
 local RS = game:GetService("ReplicatedStorage")
 local N = require(script.Parent.Parent.NativeUI)
-local Home = require(RS.Shared.Config.Home)
 local Config = require(RS.Shared.Config)
 local Refinery = {}
 
@@ -87,19 +86,10 @@ function Refinery.build(): ScreenGui
 	feedback.TextWrapped, feedback.TextSize = true, 15
 	N.button(p, "ResetPriority", "Reset order", UDim2.new(1, -144, 1, -54), UDim2.fromOffset(128, 44), N.CYAN).TextSize = 13
 
-	-- UPGRADES page: the wallet on the right, the station view (UpgradePanel) below
+	-- UPGRADES page: the wallet on the right; RefineryController adds the line view (UpgradePanel) below
 	N.text(p, "UpgradeWallet", "Your production line", UDim2.fromOffset(16, 100), UDim2.new(1, -32, 0, 24), true)
 	chip(p, "CashChip", "coin")
 	chip(p, "ShardChip", "crystal")
-	local upgrades = list("ProductionUpgrades", 132, 382)
-	for i, id in Home.StationOrder do
-		local card = N.create("Frame", { Name = id .. "Upgrade", LayoutOrder = i, Size = UDim2.new(1, -4, 0, 118), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 3 }, upgrades)
-		N.surface(card)
-		N.text(card, "Station", Home.Stations[id].Name, UDim2.fromOffset(12, 8), UDim2.new(1, -24, 0, 22)).TextSize = 16
-		N.text(card, "Improvement", "", UDim2.fromOffset(12, 34), UDim2.new(1, -24, 0, 22), true)
-		N.text(card, "Purpose", "", UDim2.fromOffset(12, 64), UDim2.new(1, -180, 0, 44), true).TextWrapped = true
-		N.button(card, "BuyUpgrade", "UPGRADE", UDim2.new(1, -160, 0, 64), UDim2.fromOffset(148, 44), N.ORANGE).TextSize = 13
-	end
 
 	local templates = N.create("Folder", { Name = "Templates" }, gui)
 	local row = N.create("Frame", { Name = "OreRow", Visible = false, Size = UDim2.new(1, -4, 0, 60), BackgroundColor3 = N.CARD, BorderSizePixel = 0, ZIndex = 3 }, templates)

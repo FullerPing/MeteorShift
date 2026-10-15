@@ -2,7 +2,7 @@
 return function(t: any)
 	local Refining = require(t.lib.Refining)
 	local function line(): any
-		return { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = {}, bin = {}, progress = 0 }
+		return { line = 1, hopper = {}, bin = {}, progress = 0 }
 	end
 	t.test("vault multiplies both station capacities while defaults stay unchanged", function()
 		local data = line()

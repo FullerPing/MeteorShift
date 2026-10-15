@@ -34,6 +34,7 @@ function PerksController:KnitStart()
 	end
 	local gui = NativeUI.get("ColonyPerks")
 	local panel = gui:WaitForChild("Panel") :: Frame
+	NativeUI.fitCentred(panel, Vector2.new(430, 560))
 	local body = panel:WaitForChild("Body") :: ScrollingFrame
 	local wallet = panel:WaitForChild("Wallet") :: TextLabel
 	local footer = panel:WaitForChild("Footer") :: TextLabel

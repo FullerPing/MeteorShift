@@ -220,9 +220,9 @@ function RebirthController:KnitStart()
 	nav.SelectionGained:Connect(function() hover(true) end)
 	nav.SelectionLost:Connect(function() hover(false) end)
 	NativeUI.onLayoutChanged(function(layout)
-		local geometry = RebirthLayout.compute(layout.viewport, layout.inset)
-		local p = geometry.panel
-		panel.Position, panel.Size = UDim2.fromOffset(p.x, p.y), UDim2.fromOffset(p.w, p.h)
+		local view = NativeUI.menuView(layout)
+		local geometry = RebirthLayout.compute(view.viewport, view.inset)
+		NativeUI.place(panel, geometry.panel, view)
 		local pad = geometry.padding
 		content.Position, content.Size = UDim2.fromOffset(pad, geometry.contentY), UDim2.new(1, -pad * 2, 0, geometry.contentH)
 		confirm.Position, confirm.Size = UDim2.fromOffset(pad, geometry.confirmY), UDim2.new(1, -pad * 2, 0, geometry.confirmH)

@@ -143,8 +143,9 @@ function IndexController:KnitStart()
 
 	local function updateLayout(nextLayout: HudLayout.Layout)
 		layout = nextLayout
-		local geometry = IndexLayout.compute(layout.viewport, layout.inset)
-		rect(panel, geometry.panel)
+		local view = NativeUI.menuView(layout)
+		local geometry = IndexLayout.compute(view.viewport, view.inset)
+		NativeUI.place(panel, geometry.panel, view)
 		rect(title, geometry.title)
 		rect(close, geometry.close)
 		rect(tabs, geometry.tabs)

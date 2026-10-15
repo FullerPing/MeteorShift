@@ -23,6 +23,8 @@ local DailyService = Knit.CreateService({
 	Client = {
 		Summary = Knit.CreateProperty(nil), -- per player: Shared.Daily.Summary
 		Notice = Knit.CreateSignal(), -- (text)
+		-- true once the first-session tutorial is finished or skipped: the Daily Rewards button and menu wait for it
+		TutorialDone = Knit.CreateProperty(false),
 	},
 })
 
@@ -35,6 +37,7 @@ local PUBLISH_INTERVAL = 1 -- seconds between summary sends; hits arrive many ti
 local dirty: { [Player]: boolean } = {}
 local lastRequest: { [Player]: number } = {}
 local joinedThisMeteor: { [Player]: boolean } = {}
+local tutorialSent: { [Player]: boolean } = {}
 
 local function now(): number
 	local offset = if RunService:IsStudio() then ServerStorage:GetAttribute("DevDayOffset") else nil
@@ -53,6 +56,11 @@ function DailyService:Publish(player: Player)
 	local data, perSecond, ceiling = context(player)
 	if not data then return end
 	dirty[player] = nil
+	local tutorialDone = data.flags.tutorialDone == true
+	if tutorialSent[player] ~= tutorialDone then
+		tutorialSent[player] = tutorialDone
+		self.Client.TutorialDone:SetFor(player, tutorialDone)
+	end
 	Daily.rollover(data.daily, Daily.dayKey(now()), data.level, data.rebirths, player.UserId)
 	self.Client.Summary:SetFor(player, Daily.summary(data.daily, now(), perSecond, ceiling))
 end
@@ -181,7 +189,7 @@ function DailyService:KnitStart()
 		if PlayerStateService:Get(player) then task.defer(publish, player) end
 	end
 	Players.PlayerRemoving:Connect(function(player)
-		dirty[player], lastRequest[player], joinedThisMeteor[player] = nil, nil, nil
+		dirty[player], lastRequest[player], joinedThisMeteor[player], tutorialSent[player] = nil, nil, nil, nil
 	end)
 
 	-- Quest progress. Hits are validated by NodeService before the signal fires.
@@ -235,7 +243,7 @@ function DailyService:KnitStart()
 			local today = Daily.dayKey(now())
 			for _, player in Players:GetPlayers() do
 				local data = PlayerStateService:Get(player)
-				if data and (dirty[player] or data.daily.day ~= today) then
+				if data and (dirty[player] or data.daily.day ~= today or tutorialSent[player] ~= (data.flags.tutorialDone == true)) then
 					publish(player)
 				end
 			end

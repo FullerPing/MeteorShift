@@ -1,10 +1,10 @@
 --!strict
--- Profile schema v9 (spec §12.4, with the plot production line instead of
+-- Profile schema v11 (spec §12.4, with the plot production line instead of
 -- refinery slots, one pickaxe and backpack with a single level each: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 
 return {
-	version = 9,
+	version = 11,
 	cash = 0,
 	shards = 0,
 	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
@@ -21,13 +21,9 @@ return {
 	-- (Shared.Rebirth.overstayShards); reset by a rebirth
 	overflow = 0,
 	backpack = {}, -- ore carried, by type
-	-- Plot production line: hopper -> conveyor -> refinery -> collection post
-	stations = {
-		hopper = 1,
-		conveyor = 1,
-		refinery = 1,
-		collector = 1,
-	},
+	-- Production line level (Shared.Line): hopper -> conveyor -> refinery -> collection post
+	-- all upgrade together (v11; before that each station had its own level in `stations`)
+	line = 1,
 	hopper = {}, -- ore waiting, by type
 	refinePriority = {}, -- ore preference; empty preserves the default order
 	bin = {}, -- bars waiting at the collection post, by type
@@ -71,5 +67,8 @@ return {
 		questBonusClaimed = false,
 		week = 0,
 		weekly = { id = "", progress = 0, claimed = false },
+		joined = 0, -- UTC day of the first rollover: the day the player started (the join popup waits a day)
 	},
+	-- Codes already redeemed (Shared.Codes, CodesService): code name -> true
+	codes = {},
 }

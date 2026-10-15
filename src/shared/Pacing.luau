@@ -11,7 +11,7 @@
 --
 --   ore rate     = backpack / (backpack / ore-per-hit x swing / HitsPerMinuteShare + TripSeconds)
 --   ore supply   = time-weighted meteor rate and debris rate (debris pays YieldFraction of a hit)
---   line rate    = min(conveyor, refinery)    (same as Server.Lib.Refining)
+--   line rate    = min(conveyor, refinery) at the line level    (same as Server.Lib.Refining)
 --   income       = min(ore supply, line rate) x blended bar price (meteor ore and debris iron)
 --   Drillbot     = Yield scales ore, Swift shortens swings, Miner supplies direct-hopper
 --                  ore while filling the backpack, with a target always in reach.
@@ -21,11 +21,11 @@
 -- levels up to the tier cap, then the evolve price. Speed, Reach and Crit levels are the
 -- player's own side budget and don't move income in the model.
 --
--- Purchases are greedy: whenever the player sells, of the next pickaxe, backpack, conveyor
--- and refinery levels that their player level allows (Config.Levels.EvolveLevel) and that
+-- Purchases are greedy: whenever the player sells, of the next pickaxe, backpack and production
+-- line levels (Shared.Line) that their player level allows (Config.Levels.EvolveLevel) and that
 -- raise income, the one with the shortest payback (cost / income gained) is chosen, and the
--- player saves up for it if it is out of reach. Shards buy nothing here (Colony Perks are not modeled). Hopper and collection post levels are never bought: they only
--- matter for offline income (spec §6.4), which `offlineCap` covers.
+-- player saves up for it if it is out of reach. Shards buy nothing here (Colony Perks are not modeled). The line level also
+-- raises the hopper and collection post, which only matter for offline income (spec §6.4, `offlineCap`).
 --
 -- Ice and Crystal (expected value, no dice): types come up by Weight. A hit yields
 -- Levels.oreYield of its ore at the player's level, and every ore refines at full speed at
@@ -41,8 +41,8 @@
 -- average share of the bonus pool, over the meteors that crack).
 --
 -- Rebirth (spec §8.3, optional, `Options.rebirths`): once cash covers Shared.Rebirth.cost the
--- player relocates: cash, hopper, conveyor, collection post and carried stock reset, the
--- pickaxe and backpack tiers, the refinery level and shards stay, every sale pays
+-- player relocates: cash, the production line and carried stock reset, the
+-- pickaxe and backpack tiers and shards stay, every sale pays
 -- Rebirth.multiplier and every cash price is Rebirth.priceMult times dearer.
 -- With `Options.paybackLimit` the player only buys what pays itself back within that many
 -- seconds, so cash can pile up for the rebirth instead of going into slow upgrades.
@@ -51,9 +51,9 @@
 local Config = require(script.Parent.Config)
 local Rebirth = require(script.Parent.Rebirth)
 local Gear = require(script.Parent.Gear)
-local Price = require(script.Parent.Price)
 local Hooks = require(script.Parent.Hooks)
 local Levels = require(script.Parent.Levels)
+local Line = require(script.Parent.Line)
 local Pets = require(script.Parent.Pets)
 
 local Pacing = {}
@@ -61,15 +61,12 @@ local Pacing = {}
 export type Owned = {
 	pickaxe: number,
 	backpack: number,
-	hopper: number,
-	conveyor: number,
-	refinery: number,
-	collector: number,
+	line: number, -- production line level (Shared.Line)
 }
 
 export type Purchase = {
 	time: number,
-	id: string, -- "pickaxe2", "backpack3", "refinery2", ...
+	id: string, -- "pickaxe2", "backpack3", "line2", ...
 	name: string,
 	cost: number,
 	shards: number,
@@ -194,11 +191,7 @@ local function averageSupply(owned: Owned, cycle: number, level: number, bonuses
 end
 
 local function lineRate(owned: Owned): number
-	local stations = Config.Home.Stations
-	return math.min(
-		stations.conveyor.Levels[owned.conveyor].Rate :: number,
-		stations.refinery.Levels[owned.refinery].Rate :: number
-	)
+	return math.min(Line.station("conveyor", owned.line).Rate :: number, Line.station("refinery", owned.line).Rate :: number)
 end
 
 -- Cash per second in the long run
@@ -278,21 +271,18 @@ local function candidates(owned: Owned, level: number, priceMult: number): { Can
 			end,
 		})
 	end
-	for _, stationId in { "conveyor", "refinery" } do
-		local station = Config.Home.Stations[stationId]
-		local nextLevel = (owned :: any)[stationId] + 1
-		local level = station.Levels[nextLevel]
-		if level then
-			table.insert(out, {
-				id = stationId .. nextLevel,
-				name = station.Name .. " level " .. nextLevel,
-				cost = Price.scaled(level.Cost, priceMult),
-				shards = level.Shards,
-				apply = function(o: Owned)
-					(o :: any)[stationId] += 1
-				end,
-			})
-		end
+	local nextLine = owned.line + 1
+	local lineCost = Line.cost(nextLine, priceMult)
+	if lineCost and level >= Line.levelNeeded(nextLine) then
+		table.insert(out, {
+			id = "line" .. nextLine,
+			name = Config.Home.Line.Name .. " level " .. nextLine,
+			cost = lineCost,
+			shards = 0,
+			apply = function(o: Owned)
+				o.line += 1
+			end,
+		})
 	end
 	return out
 end
@@ -306,7 +296,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 	local rebirths, mult, priceMult = 0, 1, 1
 	local step = Balance.StepSeconds
 	local cycle = Pacing.cycleSeconds()
-	local owned: Owned = { pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 }
+	local owned: Owned = { pickaxe = 1, backpack = 1, line = 1 }
 	local cash, shards, earned = 0, 0, 0
 	local hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
 	local result: Result = {
@@ -348,13 +338,13 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 		local meteorPrice, meteorYield = meteorMix(level)
 		local yield = if onMeteor then meteorYield else Config.Debris.YieldFraction * Balance.DebrisActivityShare
 		local orePrice = if onMeteor then meteorPrice else BarPrice
-		local hopperRoom = (Config.Home.Stations.hopper.Levels[owned.hopper].Capacity :: number) - hopperOre
+		local hopperRoom = (Line.station("hopper", owned.line).Capacity :: number) - hopperOre
 		local mined = math.min(oreRate(owned.pickaxe, owned.backpack, yield, petBonuses) * step, hopperRoom)
 		hopperOre += mined
 		hopperValue += mined * orePrice
 
 		-- The line: limited by time, hopper stock and room at the collection post
-		local room = (Config.Home.Stations.collector.Levels[owned.collector].Capacity :: number) - bars
+		local room = (Line.station("collector", owned.line).Capacity :: number) - bars
 		local made = math.max(math.min(lineRate(owned) * step, hopperOre, room), 0)
 		local madeValue = if hopperOre > 0 then hopperValue * made / hopperOre else 0
 		hopperOre -= made
@@ -440,8 +430,9 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 				mult, priceMult = Rebirth.multiplier(rebirths), Rebirth.priceMult(rebirths)
 				table.insert(result.rebirthTimes, time)
 				cash = 0
-				-- the pickaxe and backpack keep their tiers (Lib.RebirthReset); the production line starts over
-				owned.hopper, owned.conveyor, owned.collector = 1, 1, 1
+				-- the pickaxe and backpack keep their tiers (Lib.RebirthReset); the production line starts
+				-- over (no Station Memory: the model buys no perks)
+				owned.line = 1
 				hopperOre, hopperValue, bars, barsValue = 0, 0, 0, 0
 			end
 		end
@@ -465,10 +456,9 @@ end
 -- Cash a level 1 line makes while its owner is away for the offline cap, limited by
 -- the hopper's stock and the collection post's room (spec §6.4). Iron bars, no multipliers.
 function Pacing.offlineCap(hours: number?): number
-	local stations = Config.Home.Stations
-	local rate = lineRate({ pickaxe = 1, backpack = 1, hopper = 1, conveyor = 1, refinery = 1, collector = 1 })
+	local rate = lineRate({ pickaxe = 1, backpack = 1, line = 1 })
 	local seconds = if hours then hours * 3600 else Config.Home.OfflineCap
-	local bars = math.min(rate * seconds, stations.hopper.Levels[1].Capacity :: number, stations.collector.Levels[1].Capacity :: number)
+	local bars = math.min(rate * seconds, Line.station("hopper", 1).Capacity :: number, Line.station("collector", 1).Capacity :: number)
 	return bars * BarPrice
 end
 

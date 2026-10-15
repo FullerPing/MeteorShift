@@ -17,7 +17,7 @@ local colors = Config.RewardFX.Colors
 local FeedbackController = Knit.CreateController({ Name = "FeedbackController" })
 
 -- The menus whose opening and closing swoosh (player attributes set by each menu)
-local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen", "BackpackOpen" }
+local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen", "BackpackOpen" }
 
 function FeedbackController:KnitStart()
 	local RefineryService = Knit.GetService("RefineryService")

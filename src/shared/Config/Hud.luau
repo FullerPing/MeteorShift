@@ -15,6 +15,9 @@ Hud.ScaleRefWidth = 1440
 Hud.ScaleRefHeight = 810
 Hud.ScaleMin = 0.7
 Hud.ScaleMax = 1
+-- Past this screen size the HUD grows in proportion (min of width and height ratios), up to ScaleUpMax
+Hud.ScaleUpRef = Vector2.new(1920, 1080)
+Hud.ScaleUpMax = 3
 
 -- Smallest touch target (spec §10). No HUD button is ever drawn smaller than this.
 Hud.MinTouch = 44

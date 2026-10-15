@@ -90,6 +90,32 @@ return function(t: any)
 		t.eq(Daily.reward(99, 1, 1e12).shards, Settings.Days[7].Shards, "an out-of-range day pays the last one")
 	end)
 
+	t.test("the first day is remembered once and the summary says so, so no popup opens on it", function()
+		local data = fresh()
+		Daily.rollover(data, 20000, 1, 0, 7)
+		t.eq(data.joined, 20000)
+		t.eq(Daily.summary(data, 20000 * 86400 + 10, 10, 1e12).firstDay, true, "the day it started")
+		Daily.rollover(data, 20001, 1, 0, 7)
+		t.eq(data.joined, 20000, "kept on later days")
+		t.eq(Daily.summary(data, 20001 * 86400, 10, 1e12).firstDay, false, "the next day")
+		t.eq(Daily.summary(fresh(), 20000 * 86400, 10, 1e12).firstDay, true, "a profile that never rolled over counts as day one")
+	end)
+
+	t.test("the first claim of a new player cannot buy the early pickaxe tiers outright", function()
+		local Gear = require(t.shared.Gear)
+		-- every price from the first pickaxe up to tier 2 level 20
+		local toTierTwoLevelTwenty = 0
+		for level = 1, Gear.cap(1) - 1 do toTierTwoLevelTwenty += Gear.price("pickaxe", 1, level) or 0 end
+		toTierTwoLevelTwenty += Gear.evolution("pickaxe", 1, Gear.cap(1)).cost
+		for level = 1, 19 do toTierTwoLevelTwenty += Gear.price("pickaxe", 2, level) or 0 end
+		-- a fresh profile earns roughly 25 cash a second; the ceiling is 5% of the first rebirth price (68000)
+		local firstClaim = Daily.reward(1, 25, 68000 * Settings.CashCeilingShare).cash
+		t.ok(firstClaim < toTierTwoLevelTwenty / 2, "day 1 pays " .. firstClaim .. " against " .. toTierTwoLevelTwenty .. " for tier 2 level 20")
+		for day = 2, Settings.CycleLength do
+			t.ok(Daily.reward(day, 25, 68000 * Settings.CashCeilingShare).cash >= Daily.reward(day - 1, 25, 68000 * Settings.CashCeilingShare).cash, "day " .. day .. " pays at least what the day before did")
+		end
+	end)
+
 	t.test("quests are deterministic, distinct, and respect level gates", function()
 		local a = Daily.pickQuests(20000, 1, 0, 42)
 		local b = Daily.pickQuests(20000, 1, 0, 42)
@@ -194,9 +220,22 @@ return function(t: any)
 		t.ok(after.weekly ~= nil and after.weekly.slot == "w")
 	end)
 
+	t.test("summary lists every cycle day's reward for the grid", function()
+		local data = fresh()
+		Daily.rollover(data, 20000, 1, 0, 7)
+		local view = Daily.summary(data, 20000 * 86400, 10, 1e12)
+		t.eq(#view.days, Settings.CycleLength)
+		for index, entry in view.days do
+			local expected = Daily.reward(index, 10, 1e12)
+			t.eq(entry.cash, expected.cash); t.eq(entry.shards, expected.shards)
+			t.eq(entry.petXp, expected.petXp); t.eq(entry.shield, expected.shield)
+		end
+		t.eq(view.days[view.cycleDay].cash, view.reward.cash)
+	end)
+
 	t.test("a fresh profile gets the daily table with the start shield", function()
 		local Template = require(t.lib.ProfileTemplate)
-		t.eq(Template.version, 9)
+		t.eq(Template.version, 11)
 		t.eq(Template.daily.shields, Settings.StartShields)
 		t.eq(Template.daily.streak, 0)
 		t.eq(Template.daily.weekly.id, "")

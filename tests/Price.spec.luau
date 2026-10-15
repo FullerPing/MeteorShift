@@ -12,14 +12,14 @@ return function(t: any)
 		t.eq(Price.scaled(0, 9), 0)
 	end)
 
-	t.test("a station level costs its table price times the player's price inflation", function()
-		local hopper2 = Config.Home.Stations.hopper.Levels[2].Cost
-		t.eq(Price.scaled(hopper2, Rebirth.priceMult(0)), hopper2)
-		t.eq(Price.scaled(hopper2, Rebirth.priceMult(2)), hopper2 * 9)
+	t.test("a line level costs its table price times the player's price inflation", function()
+		local line2 = Config.Home.Line.Costs[2]
+		t.eq(Price.scaled(line2, Rebirth.priceMult(0)), line2)
+		t.eq(Price.scaled(line2, Rebirth.priceMult(2)), line2 * 9)
 	end)
 
 	t.test("scaled prices stay whole and finite at Legacy ranks", function()
-		local cost = Config.Home.Stations.conveyor.Levels[8].Cost
+		local cost = Config.Home.Line.Costs[8]
 		for _, rebirths in { 0, 5, 16, 17, 30 } do
 			local price = Price.scaled(cost, Rebirth.priceMult(rebirths))
 			t.eq(price, math.floor(price), "rank " .. rebirths)

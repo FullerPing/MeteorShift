@@ -16,7 +16,7 @@ return function(t: any)
 		local data = copy(Template)
 		data.cash, data.shards, data.pickaxeTier, data.backpackTier = 25e6, 87, 7, 6
 		data.pickaxeLevel, data.backpackLevel = 64, 55
-		data.stations = { hopper = 5, conveyor = 6, refinery = 7, collector = 4 }
+		data.line = 6
 		data.backpack = { iron = 40, frost = 5 }
 		data.hopper = { iron = 140, frost = 20 }
 		data.bin, data.bars, data.decor = { frost = 30 }, { crystal = 12 }, { bench = true }
@@ -43,13 +43,10 @@ return function(t: any)
 		t.eq(data.lastSeen, 1000, "new offline checkpoint")
 	end)
 
-	t.test("only the refinery upgrade survives production reset", function()
+	t.test("the production line level resets to 1 without Station Memory", function()
 		local data = profile()
-		local stations = data.stations
 		Reset.apply(data, 1000)
-		t.eq(data.stations, stations, "station references stay valid")
-		t.eq(data.stations.refinery, 7)
-		for _, id in { "hopper", "conveyor", "collector" } do t.eq(data.stations[id], 1, id) end
+		t.eq(data.line, 1)
 	end)
 
 	t.test("all held and stored inventories and decor are emptied in place", function()
@@ -119,14 +116,13 @@ return function(t: any)
 	t.test("repeated rebirth reset does not mutate the profile template or permanent rewards", function()
 		local data = profile()
 		Reset.apply(data, 1000)
-		data.cash, data.hopper.iron, data.stations.hopper = 100e6, 50, 3
+		data.cash, data.hopper.iron, data.line = 100e6, 50, 3
 		Reset.apply(data, 2000)
 		t.eq(data.cash, 0)
 		t.eq(next(data.hopper), nil)
-		t.eq(data.stations.hopper, 1)
-		t.eq(data.stations.refinery, 7)
+		t.eq(data.line, 1)
 		t.eq(data.shards, 87)
-		t.eq(Template.stations.refinery, 1)
+		t.eq(Template.line, 1)
 		t.eq(next(Template.index), nil)
 	end)
 
@@ -141,14 +137,15 @@ return function(t: any)
 		t.eq(data.overflow, 0)
 	end)
 
-	t.test("Station Memory keeps a share of hopper, conveyor and collector levels but never the refinery rule", function()
+	t.test("Station Memory keeps a share of the production line level", function()
 		local data = profile()
 		data.perks = { stationMemory = 2 } -- keeps 50% of the levels above 1
 		Reset.apply(data, 1000)
-		t.eq(data.stations.hopper, 3) -- 5: 1 + floor(4 x .5)
-		t.eq(data.stations.conveyor, 3) -- 6: 1 + floor(5 x .5)
-		t.eq(data.stations.collector, 2) -- 4: 1 + floor(3 x .5)
-		t.eq(data.stations.refinery, 7, "the refinery always survives")
+		t.eq(data.line, 3) -- 6: 1 + floor(5 x .5)
+		local full = profile()
+		full.perks = { stationMemory = 4 }
+		Reset.apply(full, 1000)
+		t.eq(full.line, 6, "the top rank keeps all of it")
 	end)
 
 	t.test("Head Start is a floor for gear below it, held to the player level, and never lowers owned gear", function()
@@ -183,8 +180,7 @@ return function(t: any)
 		t.eq(data.pickaxeLevel, 64)
 		t.eq(data.backpackLevel, 55)
 		t.eq(data.pickaxeTier, 7)
-		t.eq(data.stations.hopper, 5)
-		t.eq(data.stations.conveyor, 6)
+		t.eq(data.line, 6)
 		t.eq(data.backpack.iron, 40)
 		t.eq(data.hopper.iron, 140)
 		t.eq(data.bars.crystal, 12)

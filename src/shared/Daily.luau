@@ -13,6 +13,7 @@ export type Entry = { id: string, progress: number, claimed: boolean }
 export type Data = {
 	day: number, lastClaim: number, streak: number, shields: number,
 	quests: { Entry }, questBonusClaimed: boolean, week: number, weekly: Entry,
+	joined: number?, -- the UTC day the first rollover ran: the day the player started
 }
 export type Resolution = { status: "claimable" | "claimed", streak: number, shieldsUsed: number, reset: boolean }
 export type Reward = { cash: number, shards: number, petXp: number, shield: number }
@@ -21,8 +22,9 @@ export type QuestView = {
 }
 export type Summary = {
 	claimedToday: boolean, streak: number, cycleDay: number, shields: number, shieldCap: number,
-	shieldsToUse: number, willReset: boolean, reward: Reward, quests: { QuestView }, weekly: QuestView?,
+	shieldsToUse: number, willReset: boolean, reward: Reward, days: { Reward }, quests: { QuestView }, weekly: QuestView?,
 	bonus: { ready: boolean, claimed: boolean, cash: number, shards: number }, secondsLeft: number, anyReady: boolean,
+	firstDay: boolean, -- still the day the player started: the menu does not open by itself yet
 }
 
 local DAY = 86400
@@ -127,6 +129,10 @@ end
 -- Starts a new day's quests (and a new week's) when the profile is behind. Returns true when anything changed.
 function Daily.rollover(data: Data, today: number, level: number, rebirths: number, seed: number): boolean
 	local changed = false
+	if (data.joined or 0) == 0 then
+		data.joined = today
+		changed = true
+	end
 	if data.day ~= today then
 		data.day = today
 		data.quests = {}
@@ -252,15 +258,20 @@ function Daily.summary(data: Data, now: number, perSecond: number, ceiling: numb
 		weekly = view("w", data.weekly, weeklyDef, perSecond, ceiling)
 		if (weekly :: QuestView).ready then anyReady = true end
 	end
+	local days: { Reward } = {}
+	for index = 1, Settings.CycleLength do
+		days[index] = Daily.reward(index, perSecond, ceiling)
+	end
 	local bonus = Daily.bonusReward(perSecond, ceiling)
 	local bonusReady = not data.questBonusClaimed and allClaimed(data)
 	if bonusReady then anyReady = true end
 	return {
 		claimedToday = claimed, streak = if claimed then data.streak else result.streak, cycleDay = cycleDay,
 		shields = data.shields, shieldCap = Settings.ShieldCap, shieldsToUse = result.shieldsUsed, willReset = result.reset,
-		reward = Daily.reward(cycleDay, perSecond, ceiling), quests = quests, weekly = weekly,
+		reward = Daily.reward(cycleDay, perSecond, ceiling), days = days, quests = quests, weekly = weekly,
 		bonus = { ready = bonusReady, claimed = data.questBonusClaimed, cash = bonus.cash, shards = bonus.shards },
 		secondsLeft = DAY - math.floor(clean(now)) % DAY, anyReady = anyReady,
+		firstDay = (data.joined or 0) == 0 or (data.joined or 0) >= today,
 	}
 end
 

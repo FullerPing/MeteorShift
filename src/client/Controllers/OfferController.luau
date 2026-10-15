@@ -22,7 +22,7 @@ local Monetization = Config.Monetization
 local OfferController = Knit.CreateController({ Name = "OfferController" })
 
 local SIZE, GAP = 54, 8
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 type Offer = { key: string, kind: "pass" | "product", caption: string, icon: string, color: string }
 -- bottom to top in the column, nearest the INDEX button first
@@ -89,6 +89,9 @@ function OfferController:KnitStart()
 	local function refresh()
 		local layout = Fusion.peek(hud)
 		local index = layout.buttons.INDEX
+		-- Daily Rewards can sit right above Index: the offers climb from whichever of the two is higher
+		local daily = layout.buttons.DAILY
+		local top = if index and daily and math.abs(daily.x - index.x) < 1 then math.min(index.y, daily.y) elseif index then index.y else 0
 		local hidden = panelOpen() or HudLayout.isHidden(layout, "Offers") or index == nil
 		local blockers = {}
 		for _, other in { layout.timer, layout.eventPanel, layout.backpack, layout.thumbstick, layout.jump, layout.mine, layout.settings } do
@@ -102,7 +105,7 @@ function OfferController:KnitStart()
 			if visible and index then
 				slot += 1
 				local rect = HudLayout.nudged(layout, "Offers", {
-					x = index.x + (index.w - SIZE) / 2, y = index.y - 8 - (SIZE + GAP) * slot, w = SIZE, h = SIZE,
+					x = index.x + (index.w - SIZE) / 2, y = top - 8 - (SIZE + GAP) * slot, w = SIZE, h = SIZE,
 				})
 				for _, other in blockers do
 					if other and HudLayout.overlaps(rect, other) then visible = false break end

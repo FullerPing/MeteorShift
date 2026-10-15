@@ -127,41 +127,54 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 	return true
 end
 
--- Buys one level (Shared.Gear) for cash, up to the tier's cap.
-function ShopService:UpgradeLevel(player: Player, kind: Kind): boolean
+-- Buys up to `count` levels (Shared.Gear) for cash, one at a time, stopping at the tier's cap or
+-- when the cash runs out. A notice only explains why nothing at all was bought. The client hears
+-- one Upgraded for the whole batch; StatUpgraded still fires per level for the listeners.
+function ShopService:UpgradeLevel(player: Player, kind: Kind, count: number?): boolean
 	local entry = CATALOG[kind]
 	local data = PlayerStateService:Get(player)
 	if not entry or not data then
 		return false
 	end
-	local level = data[LEVEL_KEY[kind]]
-	if type(level) ~= "number" then
-		return false
-	end
 	local tier = data[entry.Key] :: number
-	if not Gear.canLevel(kind, tier, level) then
-		local upcoming = entry.List[tier + 1]
-		self.Client.Notice:Fire(player, if upcoming then "Evolve to the " .. upcoming.Name .. " to keep leveling this." else "Fully upgraded.")
+	local priceMult = Rebirth.priceMult(data.rebirths)
+	local bought = 0
+	for _ = 1, math.max(count or 1, 1) do
+		local level = data[LEVEL_KEY[kind]]
+		if type(level) ~= "number" then
+			break
+		end
+		if not Gear.canLevel(kind, tier, level) then
+			if bought == 0 then
+				local upcoming = entry.List[tier + 1]
+				self.Client.Notice:Fire(player, if upcoming then "Evolve to the " .. upcoming.Name .. " to keep leveling this." else "Fully upgraded.")
+			end
+			break
+		end
+		local price = Gear.price(kind, tier, level, priceMult)
+		if not price then
+			break
+		end
+		local shortfall = Price.shortfall(data, price, 0, "this upgrade")
+		if shortfall then
+			if bought == 0 then
+				self.Client.Notice:Fire(player, shortfall)
+			end
+			break
+		end
+		data.cash -= price
+		data[LEVEL_KEY[kind]] = level + 1
+		bought += 1
+		self.StatUpgraded:Fire(player, kind, level + 1, price)
+	end
+	if bought == 0 then
 		return false
 	end
-	local price = Gear.price(kind, tier, level, Rebirth.priceMult(data.rebirths))
-	if not price then
-		return false
-	end
-	local shortfall = Price.shortfall(data, price, 0, "this upgrade")
-	if shortfall then
-		self.Client.Notice:Fire(player, shortfall)
-		return false
-	end
-
-	data.cash -= price
-	data[LEVEL_KEY[kind]] = level + 1
 	if kind == "pickaxe" then
 		self:ApplyPickaxe(player) -- the tool tip shows the stats
 	end
 	PlayerStateService:ReplicateNow(player)
-	self.Client.Upgraded:Fire(player, kind, level + 1)
-	self.StatUpgraded:Fire(player, kind, level + 1, price)
+	self.Client.Upgraded:Fire(player, kind, data[LEVEL_KEY[kind]])
 	return true
 end
 
@@ -175,15 +188,20 @@ function ShopService.Client:Evolve(player: Player, kind: Kind): boolean
 	return self.Server:Evolve(player, kind)
 end
 
-function ShopService.Client:Upgrade(player: Player, kind: Kind): boolean
-	-- The shop's 10x and MAX send sequential single-level requests, so keep this gate short.
-	local allowed, stamp = RequestGate.check(lastUpgradeRequest[player], os.clock(), 0.02)
+-- `count` is how many levels the shop's 1x / 10x / MAX wants in one request (default 1). The
+-- server still prices and checks every level, and no tier has more levels than the last one's cap.
+function ShopService.Client:Upgrade(player: Player, kind: Kind, count: number?): boolean
+	local allowed, stamp = RequestGate.check(lastUpgradeRequest[player], os.clock(), 0.1)
 	lastUpgradeRequest[player] = stamp
 	if not allowed then return false end
 	if typeof(kind) ~= "string" or not CATALOG[kind] then
 		return false
 	end
-	return self.Server:UpgradeLevel(player, kind)
+	local wanted = 1
+	if typeof(count) == "number" and count == count then
+		wanted = math.clamp(math.floor(count), 1, Gear.cap(#CATALOG[kind].List))
+	end
+	return self.Server:UpgradeLevel(player, kind, wanted)
 end
 
 function ShopService:_connectTownShop()
