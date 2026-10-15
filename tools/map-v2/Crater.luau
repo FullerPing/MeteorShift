@@ -1,5 +1,8 @@
 -- Run Common first. Owns Ground, Crater and their collision only. Carried over from map-redesign
 -- (the crater, its ramps, the SkyTimer and the hole rays are contracts), recoloured for the toy-brick look.
+-- L("Crater", { craterOnly = true }) rebuilds only the Crater group and keeps Ground as it is: Ground also holds
+-- Boundary's Lawn tiles (recoloured by Biomes), which a full run would delete.
+local options = (...) or {}
 local A = assert(_G.MapRedesignArt)
 local C = A.colors
 local G = assert(A.geometry, "Run current Common first")
@@ -7,7 +10,11 @@ local K = assert(A.crater, "Run current Common first")
 local half, opening, floorRadius = G.BoundaryHalf, K.OpeningRadius, K.FloorRadius
 local floorY, rimY, rampWidth = K.FloorY, K.RimY, G.CraterRampWidth
 local span, groundThickness = half*2, 4
-local groundGroup = A.group(A.map,"Ground")
+local groundGroup
+if options.craterOnly then
+	groundGroup = assert(A.map:FindFirstChild("Ground"), "craterOnly needs the existing Ground")
+else
+groundGroup = A.group(A.map,"Ground")
 local slab = A.part(groundGroup,"Slab",Vector3.new(span,groundThickness,span),
 	A.cf(0,rimY-groundThickness/2,0),C.grass)
 local cutter = A.part(groundGroup,"TemporaryCutter",Vector3.new(120,opening*2,opening*2),
@@ -66,11 +73,13 @@ for k=0,47 do
 		A.cf(math.cos(angle)*rimProxyRadius,rimY-groundThickness/2,math.sin(angle)*rimProxyRadius)
 			*CFrame.Angles(0,-angle+math.pi/2,0))
 end
+end -- (the Ground section)
 local crater = A.group(A.map,"Crater")
 local bowl = A.group(crater,"Bowl")
 local floor = A.cylinder(bowl,"Floor",floorRadius*2,2,A.cf(0,floorY-1,0),C.dark)
 floor:SetAttribute("WalkSurface",true)
-local n = 48
+-- 96 facets: at 48 the flat slabs read as a faceted, choppy bowl from the rim (owner, 15 Oct 2026)
+local n = 96
 local fanWidth = opening*2*math.tan(math.pi/n)+.4
 for k=0,n-1 do
 	local angle = k*math.pi*2/n
@@ -82,33 +91,47 @@ end
 local ramps = A.group(crater,"AccessRamps")
 local rampStart, rampEnd = floorRadius-1, opening+1
 local rampRise, rampRun = rimY-floorY, rampEnd-rampStart
+local rampLift = 1.05
 local landingWidth = rampWidth+2
 -- Keep each square landing entirely above the circular flat floor.
 local landingRadius = math.sqrt(floorRadius^2-(landingWidth/2)^2)-landingWidth/2-.25
 for k=0,3 do
 	local angle = k*math.pi/2
 	local direction = Vector3.new(math.cos(angle),0,math.sin(angle))
-	local ramp = A.slope(ramps,"Ramp"..(k+1),direction*rampStart+Vector3.new(0,floorY+.28,0),
-		direction*rampEnd+Vector3.new(0,rimY+.28,0),rampWidth,1.4,C.path)
+	-- The bowl is a cone, so beside a flat ramp it curves up over the ramp's edges (they showed as pointed leaves).
+	-- rampLift keeps the whole width clear of it: about 1.3 studs of cone at the foot, so a step under a stud remains.
+	local ramp = A.slope(ramps,"Ramp"..(k+1),direction*rampStart+Vector3.new(0,floorY+rampLift,0),
+		direction*rampEnd+Vector3.new(0,rimY+rampLift,0),rampWidth,1.4,C.path)
 	ramp:SetAttribute("WalkSurface",true)
 	ramp:SetAttribute("ClearWidth",rampWidth)
 	ramp:SetAttribute("Rise",rampRise)
 	ramp:SetAttribute("Run",rampRun)
+	-- Gold kerbs along both sides so the ramps read as paths into the bowl. Visual only: never block a step or a swing.
+	local side = Vector3.new(-direction.Z,0,direction.X)
+	for _,sign in {-1,1} do
+		local offset = side*sign*(rampWidth/2+.75)
+		local kerb = A.slope(ramps,"Kerb"..(k+1).."_"..sign,offset+direction*rampStart+Vector3.new(0,floorY+rampLift+1,0),
+			offset+direction*rampEnd+Vector3.new(0,rimY+rampLift+1,0),1.5,1.6,C.gold)
+		kerb.CanCollide,kerb.CanQuery = false,false
+	end
 	local landing = A.part(ramps,"FloorLanding"..k,Vector3.new(landingWidth,.25,landingWidth),
 		A.cf(direction.X*landingRadius,floorY+.155,direction.Z*landingRadius),C.path)
 	landing:SetAttribute("WalkSurface",true)
 end
+-- One continuous low gold lip round the opening (it used to be 32 separate blocks), broken only for the four ramps.
 local rim = A.group(crater,"Rim")
-local rimRadius = opening+6
-for k=0,47 do
-	local angle = (k+.5)*math.pi*2/48
-	-- Protect the full cardinal ramp width using the rectangles' projected corners.
+local rimRadius, rimSegments = opening+3, 72
+local rimLength = 2*rimRadius*math.tan(math.pi/rimSegments)+.3
+for k=0,rimSegments-1 do
+	local angle = (k+.5)*math.pi*2/rimSegments
 	local x,z = math.cos(angle)*rimRadius,math.sin(angle)*rimRadius
-	local extentX = math.abs(math.sin(angle))*8+math.abs(math.cos(angle))*3.5
-	local extentZ = math.abs(math.cos(angle))*8+math.abs(math.sin(angle))*3.5
-	if math.min(math.abs(x)-extentX,math.abs(z)-extentZ)>rampWidth/2+1 then
-		A.part(rim,"StuddedRim"..k,Vector3.new(16,3,7),
-			A.cf(x,rimY+1.5,z)*CFrame.Angles(0,-angle+math.pi/2,0),C.gold)
+	-- Protect the full cardinal ramp width (and its kerbs) using the segment's projected corners.
+	local extentX = math.abs(math.sin(angle))*rimLength/2+math.abs(math.cos(angle))*3
+	local extentZ = math.abs(math.cos(angle))*rimLength/2+math.abs(math.sin(angle))*3
+	if math.min(math.abs(x)-extentX,math.abs(z)-extentZ)>rampWidth/2+2.5 then
+		-- visual only: players still walk or jump into the bowl anywhere round the edge
+		A.part(rim,"StuddedRim"..k,Vector3.new(rimLength,1.6,6),
+			A.cf(x,rimY+.8,z)*CFrame.Angles(0,-angle+math.pi/2,0),C.gold,nil,false)
 	end
 end
 -- The double-sized meteor's sampled minimum is above the compact crater floor.
