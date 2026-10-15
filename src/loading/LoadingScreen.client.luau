@@ -267,7 +267,8 @@ local function buildView(parent: Instance)
 		panel.Position = UDim2.fromOffset(size.X * .5, math.min(size.Y * .86, size.Y - panelHeight * .5 - 14))
 		local logoWidth = math.min(1100, size.X - 24, math.max(360, size.X * (if compact then .7 else .38)))
 		local impactAge = elapsed % 4.1 - 2.2
-		local shake = if not reduced and impactAge >= 0 and impactAge < .25 then math.sin(impactAge * 100) * 6 * (1 - impactAge / .25) else 0
+		local landing = not (settings and settings.Showpiece) -- (a showpiece background has no meteor landing to shake the logo)
+		local shake = if landing and not reduced and impactAge >= 0 and impactAge < .25 then math.sin(impactAge * 100) * 6 * (1 - impactAge / .25) else 0
 		logo.Size = UDim2.fromOffset(logoWidth, logoWidth * .27)
 		local wide = (settings and settings.LogoWide) or Vector2.new(.5, .24)
 		local logoY = math.max(logoWidth * .135 + 40, size.Y * (if compact then .2 else wide.Y))
@@ -300,6 +301,8 @@ local function buildView(parent: Instance)
 		fallback.Visible = not loaded(backdrop)
 		-- A background with the logo painted in (LogoBaked) replaces the live logo and the drifting clouds, which would cover it.
 		local baked = settings ~= nil and settings.LogoBaked == true and loaded(backdrop)
+		-- A showpiece background has its own art in the middle: nothing crosses or covers it but the live logo
+		local showpiece = settings ~= nil and settings.Showpiece == true and loaded(backdrop)
 		logo.Visible = not baked
 		-- Crop centres the picture, so a screen wider than the art (phones, ultrawide) cuts the painted logo off the top.
 		-- A baked picture is scaled to cover the screen and pinned to the top instead, so only the bottom is trimmed.
@@ -317,7 +320,7 @@ local function buildView(parent: Instance)
 		logoShine.Visible = not reduced and elapsed % 5 < 1
 		logoShine.Position = UDim2.fromScale((elapsed % 5) * 1.4 - .2, 0)
 		for i, cloud in clouds do
-			cloud.body.Visible = not reduced and not baked
+			cloud.body.Visible = not reduced and not baked and not showpiece
 			cloud.body.Position = UDim2.fromScale(((i * .3 + elapsed / (60 + i * 10)) % 1.35) - .2, .08 + (i - 1) * .075)
 			local hasSprite = loaded(cloud.sprite)
 			cloud.body.BackgroundTransparency = if hasSprite then 1 else 0
@@ -378,7 +381,12 @@ local function buildView(parent: Instance)
 		end
 		-- On the painted sky the meteor types take the empty middle instead of one meteor crossing the screen
 		hero.Visible = fly
-		meteor.Visible = not fly
+		meteor.Visible = not fly and not showpiece
+		if showpiece then
+			trail.Visible = false
+			ring.Visible = false
+			for _, chip in chips do chip.Visible = false end
+		end
 		if fly then
 			trail.Visible = false
 			local art = (settings and settings.BackgroundSize) or Vector2.new(2048, 1152)

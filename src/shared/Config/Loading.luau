@@ -7,16 +7,19 @@ return table.freeze({
 	Weights = { engine = .15, assets = .45, state = .25, hud = .15 },
 	-- Owner uploads assets/marketing/v2/loading/*.png and supplies Image IDs.
 	-- Empty or unavailable images use the built-in sky, title and shape art.
-	Background = "rbxassetid://132108322743684",
+	Background = "rbxassetid://100691423203440", -- craterworks-background-space.png (1376x768)
 	Wordmark = "rbxassetid://91648609810870",
 	Cloud = "rbxassetid://101223363381824",
 	Trail = "rbxassetid://140237715248790",
-	-- The sky background is 1672x941 (craterworks-background-v5-sky.png) with the logo painted in, so the live logo and
-	-- clouds are hidden (LogoBaked) and the meteor crosses the whole screen instead of landing. For a background with a crater,
-	-- drop LogoBaked and set Crater (where the meteor lands, as a fraction of the image) and LogoWide (logo position).
-	BackgroundSize = Vector2.new(1672, 941),
-	LogoBaked = true,
-	LogoWide = Vector2.new(.21, .15),
+	-- The space background carries its own glowing meteor in the middle (Showpiece): the live logo sits above it and the
+	-- clouds, the flying meteor and the meteor-type strip stay off so the picture is the show.
+	-- The older sky background (rbxassetid://132108322743684, craterworks-background-v5-sky.png, 1672x941) had the logo
+	-- painted in: set LogoBaked = true for that one and LogoWide = Vector2.new(.21, .15). For a background with a crater,
+	-- leave both off and set Crater (where the meteor lands, as a fraction of the image) and LogoWide (logo position).
+	BackgroundSize = Vector2.new(1376, 768),
+	LogoBaked = false,
+	Showpiece = true,
+	LogoWide = Vector2.new(.5, .16),
 	Preload = {},
 	StatusThresholds = {
 		{ Percent = 0, Text = "Waking up the crater..." },
