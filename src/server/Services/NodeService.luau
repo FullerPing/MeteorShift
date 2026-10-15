@@ -26,6 +26,7 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Hooks = require(ReplicatedStorage.Shared.Hooks)
+local MiningReach = require(ReplicatedStorage.Shared.MiningReach)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
@@ -176,15 +177,10 @@ function NodeService:TargetPosition(id: number): Vector3?
 end
 
 -- Distance from a point to the closest point on the part's bounding box.
+-- Swing distance to a target (Shared.MiningReach): meteor crust and core also reach upward
 local function distanceToPart(part: BasePart, point: Vector3): number
-	local localPoint = part.CFrame:PointToObjectSpace(point)
-	local half = part.Size / 2
-	local clamped = Vector3.new(
-		math.clamp(localPoint.X, -half.X, half.X),
-		math.clamp(localPoint.Y, -half.Y, half.Y),
-		math.clamp(localPoint.Z, -half.Z, half.Z)
-	)
-	return (localPoint - clamped).Magnitude
+	local lift = MiningReach.lift(part:GetAttribute("TargetKind") :: string?, Config.Meteor.UpwardReach)
+	return MiningReach.distance(part.CFrame, part.Size, point, lift)
 end
 
 -- Records this hit and returns how many players hit the target within the

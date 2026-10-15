@@ -390,10 +390,12 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	model.PrimaryPart = core
 
 	local power = serverPower()
-	local slots = {}
+	-- Slots higher on the core than Meteor.CrownHeight are the crown: out of reach from anywhere a player can stand
+	-- (Shared.MiningReach), so they get a decorative piece that is not a target and doesn't count toward the crust
+	local slots, crown = {}, {}
 	for _, child in core:GetChildren() do
 		if child:IsA("Attachment") and child.Name == "NodeSlot" then
-			table.insert(slots, child)
+			table.insert(if child.Position.Y > MeteorConfig.CrownHeight then crown else slots, child)
 		end
 	end
 	local crustHp, coreHp = MiningPower.size(power, #slots, meteorType.HpMult)
@@ -449,6 +451,14 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		goldenIndex = if #candidates > 0 then candidates[math.random(1, #candidates)] else math.random(1, #slots)
 	end
 	local goldenHitters: { [Player]: boolean } = {}
+	for index, slot in crown do
+		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
+		piece.Name = "CrownPiece" .. index
+		piece.Anchored = true
+		place(piece, slot.WorldCFrame * CFrame.Angles(0, math.random() * math.pi * 2, 0))
+		paintCluster(piece, meteorType)
+		piece.Parent = crustFolder
+	end
 	for index, slot in slots do
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index

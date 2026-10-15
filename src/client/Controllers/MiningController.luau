@@ -14,6 +14,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Aim = require(ReplicatedStorage.Shared.Aim)
+local MiningReach = require(ReplicatedStorage.Shared.MiningReach)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
@@ -67,15 +68,10 @@ local function menuOpen(): boolean
 	return false
 end
 
+-- Swing distance to a target (Shared.MiningReach): meteor crust and core also reach upward
 local function distanceToPart(part: BasePart, point: Vector3): number
-	local localPoint = part.CFrame:PointToObjectSpace(point)
-	local half = part.Size / 2
-	local clamped = Vector3.new(
-		math.clamp(localPoint.X, -half.X, half.X),
-		math.clamp(localPoint.Y, -half.Y, half.Y),
-		math.clamp(localPoint.Z, -half.Z, half.Z)
-	)
-	return (localPoint - clamped).Magnitude
+	local lift = MiningReach.lift(part:GetAttribute("TargetKind") :: string?, Config.Meteor.UpwardReach)
+	return MiningReach.distance(part.CFrame, part.Size, point, lift)
 end
 
 local function isMineable(part: Instance?): boolean
