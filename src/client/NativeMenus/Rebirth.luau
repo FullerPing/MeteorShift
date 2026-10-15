@@ -12,7 +12,7 @@ local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 
 local Menu = {}
-Menu.LAYOUT = 5 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
+Menu.LAYOUT = 6 -- bumped when the panel's controls change; an older authored copy is replaced by RebirthController
 
 -- One side of the NOW -> AFTER card: a small caption over a big multiplier
 local function side(parent: Instance, name: string, valueName: string, caption: string, captionColor: Color3, maxSize: number): TextLabel
@@ -89,17 +89,9 @@ function Menu.build(): ScreenGui
 	after.Parent.Position = UDim2.fromScale(0.56, 0)
 	after.TextColor3 = Palette.WHITE
 	Theme.ink(after, true, 4)
-	-- the arrow between them: a lime shaft and a diamond head, outlined in navy (no icon in HudIcons is an arrow)
-	local arrow = N.create("Frame", { Name = "Arrow", BackgroundTransparency = 1, AnchorPoint = Vector2.new(0.5, 0.5),
-		Position = UDim2.new(0.5, 0, 0.5, 14), Size = UDim2.fromOffset(50, 34), ZIndex = 5 }, compare)
-	local shaft = N.create("Frame", { Name = "Shaft", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5),
-		Size = UDim2.fromOffset(32, 14), BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 5 }, arrow)
-	Theme.round(shaft, 4)
-	Theme.stroke(shaft, Palette.NAVY, 2.5)
-	local head = N.create("Frame", { Name = "Head", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
-		Size = UDim2.fromOffset(24, 24), Rotation = 45, BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 6 }, arrow)
-	Theme.round(head, 4)
-	Theme.stroke(head, Palette.NAVY, 2.5)
+	-- the arrow between them: one lime shape outlined in navy (no icon in HudIcons is an arrow)
+	local arrow = Theme.arrow(compare, "Arrow", UDim2.fromOffset(50, 32), 2.5)
+	arrow.AnchorPoint, arrow.Position = Vector2.new(0.5, 0.5), UDim2.new(0.5, 0, 0.5, 14)
 	local note = Theme.label(content, "PriceNote", "", 14, Palette.SECOND, nil, Enum.TextXAlignment.Center)
 	note.LayoutOrder, note.Size, note.AutomaticSize, note.TextWrapped = 2, UDim2.new(1, -6, 0, 0), Enum.AutomaticSize.Y, true
 
@@ -109,7 +101,7 @@ function Menu.build(): ScreenGui
 	list(lists, "ResetBox", 1, "RESETS", Palette.UNMET, Color3.fromRGB(255, 246, 247), Color3.fromRGB(242, 184, 194),
 		{ { "coin", "Cash" }, { "equipment", "Gear levels" }, { "foundry", "Production line level" }, { "ore", "Ore and bars" } })
 	list(lists, "KeepBox", 2, "YOU KEEP", Palette.UP, Color3.fromRGB(244, 252, 238), Color3.fromRGB(184, 226, 156),
-		{ { "pets", "Pets" }, { "crystal", "Shards and perks" }, { "index", "Index bonuses" }, { "premium", "Gear tiers and passes" } })
+		{ { "pets", "Pets" }, { "crystal", "Shards and perks" }, { "index", "Index bonuses" }, { "store", "Gear tiers and passes" } })
 
 	-- the requirement: the cost, a bar and how far along you are
 	local requirement = Theme.card(p, "Requirement", Palette.WHITE, Palette.DETAIL_BOTTOM, 12)
@@ -129,7 +121,7 @@ function Menu.build(): ScreenGui
 	-- the premium card: gold, under the main action and lighter than it
 	local keepCard = Theme.card(p, "KeepCard", Palette.EVO_TOP, Palette.EVO_BOTTOM, 14)
 	Theme.stroke(keepCard, Palette.EVO_EDGE, 3)
-	N.create("ImageLabel", { Name = "Icon", Image = Icons.premium, BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 8),
+	N.create("ImageLabel", { Name = "Icon", Image = Icons.store, BackgroundTransparency = 1, Position = UDim2.fromOffset(10, 8),
 		Size = UDim2.fromOffset(28, 28), ScaleType = Enum.ScaleType.Fit, ZIndex = 4 }, keepCard)
 	local keepTitle = Theme.label(keepCard, "Heading", "Rebirth and Keep Everything", 16, Palette.NAVY)
 	keepTitle.Position, keepTitle.Size, keepTitle.TextScaled = UDim2.fromOffset(44, 8), UDim2.new(1, -52, 0, 28), true

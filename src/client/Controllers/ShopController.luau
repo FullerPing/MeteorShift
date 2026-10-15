@@ -25,7 +25,7 @@ local Controller = Knit.CreateController({ Name = "ShopController" })
 local wantOpen, wantHighlight = false, false
 local refresh: (() -> ())? = nil
 local MET, UNMET = Palette.MET, Palette.UNMET -- requirement values on the evolution column
-local ROBUX = utf8.char(0xE002) -- Roblox draws this private-use character as the Robux icon in any font
+local ROBUX = Format.ROBUX
 function Controller:Open()
 	wantOpen = true
 	player:SetAttribute("ShopOpen", true)

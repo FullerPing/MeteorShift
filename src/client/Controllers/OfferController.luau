@@ -1,5 +1,5 @@
 --!strict
--- Small round buttons in the game for the three things that are not in the Store: the 2x Ore
+-- Small buttons in the game, drawn like the menu buttons (ExactNavButton.tile), for the three things that are not in the Store: the 2x Ore
 -- pass, the 2x Cash pass and the one-per-player Starter Value Pack. On desktop they climb in a column from the
 -- INDEX button; on phones they take the free cells in line with the menu buttons (HudLayout.offerSlots). They tap straight to the Roblox purchase prompt, and disappear once
 -- the item is owned (or while it is not on sale: Id 0). Move or hide them as "Offers" in
@@ -14,22 +14,22 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
-local Cartoon = require(script.Parent.Parent.Cartoon)
+local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
 local Sfx = require(script.Parent.Parent.Sfx)
 
 local player = Players.LocalPlayer
 local Monetization = Config.Monetization
 local OfferController = Knit.CreateController({ Name = "OfferController" })
 
-local SIZE, GAP = 54, 8
+local SIZE, GAP = 54, 14 -- the tile's caption hangs a little below it
 local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
-type Offer = { key: string, kind: "pass" | "product", caption: string, icon: string, color: string }
+type Offer = { key: string, kind: "pass" | "product", caption: string, icon: string }
 -- bottom to top in the column, nearest the INDEX button first
 local OFFERS: { Offer } = {
-	{ key = "StarterPack", kind = "product", caption = "STARTER", icon = "bars", color = "green" },
-	{ key = "TwoXCash", kind = "pass", caption = "2x CASH", icon = "coin", color = "gold" },
-	{ key = "TwoXOre", kind = "pass", caption = "2x ORE", icon = "ore", color = "orange" },
+	{ key = "StarterPack", kind = "product", caption = "Starter", icon = "bars" },
+	{ key = "TwoXCash", kind = "pass", caption = "2x Cash", icon = "coin" },
+	{ key = "TwoXOre", kind = "pass", caption = "2x Ore", icon = "ore" },
 }
 
 function OfferController:KnitStart()
@@ -49,17 +49,11 @@ function OfferController:KnitStart()
 	for _, offer in OFFERS do
 		local button = Instance.new("TextButton")
 		button.Name, button.Text, button.AutoButtonColor, button.BackgroundTransparency = offer.key, "", false, 1
-		button.Size = UDim2.fromOffset(SIZE, SIZE)
-		Cartoon.surface(offer.color, { round = true, edge = 3, lip = 4, studs = 0.84, studSize = 18 }).Parent = button
-		local icon = UI.hudIcon(scope, offer.icon, {
-			AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.1), Size = UDim2.fromScale(0.5, 0.5), ZIndex = 2,
-		})
-		icon.Parent = button
-		local label = Instance.new("TextLabel")
-		label.BackgroundTransparency, label.Font, label.TextScaled, label.TextColor3, label.Text = 1, UI.FONT, true, UI.WHITE, offer.caption
-		label.Position, label.Size, label.ZIndex = UDim2.fromScale(0.04, 0.58), UDim2.fromScale(0.92, 0.3), 2
-		Cartoon.outlineLabel(label)
-		label.Parent = button
+		-- drawn at the menu buttons' 80 x 80 and scaled to the cell
+		button.Size = UDim2.fromOffset(80, 80)
+		ExactNavButton.tile(button, offer.icon, offer.caption)
+		local scale = Instance.new("UIScale")
+		scale.Name, scale.Parent = "LayoutScale", button
 		button.Activated:Connect(function()
 			Sfx.play("Click")
 			local definition = if offer.kind == "pass" then Monetization.Passes[offer.key] else Monetization.Products[offer.key]
@@ -118,7 +112,7 @@ function OfferController:KnitStart()
 					if other and HudLayout.overlaps(rect, other) then visible = false break end
 				end
 				button.Position = UDim2.fromOffset(rect.x, rect.y)
-				button.Size = UDim2.fromOffset(rect.w, rect.h)
+				;(button:FindFirstChild("LayoutScale") :: UIScale).Scale = math.min(rect.w, rect.h) / 80
 			end
 			button.Visible = visible
 		end

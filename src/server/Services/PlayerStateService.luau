@@ -56,6 +56,7 @@ local warnedNoStations = false
 type SpeedState = { humanoid: Humanoid, applied: number, base: number, loadout: string }
 local petSpeed: { [Player]: SpeedState } = {}
 local fastWalk: { [Player]: boolean } = {}
+local onRoad: { [Player]: boolean } = {} -- standing on the ring road (CharacterSpeed.onRoad), checked a few times a second
 local lastFastRequest: { [Player]: number } = {}
 
 local function sum(t: { [string]: number }): number
@@ -157,11 +158,12 @@ function PlayerStateService:PublishPets(player: Player)
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 	local fast = fastWalk[player] == true
-	local loadout = idText .. ":" .. levelText .. (if fast then ":fast" else "")
+	local road = onRoad[player] == true
+	local loadout = idText .. ":" .. levelText .. (if fast then ":fast" else "") .. (if road then ":road" else "")
 	local previous = petSpeed[player]
 	if previous and previous.humanoid == humanoid and previous.loadout == loadout then return end
 	local same = previous and previous.humanoid == humanoid
-	local applied, base = CharacterSpeed.update(humanoid.WalkSpeed, if same then previous.applied else nil, if same then previous.base else nil, self:GetPetBonuses(player).sprint, fast)
+	local applied, base = CharacterSpeed.update(humanoid.WalkSpeed, if same then previous.applied else nil, if same then previous.base else nil, self:GetPetBonuses(player).sprint, fast, road)
 	petSpeed[player] = { humanoid = humanoid, applied = applied, base = base, loadout = loadout }
 	humanoid.WalkSpeed = applied
 end
@@ -508,6 +510,7 @@ function PlayerStateService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		petSpeed[player] = nil
 		fastWalk[player] = nil
+		onRoad[player] = nil
 		lastFastRequest[player] = nil
 		oreRemainder[player] = nil
 		lastFullNotice[player] = nil
@@ -515,12 +518,26 @@ function PlayerStateService:KnitStart()
 		leaderstatsDirty[player] = nil
 	end)
 
-	local sinceFlush = 0
+	local sinceFlush, sinceRoad = 0, 0
 	RunService.Heartbeat:Connect(function(dt)
 		sinceFlush += dt
 		if sinceFlush >= Config.Net.StateFlushInterval then
 			sinceFlush = 0
 			self:_flush()
+		end
+		-- the ring road's fast lane: re-apply the speed only when a player steps on or off it
+		sinceRoad += dt
+		if sinceRoad >= 0.2 then
+			sinceRoad = 0
+			for _, player in Players:GetPlayers() do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local now = root ~= nil and CharacterSpeed.onRoad(root.Position.X, root.Position.Z)
+				if now ~= (onRoad[player] == true) then
+					onRoad[player] = now
+					player:SetAttribute("OnRoad", now)
+					self:PublishPets(player)
+				end
+			end
 		end
 	end)
 end

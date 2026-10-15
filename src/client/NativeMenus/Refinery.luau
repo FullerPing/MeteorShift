@@ -11,7 +11,7 @@ local Palette = require(RS.Shared.MenuPalette)
 local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 local Refinery = {}
-Refinery.LAYOUT = 3 -- bumped when the controls change; RefineryController rebuilds an older copy
+Refinery.LAYOUT = 4 -- bumped when the controls change; RefineryController rebuilds an older copy
 
 local function text(parent: Instance, name: string, value: string, size: number, color: Color3, title: boolean?, align: Enum.TextXAlignment?): TextLabel
 	local label = Theme.label(parent, name, value, size, color, if title then Theme.TITLE_FONT else nil, align)
@@ -32,17 +32,10 @@ local function chip(parent: Instance, name: string, kind: string, fill: Color3):
 	return frame
 end
 
--- The arrow between two cards: a lime shaft and a diamond head, outlined in navy, drawn to any square size
+-- The arrow between two cards (MenuTheme.arrow: one lime shape outlined in navy), drawn to any square size
 local function arrow(parent: Instance, name: string): Frame
-	local frame = N.create("Frame", { Name = name, BackgroundTransparency = 1, Size = UDim2.fromOffset(26, 26), Visible = false, ZIndex = 5 }, parent)
-	local shaft = N.create("Frame", { Name = "Shaft", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromScale(0.62, 0.42),
-		BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 5 }, frame)
-	Theme.round(shaft, 3)
-	Theme.stroke(shaft, Palette.NAVY, 2)
-	local head = N.create("Frame", { Name = "Head", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.66, 0.5), Size = UDim2.fromScale(0.56, 0.56),
-		Rotation = 45, BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = 6 }, frame)
-	Theme.round(head, 3)
-	Theme.stroke(head, Palette.NAVY, 2)
+	local frame = Theme.arrow(parent, name, UDim2.fromOffset(26, 26), 2)
+	frame.Visible = false
 	return frame
 end
 

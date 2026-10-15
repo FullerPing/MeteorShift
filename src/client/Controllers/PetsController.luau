@@ -138,7 +138,7 @@ function Controller:KnitStart()
 			table.insert(lines, '<font color="#' .. SOFT .. '"><i>' .. def.Blurb .. "</i></font>")
 		else
 			table.insert(lines, '<font color="#' .. SOFT .. '">Perks: ???</font>')
-			table.insert(lines, '<font color="#' .. DIM .. '">' .. (if def.Pass then "A game pass pet: R$ " .. (def.Robux or 0) .. ", a fixed price." else "Hatch it from an egg. Eggs that can drop it:") .. "</font>")
+			table.insert(lines, '<font color="#' .. DIM .. '">' .. (if def.Pass then "A game pass pet: " .. Format.ROBUX .. " " .. (def.Robux or 0) .. ", a fixed price." else "Hatch it from an egg. Eggs that can drop it:") .. "</font>")
 			for _, egg in PetsLayout.eggsFor(def) do
 				table.insert(lines, string.format('<font color="#%s">• %s</font> (%s%%)', strong, egg.Name, tostring(egg.Odds[def.Rarity])))
 			end
@@ -357,7 +357,7 @@ function Controller:KnitStart()
 					action.Text = if busyId == "pet_" .. def.Id then "PLEASE WAIT" elseif isOut then "PUT AWAY" elseif free then "EQUIP" else "ALL " .. slotCount() .. " SLOTS IN USE"
 				elseif pass then
 					Theme.state(action, busyId == nil and onSale, "gold")
-					action.Text = if onSale then "GET FOR R$" .. (def.Robux or 0) else "NOT ON SALE YET"
+					action.Text = if onSale then "GET FOR " .. Format.ROBUX .. " " .. (def.Robux or 0) else "NOT ON SALE YET"
 				else
 					Theme.state(action, false, "gold")
 					action.Text = "HATCH AT THE HATCHERY"

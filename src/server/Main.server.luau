@@ -32,12 +32,12 @@ Knit.Start()
 			if pickaxeTier then
 				data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
 				data.pickaxeLevel = Gear.levelsForTier(data.pickaxeTier)
-				ShopService:ApplyPickaxe(player)
 			end
 			if backpackTier then
 				data.backpackTier = math.clamp(math.floor(backpackTier), 1, #Config.Backpacks)
 				data.backpackLevel = Gear.levelsForTier(data.backpackTier)
 			end
+			ShopService:ApplyPickaxe(player) -- restyles the pickaxe tool and swaps the backpack on the character
 			PlayerStateService:ReplicateNow(player)
 			return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)
 		end
@@ -196,7 +196,8 @@ Knit.Start()
 		-- Dev chat commands, for Studio and for the user ids in Lib.Admins on a live server (anyone
 		-- else typing them is ignored without a reply). The reply shows as a notice on the HUD.
 		--   /meteor <Iron|Ice|Crystal|Alien>   /pickaxe <1-8>   /backpack <1-8>
-		--   /give <player> cash|shards <amount> | pickaxe|backpack <tier> | pet <pet> [level]   (Lib.AdminGive)
+		--   /give <player|all> cash|shards <amount> | pickaxe|backpack <tier> | pet <pet> [level]   (Lib.AdminGive)
+		--   /giveall <item> ...   the same as /give all <item> ...: everyone in the server
 		local TextChatService = game:GetService("TextChatService")
 		local function chatCommand(alias: string, run: (Player, string?, string) -> string)
 			local command = Instance.new("TextChatCommand")
@@ -226,27 +227,16 @@ Knit.Start()
 			local number = tonumber(tier)
 			return if number then setGear(player, nil, number) else "Usage: /backpack 1-" .. #Config.Backpacks
 		end)
-		-- Gives another player in this server cash, shards, a gear tier or a pet. The giver is told what happened;
-		-- the recipient gets a notice. Gifts only add (AdminGive.apply), so nothing is taken away.
-		chatCommand("/give", function(player, _first, text)
-			local targetName, gift, problem = AdminGive.parse(text)
-			if not targetName or not gift then
-				return problem or AdminGive.Usage
-			end
-			local list = Players:GetPlayers()
-			local selfIndex = table.find(list, player)
-			local index, reason = AdminGive.findPlayer(targetName, list, selfIndex)
-			if not index then
-				return reason or "No such player"
-			end
-			local recipient = list[index]
+		-- Gives a player in this server (or everyone: "all") cash, shards, a gear tier or a pet. The giver is told what
+		-- happened; each recipient gets a notice. Gifts only add (AdminGive.apply), so nothing is taken away.
+		local function giveTo(player: Player, recipient: Player, gift: any): (boolean, string)
 			local data = PlayerStateService:Get(recipient)
 			if not data then
-				return recipient.Name .. " has no profile loaded yet"
+				return false, recipient.Name .. " has no profile loaded yet"
 			end
 			local result = AdminGive.apply(data, gift, PlayerStateService:PetSlots(recipient))
 			if not result.changed then
-				return recipient.Name .. " " .. result.text
+				return false, recipient.Name .. " " .. result.text
 			end
 			if result.gear then
 				ShopService:ApplyPickaxe(recipient)
@@ -256,7 +246,35 @@ Knit.Start()
 				ShopService.Client.Notice:Fire(recipient, player.DisplayName .. " gave you " .. result.text)
 			end
 			print(string.format("[Give] %s (%d) gave %s (%d) %s", player.Name, player.UserId, recipient.Name, recipient.UserId, result.text))
-			return "Gave " .. recipient.Name .. " " .. result.text
+			return true, result.text
+		end
+		local function give(player: Player, text: string): string
+			local targetName, gift, problem = AdminGive.parse(text)
+			if not targetName or not gift then
+				return problem or AdminGive.Usage
+			end
+			local list = Players:GetPlayers()
+			if AdminGive.isEveryone(targetName) then
+				local count, what = 0, ""
+				for _, recipient in list do
+					local ok, said = giveTo(player, recipient, gift)
+					if ok then count += 1; what = said end
+				end
+				return if count > 0 then string.format("Gave %d player%s %s", count, if count == 1 then "" else "s", what)
+					else "Nobody here could get that (they already have it, or no profile is loaded)"
+			end
+			local index, reason = AdminGive.findPlayer(targetName, list, table.find(list, player))
+			if not index then
+				return reason or "No such player"
+			end
+			local ok, said = giveTo(player, list[index], gift)
+			return if ok then "Gave " .. list[index].Name .. " " .. said else said
+		end
+		chatCommand("/give", function(player, _first, text)
+			return give(player, text)
+		end)
+		chatCommand("/giveall", function(player, _first, text)
+			return give(player, (string.gsub(text, "^%S+", "/give all", 1)))
 		end)
 	end)
 	:catch(warn)

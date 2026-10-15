@@ -83,6 +83,15 @@ local function debrisRocks(): { BasePart }
 	return list
 end
 
+-- The rock to mine: the starter field's soft rocks first (Config.Tutorial.StarterField), any rock if none is standing
+local function starterRock(from: Vector3): BasePart?
+	local all, starter = debrisRocks(), {}
+	for _, rock in all do
+		if rock:GetAttribute("Field") == Config.Tutorial.StarterField then table.insert(starter, rock) end
+	end
+	return nearest(if #starter > 0 then starter else all, from)
+end
+
 -- Deposit and collect use the one shared refinery in town.
 local function refineryPoint(): BasePart?
 	local map = workspace:FindFirstChild("Map")
@@ -114,7 +123,7 @@ end
 -- Where the current step wants you to go.
 local function targetFor(stepId: string, from: Vector3): BasePart?
 	if stepId == "mine_debris" then
-		return nearest(debrisRocks(), from)
+		return starterRock(from)
 	elseif stepId == "mine_node" then
 		return nearest(meteorParts("Crust"), from) or crater()
 	elseif stepId == "hit_core" or stepId == "core_shards" then
@@ -125,9 +134,9 @@ local function targetFor(stepId: string, from: Vector3): BasePart?
 		return refineryPoint()
 	elseif stepId == "sell" then
 		return townPart({ "TownSquare", "TradingPost", "SellPoint" })
-	elseif stepId == "buy" then
-		return townPart({ "TownSquare", "PickaxeShop" })
 	end
+	-- "buy" has no world target on purpose: only the hand on the HUD Gear button, so the trail never
+	-- leads players to the Gear Hall's shop pad (and nothing shows while the shop menu is open)
 	return nil
 end
 
@@ -245,14 +254,31 @@ local function outlineFor(target: BasePart): Instance
 	return target
 end
 
--- A screen-space hand that points down at a HUD button
-local function makePointer(): (ScreenGui, TextLabel)
+-- A screen-space hand that points down at a HUD button, and a gold ring that pulses round the button
+local function makePointer(): (ScreenGui, TextLabel, Frame)
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "TutorialPointer"
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.DisplayOrder = 30
 	gui.Enabled = false
+	local ring = Instance.new("Frame")
+	ring.Name = "Ring"
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.BackgroundColor3 = GUIDE_COLOR
+	ring.BackgroundTransparency = 0.75
+	ring.BorderSizePixel = 0
+	local corner = Instance.new("UICorner")
+	corner.CornerRadius = UDim.new(0.3, 0)
+	corner.Parent = ring
+	local stroke = Instance.new("UIStroke")
+	stroke.Color, stroke.Thickness = GUIDE_COLOR, 4
+	stroke.Parent = ring
+	local pulse = Instance.new("UIScale")
+	pulse.Parent = ring
+	TweenService:Create(pulse, TweenInfo.new(0.55, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Scale = 1.18 }):Play()
+	TweenService:Create(stroke, TweenInfo.new(0.55, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.6 }):Play()
+	ring.Parent = gui
 	local hand = Instance.new("TextLabel")
 	hand.Name = "Hand"
 	hand.BackgroundTransparency = 1
@@ -263,7 +289,7 @@ local function makePointer(): (ScreenGui, TextLabel)
 	hand.TextSize = 72
 	hand.Parent = gui
 	gui.Parent = player:WaitForChild("PlayerGui")
-	return gui, hand
+	return gui, hand, ring
 end
 
 local function findButton(name: string): GuiObject?
@@ -449,7 +475,7 @@ function TutorialController:KnitStart()
 	-- meteor step waits for the meteor, the guide shows debris to mine instead; the
 	-- "watch" step keeps pointing at the crater with the time left over it.
 	local guide = makeGuide()
-	local pointerGui, pointerHand = makePointer()
+	local pointerGui, pointerHand, pointerRing = makePointer()
 	loop(pointerHand, 0.4, { Rotation = 6 })
 	local from: Attachment? = nil
 	local to: Attachment? = nil
@@ -466,7 +492,7 @@ function TutorialController:KnitStart()
 			local waiting = visible and waitingFor(info, Fusion.peek(meteorState))
 			if visible and root and info then
 				if waiting and info.Id ~= "meteor_lands" then
-					target, action = nearest(debrisRocks(), root.Position), "tap"
+					target, action = starterRock(root.Position), "tap"
 				else
 					target = targetFor(info.Id, root.Position)
 				end
@@ -475,6 +501,8 @@ function TutorialController:KnitStart()
 			local button = if visible and info and info.Action == "ui" and info.Button then findButton(info.Button) else nil
 			if button then
 				pointerHand.Position = UDim2.fromOffset(button.AbsolutePosition.X + button.AbsoluteSize.X / 2, button.AbsolutePosition.Y + 8)
+				pointerRing.Position = UDim2.fromOffset(button.AbsolutePosition.X + button.AbsoluteSize.X / 2, button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2)
+				pointerRing.Size = UDim2.fromOffset(button.AbsoluteSize.X + 10, button.AbsoluteSize.Y + 10)
 			end
 			pointerGui.Enabled = button ~= nil
 			if not target or not root or button then

@@ -16,6 +16,11 @@ Codes.CashCeilingShare = 0.05 -- of the next rebirth's cost
 -- A code needs Minutes or Shards. Example:
 --   WELCOME = { Minutes = 20, Shards = 5 },
 --   LAUNCHDAY = { Shards = 25, Expires = 1790000000 },
-Codes.List = {} :: { [string]: Code }
+-- The starter codes: together they pay 30 Core Shards, one Meteor Egg, so a new player can hatch a first pet early.
+Codes.List = {
+	RELEASE = { Minutes = 10, Shards = 15 },
+	CRATERWORKS = { Minutes = 5, Shards = 10 },
+	METEOR = { Minutes = 5, Shards = 5 },
+} :: { [string]: Code }
 
 return Codes

@@ -29,8 +29,14 @@ Tutorial.Steps = {
 	{ Id = "deposit", Text = "SMELT!", Icon = "🔥", Action = "go" },
 	{ Id = "collect_bar", Text = "GET BARS!", Icon = "🧱", Action = "go" },
 	{ Id = "sell", Text = "SELL!", Icon = "💰", Action = "ui", Button = "SellBars" },
-	{ Id = "buy", Text = "UPGRADE!", Icon = "⬆️", Action = "go" },
+	-- Points at the HUD Gear button, not the Gear Hall's shop pad: the button works from anywhere
+	{ Id = "buy", Text = "UPGRADE!", Sub = "Tap GEAR - it works from anywhere", Icon = "⬆️", Action = "ui", Button = "ShopButton" },
 } :: { Step }
+
+-- The ore field a new player starts in and is pointed at for "MINE!": Rust Works has the softest rocks (Config.Debris).
+-- A player who still has that step to do spawns there (TutorialService), not on the town plaza, whose nearest fields
+-- (Sulfur Ridge, Violet Quarry) are the hardest ones.
+Tutorial.StarterField = "RustWorks"
 
 -- Standing this close (horizontally) to the crater centre during an event counts as "reached"
 Tutorial.CraterRadius = 83.2

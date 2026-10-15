@@ -171,14 +171,14 @@ function StoreController:KnitStart()
 		for _, card in cards do
 			local current, info = buttonState(card), card.details
 			card.price.Text = if current == "credit" then "1 CREDIT" elseif info.loading then "LOADING PRICE"
-				elseif info.price ~= nil then "R$ " .. Format.number(info.price)
+				elseif info.price ~= nil then Format.ROBUX .. " " .. Format.number(info.price)
 				elseif info.forSale == false then "NOT ON SALE" else "NO PRICE"
 			local status = statusText(card)
 			if status == "" and not info.loading and info.forSale ~= false and info.price == nil then status = "Reopen the store to retry the price." end
 			card.status.Text = status
 			card.buy.Text = if card.key == "OreRush" and ownedPasses.TwoXOre then "You own 2x Ore"
 				elseif current == "credit" then BUTTON_TEXT.credit .. " (" .. Format.number(credits(creditKey(card))) .. ")"
-				elseif current == "buy" and info.price ~= nil then "R$ " .. Format.number(info.price) else BUTTON_TEXT[current]
+				elseif current == "buy" and info.price ~= nil then Format.ROBUX .. " " .. Format.number(info.price) else BUTTON_TEXT[current]
 			-- gold to buy with Robux, lime to use a credit, blue once owned, grey otherwise (MenuTheme's colours mean the same everywhere)
 			if current == "owned" then
 				Theme.paint(card.buy, "blue")
@@ -187,7 +187,7 @@ function StoreController:KnitStart()
 				Theme.state(card.buy, current == "buy" or current == "credit", if current == "credit" then "lime" else "gold")
 			end
 			-- the owner's HudIcons art always: a dashboard icon would not match the rest of the menu
-			card.icon.Image = Config.HudIcons[StoreMenu.ICONS[card.key] or "premium"]
+			card.icon.Image = Config.HudIcons[StoreMenu.ICONS[card.key] or "store"]
 		end
 	end
 	local function loadPrice(card: Card)

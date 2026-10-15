@@ -131,7 +131,7 @@ function RebirthController:KnitStart()
 		keepButton.Text = if busy then "REBIRTHING..."
 			elseif keep then (if wide then "USE 1 CREDIT" else "KEEP EVERYTHING · 1 CREDIT")
 			elseif keepProduct.Id == 0 then (if wide then "NOT ON SALE YET" else "KEEP EVERYTHING: NOT ON SALE YET")
-			else (if wide then "" else "KEEP EVERYTHING · ") .. "R$ " .. Format.number(keepPrice or keepProduct.Robux)
+			else (if wide then "" else "KEEP EVERYTHING · ") .. Format.ROBUX .. " " .. Format.number(keepPrice or keepProduct.Robux)
 
 	end
 	local function setOpen(value: boolean)

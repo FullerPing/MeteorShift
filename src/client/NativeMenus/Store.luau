@@ -11,14 +11,14 @@ local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 local Menu = {}
-Menu.LAYOUT = 3 -- bumped when the panel's controls change; an older authored copy is replaced by StoreController
+Menu.LAYOUT = 4 -- bumped when the panel's controls change; an older authored copy is replaced by StoreController
 local Monetization = Config.Monetization
 local Sections = Config.Store.Sections
 local ICONS: { [string]: string } = {
-	TwoXOre = "ore", BiggerBackpack = "backpack", OfflineHours = "bars", AutoDeposit = "foundry", VIP = "premium",
-	CallMeteor = "meteor", Overclock = "foundry", TipJar = "premium", PocketChange = "coin",
+	TwoXOre = "ore", BiggerBackpack = "backpack", OfflineHours = "bars", AutoDeposit = "foundry", VIP = "store",
+	CallMeteor = "meteor", Overclock = "foundry", TipJar = "store", PocketChange = "coin",
 	MiniOverclock = "foundry", OreRush = "ore", CashBundle = "coin", PetSlot = "plus",
-	TwoXCash = "coin", StarterPack = "bars", PetMax = "pets", StreakShield = "premium",
+	TwoXCash = "coin", StarterPack = "bars", PetMax = "pets", StreakShield = "store",
 	BossMeteor = "meteorAlien", Shards50 = "crystal", Shards250 = "crystal", Shards1000 = "crystal", RebirthKeep = "rebirth",
 	Drillbot = "pets", SolarPhoenix = "pets",
 }
@@ -46,14 +46,14 @@ local function card(parent: Instance, key: string, order: number, kind: string, 
 	Theme.round(well, 14)
 	Theme.gradient(well, look[1], look[2])
 	Theme.stroke(well, look[3], 2.5)
-	local icon = Config.HudIcons[ICONS[key] or "premium"]
+	local icon = Config.HudIcons[ICONS[key] or "store"]
 	-- white icons (the paw, the plus) are tinted navy so they read on the pale well
 	local white = ICONS[key] == "pets" or ICONS[key] == "plus"
 	N.create("ImageLabel", { Name = "ItemIcon", Image = icon, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(0.74, 0.74), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, ZIndex = 5,
 		ImageColor3 = if white then Palette.NAVY else Palette.WHITE }, well)
 	-- the price is on the button; this stays for bindings and is hidden by the controller
-	local price = Theme.label(frame, "Price", if definition.Robux then "R$ " .. Format.number(definition.Robux) else "NOT ON SALE", 16, Palette.NAVY)
+	local price = Theme.label(frame, "Price", if definition.Robux then Format.ROBUX .. " " .. Format.number(definition.Robux) else "NOT ON SALE", 16, Palette.NAVY)
 	price.Visible = false
 	local title = Theme.label(frame, "Title", definition.Name, 24, Palette.NAVY, Theme.TITLE_FONT, Enum.TextXAlignment.Center)
 	title.TextScaled, title.TextWrapped = true, true
@@ -87,7 +87,7 @@ function Menu.build(): ScreenGui
 		AutoButtonColor = false, BorderSizePixel = 0, Visible = false, Modal = true }, gui)
 	local panel = Theme.panel(gui, "Panel", UDim2.fromOffset(900, 680)) :: any
 	panel.AnchorPoint, panel.Position, panel.Visible = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5), false
-	Theme.ribbon(panel, "Store", Config.HudIcons.premium)
+	Theme.ribbon(panel, "Store", Config.HudIcons.store)
 	Theme.closeCorner(panel, Config.HudIcons.close)
 	local subtitle = Theme.label(panel, "Subtitle", "Passes last forever. Nothing here changes meteor or mineral odds.", 14, Palette.SECOND, nil,
 		Enum.TextXAlignment.Right)

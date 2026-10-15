@@ -359,4 +359,28 @@ function MenuTheme.withIcon(button: GuiButton, kind: string, size: number?): Ima
 	return image
 end
 
+-- A lime arrow (shaft and diamond head) with one navy outline round the whole shape, drawn to fill a frame: the outlined
+-- shaft and head sit underneath and outline-free fills of both sit on top, so neither piece's outline crosses the other.
+-- The head stays square (it is sized from the frame's height).
+function MenuTheme.arrow(parent: Instance, name: string, size: UDim2, thickness: number?, z: number?): Frame
+	local base = z or 5
+	local frame = N.create("Frame", { Name = name, BackgroundTransparency = 1, Size = size, ZIndex = base }, parent)
+	for layer = 0, 1 do
+		local suffix = if layer == 0 then "Outline" else ""
+		local shaft = N.create("Frame", { Name = "Shaft" .. suffix, AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5),
+			Size = UDim2.fromScale(0.66, 0.42), BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = base + layer }, frame)
+		-- the head's centre sits half its diagonal in from the right edge (AnchorPoint x = 0.5 + 0.707)
+		local head = N.create("Frame", { Name = "Head" .. suffix, AnchorPoint = Vector2.new(1.2, 0.5), Position = UDim2.new(1, 0, 0.5, 0),
+			Size = UDim2.fromScale(0.56, 0.56), SizeConstraint = Enum.SizeConstraint.RelativeYY, Rotation = 45,
+			BackgroundColor3 = Palette.LIME_BOTTOM, BorderSizePixel = 0, ZIndex = base + layer }, frame)
+		MenuTheme.round(shaft, 3)
+		MenuTheme.round(head, 3)
+		if layer == 0 then
+			MenuTheme.stroke(shaft, Palette.NAVY, thickness or 2)
+			MenuTheme.stroke(head, Palette.NAVY, thickness or 2)
+		end
+	end
+	return frame
+end
+
 return MenuTheme

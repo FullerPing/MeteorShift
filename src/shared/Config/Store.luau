@@ -28,7 +28,7 @@ Store.Elsewhere = {
 Store.Sections = {
 	-- the one-per-player value pack opens the page as a full-width banner (the in-game offer icon sells it too)
 	{ Id = "featured", Title = "FEATURED", Tab = "Featured", Icon = "bars", Color = "gold", Style = "wide", Keys = { "StarterPack" } },
-	{ Id = "passes", Title = "PASSES", Tab = "Passes", Icon = "premium", Color = "gold", Style = "wide",
+	{ Id = "passes", Title = "PASSES", Tab = "Passes", Icon = "store", Color = "gold", Style = "wide",
 		Keys = { "BiggerBackpack", "OfflineHours", "AutoDeposit", "VIP", "Drillbot", "SolarPhoenix" } },
 	{ Id = "shards", Title = "CORE SHARDS", Tab = "Shards", Icon = "crystal", Color = "blue", Style = "tile",
 		Keys = { "Shards50", "Shards250", "Shards1000" } },
@@ -40,7 +40,7 @@ Store.Sections = {
 		Keys = { "Overclock", "MiniOverclock", "StreakShield" } },
 	{ Id = "pets", Title = "PETS", Tab = "Pets", Icon = "pets", Color = "purple", Style = "tile",
 		Keys = { "PetSlot", "PetMax" } },
-	{ Id = "support", Title = "SUPPORT", Icon = "premium", Color = "blue", Style = "tile", Keys = { "TipJar" } },
+	{ Id = "support", Title = "SUPPORT", Icon = "store", Color = "blue", Style = "tile", Keys = { "TipJar" } },
 } :: { Section }
 
 return Store

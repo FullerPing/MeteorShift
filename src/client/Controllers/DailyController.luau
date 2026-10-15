@@ -186,10 +186,11 @@ function DailyController:KnitStart()
 		nav.Visible = tutorialDone and slot ~= nil
 		if slot then ExactNavButton.layout(nav, lastHud, "DAILY") end
 	end
-	-- once per session, when something is waiting and nothing else is on screen
+	-- once per session, when the day's login reward is waiting and nothing else is on screen (a finished quest only
+	-- shows a notification, see announceQuests)
 	local function tryPopup()
 		-- not on the first day: a new player finds Daily Rewards in the menu themselves
-		if popupShown or not tutorialDone or not summary or not summary.anyReady or summary.firstDay then return end
+		if popupShown or not tutorialDone or not summary or summary.claimedToday or summary.firstDay then return end
 		popupShown = true
 		task.spawn(function()
 			local waited = 0
@@ -197,7 +198,7 @@ function DailyController:KnitStart()
 				task.wait(1)
 				waited += 1
 			end
-			if not otherMenuOpen() and summary and summary.anyReady then
+			if not otherMenuOpen() and summary and not summary.claimedToday then
 				player:SetAttribute("DailyOpen", true)
 			end
 		end)
@@ -219,8 +220,34 @@ function DailyController:KnitStart()
 		refreshNav()
 		tryPopup()
 	end)
+	-- A quest that becomes ready mid-session gets a notification (not the menu); what was already ready on joining is
+	-- left to the DAILY button's dot
+	local announced: { [string]: boolean }? = nil
+	local GREEN = Color3.fromRGB(126, 230, 90)
+	local function announceQuests(value: any)
+		local first = announced == nil
+		local seen: { [string]: boolean } = announced or {}
+		announced = seen
+		local items = table.clone(value.quests or {})
+		if value.weekly then table.insert(items, value.weekly) end
+		for _, quest in items do
+			local key = quest.slot .. ":" .. quest.title
+			if quest.ready and not seen[key] then
+				seen[key] = true
+				if not first and tutorialDone then
+					HUDController:Toast("Quest complete: " .. quest.title .. "! Claim it in DAILY.", GREEN, quest.title)
+					Sfx.play("Bonus")
+				end
+			end
+		end
+		if value.bonus and value.bonus.ready and not seen.bonus then
+			seen.bonus = true
+			if not first and tutorialDone then HUDController:Toast("All daily quests done! Claim the bonus in DAILY.", GREEN, "All daily quests done!") end
+		end
+	end
 	DailyService.Summary:Observe(function(value)
 		summary = value
+		if value then announceQuests(value) end
 		update()
 		tryPopup()
 	end)

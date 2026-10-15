@@ -3,6 +3,9 @@
 
 local Format = {}
 
+-- Roblox draws this private-use character as the Robux icon in any font (the EVOLVE NOW button uses it)
+Format.ROBUX = utf8.char(0xE002)
+
 -- Rebirth price inflation and the cash multiplier push late-game numbers past a decillion, so the
 -- table runs to the vigintillion (1e63); anything larger reads as the largest value it can show.
 local SUFFIXES = {

@@ -95,13 +95,15 @@ function FeedbackController:KnitStart()
 		end)
 	end
 
-	-- Tutorial: a gentle ding each time a step completes
+	-- Tutorial: a gentle ding and a word of praise over your head each time a step completes
+	local PRAISE = { "NICE!", "GREAT!", "AWESOME!", "SUPER!", "WOW!" }
 	local lastStep: number? = nil
 	TutorialService.Step:Observe(function(step)
 		local index = if typeof(step) == "table" then step.index else nil
 		if lastStep and (index == nil or index > lastStep) then
 			Sfx.play("TutorialStep")
 			RewardFX.burst(colors.LevelUp, 0.5)
+			RewardFX.popText(if index == nil then "ALL DONE!" else PRAISE[(lastStep - 1) % #PRAISE + 1], colors.LevelUp)
 		end
 		lastStep = index
 	end)

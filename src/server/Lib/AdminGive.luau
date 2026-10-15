@@ -30,7 +30,13 @@ export type Result = {
 
 export type Candidate = { Name: string, DisplayName: string }
 
-AdminGive.Usage = "Usage: /give <player> cash|shards <amount>, pickaxe|backpack <tier>, pet <pet> [level]"
+AdminGive.Usage = "Usage: /give <player|all> cash|shards <amount>, pickaxe|backpack <tier>, pet <pet> [level]"
+
+-- The recipient names that mean everyone in the server ("/give all cash 1000", "/giveall cash 1000")
+local EVERYONE = { all = true, everyone = true, ["*"] = true }
+function AdminGive.isEveryone(target: string): boolean
+	return EVERYONE[string.lower(target)] == true
+end
 
 local function whole(text: string?): number?
 	local n = tonumber(text)

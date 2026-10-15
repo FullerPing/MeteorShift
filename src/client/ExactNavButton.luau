@@ -76,7 +76,7 @@ local TILE_KINDS ={ ShopButton = "orange", RebirthButton = "purple", StoreButton
 local TILE_ICONS = { ShopButton = "equipment", RebirthButton = "rebirth", StoreButton = "store", IndexButton = "index", PetsButton = "pets", DailyButton = "daily", CodesButton = "codes" }
 local TILE_CAPTIONS = { ShopButton = "Gear", RebirthButton = "Rebirth", StoreButton = "Store", IndexButton = "Index", PetsButton = "Pets", DailyButton = "Daily", CodesButton = "Codes" }
 
-local function cartoonTile(button: TextButton, design: Frame?)
+local function cartoonTile(button: TextButton, design: Frame?, iconOverride: string?, captionOverride: string?)
 	local Cartoon = require(script.Parent.Cartoon)
 	local caption = if design then design:FindFirstChild("Caption") :: TextLabel? else nil
 	local source = if design then design:FindFirstChild("Icon") :: ImageLabel? else nil
@@ -86,7 +86,7 @@ local function cartoonTile(button: TextButton, design: Frame?)
 	if not BOXLESS then
 		Cartoon.surface(TILE_KINDS[button.Name] or "blue", { radius = 16, edge = 3, lip = 5, studs = 0.84, studSize = 27 }).Parent = tile
 	end
-	local image = if source then source.Image else HudIcons[TILE_ICONS[button.Name] or ""] or ""
+	local image = iconOverride or (if source then source.Image else HudIcons[TILE_ICONS[button.Name] or ""] or "")
 	-- Boxless: the icon is drawn big with an ink outline (four offset copies) and a drop shadow instead
 	local glyphSize = if BOXLESS then 74 else 56
 	local layers = if BOXLESS
@@ -107,11 +107,18 @@ local function cartoonTile(button: TextButton, design: Frame?)
 	label.Name, label.BackgroundTransparency = "Caption", 1
 	label.AnchorPoint, label.Position, label.Size = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, if BOXLESS then 58 else 52), UDim2.fromOffset(110, 30)
 	label.Font, label.TextSize, label.TextColor3 = Cartoon.FONT, 23, Color3.new(1, 1, 1)
-	label.Text, label.ZIndex = if caption then caption.Text else TILE_CAPTIONS[button.Name] or button.Name, 5
+	label.Text, label.ZIndex = captionOverride or (if caption then caption.Text else TILE_CAPTIONS[button.Name] or button.Name), 5
 	Cartoon.textStroke(3).Parent = label
 	label.Parent = tile
 	if design then design.Visible = false end
 	tile.Parent = button
+end
+
+-- Draws the same tile (CartoonTile, 80 x 80) on any button with one of the owner's icons and a caption, for buttons
+-- that are not menu buttons (the Offers): scale it with a UIScale for other sizes
+function ExactNavButton.tile(button: TextButton, icon: string, caption: string): Frame
+	cartoonTile(button, nil, HudIcons[icon] or icon, caption)
+	return button:FindFirstChild("CartoonTile") :: Frame
 end
 
 function ExactNavButton.bind(button: TextButton)

@@ -53,14 +53,10 @@ Meteor.TopBonus = { 10, 6, 3 }
 -- Mining validation (spec §12.2)
 Meteor.MineRange = 12
 -- Meteor crust and core targets also count a swing from up to this many studs above the player (Shared.MiningReach):
--- the 2x meteor's crown is out of reach from every spot a player can stand on (QA 2026-10-15: 6 of 36 nodes, up to
--- 29.7 studs away). Debris rocks don't get it.
-Meteor.UpwardReach = 20
--- NodeSlots higher than this on the core (studs above its centre, in the 2x template) are the crown: they sit over the
--- core's middle, more than the reach sideways from any spot a player can stand, so MeteorService gives them a
--- decorative piece that is not a target. With UpwardReach 20 every other slot is in reach (QA 2026-10-15: the 3
--- crown slots are at 29.2 to 32.4; the next one down is at 27.7).
-Meteor.CrownHeight = 28.5
+-- the 2x meteor's upper ring and crown sit well above head height (QA 2026-10-15: up to 29.7 studs away from the
+-- crater floor). Every one of the 36 slots is a real target (owner, 2026-10-15: the crown must break when you mine it),
+-- so this covers the crown (29.2 to 32.4 studs above the core's centre) as well. Debris rocks don't get it.
+Meteor.UpwardReach = 28
 Meteor.SwingTolerance = 0.8 -- accept swings up to 20% faster than the pickaxe allows (latency jitter)
 Meteor.HpFlushInterval = 0.1 -- node HP replication rate (10 Hz)
 Meteor.StandingInterval = 1 -- how often clients get their rank and the top three

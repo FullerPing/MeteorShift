@@ -142,6 +142,30 @@ function TutorialService:KnitStart()
 		self:_publish(player) -- profiles loaded before this service started (no-op without one)
 	end
 
+	-- A player who still has "MINE!" to do starts in the starter field (Config.Tutorial.StarterField), next to its
+	-- soft rocks, instead of on the town plaza: on each spawn, once their profile is in
+	local DebrisService = Knit.GetService("DebrisService")
+	local function startInField(player: Player, character: Model)
+		task.spawn(function()
+			local waited = 0
+			while not PlayerStateService:Get(player) and waited < 20 and player.Parent do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not character:WaitForChild("HumanoidRootPart", 10) then return end
+			task.wait(0.3) -- let the spawn settle, or Roblox moves the character back onto the SpawnLocation
+			if player.Character == character and self:IsBefore(player, "mine_debris") then
+				DebrisService:TravelTo(player, Config.Tutorial.StarterField)
+			end
+		end)
+	end
+	local function watch(player: Player)
+		player.CharacterAdded:Connect(function(character) startInField(player, character) end)
+		if player.Character then startInField(player, player.Character) end
+	end
+	Players.PlayerAdded:Connect(watch)
+	for _, player in Players:GetPlayers() do watch(player) end
+
 	-- Crust hits do not finish "mine_node": it waits until enough nodes broke to open the core
 	local hitSteps = { Debris = "mine_debris", Core = "hit_core" }
 	NodeService.Hit:Connect(function(player, kind)
