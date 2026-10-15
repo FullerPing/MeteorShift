@@ -10,7 +10,7 @@
 --   service sets when it logs them:
 --     first_meteor_joined     first validated hit on a crust node or the core (flags.firstMeteor)
 --     first_core_reward       first Core Shards received, value = shards (flags.firstCoreReward)
---     first_refinery_bought   first refinery station upgrade (flags.firstRefinery)
+--     first_refinery_bought   first production line upgrade (flags.firstRefinery)
 -- * returned_offline_income on every join whose offline catch-up made bars (spec §13),
 --   value = bars, field = hours away (Lib.Telemetry.hoursAway bucket).
 -- * Per meteor event: the summary rows of Lib.Telemetry.eventSummary, logged against
@@ -20,6 +20,10 @@
 --   it resets. Rebirths also log a "rebirth" custom event, value = rebirth count.
 -- * active_actions_per_minute every Config.Telemetry.ActionsInterval seconds per player:
 --   swings, deposits, collects, sells and purchases. Players with none log nothing.
+--   On the same timer, field_rocks_mined per player and field (value = rocks broken, field = the ore field
+--   id or "Filler"), so we can see which fields people use between meteors.
+-- * player_left on every leave (Lib.Telemetry.playerLeft): value = minutes this session, fields = the meteor
+--   cycle phase (countdown, meteor, aftermath), a session-length bucket and the tutorial state.
 -- * Tutorial funnel steps, which TutorialService sends through :funnel.
 -- * Monetization (spec §9): "pass_bought" when a game pass is bought in game
 --   (field = pass key) and "product_bought" per granted developer product receipt
@@ -54,6 +58,8 @@ local PlayerStateService
 
 local warned: { [string]: boolean } = {}
 local actions: { [Player]: number } = {}
+local rocksMined: { [Player]: { [string]: number } } = {}
+local joinedAt: { [Player]: number } = {}
 -- Who hit a crust node / the core during the current meteor event, by UserId so
 -- players who left still count. Reset when a meteor lands.
 local nodeHitters: { [number]: boolean } = {}
@@ -175,6 +181,14 @@ function TelemetryService:_logActions()
 			self:custom(player, "active_actions_per_minute", n)
 		end
 	end
+	for player, fields in rocksMined do
+		if player.Parent then
+			for field, n in fields do
+				self:custom(player, "field_rocks_mined", n, { field })
+			end
+		end
+	end
+	table.clear(rocksMined)
 end
 
 function TelemetryService:KnitInit()
@@ -191,6 +205,7 @@ function TelemetryService:KnitStart()
 	local UpgradeService = Knit.GetService("UpgradeService")
 	local RebirthService = Knit.GetService("RebirthService")
 	local MonetizationService = Knit.GetService("MonetizationService")
+	local DebrisService = Knit.GetService("DebrisService")
 
 	NodeService.Hit:Connect(function(player: Player, kind: string)
 		act(player)
@@ -247,16 +262,10 @@ function TelemetryService:KnitStart()
 		self:_purchase(player, { Cost = cash, Shards = 0 }, kind .. "_level_" .. level)
 	end)
 
-	UpgradeService.StationUpgraded:Connect(function(player: Player, stationId: string, level: number)
+	UpgradeService.LineUpgraded:Connect(function(player: Player, level: number, cash: number)
 		act(player)
-		local station = Config.Home.Stations[stationId]
-		local item = station and station.Levels[level]
-		if item then
-			self:_purchase(player, item, stationId .. "_" .. level, true)
-		end
-		if stationId == "refinery" then
-			self:milestone(player, "firstRefinery", "first_refinery_bought", level)
-		end
+		self:_purchase(player, { Cost = cash, Shards = 0 }, "line_" .. level)
+		self:milestone(player, "firstRefinery", "first_refinery_bought", level)
 	end)
 
 	RebirthService.Reborn:Connect(function(player: Player, rebirths: number, cashSpent: number)
@@ -273,8 +282,31 @@ function TelemetryService:KnitStart()
 		self:custom(player, "product_bought", 1, { productKey, outcome })
 	end)
 
+	DebrisService.RockBroken:Connect(function(player: Player, field: string)
+		local fields = rocksMined[player] or {}
+		rocksMined[player] = fields
+		Telemetry.countAction(fields, field)
+	end)
+
+	local function joined(player: Player)
+		joinedAt[player] = os.clock()
+	end
+	Players.PlayerAdded:Connect(joined)
+	for _, player in Players:GetPlayers() do
+		joined(player)
+	end
+
 	Players.PlayerRemoving:Connect(function(player)
 		actions[player] = nil
+		rocksMined[player] = nil
+		local started = joinedAt[player]
+		joinedAt[player] = nil
+		if started then
+			local data = PlayerStateService:Get(player)
+			local tutorialDone: boolean? = if data and data.flags then data.flags.tutorialDone == true else nil
+			local row = Telemetry.playerLeft(os.clock() - started, MeteorService:GetPhase(), tutorialDone)
+			self:custom(player, row.Name, row.Value, row.Fields)
+		end
 	end)
 
 	task.spawn(function()

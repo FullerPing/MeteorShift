@@ -1,7 +1,7 @@
 --!strict
 -- Pure helpers behind TelemetryService (spec §13): building AnalyticsService
 -- custom fields, the hours-away bucket of returned_offline_income, the
--- per-minute action counter and the rows of the meteor event summary.
+-- per-minute action counter, the rows of the meteor event summary and the player_left row.
 --
 -- Roblox custom and economy events take at most three custom fields
 -- (CustomField01..03) with low-cardinality string values, so the event summary
@@ -77,6 +77,45 @@ function Telemetry.eventSummary(summary: EventSummary): { Row }
 		})
 	end
 	return rows
+end
+
+-- Session length as a coarse low-cardinality bucket for player_left.
+local SESSION_BUCKETS = { { 2, "0-2" }, { 5, "2-5" }, { 10, "5-10" }, { 20, "10-20" }, { 40, "20-40" }, { 90, "40-90" } }
+
+function Telemetry.sessionBucket(seconds: number): string
+	local minutes = math.max(seconds, 0) / 60
+	for _, bucket in SESSION_BUCKETS do
+		if minutes < bucket[1] then
+			return bucket[2]
+		end
+	end
+	return "90+"
+end
+
+-- The part of the meteor cycle a Shared.Phase falls in: the wait, the event, or the few seconds after it.
+-- This is what tells whether players leave between meteors (spec §15).
+local LEAVE_PHASES: { [string]: string } = {
+	Countdown = "countdown",
+	Impact = "meteor",
+	Active = "meteor",
+	CoreCracked = "aftermath",
+	Cooled = "aftermath",
+	Cleanup = "aftermath",
+}
+
+function Telemetry.leavePhase(phase: string): string
+	return LEAVE_PHASES[phase] or "unknown"
+end
+
+-- The player_left row: value = whole minutes this session, fields = cycle phase, session bucket and whether
+-- the player had finished the tutorial (nil when the profile was already gone).
+function Telemetry.playerLeft(sessionSeconds: number, phase: string, tutorialDone: boolean?): Row
+	local onboarding = if tutorialDone == nil then "unknown" elseif tutorialDone then "tutorial_done" else "in_tutorial"
+	return {
+		Name = "player_left",
+		Value = math.floor(math.max(sessionSeconds, 0) / 60),
+		Fields = { Telemetry.leavePhase(phase), Telemetry.sessionBucket(sessionSeconds), onboarding },
+	}
 end
 
 -- The compact line printed in Studio for every event, so the log proves it fired.

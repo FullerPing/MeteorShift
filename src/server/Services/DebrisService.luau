@@ -19,6 +19,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local DebrisField = require(ReplicatedStorage.Shared.DebrisField)
 local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
@@ -33,6 +34,9 @@ local DebrisService = Knit.CreateService({
 	Name = "DebrisService",
 	Client = {},
 })
+
+-- (player: Player, field: string) a rock was broken; field is its ore field's id, or "Filler" outside the fields
+DebrisService.RockBroken = Signal.new()
 
 local lastTravel: { [Player]: number } = {}
 
@@ -144,6 +148,8 @@ function DebrisService:_track(part: BasePart)
 			if reward then
 				self:_payCash(player, reward)
 			end
+			local field = part:GetAttribute("Field")
+			self.RockBroken:Fire(player, if reward and type(field) == "string" then field else "Filler")
 			setVisible(part, false)
 			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()
 				if part.Parent then
