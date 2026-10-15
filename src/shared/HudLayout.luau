@@ -70,6 +70,7 @@ export type Layout = {
 	ore: Rect?, -- desktop: where ORE goes, in line with the backpack; nil puts it above SPRINT
 	levelAbove: boolean?, -- phones in landscape: the level medal sits above the wallet instead of on its corner
 	objective: Rect?, -- phones in landscape: the clock's larger slot below the top bar (countdown, cooldown and objective)
+	offers: { Rect }, -- touch and portrait: free cells in line with the menu buttons for the Offers buttons, best first
 	jump: Rect?, -- Roblox's jump button (touch only)
 	thumbstick: Rect?, -- Roblox's thumbstick area (touch only)
 	topBar: Rect,
@@ -352,6 +353,7 @@ function HudLayout.compute(
 				buttons.DAILY = { x = 12 + (row.Width + row.Gap), y = lTop + navigationHeight + navGap, w = row.Width, h = row.Height }
 				buttons.CODES = { x = 12 + (row.Width + row.Gap), y = lTop + 2 * (navigationHeight + navGap), w = row.Width, h = row.Height }
 				buttons.STORE = { x = 12, y = lTop + 2 * (navigationHeight + navGap), w = row.Width, h = row.Height }
+				-- (the Offers fill the two free cells under Rebirth, see HudLayout.offerSlots)
 				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
 			elseif math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2)) + 2 * navigationHeight + 2 <= reservedThumb.y then
 				-- smaller phones: too short for the column above the joystick, so two lines instead: Gear, Index and
@@ -521,6 +523,14 @@ function HudLayout.compute(
 			fastWalk, ore = sprintSpot, oreSpot
 		end
 	end
+	local offers = if touch or portrait then HudLayout.offerSlots(buttons, width, height, {
+		settings, if timerVisible then timer else nil, objective, eventPanel, mine, jump, fastWalk, ore, production, tutorial,
+		-- the thumbstick's reserve reaches well above the stick itself: a cell may graze its top edge
+		if thumbstick then { x = thumbstick.x, y = thumbstick.y + 4, w = thumbstick.w, h = thumbstick.h - 4 } else nil,
+		if backpackVisible then backpack else nil, if resourcesVisible then resources else nil,
+		if fastWalk and not ore then { x = fastWalk.x, y = fastWalk.y - Hud.SideButtons.Size - Hud.SideButtons.Gap,
+			w = fastWalk.w, h = Hud.SideButtons.Size } else nil, -- ORE above SPRINT
+	}) else {}
 	-- Notifications use real pixels, independent of card scale. The reward line
 	-- needs two rows; tight expanded screens temporarily reserve the event slot
 	-- instead of shrinking the text into movement controls or the foundry.
@@ -539,6 +549,7 @@ function HudLayout.compute(
 		for _, button in buttons do
 			table.insert(obstacles, { x = button.x, y = button.y, w = button.w, h = navigationHeight(button.w, button.h) })
 		end
+		for _, offer in offers do table.insert(obstacles, offer) end
 		-- the widest centred banner at y that stays clear of everything on either side of it
 		local function place(y: number): Rect
 			local left, right = 12, width - 12
@@ -585,9 +596,83 @@ function HudLayout.compute(
 		tutorialVisible = tutorialVisible, backpack = backpack, backpackVisible = backpackVisible, settings = settings,
 		notification = notification, notificationCompact = notification.h < 40, eventVisible = eventVisible,
 		tutorialY = tutorial.y - topInset, mine = mine, jump = jump, thumbstick = thumbstick, fastWalk = fastWalk, ore = ore,
-		levelAbove = phoneLandscape, objective = objective,
+		levelAbove = phoneLandscape, objective = objective, offers = offers,
 		topBar = { x = 0, y = 0, w = width, h = topInset },
 	}
+end
+
+-- Touch and portrait: up to Hud.OfferSlots cells for the Offers buttons (2x Ore, 2x Cash, Starter Pack), in line
+-- with the menu buttons. The menu buttons sit on a grid; the empty cells inside it come first (row by row) and,
+-- when they all take an offer, are all the slots (the rest wait until one is bought). Otherwise a column to the right of it, then the rows under it (portrait phones: under the clock, beside the event card),
+-- where the slots stay one block of touching cells. A cell that leaves the screen or touches any of `blockers`
+-- (nil entries are skipped) is passed over.
+function HudLayout.offerSlots(buttons: { [string]: Rect }, width: number, height: number, blockers: { Rect? }): { Rect }
+	local row = Hud.TouchRow
+	local xs, ys = {}, {}
+	local function add(list: { number }, value: number)
+		for _, v in list do
+			if math.abs(v - value) < 0.5 then return end
+		end
+		table.insert(list, value)
+	end
+	for _, button in buttons do
+		add(xs, button.x)
+		add(ys, button.y)
+	end
+	if #xs == 0 then return {} end
+	table.sort(xs)
+	table.sort(ys)
+	local stepX = if #xs > 1 then xs[2] - xs[1] else row.Width + row.Gap
+	local stepY = if #ys > 1 then ys[2] - ys[1] else navigationHeight(row.Width, row.Height) + row.Gap
+	local cells: { Rect } = {}
+	local function cell(x: number, y: number): Rect
+		return { x = x, y = y, w = row.Width, h = row.Height }
+	end
+	for _, y in ys do
+		for _, x in xs do
+			local taken = false
+			for _, button in buttons do
+				if math.abs(button.x - x) < 0.5 and math.abs(button.y - y) < 0.5 then taken = true break end
+			end
+			if not taken then table.insert(cells, cell(x, y)) end
+		end
+	end
+	local holes = #cells
+	for _, y in ys do table.insert(cells, cell(xs[#xs] + stepX, y)) end
+	for line = 1, math.ceil(height / stepY) do
+		for _, x in xs do table.insert(cells, cell(x, ys[#ys] + line * stepY)) end
+	end
+	local slots: { Rect } = {}
+	local below: { Rect } = {} -- the slots taken under the grid, which must stay one block
+	local function touching(a: Rect, b: Rect): boolean
+		local dx, dy = math.abs(a.x - b.x), math.abs(a.y - b.y)
+		return (dy < 0.5 and math.abs(dx - stepX) < 0.5) or (dx < 0.5 and math.abs(dy - stepY) < 0.5)
+	end
+	for i, candidate in cells do
+		-- once the offers have filled the grid's gaps it is a clean rectangle: stop rather than grow a ragged edge
+		if #slots >= Hud.OfferSlots or (i > holes and #slots > 0 and #slots == holes) then break end
+		local under = candidate.y > ys[#ys] + 0.5
+		local clear = candidate.x >= 0 and candidate.y >= 0 and candidate.x + candidate.w <= width - 6
+			and candidate.y + navigationHeight(candidate.w, candidate.h) <= height
+		for _, button in buttons do
+			if clear and HudLayout.overlaps(candidate, button) then clear = false end
+		end
+		for j = 1, 16 do
+			local blocker = blockers[j]
+			if clear and blocker and HudLayout.overlaps(candidate, blocker) then clear = false end
+		end
+		if clear and under and #below > 0 then
+			clear = false
+			for _, other in below do
+				if touching(candidate, other) then clear = true break end
+			end
+		end
+		if clear then
+			table.insert(slots, candidate)
+			if under then table.insert(below, candidate) end
+		end
+	end
+	return slots
 end
 
 -- An ore list attached above the backpack HUD. These are screen pixels: the

@@ -51,6 +51,9 @@ Hud.TouchRow = {
 	TextSize = 26, -- unscaled; the 0.5 navigation scale keeps labels at 13 px
 }
 
+-- Touch and portrait: how many cells HudLayout.offerSlots finds for the Offers buttons (2x Ore, 2x Cash, Starter Pack)
+Hud.OfferSlots = 3
+
 -- Landscape training scale. Skip keeps a 44 px target through closeSize().
 Hud.TouchCardScale = 0.65
 

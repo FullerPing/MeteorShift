@@ -1,7 +1,7 @@
 --!strict
 -- Small round buttons in the game for the three things that are not in the Store: the 2x Ore
--- pass, the 2x Cash pass and the one-per-player Starter Value Pack. They sit in a row to the
--- column going up from the INDEX button, tap straight to the Roblox purchase prompt, and disappear once
+-- pass, the 2x Cash pass and the one-per-player Starter Value Pack. On desktop they climb in a column from the
+-- INDEX button; on phones they take the free cells in line with the menu buttons (HudLayout.offerSlots). They tap straight to the Roblox purchase prompt, and disappear once
 -- the item is owned (or while it is not on sale: Id 0). Move or hide them as "Offers" in
 -- Config.HudEdit.
 
@@ -92,7 +92,8 @@ function OfferController:KnitStart()
 		-- Daily Rewards can sit right above Index: the offers climb from whichever of the two is higher
 		local daily = layout.buttons.DAILY
 		local top = if index and daily and math.abs(daily.x - index.x) < 1 then math.min(index.y, daily.y) elseif index then index.y else 0
-		local hidden = panelOpen() or HudLayout.isHidden(layout, "Offers") or index == nil
+		local grid = layout.touch or layout.portrait -- phones: the cells HudLayout found beside the menu buttons
+		local hidden = panelOpen() or HudLayout.isHidden(layout, "Offers") or (index == nil and not grid)
 		local blockers = {}
 		for _, other in { layout.timer, layout.eventPanel, layout.backpack, layout.thumbstick, layout.jump, layout.mine, layout.settings } do
 			table.insert(blockers, other)
@@ -102,12 +103,18 @@ function OfferController:KnitStart()
 			local button = buttons[offer.key]
 			local definition = if offer.kind == "pass" then Monetization.Passes[offer.key] else Monetization.Products[offer.key]
 			local visible = not hidden and definition.Id ~= 0 and not owned(offer)
-			if visible and index then
+			local cell: HudLayout.Rect? = nil
+			if visible then
 				slot += 1
-				local rect = HudLayout.nudged(layout, "Offers", {
+				cell = if grid then layout.offers[slot] elseif index then {
 					x = index.x + (index.w - SIZE) / 2, y = top - 8 - (SIZE + GAP) * slot, w = SIZE, h = SIZE,
-				})
-				for _, other in blockers do
+				} else nil
+				visible = cell ~= nil
+			end
+			if visible then
+				local rect = HudLayout.nudged(layout, "Offers", cell :: HudLayout.Rect)
+				-- (the phone cells already keep clear of everything)
+				for _, other in if grid then {} else blockers do
 					if other and HudLayout.overlaps(rect, other) then visible = false break end
 				end
 				button.Position = UDim2.fromOffset(rect.x, rect.y)

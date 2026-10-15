@@ -819,4 +819,45 @@ return function(t: any)
 		t.ok(layout.hidden == nil, "the input layout is not mutated")
 	end)
 
+	t.test("phones put the offers in line with the menu buttons, clear of everything else", function()
+		for _, viewport in viewports do
+			if viewport.touch then
+				local layout = HudLayout.compute(viewport.size, true, viewport.inset)
+				if viewport.size.X > viewport.size.Y then
+					t.ok(#layout.offers >= 1, viewport.name .. ": at least one offer cell")
+				end
+				local stick = layout.thumbstick :: HudLayout.Rect -- (its top 4 px may be grazed)
+				local others = { layout.settings, layout.mine, layout.jump, layout.fastWalk, layout.objective,
+					{ x = stick.x, y = stick.y + 4, w = stick.w, h = stick.h - 4 } }
+				for _, offer in layout.offers do
+					local aligned = false
+					for _, button in layout.buttons do
+						if math.abs(button.x - offer.x) < 0.5 or math.abs(button.y - offer.y) < 0.5 then aligned = true end
+						t.ok(not HudLayout.overlaps(offer, button), viewport.name .. ": offer clear of a menu button")
+					end
+					t.ok(aligned, viewport.name .. ": offer shares a row or column with the menu buttons")
+					t.ok(offer.x >= 0 and offer.y >= layout.inset and offer.x + offer.w <= viewport.size.X
+						and offer.y + offer.h <= viewport.size.Y, viewport.name .. ": offer on screen")
+					for _, other in others do
+						t.ok(not HudLayout.overlaps(offer, other), viewport.name .. ": offer clear of the controls")
+					end
+				end
+			end
+		end
+	end)
+
+	t.test("on a landscape phone the offers fill the two cells under Rebirth, completing the grid", function()
+		local layout = HudLayout.compute(Vector2.new(844, 390), true)
+		local rebirth = layout.buttons.REBIRTH
+		t.eq(#layout.offers, 2) -- a fourth column would squeeze the meteor objective
+		t.near(layout.offers[1].x, rebirth.x, 0.5)
+		t.near(layout.offers[1].y, layout.buttons.DAILY.y, 0.5)
+		t.near(layout.offers[2].x, rebirth.x, 0.5)
+		t.near(layout.offers[2].y, layout.buttons.CODES.y, 0.5)
+	end)
+
+	t.test("desktop leaves the offers to their column above Index", function()
+		t.eq(#HudLayout.compute(Vector2.new(1920, 1080), false).offers, 0)
+	end)
+
 end

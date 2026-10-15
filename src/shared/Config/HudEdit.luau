@@ -17,7 +17,7 @@
 --   Settings    the settings gear (touch screens)
 --   FastWalk    the SPRINT button (the ORE button follows it)
 --   Ore         the ORE button, on top of wherever FastWalk is
---   Offers      the 2x Ore, 2x Cash and Starter Pack buttons stacked above INDEX (they leave once bought)
+--   Offers      the 2x Ore, 2x Cash and Starter Pack buttons: above INDEX on desktop, in the menu grid on phones (they leave once bought)
 
 local HudEdit = {}
 
