@@ -31,21 +31,31 @@ Daily.Days = {
 } :: { Day }
 
 -- Events: crustHit (a validated hit on a meteor crust node), meteorJoin (first hit of each meteor), coreCrack
--- (you shared in a cracked core), barsSold (bars), oreDeposited (ore), hatch (an egg). Titles state the target.
+-- (you shared in a cracked core), barsSold (bars), oreDeposited (ore), hatch (an egg). Titles state the target:
+-- a %d in a title is filled from that quest's own Target below at load, so re-targeting a quest can never
+-- desync its displayed text (the two number-free titles pass through string.format unchanged: Roblox's
+-- string.format ignores arguments its format string does not use).
 Daily.Quests = {
-	{ Id = "crust150", Event = "crustHit", Target = 150, Title = "Break 150 meteor crust nodes", Minutes = 6, Shards = 0 },
-	{ Id = "crust400", Event = "crustHit", Target = 400, Title = "Break 400 meteor crust nodes", Minutes = 12, Shards = 2, MinLevel = 8 },
-	{ Id = "join2", Event = "meteorJoin", Target = 2, Title = "Join 2 meteors", Minutes = 8, Shards = 0 },
+	{ Id = "crust150", Event = "crustHit", Target = 150, Title = "Break %d meteor crust nodes", Minutes = 6, Shards = 0 },
+	{ Id = "crust400", Event = "crustHit", Target = 400, Title = "Break %d meteor crust nodes", Minutes = 12, Shards = 2, MinLevel = 8 },
+	{ Id = "join2", Event = "meteorJoin", Target = 2, Title = "Join %d meteors", Minutes = 8, Shards = 0 },
 	{ Id = "crack1", Event = "coreCrack", Target = 1, Title = "Help crack a meteor core", Minutes = 10, Shards = 3 },
-	{ Id = "sell100", Event = "barsSold", Target = 100, Title = "Sell 100 bars", Minutes = 6, Shards = 0 },
-	{ Id = "deposit500", Event = "oreDeposited", Target = 500, Title = "Deposit 500 ore in the Refinery", Minutes = 6, Shards = 0 },
+	{ Id = "sell100", Event = "barsSold", Target = 100, Title = "Sell %d bars", Minutes = 6, Shards = 0 },
+	{ Id = "deposit500", Event = "oreDeposited", Target = 500, Title = "Deposit %d ore in the Refinery", Minutes = 6, Shards = 0 },
 	{ Id = "hatch1", Event = "hatch", Target = 1, Title = "Hatch an egg", Minutes = 8, Shards = 0, MinLevel = 8 },
 } :: { Quest }
 
 Daily.Weekly = {
-	{ Id = "week15", Event = "meteorJoin", Target = 15, Title = "Join 15 meteors this week", Minutes = 60, Shards = 20 },
-	{ Id = "weekCores3", Event = "coreCrack", Target = 3, Title = "Help crack 3 meteor cores this week", Minutes = 60, Shards = 20 },
+	{ Id = "week15", Event = "meteorJoin", Target = 15, Title = "Join %d meteors this week", Minutes = 60, Shards = 20 },
+	{ Id = "weekCores3", Event = "coreCrack", Target = 3, Title = "Help crack %d meteor cores this week", Minutes = 60, Shards = 20 },
 } :: { Quest }
+
+for _, def in Daily.Quests do
+	def.Title = string.format(def.Title, def.Target)
+end
+for _, def in Daily.Weekly do
+	def.Title = string.format(def.Title, def.Target)
+end
 
 -- Paid once all of today's quests are claimed
 Daily.Bonus = { Minutes = 15, Shards = 5 }
