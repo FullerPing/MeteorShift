@@ -4,7 +4,9 @@ MeteorShift has no build, lint or CLI test step — "Everything runs through Roj
 (`CLAUDE.md:9`). The suite is a tiny harness (`tests/Runner.luau`, 147 lines) plus one pure spec per
 logic module; it exists because the game's rules live in pure `Shared.*` / `Lib.*` modules that can
 be tested headless inside Studio. The profile specs' subject matter is [profile-schema.md](profile-schema.md),
-the pacing model's is [economy.md](economy.md), the catalog rules' are [monetization.md](monetization.md).
+the pacing model's is [economy.md](economy.md), the catalog rules' are [monetization.md](monetization.md),
+the datamodel mapping is [architecture.md](architecture.md)'s "Repo shape", and the Play-mode `Dev*`
+hooks beside this Edit-mode suite are [dev-hooks.md](dev-hooks.md)'s.
 
 ## How to run
 
