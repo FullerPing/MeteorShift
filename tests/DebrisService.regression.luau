@@ -27,6 +27,10 @@ modules.MiningPower = { power = function(tier) return 1.25 ^ (tier - 1) end }
 modules.Levels = { oreYield = function(level) return if level >= 5 then 1 else 0.5 end }
 modules.Rebirth = { cost = function() return 1000000 end }
 modules.Format = { cash = function(n) return "$" .. n end }
+modules.Signal = { new = function() return { Fire = function() end } end }
+modules.WorldMap = {}
+modules.RequestGate = {}
+modules.StudSkin = { apply = function() end }
 
 local passed, failed = 0, 0
 local function eq(actual, expected, message)
@@ -55,20 +59,26 @@ local function fixture(tier, field)
 				}
 			end
 			if name == "EconomyService" then return { ExpectedIncome = function() return { perSecond = state.income } end } end
+			if name == "TelemetryService" then return { custom = function() end, earned = function() end } end
 			if name == "RewardService" then return { Bonus = function(_, _, kind, text) table.insert(state.toasts, kind .. ":" .. text) end } end
 			error("Unexpected service " .. name)
 		end,
 	}
 	local shared = { Config = "Config", MiningPower = "MiningPower", DebrisOre = "DebrisOre", DebrisField = "DebrisField", FieldTravel = "FieldTravel",
-		Levels = "Levels", Rebirth = "Rebirth", Format = "Format" }
+		Levels = "Levels", Rebirth = "Rebirth", Format = "Format", WorldMap = "WorldMap", RequestGate = "RequestGate", StudSkin = "StudSkin" }
+	local players = { PlayerRemoving = { Connect = function() end } }
 	local service = load("src/server/Services/DebrisService.luau", {
-		game = { GetService = function(_, name) eq(name, "ReplicatedStorage"); return { Packages = { Knit = "Knit" }, Shared = shared } end },
+		game = { GetService = function(_, name)
+			if name == "Players" then return players end
+			eq(name, "ReplicatedStorage")
+			return { Packages = { Knit = "Knit", Signal = "Signal" }, Shared = shared }
+		end },
 		task = { delay = function(_, fn) table.insert(state.delayed, fn) end },
 	})
-	local fleck = { Color = roblox.Color3.fromRGB(176, 152, 112), Material = roblox.Enum.Material.Metal, Transparency = 0 }
+	local fleck = { Name = "OreFleck", Color = roblox.Color3.fromRGB(176, 152, 112), Material = roblox.Enum.Material.Metal, Transparency = 0 }
 	function fleck:IsA(name) return name == "BasePart" end
 	local attrs = { Field = field }
-	local part = { Parent = true, Transparency = 0, CanQuery = true, CanCollide = true }
+	local part = { Parent = true, Transparency = 0, CanQuery = true, CanCollide = true, Color = roblox.Color3.fromRGB(120, 120, 120) }
 	function part:GetDescendants() return { fleck } end
 	function part:SetAttribute(name, value) attrs[name] = value end
 	function part:GetAttribute(name) return attrs[name] end
