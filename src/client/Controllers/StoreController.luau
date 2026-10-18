@@ -161,7 +161,7 @@ function StoreController:KnitStart()
 			local left = if playerState then playerState.overclockLeft or 0 else 0
 			return if left > 0 then "Active: " .. Format.number(math.ceil(left / 60)) .. " min left" else ""
 		elseif card.key == "OreRush" then
-			if ownedPasses.TwoXOre then return "You own 2x Ore" end
+			if ownedPasses.TwoXOre then return "You own " .. Monetization.Passes.TwoXOre.Name end
 			local left = if playerState then playerState.oreBoostLeft or 0 else 0
 			return if left > 0 then "Active: " .. Format.number(math.ceil(left / 60)) .. " min left" else ""
 		end
@@ -176,7 +176,7 @@ function StoreController:KnitStart()
 			local status = statusText(card)
 			if status == "" and not info.loading and info.forSale ~= false and info.price == nil then status = "Reopen the store to retry the price." end
 			card.status.Text = status
-			card.buy.Text = if card.key == "OreRush" and ownedPasses.TwoXOre then "You own 2x Ore"
+			card.buy.Text = if card.key == "OreRush" and ownedPasses.TwoXOre then "You own " .. Monetization.Passes.TwoXOre.Name
 				elseif current == "credit" then BUTTON_TEXT.credit .. " (" .. Format.number(credits(creditKey(card))) .. ")"
 				elseif current == "buy" and info.price ~= nil then Format.ROBUX .. " " .. Format.number(info.price) else BUTTON_TEXT[current]
 			-- gold to buy with Robux, lime to use a credit, blue once owned, grey otherwise (MenuTheme's colours mean the same everywhere)
