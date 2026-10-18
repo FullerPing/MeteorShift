@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-MeteorShift is a Roblox game (Luau, `--!strict`) synced to Studio with Rojo. Meteors crash into a central crater on a timer; players mine them together, haul ore to a personal refinery line, sell bars, upgrade gear, hatch pets and rebirth. `README.md` is the feature-by-feature spec (long, and parts are stale: the "plot-era map" section and the charcoal/studded UI description predate the current cartoon HUD restyle). Treat the code and `docs/` as the source of truth when they disagree.
+MeteorShift is a Roblox game (Luau, `--!strict`) synced to Studio with Rojo. Meteors crash into a central crater on a timer; players mine them together, haul ore to a personal refinery line, sell bars, upgrade gear, hatch pets and rebirth. `README.md` is the quick start: the pitch, the Studio/Rojo setup steps and pointers into `docs/` — the feature-by-feature documentation lives in the guides under `docs/guide/` (indexed in `docs/README.md`). Treat the code and `docs/` as the source of truth when they disagree.
 
 ## Commands
 
@@ -10,7 +10,7 @@ There is no build, lint or CLI test step. Everything runs through Rojo and Roblo
 
 - `rojo serve` in the repo root, then connect with the Rojo plugin in Studio. `default.project.json` maps `src/shared` → `ReplicatedStorage.Shared`, `src/server` → `ServerScriptService.Server`, `src/client` → `StarterPlayerScripts.Client`, `tests` → `ServerStorage.Tests`, `src/loading` → `ReplicatedFirst`, `assets/native-ui` → `StarterGui`. `Packages/` (Knit, Fusion, Comm, Promise, Signal, Option) is vendored; don't edit it.
 - Run all specs in Studio **Edit mode** (command bar or the Studio MCP `execute_luau`): `require(game.ServerStorage.Tests.Runner)()`. Run one spec (name or part of it): `require(game.ServerStorage.Tests.Runner)("MenuFit")`.
-- Dev hooks (`DevGrant`, `DevGear`, `DevMeteor`, `DevLevel`, `DevMineral`, `DevBench`, `DevPet`, `DevProduct`, plus `/meteor`, `/pickaxe`, `/backpack` chat commands) and the `Dev*` attributes on `ServerStorage` / `ReplicatedStorage` are listed in the README's "Working on it" section. Set `ServerStorage.DevMemoryStore = true` **before** Play for isolated runs; clear it before saving the place.
+- Dev hooks (`DevGrant`, `DevGear`, `DevMeteor`, `DevLevel`, `DevMineral`, `DevBench`, `DevPet`, `DevProduct`, plus `/meteor`, `/pickaxe`, `/backpack` chat commands) and the `Dev*` attributes on `ServerStorage` / `ReplicatedStorage` are catalogued in `docs/guide/dev-hooks.md`. Set `ServerStorage.DevMemoryStore = true` **before** Play for isolated runs; clear it before saving the place.
 
 ## Testing conventions
 
@@ -25,7 +25,7 @@ There is no build, lint or CLI test step. Everything runs through Rojo and Roblo
 
 **State is server-owned and batched.** `DataService` owns the saved profile; `PlayerStateService` applies gameplay rules to it and replicates a `State` snapshot to the client at most once per `Config.Net.StateFlushInterval`. Controllers render from that snapshot and call service remotes; every action is re-validated on the server (range, swing speed, affordability, tier/level gates). Never trust a client number.
 
-**Profile schema is versioned.** `src/server/Lib/ProfileTemplate.luau` holds the current `version` (10) and defaults; `DataService` migrates old profiles step by step. Adding saved data means: extend the template, bump the version, add a migration branch, and keep `RebirthReset` (what survives rebirth) consistent.
+**Profile schema is versioned.** `src/server/Lib/ProfileTemplate.luau` holds the defaults and the current `version` — read that field, never assume a number; `DataService` migrates old profiles step by step. Adding saved data means: extend the template, bump the version, add a migration branch, and keep `RebirthReset` (what survives rebirth) consistent.
 
 **Config is the only home for tuning numbers.** `src/shared/Config/init.luau` collects the table modules (Meteor, Gear, Pickaxes, Backpacks, Pets, Levels, Rebirth, Monetization, Store, Hud, HudEdit, HudIcons, Daily, Codes, Badges, ...). Rules that read Config live in sibling `Shared.*` modules (`Gear`, `Rebirth`, `Levels`, `MeteorTypes`, `Daily`, ...). Keep that split.
 
