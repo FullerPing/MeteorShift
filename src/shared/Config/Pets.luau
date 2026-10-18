@@ -36,8 +36,7 @@ export type Rarity = { Id: string, Name: string, Color: Color3 }
 export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string, MinRebirths: number? }
 export type Pet = {
 	Id: string, Name: string, Rarity: string, Perks: { Perk }, Color: Color3, Blurb: string,
-	Pass: string?, -- Config.Monetization pass key: owning the pass gives the pet (not in any egg)
-	Robux: number?, -- the pass price, shown in the shop (the pass itself is priced on Roblox)
+	Pass: string?, -- Config.Monetization pass key: owning the pass gives the pet (not in any egg); the price is Config.Monetization.Passes[Pass].Robux, as PetsController shows it
 }
 
 Pets.MaxLevel = 10
@@ -130,9 +129,9 @@ Pets.List = {
 	{ Id = "meteorDrake", Name = "Meteor Drake", Rarity = "legendary", Color = Color3.fromRGB(255, 130, 50), Blurb = "Born in a crater. It never stops digging.",
 		Perks = { { Role = "miner", Min = 0.22, Max = 0.36 }, { Role = "yield", Min = 0.08, Max = 0.18 }, { Role = "shards", Min = 0.08, Max = 0.20 } } },
 	-- Premium (game passes: fixed price, never random, the strongest miners)
-	{ Id = "drillbot", Name = "Drillbot", Rarity = "premium", Pass = "Drillbot", Robux = 99, Color = Color3.fromRGB(255, 176, 48), Blurb = "A little drill on legs. It keeps swinging while you do.",
+	{ Id = "drillbot", Name = "Drillbot", Rarity = "premium", Pass = "Drillbot", Color = Color3.fromRGB(255, 176, 48), Blurb = "A little drill on legs. It keeps swinging while you do.",
 		Perks = { { Role = "miner", Min = 0.25, Max = 0.40 }, { Role = "swift", Min = 0.08, Max = 0.20 }, { Role = "yield", Min = 0.10, Max = 0.20 } } },
-	{ Id = "solarPhoenix", Name = "Solar Phoenix", Rarity = "premium", Pass = "SolarPhoenix", Robux = 199, Color = Color3.fromRGB(255, 120, 60), Blurb = "A sun in feathers. It mines at the speed of light.",
+	{ Id = "solarPhoenix", Name = "Solar Phoenix", Rarity = "premium", Pass = "SolarPhoenix", Color = Color3.fromRGB(255, 120, 60), Blurb = "A sun in feathers. It mines at the speed of light.",
 		Perks = { { Role = "miner", Min = 0.50, Max = 1.00 }, { Role = "merchant", Min = 0.15, Max = 0.35 }, { Role = "scholar", Min = 0.15, Max = 0.35 } } },
 } :: { Pet }
 
