@@ -121,7 +121,7 @@ function RebirthController:KnitStart()
 			elseif not canAfford then (if ratio >= 0.8 then "Almost there! Earn " else "Earn ") .. Format.cash(cost - cash) .. " more"
 			else (if keep then "Keep Everything is ready: nothing resets. " else "")
 				.. (if unlock then "Unlocks: " .. unlock .. ". " else "Index bonuses stay and stack with this multiplier. ")
-				.. (if bonus > 0 then "+" .. bonus .. " bonus shards now." else "Rebirth now: waiting never beats the x5.")
+				.. (if bonus > 0 then "+" .. bonus .. " bonus shards now." else "Rebirth now: waiting never beats the x" .. Format.number(Config.Rebirth.CashMult) .. ".")
 		footer.TextColor3 = if armed or notice ~= "" then Palette.UNMET else Palette.SECOND
 		-- "Rebirth without losing anything": usable at any time, even before you can afford the rebirth.
 		-- Uses a credit when you have one, otherwise sells the product
