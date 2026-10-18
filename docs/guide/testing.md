@@ -123,7 +123,7 @@ add dates). Cite = the header or first-test line the one-liner came from.
 | Price | rebirth-inflated cash rounds identically server and client | `tests/Price.spec.luau:2` |
 | Rebirth | cost/multiplier shape read from `Config.Rebirth`, never retune-brittle values | `tests/Rebirth.spec.luau:2-5` |
 | Gear | one pickaxe + one backpack, level restarts at 1 each tier | `tests/Gear.spec.luau:2-3` |
-| GearMigration | the v6→v7 stat-merge and v7→v8 per-tier restart conversions | `tests/GearMigration.spec.luau:2-3` |
+| GearMigration | the historical gear-stat merge and per-tier-restart conversions, shape-only | `tests/GearMigration.spec.luau:2-3` |
 | Levels | XP curve, awards, meteor XP, evolve gates | `tests/Levels.spec.luau:2` |
 | Line | the production line's single level | `tests/Line.spec.luau:2` |
 | Refining | `Lib.Refining`'s line sim (online tick + offline catch-up share it) | `tests/Refining.spec.luau:2-5` |
