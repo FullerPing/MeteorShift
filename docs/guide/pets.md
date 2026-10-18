@@ -170,7 +170,8 @@ PetsController shows it").
   click prompts the game pass by id (`:405-407`). `tests/Pets.spec.luau:80-89` pins this flow so no
   hard-coded price can creep back in.
 - Being paid does not make them random or egg drops, and their perks stay ahead of every free pet at
-  both endpoints — both pinned (`tests/Pets.spec.luau:287-310`).
+  both endpoints — both pinned (`tests/Pets.spec.luau:287-310`). The full pass/product catalogue lives
+  in [monetization.md](monetization.md).
 
 ## Menus and hatch UI (pointers)
 
@@ -215,5 +216,6 @@ covers only meteorEgg/crystalEgg — the generic tests (`:275-285`) are what wat
 ## Related
 
 - Shard income, bar prices and the sale multiplier chain: [economy.md](economy.md)
+- Passes and products (Pet Max, Extra Pet Slot, the two pet passes): [monetization.md](monetization.md)
 - Service/signal architecture: [architecture.md](architecture.md)
 - Authored models: [pet-models.md](../art-pipeline/pet-models.md) and [blender-asset-briefs.md](../art-pipeline/blender-asset-briefs.md)
