@@ -1,13 +1,16 @@
 --!strict
--- The ORE button: opens a short list of the four ore fields (Config.Debris.Fields) and asks
+-- The ORE button: opens a short list of the ore fields (Config.Debris.Fields) and asks
 -- DebrisService to teleport you to the one you pick. It sits just above the SPRINT button
 -- (FastWalkController places that), hides while a menu is open, and the list closes after a pick.
+-- A field still locked to you (Shared.FieldGate) shows its rule ("Level 12") in grey and can't be picked;
+-- the server refuses it anyway.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
+local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 local Cartoon = require(script.Parent.Parent.Cartoon)
@@ -38,6 +41,8 @@ end
 
 function FieldTravelController:KnitStart()
 	local DebrisService = Knit.GetService("DebrisService")
+	local PlayerStateService = Knit.GetService("PlayerStateService")
+	local state: any = nil
 	local playerGui = player:WaitForChild("PlayerGui")
 	local scope = Fusion.scoped(Fusion)
 	local hud = UI.hud(scope)
@@ -48,6 +53,7 @@ function FieldTravelController:KnitStart()
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	gui.DisplayOrder = 2 -- the open list draws over the tutorial card (1), under every menu (10+)
 
 	local button = Instance.new("TextButton")
 	button.Name = "OreButton"
@@ -69,7 +75,11 @@ function FieldTravelController:KnitStart()
 	panel.Name = "Panel"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.5)
-	panel.Size = UDim2.fromOffset(300, 64 + #fields * 56)
+	local ROW, STEP = 40, 46
+	local panelHeight = 64 + #fields * STEP
+	panel.Size = UDim2.fromOffset(300, panelHeight)
+	local fit = Instance.new("UIScale") -- short screens shrink the list rather than cut it off
+	fit.Parent = panel
 	panel.BackgroundColor3 = Color3.fromRGB(30, 36, 62)
 	panel.Visible = false
 	panel.Parent = gui
@@ -81,20 +91,28 @@ function FieldTravelController:KnitStart()
 	stroke.Color = Color3.fromRGB(255, 190, 70)
 	stroke.Parent = panel
 	label(panel, "ORE FIELDS", UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 10))
+	local rows: { [any]: { row: TextButton, text: TextLabel } } = {}
+	local function isOpen(field: any): boolean
+		return state ~= nil and FieldGate.isOpen(field, state.level or 1, state.rebirths or 0)
+	end
 	for index, field in fields do
 		local row = Instance.new("TextButton")
 		row.Name = field.Id
 		row.AutoButtonColor = true
 		row.Text = ""
 		row.BackgroundColor3 = field.Color
-		row.Size = UDim2.new(1, -24, 0, 46)
-		row.Position = UDim2.fromOffset(12, 54 + (index - 1) * 56)
+		row.Size = UDim2.new(1, -24, 0, ROW)
+		row.Position = UDim2.fromOffset(12, 54 + (index - 1) * STEP)
 		row.Parent = panel
 		local rowCorner = Instance.new("UICorner")
 		rowCorner.CornerRadius = UDim.new(0, 12)
 		rowCorner.Parent = row
-		label(row, string.upper(field.Name), UDim2.new(1, -16, 1, -12), UDim2.fromOffset(8, 6))
+		rows[field] = { row = row, text = label(row, string.upper(field.Name), UDim2.new(1, -16, 1, -12), UDim2.fromOffset(8, 6)) }
 		row.Activated:Connect(function()
+			if not isOpen(field) then
+				Sfx.play("Click")
+				return
+			end
 			panel.Visible = false
 			task.spawn(function()
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
@@ -110,6 +128,19 @@ function FieldTravelController:KnitStart()
 		end)
 	end
 
+	local function paintRows()
+		for field, item in rows do
+			local open = isOpen(field)
+			item.row.BackgroundColor3 = if open then field.Color else UI.DISABLED
+			item.row.AutoButtonColor = open
+			item.text.Text = if open then string.upper(field.Name) else string.upper(field.Name) .. "  ·  " .. string.upper(FieldGate.label(field))
+		end
+	end
+	PlayerStateService.State:Observe(function(value)
+		state = value
+		paintRows()
+	end)
+
 	local function panelOpen(): boolean
 		for _, flag in PANEL_FLAGS do
 			if player:GetAttribute(flag) == true then return true end
@@ -123,6 +154,8 @@ function FieldTravelController:KnitStart()
 		local rect = HudLayout.nudged(layout, "Ore", if layout.ore then table.clone(layout.ore) else {
 			x = anchor.Position.X.Offset, y = anchor.Position.Y.Offset - SIZE - GAP, w = SIZE, h = SIZE,
 		})
+		local camera = workspace.CurrentCamera
+		fit.Scale = if camera then math.min(1, (camera.ViewportSize.Y - 40) / panelHeight) else 1
 		button.Position = UDim2.fromOffset(rect.x, rect.y)
 		button.Size = UDim2.fromOffset(rect.w, rect.h)
 		local hidden = panelOpen()
@@ -130,7 +163,10 @@ function FieldTravelController:KnitStart()
 		if hidden or not button.Visible then panel.Visible = false end
 	end
 	scope:Observer(hud):onChange(refresh)
-	button.Activated:Connect(function() panel.Visible = not panel.Visible end)
+	button.Activated:Connect(function()
+		panel.Visible = not panel.Visible
+		if panel.Visible then refresh() end
+	end)
 	anchor:GetPropertyChangedSignal("Position"):Connect(refresh)
 	for _, flag in PANEL_FLAGS do player:GetAttributeChangedSignal(flag):Connect(refresh) end
 	gui.Parent = playerGui
