@@ -38,10 +38,21 @@ function WorldMap.commissaryPoint(root: Instance?): BasePart?
 	return if commissary and commissary:IsA("Model") and point and point:IsA("BasePart") then point else nil
 end
 
--- Every place the refinery can be used from: the Foundry first, then the Commissary when the map has one
+-- Every place the refinery can be used from: the Foundry first, then the Commissary when the map has one, then
+-- the ore chute at each field (Map.Chutes.<FieldId>.UsePoint), by name
 function WorldMap.refineryPoints(root: Instance?): { BasePart }
 	local points = {}
 	for _, point in { WorldMap.refineryPoint(root), WorldMap.commissaryPoint(root) } do table.insert(points, point) end
+	local chutes = root and root:FindFirstChild("Chutes")
+	if chutes then
+		local found = {}
+		for _, chute in chutes:GetChildren() do
+			local point = chute:FindFirstChild("UsePoint")
+			if point and point:IsA("BasePart") then table.insert(found, point) end
+		end
+		table.sort(found, function(a, b) return (a.Parent :: Instance).Name < (b.Parent :: Instance).Name end)
+		table.move(found, 1, #found, #points + 1, points)
+	end
 	return points
 end
 

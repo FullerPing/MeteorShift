@@ -60,6 +60,23 @@ return function(t: any)
 		t.eq(#WorldMap.refineryPoints(map), 1)
 		map:Destroy(); character:Destroy()
 	end)
+	t.test("every ore chute is a place to deposit, after the Foundry and the Commissary", function()
+		local map, character, root, _, point = fixture()
+		local chutes = Instance.new("Folder"); chutes.Name = "Chutes"; chutes.Parent = map
+		for i, name in { "RustWorks", "FrostYard" } do
+			local chute = Instance.new("Model"); chute.Name = name; chute.Parent = chutes
+			local use = Instance.new("Part"); use.Name = "UsePoint"; use.Position = point.Position + Vector3.new(i * 100, 0, 0); use.Parent = chute
+		end
+		local decoy = Instance.new("Model"); decoy.Name = "Broken"; decoy.Parent = chutes -- no UsePoint: ignored
+		local points = WorldMap.refineryPoints(map)
+		t.eq(#points, 3)
+		t.eq(points[1], point, "the Foundry comes first")
+		t.eq(points[2].Parent.Name, "FrostYard", "chutes are sorted by name")
+		t.eq(points[3].Parent.Name, "RustWorks")
+		root.Position = point.Position + Vector3.new(200, 0, 0)
+		t.ok(WorldMap.canUseRefinery(map, character), "standing at a chute counts")
+		map:Destroy(); character:Destroy()
+	end)
 	t.test("production ignores the development map override", function()
 		t.eq(WorldMap.name(false, "Map_Redesign"), "Map")
 		t.eq(WorldMap.name(true, "Map_Redesign"), "Map_Redesign")

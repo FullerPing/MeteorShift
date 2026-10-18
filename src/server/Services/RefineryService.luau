@@ -221,7 +221,7 @@ function RefineryService:_connectShared()
 		warn("[RefineryService] TownSquare.Refinery requires its exact UsePoint part")
 		return
 	end
-	-- the Foundry and, when the map has one, the Commissary: both open the same menu
+	-- the Foundry, the Commissary and every ore chute on the map: all open the same menu
 	for _, point in WorldMap.refineryPoints(map) do
 		local existing = point:FindFirstChild("UseRefinery")
 		local prompt: ProximityPrompt
@@ -231,7 +231,8 @@ function RefineryService:_connectShared()
 			prompt = Instance.new("ProximityPrompt")
 			prompt.Name = "UseRefinery"
 			prompt.ActionText = "Use refinery"
-			prompt.ObjectText = if point == WorldMap.refineryPoint(map) then "Town refinery" else "Foundry commissary"
+			prompt.ObjectText = if point == WorldMap.refineryPoint(map) then "Town refinery"
+				elseif point == WorldMap.commissaryPoint(map) then "Foundry commissary" else "Ore chute"
 			prompt.KeyboardKeyCode = Enum.KeyCode.E
 			prompt.HoldDuration = 0
 			prompt.MaxActivationDistance = 14
