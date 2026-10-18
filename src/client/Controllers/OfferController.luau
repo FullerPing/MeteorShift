@@ -29,7 +29,7 @@ type Offer = { key: string, kind: "pass" | "product", caption: string, icon: str
 local OFFERS: { Offer } = {
 	{ key = "StarterPack", kind = "product", caption = "Starter", icon = "bars" },
 	{ key = "TwoXCash", kind = "pass", caption = Monetization.Passes.TwoXCash.Name, icon = "coin" },
-	{ key = "TwoXOre", kind = "pass", caption = "2x Ore", icon = "ore" },
+	{ key = "TwoXOre", kind = "pass", caption = Monetization.Passes.TwoXOre.Name, icon = "ore" },
 }
 
 function OfferController:KnitStart()
