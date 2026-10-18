@@ -29,7 +29,9 @@ modules.Levels = { oreYield = function(level) return if level >= 5 then 1 else 0
 modules.Rebirth = { cost = function() return 1000000 end }
 modules.Format = { cash = function(n) return "$" .. n end }
 modules.Signal = { new = function() return { Fire = function() end } end }
-modules.WorldMap = {}
+-- the map the service sees: a v3 map has a Gates folder (fields can lock); the archived v2 map has none
+local currentMap = { FindFirstChild = function(_, name) return if name == "Gates" then {} else nil end }
+modules.WorldMap = { find = function() return currentMap end }
 modules.RequestGate = {}
 modules.StudSkin = { apply = function() end }
 
@@ -201,6 +203,28 @@ test("a rebirth field ignores level", function()
 	state.rebirths = 1
 	eq(state.def.CanHit({}), true)
 	eq(service:IsFieldOpen({}, "HaloLedge"), false)
+end)
+
+test("on a map without gates (the v2 map) every field stays open", function()
+	local saved = currentMap
+	currentMap = { FindFirstChild = function() return nil end }
+	local ok, err = pcall(function()
+		local service, state = fixture(1, "GlassScar")
+		eq(service:IsFieldOpen({}, "GlassScar"), true)
+		eq(state.def.CanHit({}), true)
+	end)
+	currentMap = saved
+	assert(ok, err)
+end)
+
+test("a refused swing on a locked rock says why, once in a while", function()
+	local _, state = fixture(1, "VioletQuarry")
+	local player = {}
+	eq(state.def.OnRefused ~= nil, true, "gated rocks tell NodeService what to do on a refused swing")
+	state.def.OnRefused(player)
+	state.def.OnRefused(player)
+	eq(#state.toasts, 1, "one notice, not one per swing")
+	eq(state.toasts[1], "locked:Violet Quarry opens at Level 12")
 end)
 
 test("open fields and filler rocks have no hit gate", function()

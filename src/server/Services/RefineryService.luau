@@ -252,7 +252,7 @@ end
 function RefineryService.Client:Deposit(player: Player): number
 	if not remoteReady(player, "deposit", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
-		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry or the Commissary to deposit ore.")
+		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry, the Commissary or an ore chute to deposit ore.")
 		return 0
 	end
 	return self.Server:Deposit(player)
@@ -261,7 +261,7 @@ end
 function RefineryService.Client:Claim(player: Player): number
 	if not remoteReady(player, "claim", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
-		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry or the Commissary to claim bars.")
+		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry, the Commissary or an ore chute to claim bars.")
 		return 0
 	end
 	return self.Server:Collect(player)

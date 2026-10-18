@@ -42,6 +42,7 @@ function FieldGateController:KnitStart()
 	map.DescendantAdded:Connect(function(item)
 		if item.Name ~= "Barrier" and item.Name ~= "Rule" then return end
 		local gates = map:FindFirstChild("Gates")
+		if not gates then return end
 		local gate = item
 		while gate.Parent and gate.Parent ~= gates do gate = gate.Parent :: Instance end
 		if gate.Parent == gates then paint(gate) end

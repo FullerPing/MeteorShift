@@ -45,6 +45,7 @@ export type TargetDef = {
 	-- how many players hit this target within the Resonance window, this one included.
 	PowerMult: ((player: Player, hitters: number) -> number)?,
 	CanHit: ((player: Player) -> boolean)?,
+	OnRefused: ((player: Player) -> ())?, -- a swing CanHit refused (pets and targeting stay silent)
 	OnHit: ((player: Player, power: number, ore: number) -> ())?, -- power is the hit's Mining Power
 	OnBroken: ((player: Player) -> ())?,
 }
@@ -305,6 +306,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 
 	local def = target.Def
 	if def.CanHit and not def.CanHit(player) then
+		if def.OnRefused then def.OnRefused(player) end
 		return false
 	end
 

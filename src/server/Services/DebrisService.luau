@@ -44,6 +44,7 @@ local DebrisService = Knit.CreateService({
 DebrisService.RockBroken = Signal.new()
 
 local lastTravel: { [Player]: number } = {}
+local lastRefusal: { [Player]: number } = {} -- the last "this field is locked" notice, so swings don't spam it
 
 local NodeService
 local ActivityService
@@ -139,6 +140,12 @@ function DebrisService:_track(part: BasePart)
 	local id = NodeService:Register(part, {
 		Kind = "Debris",
 		CanHit = if gated and gated.Unlock then function(player: Player) return self:IsFieldOpen(player, gated.Id) end else nil,
+		OnRefused = if gated and gated.Unlock then function(player: Player)
+			local now = os.clock()
+			if lastRefusal[player] and now - lastRefusal[player] < 3 then return end
+			lastRefusal[player] = now
+			RewardService:Bonus(player, "locked", gated.Name .. " opens at " .. FieldGate.label(gated))
+		end else nil,
 		MaxHp = hits,
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
@@ -214,11 +221,13 @@ function DebrisService:_fieldSpot(id: string): Vector3?
 	return Vector3.new(floor.Position.X + dx, top + 3.6, floor.Position.Z + dz)
 end
 
--- Whether the ore field `id` is open to the player (their saved level and rebirths)
+-- Whether the ore field `id` is open to the player (their saved level and rebirths). A map without gates (the
+-- archived v2 map) has no locked fields.
 function DebrisService:IsFieldOpen(player: Player, id: string): boolean
 	local field = FieldTravel.find(id)
 	if not field then return false end
-	if not field.Unlock then return true end
+	local map = WorldMap.find()
+	if not field.Unlock or not (map and map:FindFirstChild("Gates")) then return true end
 	local data = PlayerStateService:Get(player)
 	return data ~= nil and FieldGate.isOpen(field, data.level or 1, data.rebirths or 0)
 end
@@ -284,6 +293,7 @@ end
 function DebrisService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastTravel[player] = nil
+		lastRefusal[player] = nil
 	end)
 	local folder = WorldMap.wait():WaitForChild("Debris")
 	for _, part in folder:GetChildren() do

@@ -11,6 +11,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 local Cartoon = require(script.Parent.Parent.Cartoon)
@@ -92,8 +93,11 @@ function FieldTravelController:KnitStart()
 	stroke.Parent = panel
 	label(panel, "ORE FIELDS", UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 10))
 	local rows: { [any]: { row: TextButton, text: TextLabel } } = {}
+	-- mirrors DebrisService:IsFieldOpen: a map without gates (the archived v2 map) has no locked fields
 	local function isOpen(field: any): boolean
-		return state ~= nil and FieldGate.isOpen(field, state.level or 1, state.rebirths or 0)
+		local map = WorldMap.find()
+		if not (map and map:FindFirstChild("Gates")) then return true end
+		return FieldGate.isOpen(field, if state then state.level or 1 else 1, if state then state.rebirths or 0 else 0)
 	end
 	for index, field in fields do
 		local row = Instance.new("TextButton")

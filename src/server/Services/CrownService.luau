@@ -44,11 +44,12 @@ function CrownService:RideLift(player: Player, crown: Instance): boolean
 	return true
 end
 
-function CrownService:Dive(player: Player): boolean
+function CrownService:Dive(player: Player, pad: BasePart): boolean
 	local now = os.clock()
 	if lastDive[player] and now - lastDive[player] < Config.Crown.DiveCooldown then return false end
 	local _, root = liveRoot(player)
-	if not root then return false end
+	-- a touch is reported by the toucher's machine: only launch someone actually standing at the pad
+	if not root or (root.Position - pad.Position).Magnitude > pad.Size.Magnitude / 2 + 8 then return false end
 	lastDive[player] = now
 	local velocity, seconds = DiveArc.velocity(root.Position, Config.Crown.DiveTarget, Config.Crown.DiveApex, workspace.Gravity)
 	self.Client.Dive:Fire(player, velocity, seconds)
@@ -74,7 +75,7 @@ function CrownService:_wire(crown: Instance)
 		pad.CanTouch = true
 		pad.Touched:Connect(function(hit)
 			local player = Players:GetPlayerFromCharacter(hit.Parent)
-			if player then self:Dive(player) end -- any body part; the cooldown keeps it to one launch
+			if player then self:Dive(player, pad) end -- any body part; the cooldown keeps it to one launch
 		end)
 	end
 end
