@@ -22,6 +22,7 @@ return {
 	Pets = require(script.Pets),
 	Levels = require(script.Levels),
 	Debris = require(script.Debris),
+	Crown = require(script.Crown),
 	Home = Home,
 	Tutorial = require(script.Tutorial),
 	Intro = require(script.Intro),

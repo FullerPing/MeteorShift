@@ -247,6 +247,7 @@ function HUDController:KnitStart()
 		crate = Color3.fromRGB(139, 240, 195),
 		fieldCash = Color3.fromRGB(255, 214, 64),
 		welcomeBack = Color3.fromRGB(255, 214, 64),
+		locked = Color3.fromRGB(255, 150, 140),
 	}
 	RewardService.Bonus:Connect(function(message)
 		showToast(message.text, BONUS_COLORS[message.kind])
