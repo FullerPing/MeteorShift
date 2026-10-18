@@ -1,3 +1,4 @@
+SUPERSEDED by docs/guide/monetization.md (2026-10-18)
 # Fixed purchases
 
 `Config.Monetization` lists every pass and developer product. An item whose `Id` is `0` is not on sale: the store says **Not on sale yet** and never requests Marketplace metadata or prompts a purchase. `Robux` records the intended Creator Dashboard price; for items with an id the store reads the live regional price from Roblox.
