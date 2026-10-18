@@ -4,6 +4,8 @@
 --   Config.Crown.LiftRebirths rebirths on. The server checks the saved rebirths; the prompt is open to everyone.
 --   Meteor Dive: touching Crown.DivePad throws you on a ballistic arc (Shared.DiveArc) onto the crater's north rim.
 --   The server decides the launch; the client applies it (it owns its character's physics, like the knockback).
+-- Below LiftRebirths nobody stays on the Crown however they got up (climbing the north slide, a lucky jump): every
+-- half second they are put back at the lift's foot with the same notice.
 -- A map without a Crown (the archived v2 map) simply never wires either.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,6 +14,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local DiveArc = require(ReplicatedStorage.Shared.DiveArc)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
+local WorldGeometry = require(ReplicatedStorage.Shared.WorldGeometry)
 
 local CrownService = Knit.CreateService({
 	Name = "CrownService",
@@ -56,6 +59,22 @@ function CrownService:Dive(player: Player, pad: BasePart): boolean
 	return true
 end
 
+-- Puts anyone below LiftRebirths who stands on the Crown back in front of the lift
+function CrownService:_returnUnready(crown: Instance)
+	local lift = crown:FindFirstChild("Lift")
+	local promptPart = lift and lift:FindFirstChild("Prompt")
+	if not (promptPart and promptPart:IsA("BasePart")) then return end
+	for _, player in Players:GetPlayers() do
+		local character, root = liveRoot(player)
+		local data = PlayerStateService:Get(player)
+		if character and root and data and (data.rebirths or 0) < Config.Crown.LiftRebirths and WorldGeometry.onCrown(root.Position) then
+			character:PivotTo(CFrame.new(promptPart.Position + Vector3.new(0, 1, -4)))
+			root.AssemblyLinearVelocity = Vector3.zero
+			RewardService:Bonus(player, "locked", "The Crown opens at rebirth " .. Config.Crown.LiftRebirths)
+		end
+	end
+end
+
 function CrownService:_wire(crown: Instance)
 	local lift = crown:WaitForChild("Lift", math.huge)
 	local promptPart = lift:WaitForChild("Prompt", math.huge)
@@ -89,6 +108,12 @@ function CrownService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player) lastDive[player] = nil end)
 	task.spawn(function()
 		local crown = WorldMap.wait():WaitForChild("Crown", math.huge)
+		task.spawn(function()
+			while crown.Parent do
+				task.wait(0.5)
+				self:_returnUnready(crown)
+			end
+		end)
 		self:_wire(crown)
 	end)
 end

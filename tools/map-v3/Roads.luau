@@ -74,10 +74,10 @@ for _, angle in G.Avenues.angles do
 	local wall = HALF / math.max(math.abs(c), math.abs(s)) - W / 2
 	local runs = { { G.Avenues.starts[angle] or G.Avenues.from, EDGE_T1 - RUN, 0 } }
 	if angle == 270 then
-		table.insert(runs, { EDGE_T1 + 4, 302, Y1 }) -- ends at the Rebirth terrace's front
+		table.insert(runs, { EDGE_T1 + 4, G.Avenues.stops[270], Y1 }) -- ends at the Rebirth terrace's front
 	else
 		table.insert(runs, { EDGE_T1 + 4, EDGE_T2 - RUN, Y1 })
-		table.insert(runs, { EDGE_T2 + 4, if angle == 90 then G.Crown.z0 - 8 else wall, Y2 })
+		table.insert(runs, { EDGE_T2 + 4, G.Avenues.stops[angle] or wall, Y2 })
 	end
 	for _, run in runs do
 		local a0, a1, y = run[1], run[2], run[3]

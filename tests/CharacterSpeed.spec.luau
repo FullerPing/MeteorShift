@@ -50,6 +50,13 @@ return function(t)
 		t.eq(Speed.onRoad(-450, 30), false) -- beside the west avenue
 	end)
 
+	t.test("the avenues stop where their paving stops", function()
+		t.eq(Speed.onRoad(0, -280), true, "south avenue on T1")
+		t.eq(Speed.onRoad(0, -320), false, "the Rebirth Terrace is not a lane")
+		t.eq(Speed.onRoad(0, -450), false, "nor T2 beyond it")
+		t.eq(Speed.onRoad(0, 420), false, "the Crown is not a lane")
+	end)
+
 	t.test("a respawn starts from the humanoid default again, not a boosted speed", function()
 		local applied, base = Speed.update(16, nil, nil, 0)
 		t.near(base, 16, 1e-9)

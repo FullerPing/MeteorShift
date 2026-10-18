@@ -1,6 +1,13 @@
 --!strict
 -- World access and effect clearance are geometric contracts, not mining-rule changes.
 return function(t: any)
+	t.test("onCrown is the plateau's top, not the T2 ground below its edge", function()
+		local G = require(t.shared.WorldGeometry)
+		t.eq(G.onCrown(Vector3.new(0, 59, 450)), true)
+		t.eq(G.onCrown(Vector3.new(-30, 57, 475)), true)
+		t.eq(G.onCrown(Vector3.new(0, 36, 395)), false, "the lift base on T2")
+		t.eq(G.onCrown(Vector3.new(200, 59, 450)), false, "beside the Crown")
+	end)
 	local module = t.shared:FindFirstChild("WorldGeometry")
 	t.test("shared world geometry exists", function() t.ok(module, "WorldGeometry missing") end)
 	if not module then return end

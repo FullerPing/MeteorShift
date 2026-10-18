@@ -12,7 +12,7 @@ Speed.RoadMultiplier = 1.5
 Speed.RoadMargin = 2 -- studs past the road's kerbs that still count as on it
 
 -- Whether a ground point is on a fast lane: the ring road (LoopRadius, PathWidth wide), the Terrace Express
--- (ExpressRadius, ExpressWidth wide) or an avenue between its start and the wall (the north one stops at the Crown)
+-- (ExpressRadius, ExpressWidth wide) or an avenue between its start and its stop (Avenues.stops, else the wall)
 function Speed.onRoad(x: number, z: number): boolean
 	local settings = WorldGeometry.Settings
 	local offset = settings.StageOffset
@@ -26,8 +26,7 @@ function Speed.onRoad(x: number, z: number): boolean
 	for _, angle in avenues.angles do
 		local c, s = math.cos(math.rad(angle)), math.sin(math.rad(angle))
 		local along, across = dx * c + dz * s, math.abs(dz * c - dx * s)
-		local stop = settings.BoundaryHalf / math.max(math.abs(c), math.abs(s))
-		if angle == 90 then stop = settings.Crown.z0 end
+		local stop = avenues.stops[angle] or settings.BoundaryHalf / math.max(math.abs(c), math.abs(s))
 		if across <= avenues.width / 2 + Speed.RoadMargin and along >= (avenues.starts[angle] or avenues.from) and along <= stop then
 			return true
 		end

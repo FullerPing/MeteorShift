@@ -27,8 +27,9 @@ WorldGeometry.Settings = {
 	ExpressRadius = 280, -- the Terrace Express ring on T1, a fast lane like the ring road
 	ExpressWidth = 16,
 	-- Eight gold avenues every 45 degrees (atan2(z, x)) from the ring road to the wall, also fast lanes. The north one
-	-- ends at the Crown; the south one starts behind the Refinery so the spawn plaza stays calm.
-	Avenues = { width = 24, from = 143, angles = { 0, 45, 90, 135, 180, 225, 270, 315 }, starts = { [270] = 196 } },
+	-- ends at the Crown; the south one starts behind the Refinery so the spawn plaza stays calm and ends at the Rebirth
+	-- Terrace's front. `stops` is where the paving (and the fast lane) ends; the others run to the wall.
+	Avenues = { width = 24, from = 143, angles = { 0, 45, 90, 135, 180, 225, 270, 315 }, starts = { [270] = 196 }, stops = { [90] = 392, [270] = 302 } },
 	-- Slides down beside three avenues, `offset` studs off the centre line (side +1 = counter-clockwise of it), from the
 	-- tier edge (the Crown for the north one) to the ring road's outer edge
 	Slides = { offset = 22, width = 8, list = { { angle = 45, side = -1 }, { angle = 135, side = 1 }, { angle = 90, side = 1 } } },
@@ -96,6 +97,12 @@ function WorldGeometry.tierAt(x: number, z: number): string
 		if r >= tier.inner and r < tier.outer then return tier.id end
 	end
 	return "Cliff"
+end
+
+-- Whether a position stands on the Crown plateau's top (not on T2 below its edge)
+function WorldGeometry.onCrown(position: Vector3): boolean
+	local c = WorldGeometry.Settings.Crown
+	return WorldGeometry.tierAt(position.X, position.Z) == "Crown" and position.Y > c.y - 6
 end
 
 -- The ground height of a tier id ("Crown" included)

@@ -6,8 +6,8 @@
 --     a margin, in the field's own frame; Entrance (the zone's entrance, facing the crater). The locked-field eject
 --     treats the floor box as "inside", so each Entrance is asserted to lie outside it.
 --   Gates.<Id>: the FieldGate mesh facing the crater, a Barrier (not on fields without an Unlock) and the Rule label.
---     The Crown fields have no plan gate; theirs stands 9 studs in front of their first rocks.
---   Chutes.<Id>: the OreChute mesh facing the crater and its UsePoint 3 studs in front.
+--     The Crown fields have no plan gate; theirs stands 4 studs past their entrance, as on the other tiers.
+--   Chutes.<Id>: the OreChute mesh facing the crater and its UsePoint 9 studs in front of its pivot.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local T = assert(A.toon, "Run Toon first")
 local plan = assert(..., "Pass the plan: L(\"../map-v3/PlanData\")")
@@ -19,7 +19,7 @@ local BAND_Y = { T0 = G.Tiers[1].y, T1 = G.Tiers[2].y, T2 = G.Tiers[3].y, CROWN 
 -- which archived field's rocks each field borrows, and the tint for the new ones (nil keeps the v2 colours)
 local LOOK = { RustWorks = "RustWorks", FrostYard = "FrostYard", VioletQuarry = "VioletQuarry", SulfurRidge = "SulfurRidge",
 	EmberShelf = "RustWorks", GlassScar = "FrostYard", Starfall = "VioletQuarry", HaloLedge = "SulfurRidge" }
-local MARGIN = 6
+local MARGIN = 2 -- past the rocks' footprints; more and the eject box reaches the avenue kerbs beside Rust and Frost
 
 local debris = A.group(A.map, "Debris", "Folder")
 local fieldsGroup = A.group(A.map, "DebrisFields")
@@ -105,7 +105,9 @@ for index, field in Config.Debris.Fields do
 		id .. ": the Entrance is inside the field's eject box; a locked player would be put back forever")
 
 	-- gate: the plan's, or for the Crown fields one in front of the first rocks
-	local gatePos = if f.gate then Vector3.new(f.gate.x, y, f.gate.z) else Vector3.new(0, y, 0) + out * (dMin - 9) + across * uMid
+	local gatePos = if f.gate then Vector3.new(f.gate.x, y, f.gate.z) else Vector3.new(e.X, y, e.Z) + out * 4
+	-- the eject puts a locked player on the Entrance, so it must stand clear of the (solid for them) barrier
+	assert(math.abs((Vector3.new(e.X, y, e.Z) - gatePos):Dot(out)) >= 3, id .. ": the Entrance is inside the gate's barrier")
 	local gateModel = A.group(gates, id)
 	local mesh = T.mesh(gateModel, "FieldGate", CFrame.lookAt(gatePos, gatePos - out), 25.2, function() error("ServerStorage.MapArt.FieldGate is missing; run Props") end)
 	if field.Unlock then

@@ -18,7 +18,8 @@ local c = G.Crown
 local z = c.z1 - 1.5
 T.part(boundary, "CrownParapet", Vector3.new(c.x1 - c.x0, 3, 3), A.cf((c.x0 + c.x1) / 2, c.y + 1.5, z), R.stone[1])
 T.part(boundary, "CrownParapetCap", Vector3.new(c.x1 - c.x0 + 1, .8, 3.8), A.cf((c.x0 + c.x1) / 2, c.y + 3.4, z), R.cream[2], nil, false)
-local fence = A.part(boundary, "CrownFence", Vector3.new(c.x1 - c.x0, 20, 2), A.cf((c.x0 + c.x1) / 2, c.y + 10, c.z1 + 1), R.stone[1])
+-- the whole north wall: the Crown's side turf overhangs its x span by a stud or so
+local fence = A.part(boundary, "CrownFence", Vector3.new(G.BoundaryHalf * 2, 20, 2), A.cf(0, c.y + 10, c.z1 + 1), R.stone[1])
 fence.Transparency = 1
 result.boundaryParts = A.count(boundary)
 return result

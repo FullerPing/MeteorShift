@@ -125,6 +125,28 @@ local function reach(label: string, at: Vector3)
 	end
 	fail(("%s: no walk to an avenue (%s)"):format(label, why))
 end
+-- a locked field's eject box (its floor +2 studs, as DebrisService reads it) must not reach any avenue paving, or a
+-- player walking the avenue's kerb is teleported to the field's entrance
+for _, avenue in map.Roads:GetChildren() do
+	if avenue.Name:find("^Avenue_") then
+		for _, p in avenue:GetChildren() do
+			if p.Name == "Paving" then
+				for t = -p.Size.Z / 2, p.Size.Z / 2, 2 do
+					for _, side in { -1, 0, 1 } do
+						local at = (p.CFrame * CFrame.new(side * p.Size.X / 2, 0, t)).Position
+						for _, field in map.DebrisFields:GetChildren() do
+							local floor = field.FieldFloor
+							local l = floor.CFrame:PointToObjectSpace(at)
+							if math.abs(l.X) <= floor.Size.X / 2 + 2 and math.abs(l.Z) <= floor.Size.Z / 2 + 2 and l.Y > -2 and l.Y < 40 then
+								fail(("%s eject box reaches %s paving at (%.0f, %.0f)"):format(field.Name, avenue.Name, at.X, at.Z))
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+end
 for _, chute in map.Chutes:GetChildren() do reach("chute " .. chute.Name, chute.UsePoint.Position) end
 for _, field in map.DebrisFields:GetChildren() do reach("entrance " .. field.Name, field.Entrance.Position) end
 
