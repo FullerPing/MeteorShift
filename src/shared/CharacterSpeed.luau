@@ -11,13 +11,28 @@ Speed.FastMultiplier = 1.5
 Speed.RoadMultiplier = 1.5
 Speed.RoadMargin = 2 -- studs past the road's kerbs that still count as on it
 
--- Whether a ground point is on the ring road (its centre line is LoopRadius, PathWidth wide)
+-- Whether a ground point is on a fast lane: the ring road (LoopRadius, PathWidth wide), the Terrace Express
+-- (ExpressRadius, ExpressWidth wide) or an avenue between its start and the wall (the north one stops at the Crown)
 function Speed.onRoad(x: number, z: number): boolean
 	local settings = WorldGeometry.Settings
 	local offset = settings.StageOffset
 	local dx, dz = x - offset.X, z - offset.Z
 	local radius = math.sqrt(dx * dx + dz * dz)
-	return math.abs(radius - settings.LoopRadius) <= settings.PathWidth / 2 + Speed.RoadMargin
+	if math.abs(radius - settings.LoopRadius) <= settings.PathWidth / 2 + Speed.RoadMargin
+		or math.abs(radius - settings.ExpressRadius) <= settings.ExpressWidth / 2 + Speed.RoadMargin then
+		return true
+	end
+	local avenues = settings.Avenues
+	for _, angle in avenues.angles do
+		local c, s = math.cos(math.rad(angle)), math.sin(math.rad(angle))
+		local along, across = dx * c + dz * s, math.abs(dz * c - dx * s)
+		local stop = settings.BoundaryHalf / math.max(math.abs(c), math.abs(s))
+		if angle == 90 then stop = settings.Crown.z0 end
+		if across <= avenues.width / 2 + Speed.RoadMargin and along >= (avenues.starts[angle] or avenues.from) and along <= stop then
+			return true
+		end
+	end
+	return false
 end
 
 function Speed.update(current: number, previousApplied: number?, previousBase: number?, bonus: number, fast: boolean?, road: boolean?): (number, number)

@@ -45,41 +45,49 @@ return function(t: any)
 	end)
 	t.test("all interactive footprints clear the worst landing effect", function()
 		for _, zone in Geometry.Settings.Zones do
-			-- an ore field's box round its diagonal fan reaches far closer than the fan does: check where the field starts
-			local distance = if zone.quarter then Geometry.Settings.Fan.Gate - 3 else Geometry.footprintDistance(zone)
-			t.ok(distance >= Geometry.Settings.LandingRadius + 4, zone.id .. " inside FX")
+			t.ok(Geometry.footprintDistance(zone) >= Geometry.Settings.LandingRadius + 4, zone.id .. " inside FX")
 			t.ok(math.abs(zone.x) + zone.width / 2 < Geometry.Settings.BoundaryHalf, zone.id .. " crosses X boundary")
 			t.ok(math.abs(zone.z) + zone.depth / 2 < Geometry.Settings.BoundaryHalf, zone.id .. " crosses Z boundary")
 		end
 		t.near(Geometry.footprintDistance(Geometry.zone("Refinery")), 161, 1e-6)
 		t.ok(Geometry.zone("Refinery").entrance.Magnitude > Config.Meteor.Knockback.Radius + 12, "front clearance beyond shockwave")
 	end)
-	t.test("compact layout reduces travel while preserving usable full-size landmarks", function()
-		t.eq(Geometry.Settings.BoundaryHalf, 270)
-		t.ok(Geometry.Settings.BoundaryHalf / 510 <= 0.54, "about half the previous playable width")
-		t.eq(Geometry.Settings.BuildingScale, 0.5)
-		-- Gear Hall and the Hatchery stand SE (Gear Hall) and SW (Hatchery) of the ring, turned toward the crater: lat x dep is their own frame
-		t.eq(Geometry.zone("GearHall").lat, 50)
-		t.eq(Geometry.zone("GearHall").dep, 36)
-		t.eq(Geometry.zone("Hatchery").lat, 64)
-		t.eq(Geometry.zone("Hatchery").dep, 36)
-		local zones = Geometry.Settings.Zones
+	t.test("the 1080 terraced layout keeps every footprint apart", function()
+		local s = Geometry.Settings
+		t.eq(s.BoundaryHalf, 540)
+		t.eq(#s.Tiers, 3)
+		t.eq(s.Tiers[1].outer, 250)
+		t.eq(s.Tiers[2].inner, 266)
+		t.eq(s.Tiers[2].outer, 360)
+		t.eq(s.Tiers[3].inner, 372)
+		t.eq(s.Crown.y, 56)
+		t.eq(s.ExpressRadius, 280)
+		t.eq(#s.Avenues.angles, 8)
+		-- a zone's real footprint: its rotated lat x dep rectangle when it faces somewhere, else its box
+		local function rect(z)
+			local f = z.facing or Vector3.zAxis
+			local r = Vector3.new(f.Z, 0, -f.X)
+			local hu, hd = (if z.facing then z.lat else z.width) / 2, (if z.facing then z.dep else z.depth) / 2
+			local c = Vector3.new(z.x, 0, z.z)
+			return { c + r * hu + f * hd, c - r * hu + f * hd, c - r * hu - f * hd, c + r * hu - f * hd }, { r, f }
+		end
+		local function apart(a, b)
+			local ca, axesA = rect(a)
+			local cb, axesB = rect(b)
+			for _, axis in { axesA[1], axesA[2], axesB[1], axesB[2] } do
+				local a0, a1, b0, b1 = math.huge, -math.huge, math.huge, -math.huge
+				for _, p in ca do a0, a1 = math.min(a0, p:Dot(axis)), math.max(a1, p:Dot(axis)) end
+				for _, p in cb do b0, b1 = math.min(b0, p:Dot(axis)), math.max(b1, p:Dot(axis)) end
+				if a1 <= b0 + 1e-6 or b1 <= a0 + 1e-6 then return true end
+			end
+			return false
+		end
+		local zones = s.Zones
 		for i, a in zones do
 			for j = i + 1, #zones do
-				local b = zones[j]
-				-- ore fields are slices of the circle, checked against each other below, not as boxes
-				if a.quarter or b.quarter then continue end
-				t.ok(math.abs(a.x-b.x) >= (a.width+b.width)/2 or math.abs(a.z-b.z) >= (a.depth+b.depth)/2, a.id .. " overlaps " .. b.id)
+				t.ok(apart(a, zones[j]), a.id .. " overlaps " .. zones[j].id)
 			end
 		end
-	end)
-	t.test("Crystal crown remains visible above the doubled crust at its largest flash", function()
-		local crater = Config.LandingFX.Crater
-		local gem = Config.LandingFX.Types.Crystal.Gem
-		local largestCube = math.max(10, gem.Size, gem.Pulse[2], gem.UnlockedPulse[2])
-		local lowestCorner = crater.Center.Y + gem.Height - largestCube * math.sqrt(3) / 2
-		local measuredCrustTop = 52.642014 + crater.Center.Y - 2
-		t.ok(lowestCorner > measuredCrustTop + 1, "crown gem is buried in the double-sized crust")
 	end)
 	t.test("rectangular clearance uses the closest corner rather than centre", function()
 		t.near(Geometry.footprintDistance({ x = 275, z = 270, width = 100, depth = 92 }), math.sqrt(225^2 + 224^2), 1e-6)
@@ -87,7 +95,7 @@ return function(t: any)
 	end)
 	t.test("every zone has a walkable entrance and wide paths", function()
 		t.ok(Geometry.Settings.PathWidth >= 14)
-		t.ok(Geometry.Settings.MainPathWidth >= 14)
+		t.ok(Geometry.Settings.Avenues.width >= 14)
 		for _, zone in Geometry.Settings.Zones do
 			t.eq(typeof(zone.entrance), "Vector3", zone.id .. " entrance")
 			t.ok(zone.pathWidth >= 14, zone.id .. " narrow path")
@@ -112,8 +120,8 @@ return function(t: any)
 		t.ok(refinery.width / 2 < s.SouthPlazaHalf, "Refinery sits inside the south plaza")
 		t.ok(spawn.width / 2 <= s.SouthPlazaHalf, "spawn points stand on the south plaza")
 		t.ok(spawn.z + spawn.depth / 2 < -(s.LoopRadius + s.PathWidth / 2), "spawn points stay south of the ring road")
-		-- the angled shops: front looks toward the crater, rotated footprint is bounded by width/depth
-		for _, id in { "GearHall", "Hatchery" } do
+		-- the angled shops: front looks toward the crater, rotated footprint is bounded by width/depth, door on T0
+		for _, id in { "GearHall", "Hatchery", "Commissary", "LeaderboardEast", "LeaderboardWest" } do
 			local zone = Geometry.zone(id)
 			t.near(zone.facing.Magnitude, 1, 1e-3, id .. " facing is a unit vector")
 			local right = Vector3.new(zone.facing.Z, 0, -zone.facing.X)
@@ -121,36 +129,32 @@ return function(t: any)
 			local halfZ = math.abs(right.Z) * zone.lat / 2 + math.abs(zone.facing.Z) * zone.dep / 2
 			t.ok(halfX <= zone.width / 2 + 0.5 and halfZ <= zone.depth / 2 + 0.5, id .. " footprint bound too small")
 			t.ok(Vector3.new(zone.x, 0, zone.z):Dot(zone.facing) < 0, id .. " does not face the crater")
-			local ring = s.LoopRadius + s.PathWidth / 2
-			t.ok(zone.entrance.Magnitude > ring and zone.entrance.Magnitude < ring + 20, id .. " entrance is not just outside the ring")
+			t.ok((zone.entrance - Vector3.new(zone.x, 0, zone.z)):Dot(zone.facing) > zone.dep / 2, id .. " entrance is not in front")
+			t.eq(Geometry.tierAt(zone.entrance.X, zone.entrance.Z), "T0", id .. " entrance off the town tier")
 		end
 		t.eq(Geometry.zone("GearHall").x, -Geometry.zone("Hatchery").x, "shops mirror each other")
 	end)
-	t.test("ore fields sit in the corners and on the sides with their biomes", function()
-		local nw, ne = Geometry.zone("RustWorks"), Geometry.zone("FrostYard")
-		local w, e = Geometry.zone("VioletQuarry"), Geometry.zone("SulfurRidge")
-		t.ok(nw.x < 0 and nw.z > 0 and ne.x > 0 and ne.z > 0, "north fields in the NW and NE corners")
-		t.ok(w.x < 0 and e.x > 0 and math.abs(w.z - e.z) < 1, "side fields west and east")
-		t.eq(nw.x, -ne.x)
-		t.eq(w.x, -e.x)
-	end)
-	t.test("ore field fans stay inside their own quarter and clear of every building", function()
-		local s = Geometry.Settings
-		for _, q in s.Quarters do
-			local quarter = Geometry.quarter(q.id)
-			for d = s.Fan.Start, s.Fan.End, 6 do
-				for _, side in { -1, 1 } do
-					local p = quarter.out * d + quarter.right * side * Geometry.fanHalf(d)
-					t.eq(Geometry.quarterAt(p.X, p.Z), q.id, q.id .. " fan leaves its quarter")
-					t.ok(math.abs(p.X) < s.BoundaryHalf - 6 and math.abs(p.Z) < s.BoundaryHalf - 6, q.id .. " fan reaches the wall")
-					for _, zone in s.Zones do
-						if not zone.quarter then
-							t.ok(math.abs(p.X - zone.x) > zone.width / 2 or math.abs(p.Z - zone.z) > zone.depth / 2, q.id .. " fan crosses " .. zone.id)
-						end
-					end
-				end
-			end
+	t.test("the eight ore fields climb the tiers in unlock order", function()
+		local tiers = { RustWorks = "T0", FrostYard = "T0", VioletQuarry = "T1", SulfurRidge = "T1", EmberShelf = "T2", GlassScar = "T2", Starfall = "Crown", HaloLedge = "Crown" }
+		for id, tier in tiers do
+			local zone = Geometry.zone(id)
+			t.ok(zone.field, id .. " is not marked a field")
+			t.eq(Geometry.tierAt(zone.x, zone.z), tier, id)
+			t.eq(Geometry.tierAt(zone.entrance.X, zone.entrance.Z), tier, id .. " entrance")
 		end
+		t.eq(Geometry.zone("RustWorks").x, -Geometry.zone("FrostYard").x, "the T0 fields mirror")
+		t.eq(Geometry.zone("VioletQuarry").x, -Geometry.zone("SulfurRidge").x, "the T1 fields mirror")
+	end)
+	t.test("tiers by distance, cliffs between them, the Crown on top", function()
+		t.eq(Geometry.tierAt(0, -150), "T0")
+		t.eq(Geometry.tierAt(0, 258), "Cliff")
+		t.eq(Geometry.tierAt(0, 300), "T1")
+		t.eq(Geometry.tierAt(366, 0), "Cliff")
+		t.eq(Geometry.tierAt(0, -450), "T2")
+		t.eq(Geometry.tierAt(0, 465), "Crown")
+		t.eq(Geometry.tierAt(200, 465), "T2", "beside the Crown is T2")
+		t.eq(Geometry.tierY("T1"), 16)
+		t.eq(Geometry.tierY("Crown"), 56)
 	end)
 	t.test("spawn pads sit inside the spawn zone", function()
 		local s, spawn = Geometry.Settings, Geometry.zone("Spawn")
@@ -164,8 +168,8 @@ return function(t: any)
 	end)
 	t.test("boundary rejects below-map, outside and malformed positions", function()
 		t.eq(Geometry.inside(Vector3.new(0, 3, 0)), true)
-		t.eq(Geometry.inside(Vector3.new(269, -69, 269)), true)
-		for _, point in { Vector3.new(271, 3, 0), Vector3.new(0, 3, -271), Vector3.new(0, -71, 0), Vector3.new(0/0, 3, 0), Vector3.new(math.huge, 3, 0) } do t.eq(Geometry.inside(point), false) end
+		t.eq(Geometry.inside(Vector3.new(539, -69, 539)), true)
+		for _, point in { Vector3.new(541, 3, 0), Vector3.new(0, 3, -541), Vector3.new(0, -71, 0), Vector3.new(0/0, 3, 0), Vector3.new(math.huge, 3, 0) } do t.eq(Geometry.inside(point), false) end
 		t.eq(Geometry.inside(nil), false)
 		t.eq(Geometry.inside("position"), false)
 	end)

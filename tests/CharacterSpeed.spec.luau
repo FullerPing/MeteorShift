@@ -31,13 +31,23 @@ return function(t)
 		t.near((Speed.update(roadApplied, roadApplied, base, 0, false, false)), 16 * B, 1e-9)
 	end)
 
-	t.test("only the ring road counts as the road", function()
+	t.test("the ring road, the Express and the avenues are fast lanes", function()
 		local G = require(t.shared.WorldGeometry).Settings
 		t.eq(Speed.onRoad(G.LoopRadius, 0), true)
 		t.eq(Speed.onRoad(0, -G.LoopRadius - G.PathWidth / 2), true)
+		t.eq(Speed.onRoad(0, 280), true) -- the Terrace Express
+		t.eq(Speed.onRoad(300 * math.cos(math.rad(45)), 300 * math.sin(math.rad(45))), true) -- the NE avenue
+		t.eq(Speed.onRoad(-450, 8), true) -- the west avenue, near its edge
+		t.eq(Speed.onRoad(0, -250), true) -- the south avenue past the Refinery
+	end)
+
+	t.test("everything else is not road", function()
 		t.eq(Speed.onRoad(0, 0), false) -- the crater
 		t.eq(Speed.onRoad(0, -150), false) -- the spawn plaza
-		t.eq(Speed.onRoad(G.LoopRadius + 30, 0), false) -- out in a field
+		t.eq(Speed.onRoad(0, -177), false) -- the Refinery
+		t.eq(Speed.onRoad(200, 50), false) -- the middle of a T0 slice
+		t.eq(Speed.onRoad(0, 450), false) -- on the Crown, past the north avenue's end
+		t.eq(Speed.onRoad(-450, 30), false) -- beside the west avenue
 	end)
 
 	t.test("a respawn starts from the humanoid default again, not a boosted speed", function()
