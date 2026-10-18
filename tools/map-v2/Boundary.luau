@@ -5,6 +5,7 @@
 -- walls just stop people walking out). Every other piece is visual and non-colliding and stays within 0.8 studs of the
 -- inner wall face below Y24. The kill plane stays. The hills, mountains and sea live in Surroundings and Backdrop.
 local A = assert(_G.MapRedesignArt)
+local opts = ... or {} -- { noLawn = true }: map v3 lays its own ground and lawn
 local C, G = A.colors, assert(A.geometry)
 local half = G.BoundaryHalf
 local boundary = A.group(A.map, "Boundary")
@@ -25,7 +26,8 @@ end
 -- along the wall. (Names must not end in "Wall": StudStyle studs only the four solid walls.)
 local inward = { Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis } -- west, east, south, north walls
 local banners = { R.violet, R.gold, R.red, R.blue }
-local pillarPitch, pillarCount = 45, 12
+local pillarPitch = 45
+local pillarCount = math.floor(half * 2 / pillarPitch + .5)
 local FACE = -half
 for side, dir in inward do
 	local F = A.frame(0, 0, dir)
@@ -48,8 +50,8 @@ for side, dir in inward do
 		end
 	end
 	-- rounded merlons: a block with an arch top (16 per side, gap left for the gatehouse)
-	for k = 0, 17 do
-		local u = -255 + k * 30
+	for k = 0, math.floor(half * 2 / 30) - 1 do
+		local u = -half + 15 + k * 30
 		if math.abs(u) > 22 then
 			deco(T.box(boundary, "Merlon", F, u, -half - wallT / 2, top, 10, 9, 3.5, R.stone[1], nil, false))
 			deco(T.cylDep(boundary, "MerlonTop", F, u, -half - wallT / 2, top + 3.5, 10, 9, R.stone[1], nil, false))
@@ -57,7 +59,9 @@ for side, dir in inward do
 	end
 	-- four banners hang between the pillars, coloured for the side
 	local ramp = banners[side]
-	for k, u in { -180, -90, 90, 180 } do
+	local bannerUs = {}
+	for u = 90, half - 60, 90 do table.insert(bannerUs, -u); table.insert(bannerUs, u) end
+	for k, u in bannerUs do
 		deco(T.cylLat(boundary, "BannerRod", F, u, FACE + .2, 21.4, .7, 10, T.ink, nil, false))
 		deco(T.box(boundary, "BannerCloth", F, u, FACE + .15, 8, 8, .3, 13, ramp[2], nil, false))
 		deco(T.cylDep(boundary, "BannerEmblem", F, u, FACE + .5, 14.6, 4.8, .3, if k % 2 == 0 then T.white else R.gold[1], nil, false))
@@ -103,7 +107,8 @@ kill.Transparency, kill.CanTouch = 1, true
 kill:SetAttribute("BoundaryKillPlane", true)
 boundary:SetAttribute("WallHeight", wallH)
 A.map:SetAttribute("BoundaryVersion", 5)
-assert(A.count(boundary) <= 620, "Boundary art budget: " .. A.count(boundary))
+assert(A.count(boundary) <= 620 * half / 270, "Boundary art budget: " .. A.count(boundary))
+if opts.noLawn then return { stage = "Boundary", boundaryParts = A.count(boundary), totalParts = A.count(A.map) } end
 
 -- the lawn: two-tone checker plates over the grass, skipping the crater, the zones and the roads (parts budget)
 local ground = A.map:FindFirstChild("Ground")
@@ -139,5 +144,5 @@ for i = 0, cells - 1 do
 		end
 	end
 end
-assert(A.innerCount(A.map) <= 2700, "Map budget")
+assert(A.innerCount(A.map) <= (if half > 270 then 20000 else 2700), "Map budget")
 return { stage = "Boundary", boundaryParts = A.count(boundary), lawnTiles = count, totalParts = A.count(A.map) }

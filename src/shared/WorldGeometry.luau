@@ -23,12 +23,15 @@ WorldGeometry.Settings = {
 		{ id = "T1", inner = 266, outer = 360, y = 16 },
 		{ id = "T2", inner = 372, outer = math.huge, y = 32 },
 	},
-	Crown = { x0 = -150, x1 = 150, z0 = 400, z1 = 530, y = 56 },
+	Crown = { x0 = -150, x1 = 150, z0 = 400, z1 = 540, y = 56 }, -- runs to the north wall: no dead alley behind it
 	ExpressRadius = 280, -- the Terrace Express ring on T1, a fast lane like the ring road
 	ExpressWidth = 16,
 	-- Eight gold avenues every 45 degrees (atan2(z, x)) from the ring road to the wall, also fast lanes. The north one
 	-- ends at the Crown; the south one starts behind the Refinery so the spawn plaza stays calm.
 	Avenues = { width = 24, from = 143, angles = { 0, 45, 90, 135, 180, 225, 270, 315 }, starts = { [270] = 196 } },
+	-- Slides down beside three avenues, `offset` studs off the centre line (side +1 = counter-clockwise of it), from the
+	-- tier edge (the Crown for the north one) to the ring road's outer edge
+	Slides = { offset = 22, width = 8, list = { { angle = 45, side = -1 }, { angle = 135, side = 1 }, { angle = 90, side = 1 } } },
 	-- width/depth are the axis-aligned footprint. Buildings turned toward the crater also carry `facing` (the way their
 	-- front looks) and `lat` x `dep` (their own frame: across the front, then front-to-back); width/depth then bound
 	-- that rotated rectangle. Ore fields (`field = true`) bound their rocks, gate and chute; `entrance` is just

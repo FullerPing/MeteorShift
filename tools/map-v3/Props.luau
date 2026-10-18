@@ -84,29 +84,36 @@ props.FieldGate = function(g, F)
 	T.box(g, "PanelEdge", F, 0, 2.35, Y + 16.8, 17, .3, 5.4, R.blue[2], nil, false)
 end
 
-props.CliffSegment = function(g, F)
-	-- a 60-long, 16-tall terrace face (front = downhill), tileable end to end: three strata, outcrops, grass lip
-	-- three strata stepping back as they rise, each cut into blocks with jittered fronts and tops so the face reads
-	-- as rock, not a wall; the end blocks are flush so segments tile
+-- A terrace face of any length and height, front = downhill (+d), standing on y0 with its top at y0 + h: three strata
+-- stepping back as they rise, each cut into blocks with jittered fronts and tops so the face reads as rock, not a wall,
+-- boulders at the foot and a grass lip on top. The ends are flush so faces tile. The Ground stage calls this directly
+-- (L("../map-v3/Props", "lib").cliff) to fit every tier edge exactly; the CliffSegment prop is a 60 x 16 sample.
+function props.cliff(g, F, L, y0, h, turf, seed)
 	local sand = { Color3.fromRGB(246, 214, 158), Color3.fromRGB(226, 184, 124), Color3.fromRGB(196, 148, 96) }
-	local rng = Random.new(16)
-	T.box(g, "Core", F, 0, -3.5, Y, 60, 7, 15, sand[2])
+	local rng = Random.new(seed or 16)
+	local k = (h - 1) / 15 -- strata heights were drawn for a 16-tall face
+	T.box(g, "Core", F, 0, -3.5, y0, L, 7, h - 1, sand[2])
 	for band, spec in { { y = 0, h = 5.5, front = 2.2, color = sand[3] }, { y = 5.5, h = 5, front = 1.2, color = sand[2] }, { y = 10.5, h = 4.5, front = .4, color = sand[1] } } do
-		local cuts = { -30 }
-		for k = 1, 4 do table.insert(cuts, -30 + k * 12 + rng:NextNumber(-3, 3)) end
-		table.insert(cuts, 30)
-		for k = 1, #cuts - 1 do
-			local w, jitter = cuts[k + 1] - cuts[k], rng:NextNumber(-.7, .7)
+		local count = math.max(1, math.round(L / 12))
+		local cuts = { -L / 2 }
+		for c = 1, count - 1 do table.insert(cuts, -L / 2 + c * L / count + rng:NextNumber(-3, 3)) end
+		table.insert(cuts, L / 2)
+		for c = 1, #cuts - 1 do
+			local w, jitter = cuts[c + 1] - cuts[c], rng:NextNumber(-.7, .7)
 			local top = if band == 3 then 0 else rng:NextNumber(-.6, .6)
-			T.box(g, "Stratum", F, (cuts[k] + cuts[k + 1]) / 2, spec.front / 2 - 1 + jitter / 2, Y + spec.y, w + .05, spec.front + 2 + jitter, spec.h + top, spec.color)
+			T.box(g, "Stratum", F, (cuts[c] + cuts[c + 1]) / 2, spec.front / 2 - 1 + jitter / 2, y0 + spec.y * k, w + .05, spec.front + 2 + jitter, spec.h * k + top, spec.color)
 		end
 	end
-	for _, u in { -19, 4, 22 } do -- boulders at the foot
+	for u = -L / 2 + 8, L / 2 - 8, 20 do -- boulders at the foot
 		local s = rng:NextNumber(3.2, 4.6)
-		T.part(g, "Boulder", Vector3.new(s * 1.3, s, s), F.cf(u, Y + s / 2 - .4, 3.4, CFrame.Angles(0, rng:NextNumber(-.4, .4), rng:NextNumber(-.15, .15))), sand[3])
+		T.part(g, "Boulder", Vector3.new(s * 1.3, s, s), F.cf(u + rng:NextNumber(-4, 4), y0 + s / 2 - .4, 3.4, CFrame.Angles(0, rng:NextNumber(-.4, .4), rng:NextNumber(-.15, .15))), sand[3])
 	end
-	T.box(g, "Turf", F, 0, -2.6, Y + 15, 60, 8, 1.6, R.green[2])
-	T.box(g, "TurfLip", F, 0, 1.4, Y + 14.6, 60, 1.6, 1.2, R.green[3], nil, false)
+	T.box(g, "Turf", F, 0, -2.6, y0 + h - 1, L, 8, 1.6, turf or R.green[2])
+	T.box(g, "TurfLip", F, 0, 1.4, y0 + h - 1.4, L, 1.6, 1.2, R.green[3], nil, false)
+end
+
+props.CliffSegment = function(g, F)
+	props.cliff(g, F, 60, Y, 16)
 end
 
 props.SkyLift = function(g, F)
@@ -309,16 +316,18 @@ props.Tent = function(g, F)
 	T.part(g, "Pennant", Vector3.new(.2, 1.4, 2.4), F.cf(0, Y + 9.2, 6.8), R.red[2], nil, false, "Wedge")
 end
 
+if only == "lib" then return props end -- the builders, for other stages; nothing is built
+
 -- build, pivot and copy each prop
 local names = {}
-for name in props do if not only or name == only then table.insert(names, name) end end
+for name in props do if name ~= "cliff" and (not only or name == only) then table.insert(names, name) end end
 table.sort(names)
 local store = game:GetService("ServerStorage"):FindFirstChild("MapArt") or Instance.new("Folder")
 store.Name, store.Parent = "MapArt", game:GetService("ServerStorage")
 local report = {}
 for i, name in names do
 	local ordered = {}
-	for n in props do table.insert(ordered, n) end
+	for n in props do if n ~= "cliff" then table.insert(ordered, n) end end
 	table.sort(ordered)
 	local slot = table.find(ordered, name) :: number
 	local cx, cz = 6000 + (slot - 1) % 5 * 70 - 140, -math.floor((slot - 1) / 5) * 90 -- far from the live map, for clean previews
