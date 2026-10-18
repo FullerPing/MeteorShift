@@ -374,7 +374,7 @@ Status lines by progress: 0 to 15 `Waking up the crater...`; 15 to 55 `Polishing
 3. The icon (the smallest, the fastest way to validate the look).
 4. T3 (the pet reveal, the quickest win), T2 (pure 3D props on flat panels), T1, T5 (both need the meteor and the miner), T4 (needs the portal and the gold pile).
 5. The loading screen art (reuse the isle render), then the code, the tests and Studio verification.
-6. Contact sheet and small-size sheet; write `tools/key-art/README.md` and a one-page `assets/marketing/v2/README.md` (the files, sizes, how they were made, and what the owner uploads where).
+6. Contact sheet and small-size sheet; write a README in `tools/key-art` and a one-page `assets/marketing/v2/README.md` (the files, sizes, how they were made, and what the owner uploads where).
 
 **Acceptance checklist (tick each in the final report):**
 - [ ] All eight image files are the exact sizes in section 0 (check with Pillow) and under 5 MB each.

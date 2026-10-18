@@ -16,8 +16,8 @@ There is no build, lint or CLI test step. Everything runs through Rojo and Roblo
 
 - Logic worth testing is written as a pure module in `src/shared` (or `src/server/Lib`) with a `tests/<Name>.spec.luau` next to the others. A spec returns `function(t) ... end` and calls `t.test(name, fn)` with `t.eq`, `t.near`, `t.ok`. Require modules from `t.shared` / `t.lib` (fresh clones), never from the real `ReplicatedStorage.Shared`, or you test a stale require cache. See the header of `tests/Runner.luau`.
 - Layout is tested the same way: each menu's sizing maths is a pure `Shared.*Layout` module (`EquipmentShopLayout`, `PetsLayout`, `StoreLayout`, `RebirthLayout`, `RefineryLayout`, `IndexLayout`, `HudLayout`) plus `Shared.MenuFit`, which shrinks menus on small screens by laying them out on a larger virtual screen. Change layout numbers there and update the spec, not the controller.
-- `tests/Purchases.spec` and `tests/StoreLayout.spec` enforce that every pass/product in `Config.Monetization` appears in exactly one `Config.Store.Sections` entry or in `Config.Store.Elsewhere`. Adding a product means touching both.
-- `Shared.Pacing` simulates a fresh player from Config and `tests/Pacing.spec` asserts progression targets (first rebirth ~14 min). Any change to prices, income or rebirth costs must be re-fitted until that spec passes.
+- `tests/Purchases.spec.luau` and `tests/StoreLayout.spec.luau` enforce that every pass/product in `Config.Monetization` appears in exactly one `Config.Store.Sections` entry or in `Config.Store.Elsewhere`. Adding a product means touching both.
+- `Shared.Pacing` simulates a fresh player from Config and `tests/Pacing.spec.luau` asserts progression targets (first rebirth ~14 min). Any change to prices, income or rebirth costs must be re-fitted until that spec passes.
 
 ## Architecture
 

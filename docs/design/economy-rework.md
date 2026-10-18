@@ -82,7 +82,7 @@ Owner decision: these are sold on purpose, so the old "never sells shards" rule 
 
 Also sold (same day): **2x Cash** (pass, bar sales x2), **Starter Value Pack** (one per player), **Level Up Pets to Max** (every equipped pet) and **Extra Pet Slot**, which is now a product (`PetSlot`, saved as `flags.extraPetSlot`) instead of the old pass. Tier-ups cover tiers 1 to 7 for both items (14 products).
 
-Ids: every product and pass the owner created in the dashboard is wired (see `tests/Purchases.spec`); Tip Jar, Pet Treat, Pet Feast and the Offline Hours+ pass have no dashboard entry yet and stay at `Id = 0` (off sale). The Store builds a card for any product its saved prefab lacks (`StoreController` clones one), so the prefab export does not have to be regenerated; `tools/build-native-ui.luau` includes them.
+Ids: every product and pass the owner created in the dashboard is wired (see `tests/Purchases.spec.luau`); Tip Jar, Pet Treat, Pet Feast and the Offline Hours+ pass have no dashboard entry yet and stay at `Id = 0` (off sale). The Store builds a card for any product its saved prefab lacks (`StoreController` clones one), so the prefab export does not have to be regenerated; `tools/build-native-ui.luau` includes them.
 
 ## Verification
 
