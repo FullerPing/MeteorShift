@@ -11,6 +11,9 @@ local bd = A.group(A.map, "Backdrop")
 T.persistent(bd)
 local random = Random.new(2028)
 local seaTop = -16
+-- map v3's island is bigger (half 540): everything here moves out by the difference; at half 270 nothing moves
+local push = assert(A.geometry).BoundaryHalf - 270
+local function out(x, z) local r = math.sqrt(x * x + z * z); return x * (r + push) / r, z * (r + push) / r end
 local function yawToCentre(x, z) return math.atan2(-x, -z) end
 
 -- the middle range: 12 rounded teal mountains (three blobs and a green foothill each), none right behind Meteor Peak
@@ -20,7 +23,7 @@ for _, p in T.polar(14, 1, 0, nil, 0) do
 	local angle = p.angle + random:NextNumber(-.07, .07)
 	local gap = math.abs(math.deg(angle) % 360 - 90)
 	if gap > 13 then
-		local radius = random:NextNumber(700, 900)
+		local radius = random:NextNumber(700, 900) + push
 		local x, z = math.cos(angle) * radius, math.sin(angle) * radius
 		local w, v = random:NextNumber(220, 300), random:NextNumber(120, 200)
 		T.peak(bd, "MidPeak", x, z, seaTop, w, v, yawToCentre(x, z), midBody, midShade, nil)
@@ -40,7 +43,7 @@ end
 local farBody, farShade = Color3.fromRGB(122, 140, 206), Color3.fromRGB(100, 118, 182)
 for _, p in T.polar(18, 1, 0, nil, .5) do
 	local angle = p.angle + random:NextNumber(-.05, .05)
-	local radius = random:NextNumber(950, 1300)
+	local radius = random:NextNumber(950, 1300) + push
 	local x, z = math.cos(angle) * radius, math.sin(angle) * radius
 	local w, v = random:NextNumber(300, 460), random:NextNumber(250, 450)
 	T.peak(bd, "FarPeak", x, z, seaTop, w, v, yawToCentre(x, z), if _ % 3 == 0 then farShade else farBody, farShade, T.white)
@@ -48,7 +51,7 @@ end
 
 -- Meteor Peak, straight north behind the gate: stacked rounded cones, a rim with a glowing lava lake, neon crystals and a
 -- lazy plume of smoke
-local px, pz = 0, 800
+local px, pz = 0, 800 + push
 local slate, light, dark = Color3.fromRGB(78, 70, 116), Color3.fromRGB(104, 92, 146), Color3.fromRGB(58, 52, 92)
 T.blob(bd, "PeakBase", Vector3.new(580, 400, 500), A.cf(px, seaTop, pz), slate)
 T.blob(bd, "PeakMid", Vector3.new(410, 640, 350), A.cf(px, seaTop, pz), light)
@@ -86,7 +89,7 @@ smoke.LightEmission, smoke.Rotation, smoke.RotSpeed = 0, NumberRange.new(0, 360)
 smoke.Parent = vent
 
 -- fallen meteor rocks in the lagoon, north-east and north-west: dark boulders with glowing cracks
-for _, cluster in { { 390, 560 }, { -400, 540 } } do
+for _, cluster in { { out(390, 560) }, { out(-400, 540) } } do
 	for k = 0, 2 do
 		local x, z = cluster[1] + (k - 1) * 34 + random:NextNumber(-6, 6), cluster[2] + random:NextNumber(-22, 22)
 		local s = random:NextNumber(18, 30)
@@ -113,19 +116,20 @@ local function skyIsland(x, y, z, yaw, k)
 	T.far(bd, "SkyWaterfall", Vector3.new(7, 74, 2.4) * k, fall, R.frost[2]).Transparency = .2
 	T.blob(bd, "SkyMist", Vector3.new(24, 12, 24) * k, fall * CFrame.new(0, -38 * k, 2), T.white)
 end
-skyIsland(-480, 230, 690, .4, 1.3)
-skyIsland(490, 270, 760, -.5, 1.3)
-skyIsland(-700, 200, -40, 1.2, 1.2)
+local function sky(x, y, z, yaw, k) local ox, oz = out(x, z); skyIsland(ox, y, oz, yaw, k) end
+sky(-480, 230, 690, .4, 1.3)
+sky(490, 270, 760, -.5, 1.3)
+sky(-700, 200, -40, 1.2, 1.2)
 
 -- clouds, well away from the play area
 for k, p in T.polar(16, 1, 0, nil, .25) do
 	local angle = p.angle + random:NextNumber(-.12, .12)
 	if math.abs(math.deg(angle) % 360 - 90) < 18 then angle += math.rad(30) end -- keep Meteor Peak's rim clear
-	local radius = random:NextNumber(560, 1100)
+	local radius = random:NextNumber(560, 1100) + push
 	T.cloud(bd, math.cos(angle) * radius, random:NextNumber(160, 280), math.sin(angle) * radius, random:NextNumber(120, 200), if k % 3 == 0 then Color3.fromRGB(238, 236, 252) else T.white)
 end
 
 assert(A.count(bd) <= 320, "Backdrop art budget: " .. A.count(bd))
 local outer = A.count(A.map:FindFirstChild("Boundary")) + A.count(A.map:FindFirstChild("Surroundings")) + A.count(bd)
-assert(outer <= 1400, "Outer scenery budget: " .. outer)
+assert(outer <= 1400 * (push + 270) / 270, "Outer scenery budget: " .. outer)
 return { stage = "Backdrop", parts = A.count(bd), middleRange = mids, outerParts = outer, totalParts = A.count(A.map) }

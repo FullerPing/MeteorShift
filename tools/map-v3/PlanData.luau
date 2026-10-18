@@ -185,7 +185,7 @@ return {
 		{ x = -52.00, z = 440.00, w = 10.00, d = 10.00, yaw = 90.00, kind = "rock", tag = "crownrock", label = "", cell = "CROWN", band = "CROWN", color = "#FF8FC8", field = "Starfall" },
 		{ x = -52.00, z = 462.00, w = 10.00, d = 10.00, yaw = 90.00, kind = "rock", tag = "crownrock", label = "", cell = "CROWN", band = "CROWN", color = "#FF8FC8", field = "Starfall" },
 		{ x = -52.00, z = 484.00, w = 10.00, d = 10.00, yaw = 90.00, kind = "rock", tag = "crownrock", label = "", cell = "CROWN", band = "CROWN", color = "#FF8FC8", field = "Starfall" },
-		{ x = -70.00, z = 420.00, w = 9.00, d = 9.00, yaw = 90.00, kind = "chute", tag = "crownrock", label = "chute", cell = "CROWN", band = "CROWN", color = "#FFFFFF", field = "Starfall" },
+		{ x = -130.00, z = 420.00, w = 9.00, d = 9.00, yaw = 90.00, kind = "chute", tag = "crownrock", label = "chute", cell = "CROWN", band = "CROWN", color = "#FFFFFF", field = "Starfall" },
 		{ x = 40.00, z = 440.00, w = 12.00, d = 12.00, yaw = 90.00, kind = "rock", tag = "crownrock", label = "", cell = "CROWN", band = "CROWN", color = "#FFD54A", field = "HaloLedge" },
 		{ x = 70.00, z = 440.00, w = 12.00, d = 12.00, yaw = 90.00, kind = "rock", tag = "crownrock", label = "", cell = "CROWN", band = "CROWN", color = "#FFD54A", field = "HaloLedge" },
 		{ x = 100.00, z = 440.00, w = 12.00, d = 12.00, yaw = 90.00, kind = "rock", tag = "crownrock", label = "", cell = "CROWN", band = "CROWN", color = "#FFD54A", field = "HaloLedge" },

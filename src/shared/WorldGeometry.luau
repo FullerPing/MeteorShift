@@ -52,7 +52,7 @@ WorldGeometry.Settings = {
 		{ id = "SulfurRidge", x = 301.5, z = 112.5, width = 85, depth = 169, entrance = Vector3.new(269.8, 16, 111.7), pathWidth = 18, field = true },
 		{ id = "EmberShelf", x = -406, z = 148.5, width = 118, depth = 181, entrance = Vector3.new(-351.1, 32, 145.4), pathWidth = 18, field = true },
 		{ id = "GlassScar", x = 422.5, z = 171, width = 151, depth = 148, entrance = Vector3.new(351.1, 32, 145.4), pathWidth = 18, field = true },
-		{ id = "Starfall", x = -85, z = 452, width = 76, depth = 74, entrance = Vector3.new(-85, 56, 425), pathWidth = 18, field = true },
+		{ id = "Starfall", x = -91, z = 452, width = 88, depth = 74, entrance = Vector3.new(-85, 56, 425), pathWidth = 18, field = true },
 		{ id = "HaloLedge", x = 82, z = 450.5, width = 96, depth = 71, entrance = Vector3.new(70, 56, 425), pathWidth = 18, field = true },
 	},
 }

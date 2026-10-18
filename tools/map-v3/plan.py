@@ -120,7 +120,7 @@ putxy("CROWN", 0, 465, 300, 130, "#B8A6F0", "", "CROWN", kind="plateau")
 for i in range(4):
     for j in range(3):
         putxy("CROWN", -118 + i * 22, 440 + j * 22, 10, 10, "#FF8FC8", "", "CROWN", kind="rock", tag="crownrock")
-putxy("CROWN", -70, 420, 9, 9, "#FFFFFF", "chute", "CROWN", kind="chute", tag="crownrock")
+putxy("CROWN", -130, 420, 9, 9, "#FFFFFF", "chute", "CROWN", kind="chute", tag="crownrock")  # west of the entrance: the walk from the lift stays clear
 for i, (x, z) in enumerate(((40, 440), (70, 440), (100, 440), (40, 480), (70, 480), (100, 480))):
     putxy("CROWN", x, z, 12, 12, "#FFD54A", "", "CROWN", kind="rock", tag="crownrock")
 putxy("CROWN", 125, 420, 9, 9, "#FFFFFF", "chute", "CROWN", kind="chute", tag="crownrock")

@@ -6,6 +6,10 @@
 local A = assert(_G.MapRedesignArt)
 local C, G = A.colors, assert(A.geometry)
 local half = G.BoundaryHalf
+-- map v3 (half 540) passes { lift = 32 }: its island is twice as big and its rim stands on T2; at half 270 and no lift
+-- every number below is the v2 one
+local opts = ... or {}
+local s, lift = half / 270, opts.lift or 0
 local T = assert(A.toon, "Run Toon first")
 local R = T.ramp
 local sur = A.group(A.map, "Surroundings")
@@ -23,24 +27,24 @@ end
 -- the sea: a big plate, a darker one under it so the horizon never shows a seam. Its surface must stay below the crater
 -- floor (Y -14.755) or it shows through the crater as a lake; the lagoon, foam and sand discs stack just above it.
 local seaTop = -16
-deco("Sea", Vector3.new(2600, 2, 2600), A.cf(0, seaTop - 1, 0), C.sea).TopSurface = Enum.SurfaceType.Smooth
-deco("SeaDeep", Vector3.new(4000, 2, 4000), A.cf(0, seaTop - 6, 0), C.seaDeep)
-disc("Lagoon", 1500, seaTop + .1, Color3.fromRGB(86, 218, 226))
-disc("Foam", 960, seaTop + .2, Color3.fromRGB(238, 250, 255))
-disc("Beach", 900, seaTop + .4, T.sand[1])
+deco("Sea", Vector3.new(2600, 2, 2600) * s, A.cf(0, seaTop - 1, 0), C.sea).TopSurface = Enum.SurfaceType.Smooth
+deco("SeaDeep", Vector3.new(4000, 2, 4000) * s, A.cf(0, seaTop - 6, 0), C.seaDeep)
+disc("Lagoon", 1500 * s, seaTop + .1, Color3.fromRGB(86, 218, 226))
+disc("Foam", 960 * s, seaTop + .2, Color3.fromRGB(238, 250, 255))
+disc("Beach", 900 * s, seaTop + .4, T.sand[1])
 
 -- the cliff skirt under the rampart: rust rock, a tan band and a green cap, six overlapping sites per side
 local walls = { Vector3.xAxis, -Vector3.xAxis, Vector3.zAxis, -Vector3.zAxis }
 for _, n in walls do
 	local t = Vector3.new(-n.Z, 0, n.X)
 	local yaw = math.atan2(n.X, n.Z)
-	for k = 0, 5 do
-		local u = -250 + k * 100
-		local c = n * 302 + t * u
+	for k = 0, math.round(5 * s) do
+		local u = -250 * s + k * 100
+		local c = n * (half + 32) + t * u
 		local wob = random:NextNumber(-3, 3)
-		blob("Cliff", Vector3.new(132, 46, 64), A.cf(c.X, -16, c.Z) * CFrame.Angles(0, yaw, 0), R.rust[2])
-		blob("CliffBand", Vector3.new(120, 30, 56), A.cf(c.X + n.X * 3, -7 + wob, c.Z + n.Z * 3) * CFrame.Angles(0, yaw, 0), R.cream[3])
-		blob("CliffCap", Vector3.new(112, 16, 52), A.cf(c.X + n.X * 4, 4, c.Z + n.Z * 4) * CFrame.Angles(0, yaw, 0), R.green[2])
+		blob("Cliff", Vector3.new(132, 46 + lift * 2, 64), A.cf(c.X, -16, c.Z) * CFrame.Angles(0, yaw, 0), R.rust[2])
+		blob("CliffBand", Vector3.new(120, 30, 56), A.cf(c.X + n.X * 3, -7 + wob + lift, c.Z + n.Z * 3) * CFrame.Angles(0, yaw, 0), R.cream[3])
+		blob("CliffCap", Vector3.new(112, 16, 52), A.cf(c.X + n.X * 4, 4 + lift, c.Z + n.Z * 4) * CFrame.Angles(0, yaw, 0), R.green[2])
 	end
 end
 
@@ -49,12 +53,12 @@ end
 for _, n in walls do
 	local t = Vector3.new(-n.Z, 0, n.X)
 	local yaw = math.atan2(n.X, n.Z)
-	for k = 0, 6 do
-		local u = -231 + k * 77 + random:NextNumber(-8, 8)
-		local out = random:NextNumber(336, 366)
+	for k = 0, math.round(7 * s) - 1 do
+		local u = -231 * s + k * 77 + random:NextNumber(-8, 8)
+		local out = half + random:NextNumber(66, 96)
 		local w = random:NextNumber(72, 100)
-		local top = random:NextNumber(14, 26)
-		local cy = -10
+		local top = random:NextNumber(14, 26) + lift
+		local cy = -10 + lift
 		local depth = w * .8
 		local c = n * out + t * u
 		blob("Hill", Vector3.new(w, (top - cy) * 2, depth), A.cf(c.X, cy, c.Z) * CFrame.Angles(0, yaw, 0), R.green[(k % 2) + 1 + (if k % 3 == 0 then 1 else 0)])
@@ -109,14 +113,14 @@ local function lighthouse(x, z)
 	T.far(sur, "LighthouseDoor", Vector3.new(3.6, 6, 1) * k, F.cf(0, base + 3 * k, -6.3 * k), R.navy[3])
 	T.far(sur, "LighthouseDoorStep", Vector3.new(5.2, .8, 2) * k, F.cf(0, base + .4, -6.9 * k), R.stone[1])
 end
-local lighthouses = { { 380, -560 }, { -380, -560 } }
+local lighthouses = { { 380 * s, -(half + 290) }, { -380 * s, -(half + 290) } }
 for _, spot in lighthouses do lighthouse(spot[1], spot[2]) end
 
 local slots = 10
 local placed = 0
 for k = 0, slots - 1 do
 	local angle = math.rad(k * 360 / slots + 18 + random:NextNumber(-8, 8))
-	local radius = random:NextNumber(500, 640)
+	local radius = half + random:NextNumber(230, 370)
 	local x, z = math.cos(angle) * radius, math.sin(angle) * radius
 	local clear = true
 	for _, spot in lighthouses do if (Vector2.new(x, z) - Vector2.new(spot[1], spot[2])).Magnitude < 190 then clear = false end end
@@ -128,7 +132,7 @@ end
 
 -- sailboats on the lagoon: a wooden hull, a mast, a white and a cream sail and a pennant
 for _, spot in { { 250, -430, 20 }, { -300, -380, -35 }, { 70, 520, 95 } } do
-	local x, z, yaw = spot[1], spot[2], math.rad(spot[3])
+	local x, z, yaw = spot[1] * s, spot[2] * s, math.rad(spot[3])
 	local at = A.cf(x, seaTop, z) * CFrame.Angles(0, yaw, 0)
 	blob("BoatHull", Vector3.new(26, 8, 9), at * CFrame.new(0, 1, 0), R.wood[2])
 	T.far(sur, "BoatMast", Vector3.new(24, .8, .8), at * CFrame.new(0, 13, 0) * CFrame.Angles(0, 0, math.pi / 2), T.ink, nil, Enum.PartType.Cylinder)
@@ -137,5 +141,5 @@ for _, spot in { { 250, -430, 20 }, { -300, -380, -35 }, { 70, 520, 95 } } do
 	T.far(sur, "BoatPennant", Vector3.new(4.4, 2.2, .3), at * CFrame.new(2.2, 24, 0), R.red[2])
 end
 
-assert(A.count(sur) <= 470, "Surroundings art budget: " .. A.count(sur))
+assert(A.count(sur) <= 470 * s, "Surroundings art budget: " .. A.count(sur))
 return { stage = "Surroundings", parts = A.count(sur), islands = placed, totalParts = A.count(A.map) }
