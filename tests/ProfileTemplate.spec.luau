@@ -1,7 +1,7 @@
 --!strict
 -- Spec for server Lib.ProfileTemplate: the saved-profile defaults (spec §12.4).
--- The version's literal value is deliberately NOT stamped here (Codes/Daily do
--- that); this pins the shape: the version is a positive integer, every default
+-- The version's literal value is deliberately NOT stamped here (Codes/Daily check the same
+-- positive-integer rule, not a literal); this pins the shape: the version is a positive integer, every default
 -- carries its documented type, deep copies are independent of the template, and
 -- a rebirth reset over a fresh default profile drops no template key.
 -- Expectations read from ProfileTemplate and from what RebirthReset.apply assigns.
