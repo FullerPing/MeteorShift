@@ -42,6 +42,9 @@ Meteor.ActiveWindow = 120 -- players with no input for this long don't count tow
 Meteor.FloorPlayers = 1 -- a meteor is never smaller than this many Basic Pickaxes (HP scales with power, so the event lasts the same for any lobby size; a floor above the real player count made 1-3 players unable to crack it)
 Meteor.RescaleThreshold = 0.15 -- rescale remaining HP when server power drifts more than this
 Meteor.RescaleCooldown = 10 -- at most one rescale per this many seconds
+-- Once a meteor is down, rescales count only active players this close (flat studs) to it, so players in the ore
+-- fields don't size it for the ones at the crater (Tutorial.CraterRadius is 83.2; this adds the rim)
+Meteor.EngageRadius = 110
 Meteor.RescaleCheckInterval = 1
 
 -- Contribution and rewards (spec §5.5, §5.6)

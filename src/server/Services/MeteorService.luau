@@ -137,6 +137,13 @@ function MeteorService:SetCountdownRemaining(seconds: number)
 	end
 end
 
+-- Brings the next meteor in to at most `seconds` from now; never pushes it back (a new player's first meteor).
+function MeteorService:ShortenCountdownTo(seconds: number)
+	if state.phase == Phase.Countdown and state.endsAt - now() > seconds then
+		self:_publish({ endsAt = now() + seconds })
+	end
+end
+
 -- Whether Call a Meteor can be bought right now, and why not (Shared.CallMeteor).
 function MeteorService:CanCallMeteor(): (boolean, string?)
 	local clock = os.clock()
@@ -222,6 +229,19 @@ end
 -- Mining Power per second of the active players, with the floor (spec §5.3).
 local function serverPower(): number
 	return MiningPower.serverPowerRates(ActivityService:GetActiveRates())
+end
+
+-- The same, counting only active players within Meteor.EngageRadius (flat distance) of `center`: once a meteor is
+-- down, players mining the ore fields must not make it bigger for the ones at the crater. Ad-test telemetry
+-- (2026-10-18): meteors cooled every day while sized for the whole server.
+local function engagedPower(center: Vector3): number
+	local flat = center * Vector3.new(1, 0, 1)
+	local radius = MeteorConfig.EngageRadius
+	return MiningPower.serverPowerRates(ActivityService:GetActiveRates(function(player: Player): boolean
+		local character = player.Character
+		local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		return root ~= nil and (root.Position * Vector3.new(1, 0, 1) - flat).Magnitude <= radius
+	end))
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -515,15 +535,15 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	return meteor
 end
 
--- Mid-event joins and leaves (spec §5.3): when the active server power drifts more
--- than 15% from what the meteor was sized for, rescale the remaining HP of every
--- node and the core to the new power, keeping the same fraction done. At most once
--- every RescaleCooldown seconds.
+-- Mid-event joins and leaves (spec §5.3): when the power of the active players at the
+-- meteor (engagedPower) drifts more than 15% from what it was sized for, rescale the
+-- remaining HP of every node and the core to the new power, keeping the same fraction
+-- done. At most once every RescaleCooldown seconds.
 function MeteorService:_checkRescale(meteor: Meteor)
 	if os.clock() - meteor.LastRescale < MeteorConfig.RescaleCooldown then
 		return
 	end
-	local power = serverPower()
+	local power = engagedPower(meteor.Core.Position)
 	if not MiningPower.shouldRescale(meteor.SizedPower, power) then
 		return
 	end

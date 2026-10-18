@@ -1,7 +1,8 @@
 --!strict
 -- Who counts as active (spec §5.3): players with any input in the last 2 minutes.
 -- Meteor HP is sized from active players only, so AFK players don't make the
--- meteor impossible for everyone else.
+-- meteor impossible for everyone else; once it has landed, only the active players
+-- near it count (MeteorService rescale), so players busy in the ore fields don't either.
 --
 -- Clients ping on input (ActivityController, throttled); swings count too, and a
 -- player who just joined starts out active.
@@ -33,10 +34,11 @@ function ActivityService:IsActive(player: Player): boolean
 	return last ~= nil and os.clock() - last <= Config.Meteor.ActiveWindow
 end
 
-function ActivityService:GetActivePlayers(): { Player }
+-- `filter` optionally narrows it further (MeteorService: only players near the meteor).
+function ActivityService:GetActivePlayers(filter: ((Player) -> boolean)?): { Player }
 	local list = {}
 	for _, player in Players:GetPlayers() do
-		if self:IsActive(player) then
+		if self:IsActive(player) and (not filter or filter(player)) then
 			table.insert(list, player)
 		end
 	end
@@ -45,11 +47,11 @@ end
 
 -- The active players' pickaxes as they play now (Tier, Power, Swing, ...). In Studio,
 -- ServerStorage's DevFakeTiers attribute ("1,1,8") adds pretend active players, each with
--- a fresh pickaxe of that tier, so sizing can be tested solo.
-function ActivityService:GetActivePickaxes(): { any }
+-- a fresh pickaxe of that tier, so sizing can be tested solo (they pass every `filter`).
+function ActivityService:GetActivePickaxes(filter: ((Player) -> boolean)?): { any }
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local pickaxes = {}
-	for _, player in self:GetActivePlayers() do
+	for _, player in self:GetActivePlayers(filter) do
 		table.insert(pickaxes, PlayerStateService:GetPickaxe(player))
 	end
 	local fake = ServerStorage:GetAttribute("DevFakeTiers")
@@ -63,9 +65,9 @@ function ActivityService:GetActivePickaxes(): { any }
 end
 
 -- Mining Power per second of each active player (meteor sizing, Shared.MiningPower).
-function ActivityService:GetActiveRates(): { number }
+function ActivityService:GetActiveRates(filter: ((Player) -> boolean)?): { number }
 	local rates = {}
-	for _, pickaxe in self:GetActivePickaxes() do
+	for _, pickaxe in self:GetActivePickaxes(filter) do
 		table.insert(rates, pickaxe.Power / pickaxe.Swing)
 	end
 	return rates

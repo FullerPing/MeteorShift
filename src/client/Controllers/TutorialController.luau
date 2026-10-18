@@ -346,8 +346,8 @@ function TutorialController:KnitStart()
 		return if s then Steps[s.index] else nil
 	end)
 
-	-- Mostly no instructions to read: a meteor step that is waiting for the meteor shows only the time left,
-	-- and steps with a Sub add one small line under the verb
+	-- Mostly no instructions to read: a meteor step that is waiting for the meteor shows the time left (then its
+	-- Sub, if any), and other steps with a Sub add one small line under the verb
 	local function waitingFor(info: any, meteor: any): boolean
 		return info ~= nil and METEOR_STEPS[info.Id] == true and meteor ~= nil
 			and (meteor.phase == Phase.Countdown or meteor.phase == Phase.Cleanup)
@@ -357,7 +357,8 @@ function TutorialController:KnitStart()
 		if not waitingFor(info, meteor) then
 			return if info and info.Sub then info.Sub else ""
 		end
-		return "⏱ " .. Format.time(meteor.endsAt - use(serverNow))
+		local timer = "⏱ " .. Format.time(meteor.endsAt - use(serverNow))
+		return if info.Sub then timer .. "  " .. info.Sub else timer
 	end)
 
 	scope:New("ScreenGui")({

@@ -89,6 +89,8 @@ function TutorialService.Client:Skip(player: Player)
 	if not allowed then return end
 	local data = PlayerStateService:Get(player)
 	if data and not data.flags.tutorialDone then
+		local at = Steps[data.tutorialStep]
+		TelemetryService:custom(player, "tutorial_skipped", data.tutorialStep, { if at then at.Id else "unknown" })
 		data.flags.tutorialDone = true
 		self.Server:_publish(player)
 	end
@@ -171,7 +173,12 @@ function TutorialService:KnitStart()
 	NodeService.Hit:Connect(function(player, kind)
 		local stepId = hitSteps[kind]
 		if stepId then
+			local waitingForFirst = stepId == "mine_debris" and self:IsBefore(player, "mine_debris")
 			self:Did(player, stepId)
+			-- a new player doesn't stand around for a full countdown before their first meteor (Config.Tutorial)
+			if waitingForFirst then
+				MeteorService:ShortenCountdownTo(Config.Tutorial.FirstMeteorWait)
+			end
 		end
 	end)
 	MeteorService.CoreUnlocked:Connect(function()

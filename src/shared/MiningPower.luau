@@ -8,6 +8,7 @@
 --   power(tier)  = 1.25 ^ (tier − 1)
 --   powerPerSec  = power(tier) / swingTime
 --   serverPower  = max(sum of active players' powerPerSec, FloorPlayers basic pickaxes)
+--                  (at impact all active players; rescales count only those within Meteor.EngageRadius)
 --   crustHP      = serverPower × 70 s × type HP mult (split across the crust nodes)
 --   coreHP       = serverPower × 45 s × type HP mult
 --

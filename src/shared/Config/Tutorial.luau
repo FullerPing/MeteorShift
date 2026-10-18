@@ -11,7 +11,7 @@
 export type Step = {
 	Id: string,
 	Text: string,
-	Sub: string?, -- small line under the verb (the card's orange line); a waiting meteor step shows the countdown instead
+	Sub: string?, -- small line under the verb (the card's orange line); a waiting meteor step puts the countdown before it
 	Icon: string,
 	Action: "tap" | "go" | "watch" | "ui",
 	Button: string?, -- the HUD button a "ui" step points at (a descendant name under PlayerGui)
@@ -21,7 +21,7 @@ local Tutorial = {}
 
 Tutorial.Steps = {
 	{ Id = "mine_debris", Text = "MINE!", Icon = "⛏️", Action = "tap" },
-	{ Id = "meteor_lands", Text = "WATCH!", Icon = "☄️", Action = "watch" },
+	{ Id = "meteor_lands", Text = "WATCH!", Sub = "Keep mining while you wait!", Icon = "☄️", Action = "watch" },
 	{ Id = "reach_crater", Text = "RUN!", Icon = "🏃", Action = "go" },
 	{ Id = "mine_node", Text = "MINE IT!", Sub = "Break nodes to open the core", Icon = "⛏️", Action = "tap" },
 	{ Id = "hit_core", Text = "HIT THE CORE!", Sub = "Keep hitting until it cracks", Icon = "💥", Action = "tap" },
@@ -37,6 +37,11 @@ Tutorial.Steps = {
 -- A player who still has that step to do spawns there (TutorialService), not on the town plaza, whose nearest fields
 -- (Sulfur Ridge, Violet Quarry) are the hardest ones.
 Tutorial.StarterField = "RustWorks"
+
+-- A new player who finishes "MINE!" waits at most this long for their first meteor: the server's countdown is cut
+-- to it (never lengthened). Ad-test telemetry (2026-10-18): most new players quit the tutorial at "WATCH!", a wait of up
+-- to Meteor.Countdown (180 s). Shared.Pacing already assumes the first meteor comes within Meteor.FirstCountdown.
+Tutorial.FirstMeteorWait = 45
 
 -- Standing this close (horizontally) to the crater centre during an event counts as "reached"
 Tutorial.CraterRadius = 83.2
