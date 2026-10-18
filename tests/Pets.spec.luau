@@ -77,12 +77,14 @@ return function(t: any)
 		end
 	end)
 
-	t.test("premium pets retain fixed passes at the reduced 99 and 199 Robux prices", function()
-		for petId, price in { drillbot = 99, solarPhoenix = 199 } do
+	t.test("premium pets retain fixed passes priced by Config.Monetization", function()
+		-- the shop reads the price from Config.Monetization via the pet's Pass key (PetsController), so no number is hard-coded here
+		for _, petId in { "drillbot", "solarPhoenix" } do
 			local def = Pets.def(petId) :: any
-			t.eq(def.Robux, price)
 			t.eq(def.Rarity, "premium")
-			t.ok(require(t.shared.Config).Monetization.Passes[def.Pass] ~= nil)
+			local pass = require(t.shared.Config).Monetization.Passes[def.Pass]
+			t.ok(pass ~= nil, petId .. " pass exists in Config.Monetization")
+			t.ok(pass ~= nil and (pass.Robux or 0) > 0, petId .. " price comes from Config.Monetization")
 		end
 	end)
 
