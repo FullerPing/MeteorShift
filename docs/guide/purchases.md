@@ -15,7 +15,7 @@ The ids below were created in the Creator Dashboard on 2026-10-10 (passes: `TwoX
 | Game pass | `TwoXCash` | 2x Cash | 129 | Every bar sale pays double (`EconomyService:SaleMultiplier`). |
 | Developer product | `PetSlot` | Extra Pet Slot | 49 | One permanent extra equipped slot, saved as `flags.extraPetSlot`; up to four pets with rebirth slots. |
 | Developer product | `PetMax` | Level Up Pets to Max | 49 | Every pet equipped when the server grants it goes to max level. |
-| Developer product | `StarterPack` | Starter Value Pack | 49 | $ of 10 minutes of line income (cap 30%), two Mini Overclocks, 1,500 XP per equipped pet. One per player (`flags.starterPack`). |
+| Developer product | `StarterPack` | Starter Value Pack | 49 | $ of 30 minutes of line income (floor $5,000, cap 50%), three Mini Overclocks, 1,500 XP per equipped pet. One per player (`flags.starterPack`). |
 | Developer product | `TipJar` | Tip Jar | 5 | Confetti, a thank-you toast, and a Supporter chat tag for the current session; no gameplay benefit. |
 | Developer product | `PocketChange` | Pocket Change | 19 | Ten minutes of current line income; minimum $2,000 and maximum 30% of the next rebirth cost. |
 | Developer product | `MiniOverclock` | Mini Overclock | 19 | Adds 600 seconds to the existing refinery ×2 online timer. |

@@ -1,11 +1,11 @@
 --!strict
--- Small buttons in the game, drawn like the menu buttons (ExactNavButton.tile), for the three things that are not in the Store: the 2x Ore
--- pass, the 2x Cash pass and the one-per-player Starter Value Pack. On desktop they climb in a column from the
--- INDEX button; on phones they take the free cells in line with the menu buttons (HudLayout.offerSlots). They tap straight to the Roblox purchase prompt, and disappear once
+-- Small buttons in the game, drawn like the menu buttons (ExactNavButton.tile), for the 2x Ore pass, the 2x Cash
+-- pass and the one-per-player Starter Value Pack. On desktop they climb in a column from the
+-- INDEX button; on phones they take the free cells in line with the menu buttons (HudLayout.offerSlots). They open the
+-- Store (which sells all three), and disappear once
 -- the item is owned (or while it is not on sale: Id 0). Move or hide them as "Offers" in
 -- Config.HudEdit.
 
-local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -54,18 +54,11 @@ function OfferController:KnitStart()
 		ExactNavButton.tile(button, offer.icon, offer.caption)
 		local scale = Instance.new("UIScale")
 		scale.Name, scale.Parent = "LayoutScale", button
+		-- Opens the Store, where the card shows what it is and costs (ad test 2026-10-18: a straight Robux prompt
+		-- converted 0 of 24); the Featured and Passes sections are at the top
 		button.Activated:Connect(function()
 			Sfx.play("Click")
-			local definition = if offer.kind == "pass" then Monetization.Passes[offer.key] else Monetization.Products[offer.key]
-			if definition.Id == 0 then return end
-			local ok, err = pcall(function()
-				if offer.kind == "pass" then
-					MarketplaceService:PromptGamePassPurchase(player, definition.Id)
-				else
-					MarketplaceService:PromptProductPurchase(player, definition.Id)
-				end
-			end)
-			if not ok then warn("[OfferController] purchase prompt failed:", err) end
+			player:SetAttribute("StoreOpen", true)
 		end)
 		button.Parent = gui
 		buttons[offer.key] = button

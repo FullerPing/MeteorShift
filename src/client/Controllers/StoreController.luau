@@ -4,6 +4,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TextChatService = game:GetService("TextChatService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -112,6 +113,7 @@ function StoreController:KnitStart()
 	local ownedPasses: { [string]: boolean } = {}
 	local callMeteor = { available = false, reason = "" }
 	local playerState: any = nil
+	local starterQuote: number? = nil -- the cash the Starter Pack would pay now (MonetizationService:CashPackQuote)
 	local cards: { Card } = {}
 	local function credits(key: string?): number
 		return if playerState and playerState.credits then playerState.credits[key or "callMeteor"] or 0 else 0
@@ -176,6 +178,10 @@ function StoreController:KnitStart()
 			local status = statusText(card)
 			if status == "" and not info.loading and info.forSale ~= false and info.price == nil then status = "Reopen the store to retry the price." end
 			card.status.Text = status
+			if card.key == "StarterPack" then
+				local description = Monetization.Products.StarterPack.Description
+				card.description.Text = if starterQuote then "+$" .. Format.number(starterQuote) .. " cash now! " .. description else description
+			end
 			card.buy.Text = if card.key == "OreRush" and ownedPasses.TwoXOre then "You own " .. Monetization.Passes.TwoXOre.Name
 				elseif current == "credit" then BUTTON_TEXT.credit .. " (" .. Format.number(credits(creditKey(card))) .. ")"
 				elseif current == "buy" and info.price ~= nil then Format.ROBUX .. " " .. Format.number(info.price) else BUTTON_TEXT[current]
@@ -282,6 +288,16 @@ function StoreController:KnitStart()
 	end
 	list:GetPropertyChangedSignal("CanvasPosition"):Connect(lightTab)
 	for _, card in cards do loadPrice(card) end
+	local function refreshQuote()
+		task.spawn(function()
+			local ok, cash = pcall(function() return MonetizationService:CashPackQuote("StarterPack") end)
+			if ok and type(cash) == "number" then
+				starterQuote = cash
+				renderCards()
+			end
+		end)
+	end
+	local stopNudge: (() -> ())? = nil
 	local function updateNav()
 		nav.Visible = not open and player:GetAttribute("ShopOpen") ~= true and player:GetAttribute("IndexOpen") ~= true
 			and player:GetAttribute("RebirthOpen") ~= true and player:GetAttribute("TutorialCardInColumn") ~= true
@@ -296,12 +312,44 @@ function StoreController:KnitStart()
 			for _, card in cards do
 				if card.id ~= 0 and not card.details.loading and card.details.price == nil then loadPrice(card) end
 			end
+			refreshQuote()
+			if stopNudge then stopNudge() end
 		end
 	end
+	-- Other controllers (the offer icons) open the Store by setting StoreOpen
+	player:GetAttributeChangedSignal("StoreOpen"):Connect(function()
+		local wanted = player:GetAttribute("StoreOpen") == true
+		if wanted ~= open then setOpen(wanted) end
+	end)
 	MonetizationService.Owned:Observe(function(value) ownedPasses = value or {} renderCards() end)
 	MonetizationService.CallMeteor:Observe(function(value) if value then callMeteor = value renderCards() end end)
 	PlayerStateService.State:Observe(function(value) playerState = value renderCards() end)
 	MonetizationService.Notice:Connect(function(message: string) HUDController:Toast(message) end)
+	-- One nudge per session toward the Store (ad test 2026-10-18: it was opened 2-6 times a day): on the first sale
+	-- after the tutorial (whose last step points at GEAR), if the Starter Pack is still unbought and the Store unopened
+	local tutorialDone, nudged, everOpened = false, false, false
+	Knit.GetService("DailyService").TutorialDone:Observe(function(done) tutorialDone = done == true end)
+	player:GetAttributeChangedSignal("StoreOpen"):Connect(function()
+		if player:GetAttribute("StoreOpen") == true then everOpened = true end
+	end)
+	Knit.GetService("EconomyService").Sold:Connect(function()
+		local bought = if playerState then playerState.purchased else nil
+		if nudged or everOpened or not tutorialDone or (bought and bought.starterPack) then return end
+		nudged = true
+		task.spawn(function()
+			local ok, cash = pcall(function() return MonetizationService:CashPackQuote("StarterPack") end)
+			local amount = if ok and type(cash) == "number" then "+$" .. Format.number(cash) .. " cash" else "a cash boost"
+			HUDController:Toast("Starter Pack: " .. amount .. " - tap STORE!")
+		end)
+		local wiggle = TweenService:Create(nav, TweenInfo.new(0.15, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, 20, true), { Rotation = 8 })
+		wiggle:Play()
+		stopNudge = function()
+			wiggle:Cancel()
+			nav.Rotation = 0
+			stopNudge = nil
+		end
+		wiggle.Completed:Connect(function() if stopNudge then stopNudge() end end)
+	end)
 	nav.Activated:Connect(function() setOpen(true) end)
 	close.Activated:Connect(function() setOpen(false) end)
 	dimmer.Activated:Connect(function() setOpen(false) end)

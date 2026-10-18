@@ -184,7 +184,7 @@ Monetization.Products = {
 		Id = 3717709173,
 		Name = "Starter Value Pack",
 		Robux = 49,
-		Description = "Two Mini Overclocks (20 minutes of ×2 refinery), 1,500 XP for each equipped pet and 10 minutes of line income. One per player.",
+		Description = "30 minutes of line income, three Mini Overclocks (30 minutes of ×2 refinery) and 1,500 XP for each equipped pet. One per player.",
 	} :: Product,
 	PetMax = {
 		Key = "PetMax",
@@ -391,13 +391,15 @@ Monetization.Overclock = {
 
 Monetization.ShardPacks = { Shards50 = 50, Shards250 = 250, Shards1000 = 1000 } :: { [string]: number }
 Monetization.MiniOverclock = { Duration = 10 * 60 }
--- Starter Value Pack: Overclocks of MiniOverclock.Duration, PetXp to each equipped pet, and the StarterPack cash pack
-Monetization.StarterPack = { Overclocks = 2, PetXp = 1500 }
+-- Starter Value Pack: Overclocks of MiniOverclock.Duration, PetXp to each equipped pet, and the StarterPack cash pack.
+-- Ad test (2026-10-18): 0 of 18 prompts bought when it was PocketChange + 2 Mini Overclocks (~57 R$ of items for 49);
+-- now ~90 R$ of items for 49, and the Store quotes its cash before the prompt.
+Monetization.StarterPack = { Overclocks = 3, PetXp = 1500 }
 Monetization.OreRush = { Multiplier = 2, Duration = 30 * 60 }
 Monetization.CashPacks = {
 	PocketChange = { Minutes = 10, Floor = 2000, CeilingShare = 0.3 },
 	CashBundle = { Minutes = 60, Floor = 20000, CeilingShare = 0.8 },
-	StarterPack = { Minutes = 10, Floor = 2000, CeilingShare = 0.3 },
+	StarterPack = { Minutes = 30, Floor = 5000, CeilingShare = 0.5 },
 } :: { [string]: CashPack }
 
 -- Processed PurchaseIds are retained permanently. The previous 50-id limit could

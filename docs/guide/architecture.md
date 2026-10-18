@@ -78,7 +78,7 @@ MeteorShift in one sentence: a meteor slams into the crater on a timer (`MeteorS
 | MobileControlsController | the touch MINE button (`Shared.Aim`) |
 | MusicController | hub/event tracks, stingers, siren, hum |
 | NodeHealthController | HP bars over targets you have hit; shared bar for the core |
-| OfferController | the pass/Starter-Pack offer tiles outside the Store menu |
+| OfferController | the pass/Starter-Pack offer tiles on the HUD; they open the Store |
 | PerksController | the Colony Perks panel |
 | PetVisualController | local pet followers from the replicated loadout |
 | PetsController | the Pets menu (MY PETS / PET INDEX / eggs) |

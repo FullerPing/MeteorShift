@@ -30,7 +30,7 @@
 --   Shard packs     add a fixed number of Core Shards (Config.Monetization.ShardPacks)
 --   Pet Max         takes every equipped pet to max level; Pet Slot is the extra pet slot,
 --                   saved as flags.extraPetSlot (read by ExtraPetSlots); Starter Pack is
---                   cash, two Mini Overclocks and pet XP, once per player (flags.starterPack)
+--                   cash, Mini Overclocks and pet XP, once per player (flags.starterPack)
 --   2x Cash         EconomyService multiplies every bar sale by CashMult
 --   Rebirth Keep    adds a credit (credits.rebirthKeep); RebirthService spends it on the
 --                   next rebirth, which then keeps everything (Lib.RebirthReset)
@@ -53,6 +53,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local CallMeteorRules = require(ReplicatedStorage.Shared.CallMeteor)
 local Config = require(ReplicatedStorage.Shared.Config)
+local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
@@ -93,6 +94,7 @@ local processing: { [Player]: boolean } = {}
 type ProductEffect = { key: string, outcome: string, notice: string? }
 local pendingEffects: { [Player]: { [string]: ProductEffect } } = {}
 local lastCreditRequest: { [Player]: number } = {}
+local lastQuoteRequest: { [Player]: number } = {}
 
 -- Passes granted by the Studio-only DevPasses attribute, e.g. "TwoXOre,VIP".
 local function devPasses(): { string }
@@ -213,15 +215,31 @@ function MonetizationService:_resolve(player: Player)
 	self:_grantPasses(player, found)
 end
 
-function MonetizationService:_grantProduct(player: Player, data: any, key: string): ProductEffect?
+-- The cash a pack (Config.Monetization.CashPacks) pays this player now, nil for other keys: its minutes of what
+-- they're expected to earn with what they own. The Store quotes the same number before they buy.
+function MonetizationService:_cashPackAmount(player: Player, data: any, key: string): number?
 	local pack = Monetization.CashPacks[key]
-	-- A pack is worth its minutes of what this player is expected to earn with what they own now
-	local cash = if pack then Income.grant(
+	return if pack then Income.grant(
 		pack.Minutes * 60,
 		EconomyService:ExpectedIncome(player).perSecond,
 		pack.Floor,
 		Rebirth.cost(data.rebirths) * pack.CeilingShare
 	) else nil
+end
+
+-- The Store asks what a cash pack would pay before the player buys it (nil for an unknown key).
+function MonetizationService.Client:CashPackQuote(player: Player, key: any): number?
+	local allowed, stamp = RequestGate.check(lastQuoteRequest[player], os.clock(), 0.5)
+	lastQuoteRequest[player] = stamp
+	local data = PlayerStateService:Get(player)
+	if not allowed or not data or type(key) ~= "string" then
+		return nil
+	end
+	return self.Server:_cashPackAmount(player, data, key)
+end
+
+function MonetizationService:_grantProduct(player: Player, data: any, key: string): ProductEffect?
+	local cash = self:_cashPackAmount(player, data, key)
 	local product = Monetization.Products[key]
 	local grant = if product and product.Kind
 		then Purchases.gearSkip(data, key, Rebirth.priceMult(data.rebirths))
@@ -269,7 +287,8 @@ function MonetizationService:_grantProduct(player: Player, data: any, key: strin
 	elseif key == "StreakShield" then
 		effect.notice = "Streak Shield added: it covers one missed day of your streak."
 	elseif key == "StarterPack" then
-		effect.notice = "Starter Value Pack: +$" .. Format.number(grant.cash) .. ", 20 minutes of Overclock and pet XP."
+		local minutes = Monetization.StarterPack.Overclocks * Monetization.MiniOverclock.Duration / 60
+		effect.notice = "Starter Value Pack: +$" .. Format.number(grant.cash) .. ", " .. Format.number(minutes) .. " minutes of Overclock and pet XP."
 	elseif grant.shards and grant.shards > 0 then
 		effect.notice = "+" .. Format.number(grant.shards) .. " Core Shards."
 	elseif key == "Overclock" or key == "MiniOverclock" then
@@ -469,6 +488,7 @@ function MonetizationService:KnitStart()
 		resolved[player] = nil
 		pendingEffects[player] = nil
 		lastCreditRequest[player] = nil
+		lastQuoteRequest[player] = nil
 	end)
 	-- The profile may load after the passes resolved; send State with the right capacity
 	DataService.ProfileLoaded:Connect(function(player)
