@@ -1,5 +1,5 @@
 --!strict
--- Spec for Shared.Pacing, the economy pacing model (docs/balance.md). The checkpoints are
+-- Spec for Shared.Pacing, the economy pacing model (docs/guide/balance.md). The checkpoints are
 -- the targets of the rebased economy: a first session of about 45 minutes ends in the first
 -- rebirth, and the rebirths after it keep coming at a steady pace (rebirth cost grows as fast
 -- as the multiplier it pays). Dollar amounts are in the game's own numbers.

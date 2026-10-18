@@ -9,8 +9,8 @@
 **Tech Stack:** Luau (Roblox), Rojo sync, Knit services, the `tests/Runner.luau` harness run inside Studio.
 
 **Specs:**
-- `docs/superpowers/specs/2026-10-10-merged-gear-level-design.md`
-- `docs/superpowers/specs/2026-10-10-rebirth-price-inflation-design.md`
+- `docs/archive/superpowers/specs/2026-10-10-merged-gear-level-design.md`
+- `docs/archive/superpowers/specs/2026-10-10-rebirth-price-inflation-design.md`
 
 ## Global Constraints
 
@@ -356,7 +356,7 @@ Update the header comment block.
 ### Task 7: The pacing model and the retuned rebirth costs
 
 **Files:**
-- Modify: `src/shared/Pacing.luau`, `src/shared/Config/Rebirth.luau` (`Costs`), `tests/Pacing.spec.luau`, `docs/economy-rework.md`
+- Modify: `src/shared/Pacing.luau`, `src/shared/Config/Rebirth.luau` (`Costs`), `tests/Pacing.spec.luau`, `docs/design/economy-rework.md`
 
 **Interfaces:**
 - Consumes: `Gear.bundleCost(kind, tier, priceMult)`, `Rebirth.priceMult`.
@@ -367,7 +367,7 @@ Update the header comment block.
 - [ ] **Step 4: Refit `Costs`.** For ranks 1..16, in Studio via `execute_luau`: for each rank r in order, binary-search the cost `c` (log scale) so lap r equals its target (13, 16, 20, 24, then 25 min) when ranks 1..r-1 use their already-fitted costs; set `Config.Rebirth.Costs[r]` in memory for each probe (the module is required fresh, edit the table in place). Round each fitted value to 2 significant digits. Paste the 16 results into `Config/Rebirth.luau` and update the comment above the list (tuned with gear tiers kept and `PriceGrowth = 3`; date 2026-10-10).
 - [ ] **Step 5: Update `tests/Pacing.spec.luau`** only where the targets legitimately move: the assertions about the first four laps lengthening and laps 5-8 within 18..32 min and the first rebirth between 10 and 20 minutes must still hold with the new list; if the refit satisfies them, no edits. Early-game assertions (Steel, 15/30-minute gear, offline cap) are rank-0 and unaffected since `priceMult(0) = 1`; confirm by running them.
 - [ ] **Step 6: Add one case:** with `rebirths = 3` the model's purchase `cost` for `hopper2` after the third rebirth equals `Config.Home.Stations.hopper.Levels[2].Cost * 3^3` (find it in `result.purchases` after `rebirthTimes[3]`).
-- [ ] **Step 7: Run the full suite**, expect everything green. Add a "Price inflation and merged gear level (2026-10-10)" section to `docs/economy-rework.md` stating the factor, the new curve, the bundle table from the gear spec, the retuned `Costs` and the lap times measured.
+- [ ] **Step 7: Run the full suite**, expect everything green. Add a "Price inflation and merged gear level (2026-10-10)" section to `docs/design/economy-rework.md` stating the factor, the new curve, the bundle table from the gear spec, the retuned `Costs` and the lap times measured.
 
 ### Task 8: Number format
 
@@ -383,7 +383,7 @@ Update the header comment block.
 ### Task 9: Player-facing text and docs
 
 **Files:**
-- Modify: `src/client/NativeMenus/Rebirth.luau:102` (rules text), `src/client/Controllers/RebirthController.luau` (next-rebirth preview), `src/shared/Config/Perks.luau` (leave Head Start's text as already edited), `README.md`, `docs/native-ui.md` (if it describes the shop rows)
+- Modify: `src/client/NativeMenus/Rebirth.luau:102` (rules text), `src/client/Controllers/RebirthController.luau` (next-rebirth preview), `src/shared/Config/Perks.luau` (leave Head Start's text as already edited), `README.md`, `docs/guide/native-ui.md` (if it describes the shop rows)
 - Check: `assets/native-ui/GearShop.rbxmx` (unchanged: stat rows stay as hidden bindings)
 
 - [ ] **Step 1:** Rebirth rules line: add `Prices rise x3 and sales x5 with every rebirth.` after the keeps list (keep the panel's text-fit; verify it in Play at 3 sizes).

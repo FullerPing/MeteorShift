@@ -1,5 +1,5 @@
 --!strict
--- Economy pacing model (spec §7.4, Week 5 balancing; docs/balance.md).
+-- Economy pacing model (spec §7.4, Week 5 balancing; docs/guide/balance.md).
 --
 -- Simulates a fresh player's first sessions from Config alone: no mineral index or
 -- quantity passes. By default there are no pets; Options.drillbotLevel equips one

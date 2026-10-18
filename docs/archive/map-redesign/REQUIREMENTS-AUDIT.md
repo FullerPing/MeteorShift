@@ -4,7 +4,7 @@
 
 | Requirement | Evidence and remaining work |
 |---|---|
-| Preserve owner work and frozen GUI | Original Map remains active; Map_Old absent. No Source or scene mutation in this audit. All 39 frozen file hashes checked; only the approved TutorialController lookup differs. Its panel/guide suffix matches the baseline. Owner docs/ff.md and three unrun draft specs remain untouched. |
+| Preserve owner work and frozen GUI | Original Map remains active; Map_Old absent. No Source or scene mutation in this audit. All 39 frozen file hashes checked; only the approved TutorialController lookup differs. Its panel/guide suffix matches the baseline. Owner docs/unrelated/ff.md and three unrun draft specs remain untouched. |
 | Measured plan and rollback | Self-approved PLAN.md/layout.svg and numeric budgets exist. Four original exports and fresh Studio snapshots are archived, including full TerrainComplete. Do not use the earlier bounded Terrain capture for full rollback. |
 | Bright studded original world | Map_Redesign at offset (0,0,3000) has 1,417 anchored authored parts, zero Scripts/MeshParts/previews. Landmarks, spawn trim, decorative eggs, mineral exhibits and four yards exist. Full visual acceptance remains unverified. |
 | Meteor at least 2x in every linear dimension | Isolated scaled binary templates preserve Core 56.699997 and doubled NodePieces/attachments. Live Core is still 28.349998 per axis; runtime templates, Config and FX/sound/shake changes are pending. Candidate reach and sampled bounds do not prove walking/aiming on Iron/Ice/Crystal. |

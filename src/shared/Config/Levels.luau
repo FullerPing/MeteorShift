@@ -2,7 +2,7 @@
 -- Player level (XP). Separate from gear: it is earned by taking part in meteors, survives
 -- rebirth, and gates evolving (Shared.Levels, Server.ShopService) and ore yield. Tune here.
 --
--- Levels run 1 to 50 and everything unlocks somewhere on that road (docs/economy-rework.md):
+-- Levels run 1 to 50 and everything unlocks somewhere on that road (docs/design/economy-rework.md):
 -- tiers 5 to 8 at 10 / 16 / 24 / 34, Frost cleared at 12, Crystal at 24, Alien at 38. At a
 -- full meteor of hitting (about 70 XP) level 10 is about 20 minutes in and level 50 about a
 -- day of play.

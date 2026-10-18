@@ -61,7 +61,7 @@ Pet slots are 1 plus 1 per rebirth to 3, one more at rebirth 4, plus the pass an
 
 ## Merged gear level and price inflation (2026-10-10)
 
-Specs: `docs/superpowers/specs/2026-10-10-merged-gear-level-design.md` and `2026-10-10-rebirth-price-inflation-design.md`.
+Specs: `docs/archive/superpowers/specs/2026-10-10-merged-gear-level-design.md` and `2026-10-10-rebirth-price-inflation-design.md`.
 
 - **One gear level.** The pickaxe's Power, Swing, Reach and Crit and the backpack's Capacity are read from a single level per item (`pickaxeLevel`, `backpackLevel`, profile v7). A level costs `Base x 1.12^(level-1)` (pickaxe base 45, backpack 37.5; was 30 / 25 at 1.115 on the gate stat alone). The bundle cost to reach a pickaxe tier rose +33% at tier 2 up to +64% at tier 8.
 - **Rebirth keeps gear tiers**, and resets only the level. The model (`Shared.Pacing`) keeps the pickaxe and backpack tiers through a rebirth.

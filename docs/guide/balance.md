@@ -29,7 +29,7 @@ The economy follows the Roblox simulator rhythm: millions on day 1, billions wit
 
 ## Rebirth cost and multiplier
 
-Rebirth costs come from an explicit list (`Config.Rebirth.Costs`) tuned in the model so the laps are 14, 17, 19, 23 and then about 25 minutes, and pay `CashMult`^n on bar sales (x5, x25, ...); past the 16 listed ranks Legacy ranks cost x2.3 more and pay x2. The old rule (every rank x5 on cost and multiplier, first rebirth $15M at 45 minutes) was replaced; see docs/economy-rework.md.
+Rebirth costs come from an explicit list (`Config.Rebirth.Costs`) tuned in the model so the laps are 14, 17, 19, 23 and then about 25 minutes, and pay `CashMult`^n on bar sales (x5, x25, ...); past the 16 listed ranks Legacy ranks cost x2.3 more and pay x2. The old rule (every rank x5 on cost and multiplier, first rebirth $15M at 45 minutes) was replaced; see docs/design/economy-rework.md.
 
 ## Timeline (model)
 

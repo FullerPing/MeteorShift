@@ -8,7 +8,7 @@
 
 **Tech Stack:** Luau (strict), Knit 1.7, Rojo, the in-Studio test runner (`require(game.ServerStorage.Tests.Runner)("<filter>")`).
 
-**Spec:** `docs/superpowers/specs/2026-10-11-daily-rewards-design.md`
+**Spec:** `docs/archive/superpowers/specs/2026-10-11-daily-rewards-design.md`
 
 ## Global Constraints
 
@@ -1567,7 +1567,7 @@ Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"
 ### Task 7: Docs and final verification
 
 **Files:**
-- Modify: `docs/superpowers/specs/2026-10-11-daily-rewards-design.md`
+- Modify: `docs/archive/superpowers/specs/2026-10-11-daily-rewards-design.md`
 - Modify: `README.md`
 
 - [ ] **Step 1: Update the spec to match what was built**
@@ -1585,7 +1585,7 @@ Add a short `**Daily rewards (Shared.Daily, Config.Daily, DailyService)**` block
 - [ ] **Step 4: Commit**
 
 ```bash
-git add README.md docs/superpowers/specs/2026-10-11-daily-rewards-design.md
+git add README.md docs/archive/superpowers/specs/2026-10-11-daily-rewards-design.md
 git commit -m "Document daily rewards, quests, badges and the Streak Shield
 
 Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>"

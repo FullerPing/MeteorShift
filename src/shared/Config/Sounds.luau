@@ -1,7 +1,7 @@
 --!strict
 -- Sound effects, played through client/Sfx.luau by name. Every id is licensed for all
 -- experiences: Pro Sound Effects and APM uploads by Roblox's library accounts, Roblox's own
--- UI kit, or a few built-ins (sources in docs/audio.md). Volume is 0..1; when PitchMin and
+-- UI kit, or a few built-ins (sources in docs/guide/audio.md). Volume is 0..1; when PitchMin and
 -- PitchMax are set, each play picks a random PlaybackSpeed between them. Cooldown is the
 -- shortest gap in seconds between two plays of the same name; Max caps how many copies may
 -- sound at once (default 4 for 2D sounds, 6 for sounds placed on a part). Group is the

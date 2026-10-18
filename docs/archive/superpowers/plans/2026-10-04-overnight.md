@@ -8,7 +8,7 @@ Architecture: retain Knit services as the authority and Fusion menus as views. P
 
 Tech stack: Roblox Studio, Rojo 7.6, strict Luau, Knit, Fusion, Git.
 
-Spec: the complete master prompt is `docs/master-prompt.md`; the user-supplied attachment `goal-objective.md` adds permission to proceed and confirms the halved pet prices.
+Spec: the complete master prompt is `docs/archive/master-prompt.md`; the user-supplied attachment `goal-objective.md` adds permission to proceed and confirms the halved pet prices.
 
 ## Global constraints
 
@@ -58,7 +58,7 @@ Assumption: after Frost clearance, cash-pack average price uses meteor weights m
 
 - [x] Implement tested visual budget/loadout/hatch timing helpers, PetVisualController and HatchController.
 - [x] Author all fourteen pets from the exact art prose with deterministic Edit-only generator. Validate both looks, hierarchy, part limits and disabled collisions before replacing the folder.
-- [x] Execute generator in Edit, save and export `assets/PetModels.rbxm` (52,373 bytes); document conventions in `docs/pet-models.md`; all 14 × 2 clone checks passed.
+- [x] Execute generator in Edit, save and export `assets/PetModels.rbxm` (52,373 bytes); document conventions in `docs/art-pipeline/pet-models.md`; all 14 × 2 clone checks passed.
 - [x] Verify pure loadout/culling/missing-asset/40-model/hatch-timing rules and review working/level-10 code; observe duplicate name/perks after the Sibling fix; commit/push Part C. Full runtime and cross-client coverage remain in Part D.
 
 Interfaces: Player `Pets`, `PetLevels`, `PetSlots`; `PetService.Client.Working(userId, role, targetPosition?)` with an optional world destination on working events; client `ReduceEffects` and `HatchOpen`. `Level10` contains a complete replacement geometry set, included in the saved part count.
@@ -87,7 +87,7 @@ Interfaces: Player `Pets`, `PetLevels`, `PetSlots`; `PetService.Client.Working(u
 
 - [ ] Final documentation check after the new GUI style: pet/purchase/balance/model docs and current README are updated; all 17 monetization IDs are zero. Recheck wording against the completed user-directed layout and styling.
 - [ ] All changed Luau, docs and model export committed and pushed; no PR or publish.
-- [x] Draft `docs/overnight-report.md` records established evidence, assumptions, verification limits and all 8 passes/9 products with exact configured prices; unspecified legacy prices are owner decisions.
+- [x] Draft `docs/archive/overnight-report.md` records established evidence, assumptions, verification limits and all 8 passes/9 products with exact configured prices; unspecified legacy prices are owner decisions.
 - [ ] Replace the report's final layout/test/runtime/save/push pending fields with observed evidence before completion.
 - [ ] Compare each master-prompt requirement with authoritative evidence before marking the goal complete.
 

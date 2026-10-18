@@ -1,7 +1,7 @@
 # Meteor Shift improvement pass — implementation plan
 
 **Spec:** the game spec, "Meteor Shift — Game Spec (MVP)" v2. A copy for this pass lives at
-`docs/plans/meteor-shift-spec.md`. Section numbers below (§5.3, §8.1 …) refer to it.
+`docs/design/meteor-shift-spec.md`. Section numbers below (§5.3, §8.1 …) refer to it.
 **Branch:** `improve-pass` (off `claude/eager-cannon-d2cki4`, which holds main + the Week 3 start).
 **Checkpoint of the game before this pass:** `oldmain/` (git-ignored) and the local branch `oldmain`.
 
@@ -311,7 +311,7 @@ The place has no pass/product IDs yet, so everything is wired but off until IDs 
   worth roughly $9K at most. If the current Config misses a checkpoint, tune Config values (prices or
   rates, smallest change) until it passes, and list every changed number in the commit message and the
   README.
-- Write `docs/balance.md` summarising the model, its assumptions and the resulting timeline.
+- Write `docs/guide/balance.md` summarising the model, its assumptions and the resulting timeline.
 - Commit: "Add an economy pacing model and tune early progression (spec 7.4)".
 
 ### Task 11: README and cleanup

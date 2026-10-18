@@ -52,7 +52,7 @@ API changes in `Shared.Gear`:
 
 - The change is bigger than the headline +50% base because growth compounds. The owner picked "slightly harder"; if this reads as too steep, growth 1.118 is the knob to turn first. The plan recomputes the backpack column and the full-game gear total.
 - The new level also carries Speed, Reach and Crit, which players used to buy separately (or skip). Maxed, a level-80 pickaxe has +11.85 studs reach and 23.7% crit for everyone. The plan reviews `ReachPerLevel` / `CritPerLevel` against `Pacing` before shipping; halving them is the likely adjustment.
-- `Gear.bundleCost` uses the new curve (one level stream instead of the Gate stat), so `Pacing` follows automatically. The plan re-runs the `Pacing` model and re-checks the rebirth cost list tuned against it (`docs/economy-rework.md`).
+- `Gear.bundleCost` uses the new curve (one level stream instead of the Gate stat), so `Pacing` follows automatically. The plan re-runs the `Pacing` model and re-checks the rebirth cost list tuned against it (`docs/design/economy-rework.md`).
 
 ## Migration (profile version 6 to 7)
 

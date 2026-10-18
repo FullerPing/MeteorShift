@@ -10,7 +10,7 @@ return {
 	-- with the earlier ones fixed, so lap 2 and 3 settle a little above the 16 and 20 minutes aimed at.
 	-- They are not a clean x5: lap 1 pays for the gear ramp, and the tiers and ores that player
 	-- level opens keep arriving for the first hours. Edit them together with Config.Levels and
-	-- Config.Home, then re-run the model (docs/economy-rework.md).
+	-- Config.Home, then re-run the model (docs/design/economy-rework.md).
 	Costs = { 68e3, 1.2e6, 12e6, 65e6, 530e6, 2.9e9, 14e9, 69e9, 380e9, 2.6e12, 13e12, 64e12, 340e12, 1.6e15, 8.5e15, 40e15 },
 	CashMult = 5, -- bar sales multiplier gained per rebirth for the listed ranks, multiplicative (x5, x25, x125, ...)
 	-- Cash price inflation per rebirth: gear and production upgrades cost this much more for every rebirth

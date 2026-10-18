@@ -1,6 +1,6 @@
 # Pet model conventions
 
-The art brief and rarity ladder are in [pets.md](pets.md). `tools/build-pet-models.luau` builds all fourteen saved models deterministically in Studio Edit mode. Execute the complete file, inspect the models, save the place without publishing, and export `ReplicatedStorage.PetModels` to `assets/PetModels.rbxm`. The tool validates the complete staged folder before replacing the existing one.
+The art brief and rarity ladder are in [pets.md](../guide/pets.md). `tools/build-pet-models.luau` builds all fourteen saved models deterministically in Studio Edit mode. Execute the complete file, inspect the models, save the place without publishing, and export `ReplicatedStorage.PetModels` to `assets/PetModels.rbxm`. The tool validates the complete staged folder before replacing the existing one.
 
 Each model uses the pet id from `Config.Pets` as its name. Its `PrimaryPart` is `Body`, and its `PetColor` attribute is the configured colour. `Level10` holds complete replacement geometry, including another `Body`; the client promotes that folder's contents at level 10 and removes the inactive geometry. Both looks count toward the authoring limit: fewer than 300 BaseParts, or at most 400 for Legendary and Premium. Stored parts are unanchored, massless, noncolliding, nontouchable and nonqueryable. Models contain no scripts. Lights and particle emitters begin at Rare. Only Solar Phoenix has a halo.
 

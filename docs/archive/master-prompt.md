@@ -4,13 +4,13 @@ You are the engineer who already knows this project (Roblox, Rojo + Luau, Knit, 
 
 ## 0. Catch up first (20 minutes at most)
 
-You have not seen the newest changes. Run `git pull origin job-for-tomorrow`, then `git log --oneline c0ba585..HEAD` and read the diff of each commit plus these files: `README.md`, `docs/balance.md`, `docs/pets.md`, `audit.md`. The newest changes, in order:
+You have not seen the newest changes. Run `git pull origin job-for-tomorrow`, then `git log --oneline c0ba585..HEAD` and read the diff of each commit plus these files: `README.md`, `docs/guide/balance.md`, `docs/guide/pets.md`, `audit.md`. The newest changes, in order:
 
 1. **Player level (XP)**: `src/shared/Config/Levels.luau`, `src/shared/Levels.luau`, `src/server/Services/LevelService.luau`. XP arrives per validated crust hit, core hit and a cracked-core bonus (not as a lump after a meteor). Level survives rebirth, shown as "LV n" with an XP bar in the HUD wallet card, and gates evolving to tier 5 and up.
 2. **Refinery clearance**: each ore refines at full speed from a level (iron 1, frost 4, crystal 6) and at 0.35 per level short under it (`Levels.clearance`, applied in `Server.Lib.Refining.run`). The old under-tier meteor rules and the 25% eligibility rule are gone: every meteor type comes up by weight and everyone mines every type. `Shared.Pacing` models it.
 3. **Gear shop**: one screen per gear (Pickaxe, Backpack) with +1 and +10 buy buttons (`Gear.bulk`) and an evolve banner. Pets and the old Production cards remain carousels.
 4. **Audit fixes** in `DataService` (per-profile write ordering, per-save abort flag, live servers fail closed with no DataStore) and `NodeService` (the server requires an alive humanoid holding the pickaxe). Every menu now blocks mining. The welcome-back popup has a 44 px button and closes on Escape.
-5. **Pets**: 14 pets in six rarities (`Config.Pets`, `Shared.Pets`, `PetService`), shard eggs with shown odds and pity (Meteor Egg 30 shards, Crystal Egg 120), duplicate pets give 400 XP, two Robux game-pass pets (Drillbot 199, Solar Phoenix 399, ids still 0 in `Config.Monetization`). Art descriptions are in `docs/pets.md`.
+5. **Pets**: 14 pets in six rarities (`Config.Pets`, `Shared.Pets`, `PetService`), shard eggs with shown odds and pity (Meteor Egg 30 shards, Crystal Egg 120), duplicate pets give 400 XP, two Robux game-pass pets (Drillbot 199, Solar Phoenix 399, ids still 0 in `Config.Monetization`). Art descriptions are in `docs/guide/pets.md`.
 
 Then check the repo and Studio agree: sync the code into Studio the way you normally do, open the place, and run the project's test runner in Studio (`ServerStorage.Tests`, see `tests/Runner.luau`) to get a baseline. Note how many pass and which fail before you change anything. Fix anything that is only broken by the new commits being out of sync with the place.
 
@@ -77,7 +77,7 @@ Perks per rarity: common 1, uncommon 1, rare 1 or 2, epic 2, legendary 3, premiu
 - Apply each new role where A1 says. For vault, `Server.Lib.Refining` reads station levels only: add an optional capacity multiplier or scale in callers, and keep `RefineryService` offline catch-up consistent. State must publish all bonuses.
 - Shop (`ShopController`): each pet card lists all its perks with current values at the pet's level, with the rarity colour as accent. Egg cards unchanged. No phone layout regressions.
 - Specs: rewrite `tests/Pets.spec.luau` for the new model (perk counts per rarity, the table above asserted exactly at level 1 and 10, caps, monotonic strength by rarity per role, paid pets best, clean still repairs saves, roll and pity unchanged) and add specs for the pure arithmetic of yield, scholar, shards and vault.
-- No profile schema change is needed. Update `docs/pets.md` (keep all art descriptions word for word, add perk lines), README and `docs/balance.md`.
+- No profile schema change is needed. Update `docs/guide/pets.md` (keep all art descriptions word for word, add perk lines), README and `docs/guide/balance.md`.
 
 ## 3. Part B: micro-purchases
 
@@ -110,8 +110,8 @@ Add a Studio-only `DevProduct` BindableFunction next to the existing dev hooks t
 1. **Replicated loadout.** The server sets Player attributes `Pets` (comma-separated equipped ids) and `PetLevels` (matching levels), updated on every loadout or level change.
 2. **`PetVisualController`** (new client controller). For every player, render their equipped pets near their character from `ReplicatedStorage.PetModels` (one Model per pet id). A missing model renders nothing and never errors. Clone locally, anchored parts moved with `PivotTo` each `RenderStepped`, offsets: slot 1 behind-left, slot 2 behind-right, slot 3 above the shoulder, smoothed, ground pets trot and flyers hover, working animation when their perk fires, at most 3 pets per player (4 with the extra slot pass), cull beyond 150 studs, never more than 40 pet models in total, destroy on leave or unequip. Tint parts named `Body` from the `PetColor` attribute when present, and swap in a child folder `Level10` at pet level 10 when it exists. Honour "Reduce effects" (Part E item 4) once it exists.
 3. **Hatch overlay.** Replace the hatch toast with a client overlay: 1.5 s egg wobble, a flash in the rarity colour, pet name and perks, "Duplicate: +400 XP" when applicable. Escape or tap closes it, 44 px touch targets, never blocks more than 2 s, queue multiple hatches.
-4. **Build the 14 pet models in Studio** into `ReplicatedStorage.PetModels`, following `docs/pets.md` exactly (the art descriptions are the brief): one Model per pet id, `PrimaryPart`, a `Body` part, a `Level10` folder with the upgraded look, no scripts, no colliders, unanchored, under 300 parts (Legendary and Premium up to 400), rarer pets visibly better (see the rarity ladder in the doc), Premium pets best, lights and particle emitters only on Rare and above. Name parts sensibly so animation can find them (`Head`, `Tail`, `Wings`, `Drill`, `Halo` where they exist). Save the place without publishing and export the folder to `assets/PetModels.rbxm`.
-5. Write `docs/pet-models.md`: a short technical brief of the conventions above, linking to `docs/pets.md` instead of repeating the art.
+4. **Build the 14 pet models in Studio** into `ReplicatedStorage.PetModels`, following `docs/guide/pets.md` exactly (the art descriptions are the brief): one Model per pet id, `PrimaryPart`, a `Body` part, a `Level10` folder with the upgraded look, no scripts, no colliders, unanchored, under 300 parts (Legendary and Premium up to 400), rarer pets visibly better (see the rarity ladder in the doc), Premium pets best, lights and particle emitters only on Rare and above. Name parts sensibly so animation can find them (`Head`, `Tail`, `Wings`, `Drill`, `Halo` where they exist). Save the place without publishing and export the folder to `assets/PetModels.rbxm`.
+5. Write `docs/art-pipeline/pet-models.md`: a short technical brief of the conventions above, linking to `docs/guide/pets.md` instead of repeating the art.
 
 ## 5. Part D: Studio verification
 
@@ -131,11 +131,11 @@ In order, stop when time runs out:
 3. Audit A17: meteor notifications state the reason and the economic outcome (cooled or cracked, shards earned, XP earned).
 4. Audit A18: add "Reduce camera shake" and "Reduce effects" toggles to the HUD settings (player attributes like the other settings), honoured by every shake and by pet and hatch effects.
 5. Audit A20 (partial): clearer Kick messages for an unavailable DataStore versus a save still open on another server, without weakening the session lock.
-6. Add pets to `Shared.Pacing` (model an equipped Drillbot at level 5) and report in `docs/balance.md` how first-rebirth time changes; do not retune other numbers.
+6. Add pets to `Shared.Pacing` (model an equipped Drillbot at level 5) and report in `docs/guide/balance.md` how first-rebirth time changes; do not retune other numbers.
 
 ## 7. Definition of done
 
 - The Studio test runner passes completely, Play-testing found no unresolved errors, and every changed `.luau` file is committed and pushed to `origin/job-for-tomorrow`.
-- README, `docs/pets.md`, `docs/balance.md`, `docs/pet-models.md` and Config header comments describe the final behaviour. Nothing in the repo is random-for-Robux. All `Config.Monetization` ids are 0.
+- README, `docs/guide/pets.md`, `docs/guide/balance.md`, `docs/art-pipeline/pet-models.md` and Config header comments describe the final behaviour. Nothing in the repo is random-for-Robux. All `Config.Monetization` ids are 0.
 - The place is saved (not published) and `assets/PetModels.rbxm` is exported.
-- Finish with `docs/overnight-report.md`: what was done, what was skipped and why, every assumption, anything you could not verify, and the exact list of Creator Dashboard items the owner must create (passes and developer products with the intended Robux prices).
+- Finish with `docs/archive/overnight-report.md`: what was done, what was skipped and why, every assumption, anything you could not verify, and the exact list of Creator Dashboard items the owner must create (passes and developer products with the intended Robux prices).

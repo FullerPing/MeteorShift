@@ -41,7 +41,7 @@ Inflation slows income growth inside a lap (upgrades cost more than the income t
 
 1. Add `priceMult` to `Shared.Pacing` (gear and station candidate costs) so the model sees the inflation.
 2. Re-run the model in Studio and fit a new `Costs` list so laps return to the same targets; `tests/Pacing.spec` holds them.
-3. Document the change next to the existing tuning notes in `Config.Rebirth` and `docs/economy-rework.md`.
+3. Document the change next to the existing tuning notes in `Config.Rebirth` and `docs/design/economy-rework.md`.
 
 The fit is computed, not guessed; the spec fixes the targets, not the list.
 

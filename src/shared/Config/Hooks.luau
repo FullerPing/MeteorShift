@@ -1,5 +1,5 @@
 --!strict
--- Engagement hooks (docs/economy-rework.md): small random rewards on a variable-ratio
+-- Engagement hooks (docs/design/economy-rework.md): small random rewards on a variable-ratio
 -- schedule, plus the rules that keep them fair. Shared.Hooks holds the math; NodeService,
 -- MeteorService, LevelService and RefineryService run them.
 --
@@ -48,6 +48,6 @@ return {
 	WelcomeBack = { { 0.80, 1 }, { 0.17, 1.5 }, { 0.03, 3 } },
 
 	-- Mineral index soft pity: after this many hits without any mineral, every hit's odds rise by
-	-- the same amount again, up to MaxMult times (docs/economy-rework.md; Shared.MineralIndex)
+	-- the same amount again, up to MaxMult times (docs/design/economy-rework.md; Shared.MineralIndex)
 	Pity = { AfterHits = 400, StepHits = 100, MaxMult = 3 },
 }

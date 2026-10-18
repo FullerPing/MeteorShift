@@ -173,7 +173,7 @@ These are worn on the character's back and shown on Gear Hall walls.
 
 ## 3. Pets (14 pets × 2 looks): `pets/<id>.fbx` and `pets/<id>_lv10.fbx`
 
-The full art direction is in `docs/pets.md`; follow it. The rules below are the mesh-specific ones.
+The full art direction is in `docs/guide/pets.md`; follow it. The rules below are the mesh-specific ones.
 
 **Size**
 - Ground pets are about 2.5 to 3.5 studs tall.

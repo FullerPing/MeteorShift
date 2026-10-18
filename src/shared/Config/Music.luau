@@ -1,7 +1,7 @@
 --!strict
 -- Background music and ambience (client/Controllers/MusicController.luau). Tracks are APM
 -- library uploads and the beds are Pro Sound Effects loops, all licensed for every experience
--- (docs/audio.md). The hub track plays in calm times; the event track fades in as a meteor
+-- (docs/guide/audio.md). The hub track plays in calm times; the event track fades in as a meteor
 -- approaches (AtmosphereMood's approach weight) and stays while it is down, then hands back.
 
 local Music = {

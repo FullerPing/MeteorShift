@@ -2,7 +2,7 @@
 
 `Config.Monetization` lists every pass and developer product. An item whose `Id` is `0` is not on sale: the store says **Not on sale yet** and never requests Marketplace metadata or prompts a purchase. `Robux` records the intended Creator Dashboard price; for items with an id the store reads the live regional price from Roblox.
 
-Nothing bought with Robux rolls a pet or changes odds, and nothing hatches an egg. Core Shards are sold as fixed packs and eggs keep their visible odds and pity rules. The progression products (shard packs, tier-ups, boss meteor, Rebirth and Keep Everything) are described in [economy-rework.md](economy-rework.md).
+Nothing bought with Robux rolls a pet or changes odds, and nothing hatches an egg. Core Shards are sold as fixed packs and eggs keep their visible odds and pity rules. The progression products (shard packs, tier-ups, boss meteor, Rebirth and Keep Everything) are described in [economy-rework.md](../design/economy-rework.md).
 
 The ids below were created in the Creator Dashboard on 2026-10-10 (passes: `TwoXOre`, `TwoXCash`, `BiggerBackpack`, `AutoDeposit`, `VIP`, `Drillbot`, `SolarPhoenix`; products: everything below except `TipJar`). `OfflineHours` (pass) has no dashboard entry yet.
 

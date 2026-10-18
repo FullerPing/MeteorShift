@@ -28,7 +28,7 @@
  *    span, so `git add src/foo.luau tests/foo.spec.luau` lines are still checked.
  *  - Line-suffix rule: one trailing line reference is stripped before qualifying:
  *    `:12`, `:12-15`, or comma-joined ranges like `:26-42,50-69,105-135`, so
- *    `docs/native-ui.md:12` checks `docs/native-ui.md`. Only one suffix is
+ *    `docs/guide/native-ui.md:12` checks `docs/guide/native-ui.md`. Only one suffix is
  *    stripped, and only when every part after the colon is numeric.
  *  - Also skipped by Check B: spans containing glob or placeholder metacharacters
  *    (* ? [ ] { } < >), e.g. `assets/native-ui/*.rbxmx` or `tests/<Name>.spec.luau`

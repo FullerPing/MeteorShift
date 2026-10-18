@@ -89,7 +89,7 @@ All 39 frozen GUI hashes were freshly checked: only the separately approved Tuto
 ## Checklist
 
 - [x] Read the full pasted objective and inspect current Git/open place.
-- [x] Preserve owner `docs/ff.md`; baseline HEAD9e66f0a.
+- [x] Preserve owner `docs/unrelated/ff.md`; baseline HEAD9e66f0a.
 - [x] Measure Edit geometry/meteor contracts and runtime render/frame baseline.
 - [x] Full baseline runner360passed/0failed.
 - [x] Record39frozen GUI file hashes.
