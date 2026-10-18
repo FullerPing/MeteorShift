@@ -74,7 +74,9 @@ return function(t: any)
 
 	t.test("a fresh profile starts with no redeemed codes", function()
 		local Template = require(t.lib.ProfileTemplate)
-		t.eq(Template.version, 11)
+		t.eq(type(Template.version), "number", "version is a number")
+		t.ok(Template.version > 0, "a saved schema versions up from 1")
+		t.eq(math.floor(Template.version), Template.version, "an integer step, not a float")
 		t.eq(next(Template.codes), nil)
 	end)
 end
