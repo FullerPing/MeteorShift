@@ -4,8 +4,8 @@ return function(t)
 	local StudSkin = require(t.shared.StudSkin)
 	local Config = require(t.shared.Config)
 
-	t.test("the four ore fields are valid travel targets and nothing else is", function()
-		t.eq(#Config.Debris.Fields, 4)
+	t.test("the eight ore fields are valid travel targets and nothing else is", function()
+		t.eq(#Config.Debris.Fields, 8)
 		for _, field in Config.Debris.Fields do
 			t.ok(FieldTravel.find(field.Id), field.Id)
 		end
