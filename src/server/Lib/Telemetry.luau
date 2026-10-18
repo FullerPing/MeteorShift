@@ -195,6 +195,15 @@ function Telemetry.keyForId(list: { [string]: { Id: number } }, id: number): str
 	return nil
 end
 
+-- Whether a player's events stay out of analytics: the place's owner (User-owned place) or the owning group's owner
+-- (rank 255), so the owner's test sessions don't skew the numbers. `groupRank` is nil when it isn't known.
+function Telemetry.excluded(creatorType: string, creatorId: number, userId: number, groupRank: number?): boolean
+	if creatorType == "User" then
+		return userId == creatorId
+	end
+	return creatorType == "Group" and (groupRank or 0) >= 255
+end
+
 -- Whether a menu name a client reported is one the analytics count (Config.Telemetry.Menus).
 function Telemetry.knownMenu(menus: { string }, name: any): boolean
 	return type(name) == "string" and table.find(menus, name) ~= nil

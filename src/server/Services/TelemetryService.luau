@@ -41,6 +41,10 @@
 -- * Reward sources through :earned: daily streak, quests, codes and field rocks' cash (their services call it).
 -- * menu_opened per player and menu every ActionsInterval (value = opens), reported by the client's
 --   TelemetryController through Client.MenuOpened, checked against Config.Telemetry.Menus and capped.
+-- * tutorial_skipped when a player skips the tutorial (TutorialService): value = the step they were on,
+--   field = its id. Without it a skip looks like a quit in the onboarding funnel.
+-- The place's owner logs nothing (Lib.Telemetry.excluded), so test sessions don't skew the numbers; Studio
+-- still prints every line.
 
 local AnalyticsService = game:GetService("AnalyticsService")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -88,6 +92,8 @@ local coreOpenedAfter: number? = nil -- seconds from the landing to the core ope
 -- Menu opens this window: per player and menu, plus each player's total for the cap
 local menuOpens: { [Player]: { [string]: number } } = {}
 local menuTotals: { [Player]: number } = {}
+-- Players whose events stay out of analytics (Telemetry.excluded), set on join
+local excluded: { [Player]: boolean } = {}
 
 local function call(method: string, fn: () -> ())
 	local ok, err = pcall(fn)
@@ -109,6 +115,9 @@ end
 function TelemetryService:custom(player: Player, name: string, value: number?, fields: { string }?)
 	if IS_STUDIO then
 		print(Telemetry.line("custom", name, player.Name, value, fields))
+	end
+	if excluded[player] then
+		return
 	end
 	call("LogCustomEvent", function()
 		AnalyticsService:LogCustomEvent(player, name, value or 1, Telemetry.fields(fields))
@@ -133,6 +142,9 @@ function TelemetryService:economy(
 	if IS_STUDIO then
 		print(Telemetry.line("economy", flowType.Name .. " " .. currency, player.Name, amount, { transactionType, sku }))
 	end
+	if excluded[player] then
+		return
+	end
 	call("LogEconomyEvent", function()
 		-- Documented order: (player, flowType, currencyType, amount, endingBalance, transactionType, itemSku, customFields?)
 		-- https://create.roblox.com/docs/reference/engine/classes/AnalyticsService#LogEconomyEvent
@@ -144,6 +156,9 @@ end
 function TelemetryService:funnel(player: Player, step: number, stepName: string)
 	if IS_STUDIO then
 		print(Telemetry.line("funnel", step .. " " .. stepName, player.Name))
+	end
+	if excluded[player] then
+		return
 	end
 	call("LogOnboardingFunnelStepEvent", function()
 		AnalyticsService:LogOnboardingFunnelStepEvent(player, step, stepName)
@@ -425,6 +440,16 @@ function TelemetryService:KnitStart()
 
 	local function joined(player: Player)
 		joinedAt[player] = os.clock()
+		local creatorType = game.CreatorType.Name
+		excluded[player] = Telemetry.excluded(creatorType, game.CreatorId, player.UserId, nil)
+		if creatorType == "Group" then
+			task.spawn(function()
+				local ok, rank = pcall(player.GetRankInGroup, player, game.CreatorId)
+				if ok and player.Parent then
+					excluded[player] = Telemetry.excluded(creatorType, game.CreatorId, player.UserId, rank)
+				end
+			end)
+		end
 	end
 	Players.PlayerAdded:Connect(joined)
 	for _, player in Players:GetPlayers() do
@@ -445,6 +470,7 @@ function TelemetryService:KnitStart()
 			local row = Telemetry.playerLeft(os.clock() - started, MeteorService:GetPhase(), tutorialDone)
 			self:custom(player, row.Name, row.Value, row.Fields)
 		end
+		excluded[player] = nil -- after player_left, which still checks it
 	end)
 
 	task.spawn(function()

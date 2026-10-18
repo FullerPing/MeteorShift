@@ -222,4 +222,12 @@ return function(t: any)
 		t.ok(not Telemetry.knownMenu(Config.Menus, 5), "non-string refused")
 	end)
 
+	t.test("excluded keeps the place owner out of analytics", function()
+		t.ok(Telemetry.excluded("User", 42, 42), "owner of a user place")
+		t.ok(not Telemetry.excluded("User", 42, 7), "other player")
+		t.ok(Telemetry.excluded("Group", 9, 7, 255), "group owner")
+		t.ok(not Telemetry.excluded("Group", 9, 7, 254), "group admin below owner")
+		t.ok(not Telemetry.excluded("Group", 9, 7, nil), "rank unknown")
+	end)
+
 end
