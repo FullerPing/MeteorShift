@@ -21,6 +21,7 @@ if fs.isFile("src/shared/DebrisOre.luau") then
 end
 modules.Income = load("src/shared/Income.luau")
 modules.FieldTravel = load("src/shared/FieldTravel.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
+modules.FieldGate = load("src/shared/FieldGate.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
 modules.DebrisField = load("src/shared/DebrisField.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" }, FieldTravel = "FieldTravel", Income = "Income" } } })
 modules.MiningPower = { power = function(tier) return 1.25 ^ (tier - 1) end }
 -- the player's level only matters to what an ore rock yields; stubs keep this harness off the economy modules
@@ -42,7 +43,7 @@ local function test(name, fn)
 end
 
 local function fixture(tier, field)
-	local state = { tier = tier, hp = 1, maxHp = 1, delayed = {}, cash = 0, toasts = {}, level = 1, income = 100 }
+	local state = { tier = tier, hp = 1, maxHp = 1, delayed = {}, cash = 0, toasts = {}, level = 1, rebirths = 0, income = 100 }
 	local node = {}
 	function node:Register(_, def) state.def = def; return 17 end
 	function node:SetMaxHp(id, hp) eq(id, 17); state.hp = hp; state.maxHp = hp end
@@ -54,7 +55,7 @@ local function fixture(tier, field)
 			if name == "ActivityService" then return { GetActivePickaxes = function() return { { Tier = state.tier, Power = 1.25 ^ (state.tier - 1) } } end } end
 			if name == "PlayerStateService" then
 				return {
-					Get = function() return { level = state.level, rebirths = 0 } end,
+					Get = function() return { level = state.level, rebirths = state.rebirths } end,
 					AddCash = function(_, _, amount) state.cash += amount end,
 				}
 			end
@@ -65,7 +66,7 @@ local function fixture(tier, field)
 		end,
 	}
 	local shared = { Config = "Config", MiningPower = "MiningPower", DebrisOre = "DebrisOre", DebrisField = "DebrisField", FieldTravel = "FieldTravel",
-		Levels = "Levels", Rebirth = "Rebirth", Format = "Format", WorldMap = "WorldMap", RequestGate = "RequestGate", StudSkin = "StudSkin" }
+		Levels = "Levels", Rebirth = "Rebirth", Format = "Format", FieldGate = "FieldGate", WorldMap = "WorldMap", RequestGate = "RequestGate", StudSkin = "StudSkin" }
 	local players = { PlayerRemoving = { Connect = function() end } }
 	local service = load("src/server/Services/DebrisService.luau", {
 		game = { GetService = function(_, name)
@@ -179,6 +180,34 @@ test("a rock without a field, or in an unknown one, is plain filler", function()
 		state.def.OnBroken({})
 		eq(state.cash, 0)
 	end
+end)
+
+test("a locked level field refuses hits and travel until the player reaches its level", function()
+	local service, state = fixture(1, "GlassScar")
+	local player = setmetatable({}, { __index = function(_, key) error("a locked field must not look at the player's " .. key) end })
+	eq(service:IsFieldOpen(player, "GlassScar"), false)
+	eq(service:IsFieldOpen(player, "RustWorks"), true)
+	eq(state.def.CanHit ~= nil, true, "gated rocks give NodeService a CanHit (it guards swings and pet hits)")
+	eq(state.def.CanHit(player), false)
+	eq(service:TravelTo(player, "GlassScar"), false)
+	state.level = 40
+	eq(state.def.CanHit(player), true, "opens as soon as the level is reached, no rejoin")
+end)
+
+test("a rebirth field ignores level", function()
+	local service, state = fixture(1, "Starfall")
+	state.level = 99
+	eq(state.def.CanHit({}), false)
+	state.rebirths = 1
+	eq(state.def.CanHit({}), true)
+	eq(service:IsFieldOpen({}, "HaloLedge"), false)
+end)
+
+test("open fields and filler rocks have no hit gate", function()
+	local _, rust = fixture(1, "RustWorks")
+	eq(rust.def.CanHit, nil)
+	local _, filler = fixture(1)
+	eq(filler.def.CanHit, nil)
 end)
 
 if modules.DebrisOre then

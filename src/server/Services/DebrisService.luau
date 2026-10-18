@@ -13,6 +13,10 @@
 -- A rock's Field attribute puts it in one of the ore fields (Config.Debris.Fields), which set its hits and
 -- its reward: cash worth a few seconds of the breaker's expected income (Economy:ExpectedIncome), or a
 -- better ore than iron. Rocks outside a field stay plain iron filler.
+--
+-- A field may be locked behind a level or a rebirth count (Shared.FieldGate). The server is the gate: a locked
+-- field's rocks refuse the player's swings and pets (NodeService CanHit), ORE travel there is refused, and anyone
+-- standing on its floor is put back at its Entrance. The gate models on the map are the client's picture of it.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -23,6 +27,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local DebrisField = require(ReplicatedStorage.Shared.DebrisField)
 local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
+local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
 local FieldTravel = require(ReplicatedStorage.Shared.FieldTravel)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Levels = require(ReplicatedStorage.Shared.Levels)
@@ -129,9 +134,11 @@ function DebrisService:_track(part: BasePart)
 	-- The field a rock stands in (its Field attribute) decides its hits and what it pays
 	local reward = DebrisField.reward(part:GetAttribute("Field"))
 	local hits = DebrisField.hits(reward)
+	local gated = FieldTravel.find(part:GetAttribute("Field"))
 	local rock: Rock
 	local id = NodeService:Register(part, {
 		Kind = "Debris",
+		CanHit = if gated and gated.Unlock then function(player: Player) return self:IsFieldOpen(player, gated.Id) end else nil,
 		MaxHp = hits,
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
@@ -207,9 +214,44 @@ function DebrisService:_fieldSpot(id: string): Vector3?
 	return Vector3.new(floor.Position.X + dx, top + 3.6, floor.Position.Z + dz)
 end
 
+-- Whether the ore field `id` is open to the player (their saved level and rebirths)
+function DebrisService:IsFieldOpen(player: Player, id: string): boolean
+	local field = FieldTravel.find(id)
+	if not field then return false end
+	if not field.Unlock then return true end
+	local data = PlayerStateService:Get(player)
+	return data ~= nil and FieldGate.isOpen(field, data.level or 1, data.rebirths or 0)
+end
+
+-- Puts anyone standing on a field that is locked to them back at its Entrance (they walked, slid or were thrown in)
+function DebrisService:_ejectLocked()
+	local map = WorldMap.find()
+	local fields = map and map:FindFirstChild("DebrisFields")
+	if not fields then return end
+	for _, player in Players:GetPlayers() do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not (root and root:IsA("BasePart")) then continue end
+		for _, field in Config.Debris.Fields do
+			if not field.Unlock then continue end
+			local model = fields:FindFirstChild(field.Id)
+			local floor = model and model:FindFirstChild("FieldFloor")
+			local entrance = model and model:FindFirstChild("Entrance")
+			if not (floor and floor:IsA("BasePart") and entrance and entrance:IsA("BasePart")) then continue end
+			local p = floor.CFrame:PointToObjectSpace(root.Position)
+			local inside = math.abs(p.X) <= floor.Size.X / 2 + 2 and math.abs(p.Z) <= floor.Size.Z / 2 + 2
+				and p.Y >= -floor.Size.Y / 2 - 2 and p.Y <= floor.Size.Y / 2 + 40
+			if inside and not self:IsFieldOpen(player, field.Id) then
+				player.Character:PivotTo(entrance.CFrame + Vector3.new(0, 4, 0))
+				root.AssemblyLinearVelocity = Vector3.zero
+			end
+		end
+	end
+end
+
 -- Teleports a player to an ore field; false when the request is refused.
 function DebrisService:TravelTo(player: Player, id: any): boolean
 	if not FieldTravel.find(id) then return false end
+	if not self:IsFieldOpen(player, id) then return false end
 	local character = player.Character
 	if not character then return false end
 	local root = character:FindFirstChild("HumanoidRootPart")
@@ -254,6 +296,12 @@ function DebrisService:KnitStart()
 		while true do
 			task.wait(Config.Debris.RerollInterval)
 			self:_reroll()
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			self:_ejectLocked()
 		end
 	end)
 end
