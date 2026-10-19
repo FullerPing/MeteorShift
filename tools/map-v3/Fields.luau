@@ -6,7 +6,7 @@
 --     a margin, in the field's own frame; Entrance (the zone's entrance, facing the crater). The locked-field eject
 --     treats the floor box as "inside", so each Entrance is asserted to lie outside it.
 --   Gates.<Id>: the FieldGate mesh facing the crater, a Barrier (not on fields without an Unlock) and the Rule label.
---     A locked field is also ringed by force-field `Wall`s 2.5 studs outside its floor, open in front of the gate with two
+--     A locked field is also ringed by glass `Wall`s 2.5 studs outside its floor, open in front of the gate with two
 --     short walls running out to the barrier's ends, so the gate is the one way in. FieldGateController shows and
 --     hides walls and barrier together.
 --     The Crown fields have no plan gate; theirs stands 4 studs past their entrance, as on the other tiers.
@@ -114,27 +114,30 @@ for index, field in Config.Debris.Fields do
 	local gateModel = A.group(gates, id)
 	local mesh = T.mesh(gateModel, "FieldGate", CFrame.lookAt(gatePos, gatePos - out), 25.2, function() error("ServerStorage.MapArt.FieldGate is missing; run Props") end)
 	if field.Unlock then
-		local barrier = A.part(gateModel, "Barrier", Vector3.new(24, 16, 1), CFrame.lookAt(gatePos + Vector3.new(0, 8, 0), gatePos + Vector3.new(0, 8, 0) - out), Color3.fromRGB(111, 240, 224), Enum.Material.ForceField, true)
-		barrier.Transparency, barrier.CanQuery = .35, false
+		local barrier = A.part(gateModel, "Barrier", Vector3.new(24, 16, 1), CFrame.lookAt(gatePos + Vector3.new(0, 8, 0), gatePos + Vector3.new(0, 8, 0) - out), Color3.fromRGB(111, 240, 224), Enum.Material.Glass, true)
+		barrier.Transparency, barrier.CanQuery, barrier.CastShadow = .5, false, false
 		-- the ring, in the floor's frame (x across, +z toward the crater)
 		local hx, hz, H = floor.Size.X / 2 + 2.5, floor.Size.Z / 2 + 2.5, 12
 		local gateZ = floor.CFrame:PointToObjectSpace(gatePos).Z
 		assert(gateZ > hz, id .. ": the gate is not in front of the field's near side")
-		local function wall(x0: number, z0: number, x1: number, z1: number)
+		-- walls are 1 thick on their line; the far and near sides run over the corners and the others stop at their
+		-- inner faces, so no two walls overlap (overlapping faces flicker)
+		local function wall(x0: number, z0: number, x1: number, z1: number, grow: number)
 			local a, b = Vector3.new(x0, 0, z0), Vector3.new(x1, 0, z1)
-			if (b - a).Magnitude < 1 then return end
+			local length = (b - a).Magnitude + grow
+			if length < 1 then return end
 			local mid = floor.CFrame * ((a + b) / 2) + Vector3.new(0, H / 2 - .1, 0)
 			local along = floor.CFrame:VectorToWorldSpace((b - a).Unit)
-			local w = A.part(gateModel, "Wall", Vector3.new(1, H, (b - a).Magnitude + 1), CFrame.lookAt(mid, mid + along), barrier.Color, Enum.Material.ForceField, true)
-			w.Transparency, w.CanQuery = .35, false
+			local w = A.part(gateModel, "Wall", Vector3.new(1, H, length), CFrame.lookAt(mid, mid + along), barrier.Color, Enum.Material.Glass, true)
+			w.Transparency, w.CanQuery, w.CastShadow = .5, false, false
 		end
-		wall(-hx, -hz, hx, -hz) -- far side
-		wall(-hx, -hz, -hx, hz)
-		wall(hx, -hz, hx, hz)
-		wall(-hx, hz, -12, hz) -- near side, open in front of the gate
-		wall(12, hz, hx, hz)
-		wall(-12, hz, -12, gateZ)
-		wall(12, hz, 12, gateZ)
+		wall(-hx, -hz, hx, -hz, 1) -- far side
+		wall(-hx, -hz, -hx, hz, -1)
+		wall(hx, -hz, hx, hz, -1)
+		wall(-hx - .5, hz, -12.5, hz, 0) -- near side, open in front of the gate (half a stud past each connector's centre)
+		wall(12.5, hz, hx + .5, hz, 0)
+		wall(-12.5, hz + .5, -12.5, gateZ - .5, 0) -- out to the barrier's ends (it spans x -12..12, z gateZ +-0.5)
+		wall(12.5, hz + .5, 12.5, gateZ - .5, 0)
 	end
 	local panel = mesh:FindFirstChild("Panel", true)
 	if panel and panel:IsA("BasePart") then

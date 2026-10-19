@@ -6,7 +6,8 @@
 --   at chest height must hit nothing solid and the ground under the line must stay level (no cliff edge in between).
 --   anything visible (not ground or road) in the 20 studs in front of a leaderboard's Screen, or inside the board;
 --   a locked field's Wall cutting into a road, cliff, ramp, the rampart, a rock, chute, Crown piece or the town, or a
---   chute UsePoint or field Entrance standing inside a walled field (locked players couldn't reach it).
+--   chute UsePoint or field Entrance standing inside a walled field (locked players couldn't reach it);
+--   any visible pair of flush same-way faces (they flicker; run Dezfight last).
 -- Budgets: total parts <= 20,000, lights <= 24, emitters <= 32.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local map = A.map
@@ -202,6 +203,14 @@ do
 				end
 			end
 		end
+	end
+end
+do
+	local H = game:GetService("HttpService")
+	local O = assert(loadstring(H:GetAsync("http://127.0.0.1:8123/map-v3/Overlap.luau", true)))()
+	local flush = assert(loadstring(H:GetAsync("http://127.0.0.1:8123/map-v3/Coplanar.luau", true)))(O)
+	for _, pair in flush.list do
+		fail(("flush faces flicker at (%.0f, %.1f, %.0f): %s | %s (run Dezfight)"):format(pair.at.X, pair.at.Y, pair.at.Z, pair.p:GetFullName(), pair.q:GetFullName()))
 	end
 end
 for _, chute in map.Chutes:GetChildren() do reach("chute " .. chute.Name, chute.UsePoint.Position) end

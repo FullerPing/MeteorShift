@@ -1,6 +1,6 @@
 --!strict
 -- The field gates on the map (Map.Gates.<FieldId>, built by tools/map-v3/Fields): a gate still closed to this player
--- shows a solid force field (the Barrier and the Walls round the field) and its rule ("Level 12") on the sign; an open
+-- shows solid see-through glass (the Barrier and the Walls round the field) and its rule ("Level 12") on the sign; an open
 -- one hides them, lets them walk through and says OPEN.
 -- This is the picture only; DebrisService refuses hits, travel and standing on a locked field on the server.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -12,7 +12,7 @@ local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 
 local FieldGateController = Knit.CreateController({ Name = "FieldGateController" })
 
-local CLOSED_TRANSPARENCY = 0.35
+local CLOSED_TRANSPARENCY = 0.5
 
 function FieldGateController:KnitStart()
 	local PlayerStateService = Knit.GetService("PlayerStateService")

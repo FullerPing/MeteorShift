@@ -139,7 +139,7 @@ props.SkyLift = function(g, F)
 	T.box(g, "Machine", F, 0, 0, top, 15, 11, 5, R.red[2])
 	T.box(g, "MachineTrim", F, 0, 0, top, 15.6, 11.6, .8, white, nil, false)
 	T.box(g, "Roof", F, 0, 0, top + 5, 16, 12, 1.2, R.red[3])
-	T.cylLat(g, "Wheel", F, 0, 5.6, top + 2.6, 4, .8, ink, nil, false)
+	for _, su in { -1, 1 } do T.cylLat(g, "Wheel", F, su * 7.9, 0, top + 2.6, 4, .8, ink, nil, false) end -- on the sides, clear of the lettering
 	local gui = T.textBoard(g, "Lettering", F, 0, top + 2.6, 5.62, 9, 2.6, 30)
 	T.outlined(gui, "SKY LIFT", Enum.Font.FredokaOne, white, UDim2.fromScale(1, 1), nil, 3)
 end
