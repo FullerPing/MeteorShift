@@ -17,7 +17,7 @@ local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local player = Players.LocalPlayer
 local DailyController = Knit.CreateController({ Name = "DailyController" })
 
-local OTHER_MENUS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "CodesOpen", "OreFieldsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen", "PerksOpen" }
+local OTHER_MENUS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen", "PerksOpen" }
 
 local function otherMenuOpen(): boolean
 	for _, name in OTHER_MENUS do

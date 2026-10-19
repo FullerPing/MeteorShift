@@ -1,9 +1,10 @@
 --!strict
 -- Small buttons in the game, drawn like the menu buttons (ExactNavButton.tile), for the three things that are not in the Store: the 2x Ore
 -- pass, the 2x Cash pass and the one-per-player Starter Value Pack. On desktop they climb in a column from the
--- INDEX button; on phones they take the free cells in line with the menu buttons (HudLayout.offerSlots). They tap straight to the Roblox purchase prompt, and disappear once
--- the item is owned (or while it is not on sale: Id 0). Move or hide them as "Offers" in
--- Config.HudEdit.
+-- INDEX button; on phones they take the free cells in line with the menu buttons (HudLayout.offerSlots). Each tile wears its
+-- Robux price on a gold tag (RobuxPrice). A tap opens a quick preview (NativeMenus.OfferPreview: the icon, what you get from
+-- the definition's Highlights, and a BUY button with the price) whose BUY opens the Roblox purchase prompt. The tiles
+-- disappear once the item is owned (or while it is not on sale: Id 0). Move or hide them as "Offers" in Config.HudEdit.
 
 local MarketplaceService = game:GetService("MarketplaceService")
 local Players = game:GetService("Players")
@@ -15,6 +16,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
+local NativeUI = require(script.Parent.Parent.NativeUI)
+local OfferPreview = require(script.Parent.Parent.NativeMenus.OfferPreview)
+local RobuxPrice = require(script.Parent.Parent.RobuxPrice)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local Sfx = require(script.Parent.Parent.Sfx)
 
 local player = Players.LocalPlayer
@@ -22,7 +28,8 @@ local Monetization = Config.Monetization
 local OfferController = Knit.CreateController({ Name = "OfferController" })
 
 local SIZE, GAP = 54, 14 -- the tile's caption hangs a little below it
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local OPEN = "OfferPreviewOpen"
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 type Offer = { key: string, kind: "pass" | "product", caption: string, icon: string }
 -- bottom to top in the column, nearest the INDEX button first
@@ -45,6 +52,62 @@ function OfferController:KnitStart()
 	gui.Name, gui.ResetOnSpawn, gui.IgnoreGuiInset = "Offers", false, true
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
+	local function definitionOf(offer: Offer): any
+		return if offer.kind == "pass" then Monetization.Passes[offer.key] else Monetization.Products[offer.key]
+	end
+	local function prompt(offer: Offer)
+		local definition = definitionOf(offer)
+		if definition.Id == 0 then return end
+		local ok, err = pcall(function()
+			if offer.kind == "pass" then
+				MarketplaceService:PromptGamePassPurchase(player, definition.Id)
+			else
+				MarketplaceService:PromptProductPurchase(player, definition.Id)
+			end
+		end)
+		if not ok then warn("[OfferController] purchase prompt failed:", err) end
+	end
+
+	-- The preview: filled for the tapped offer, BUY prompts it
+	local preview = NativeUI.getFresh("OfferPreviewMenu", OfferPreview.build, OfferPreview.LAYOUT)
+	local sheet = preview:WaitForChild("Panel") :: Frame
+	NativeUI.fitWhole(sheet, OfferPreview.SIZE)
+	local title = sheet:WaitForChild("Ribbon"):WaitForChild("Face"):WaitForChild("Title") :: TextLabel
+	local ribbonIcon = sheet.Ribbon.Face:WaitForChild("Icon") :: ImageLabel
+	local itemIcon = sheet:WaitForChild("IconWell"):WaitForChild("ItemIcon") :: ImageLabel
+	local lines = sheet:WaitForChild("Lines")
+	local buy = sheet:WaitForChild("Buy") :: TextButton
+	local footer = sheet:WaitForChild("Footer") :: TextLabel
+	local showing: Offer? = nil
+	local function show(offer: Offer)
+		local definition = definitionOf(offer)
+		showing = offer
+		title.Text = definition.Name
+		ribbonIcon.Image = Config.HudIcons[offer.icon] or ""
+		itemIcon.Image = Config.HudIcons[offer.icon] or ""
+		local said = definition.Highlights or { definition.Description }
+		for index = 1, OfferPreview.LINES do
+			local row = lines:WaitForChild("Line" .. index) :: Frame
+			row.Visible = said[index] ~= nil
+			;(row:WaitForChild("Text") :: TextLabel).Text = said[index] or ""
+		end
+		footer.Text = if offer.kind == "pass" then "One-time purchase. Yours forever." else "Delivered right away."
+		buy.Text = "BUY"
+		RobuxPrice.get(offer.kind, definition, function(price)
+			if showing == offer and price then buy.Text = "BUY  " .. RobuxPrice.text(price) end
+		end)
+		player:SetAttribute(OPEN, true)
+	end
+	buy.Activated:Connect(function()
+		local offer = showing
+		player:SetAttribute(OPEN, false)
+		if offer then prompt(offer) end
+	end)
+	player:SetAttribute(OPEN, false)
+	NativeUI.bindOpen(preview, OPEN, function()
+		player:SetAttribute(OPEN, false)
+	end)
+
 	local buttons: { [string]: TextButton } = {}
 	for _, offer in OFFERS do
 		local button = Instance.new("TextButton")
@@ -54,18 +117,19 @@ function OfferController:KnitStart()
 		ExactNavButton.tile(button, offer.icon, offer.caption)
 		local scale = Instance.new("UIScale")
 		scale.Name, scale.Parent = "LayoutScale", button
+		-- the price tag on the tile's top right corner
+		local tag = MenuTheme.pill(button, "PriceTag", Palette.GOLD_BOTTOM, Palette.NAVY, Palette.NAVY, 22)
+		tag.AnchorPoint, tag.Position, tag.Size, tag.Rotation, tag.ZIndex = Vector2.new(1, 0), UDim2.new(1, 16, 0, -10), UDim2.fromOffset(76, 30), 8, 20
+		;(tag:FindFirstChild("Label") :: TextLabel).ZIndex = 21
+		tag.Visible = false
+		RobuxPrice.get(offer.kind, definitionOf(offer), function(price)
+			tag.Visible = price ~= nil
+			;(tag:FindFirstChild("Label") :: TextLabel).Text = RobuxPrice.text(price)
+		end)
 		button.Activated:Connect(function()
 			Sfx.play("Click")
-			local definition = if offer.kind == "pass" then Monetization.Passes[offer.key] else Monetization.Products[offer.key]
-			if definition.Id == 0 then return end
-			local ok, err = pcall(function()
-				if offer.kind == "pass" then
-					MarketplaceService:PromptGamePassPurchase(player, definition.Id)
-				else
-					MarketplaceService:PromptProductPurchase(player, definition.Id)
-				end
-			end)
-			if not ok then warn("[OfferController] purchase prompt failed:", err) end
+			if definitionOf(offer).Id == 0 then return end
+			show(offer)
 		end)
 		button.Parent = gui
 		buttons[offer.key] = button
@@ -95,7 +159,7 @@ function OfferController:KnitStart()
 		local slot = 0
 		for _, offer in OFFERS do
 			local button = buttons[offer.key]
-			local definition = if offer.kind == "pass" then Monetization.Passes[offer.key] else Monetization.Products[offer.key]
+			local definition = definitionOf(offer)
 			local visible = not hidden and definition.Id ~= 0 and not owned(offer)
 			local cell: HudLayout.Rect? = nil
 			if visible then

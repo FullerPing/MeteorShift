@@ -34,6 +34,7 @@ export type Pass = {
 	Name: string,
 	Description: string,
 	Robux: number?,
+	Highlights: { string }?, -- the offer preview's lines (OfferController); Description stands in when absent
 }
 
 export type Product = {
@@ -42,6 +43,7 @@ export type Product = {
 	Name: string,
 	Description: string,
 	Robux: number?,
+	Highlights: { string }?, -- the offer preview's lines (OfferController); Description stands in when absent
 	Kind: string?, -- tier-ups: "pickaxe" or "backpack"
 	From: number?, -- tier-ups: the tier it evolves from (T2 gives tier 3)
 }
@@ -60,6 +62,7 @@ Monetization.Passes = {
 		Name = "2x Ore",
 		Robux = 149,
 		Description = "Double the ore from every hit. Never changes mineral odds.",
+		Highlights = { "x2 ore from every meteor and rock hit", "Your backpack fills twice as fast", "Never changes mineral odds", "Yours forever" },
 	} :: Pass,
 	TwoXCash = {
 		Key = "TwoXCash",
@@ -67,6 +70,7 @@ Monetization.Passes = {
 		Name = "2x Cash",
 		Robux = 129,
 		Description = "Double the cash from every bar sale. Stacks with rebirth, index and VIP bonuses.",
+		Highlights = { "x2 cash from every bar you sell", "Stacks with rebirth, index and VIP bonuses", "Bars made offline sell for x2 too", "Yours forever" },
 	} :: Pass,
 	BiggerBackpack = {
 		Key = "BiggerBackpack",
@@ -185,6 +189,7 @@ Monetization.Products = {
 		Name = "Starter Value Pack",
 		Robux = 49,
 		Description = "Two Mini Overclocks (20 minutes of ×2 refinery), 1,500 XP for each equipped pet and 10 minutes of line income. One per player.",
+		Highlights = { "2 Mini Overclocks: 20 min of x2 refinery", "1,500 XP for each equipped pet", "10 minutes of line income", "One per player" },
 	} :: Product,
 	PetMax = {
 		Key = "PetMax",

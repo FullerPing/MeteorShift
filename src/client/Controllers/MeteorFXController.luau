@@ -439,7 +439,7 @@ function MeteorFXController:KnitStart()
 	local look = Config.Meteor.LandingCamera
 	local lookWeight, impactAt = 0, -math.huge
 	-- Not while a menu is open, nor before the tutorial reaches its "watch the meteor" step
-	local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "SettingsOpen", "RefineryOpen",
+	local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen",
 		"HatchOpen", "BackpackOpen", "PerksOpen", "IntroOpen" }
 	local watchStep = 1
 	for index, step in Config.Tutorial.Steps do
