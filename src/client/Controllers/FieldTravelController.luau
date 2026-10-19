@@ -1,8 +1,9 @@
 --!strict
--- The ORE button: opens a short list of the ore fields (Config.Debris.Fields) and asks
--- DebrisService to teleport you to the one you pick. It sits just above the SPRINT button
--- (FastWalkController places that), hides while a menu is open, and the list closes after a pick.
--- A field still locked to you (Shared.FieldGate) shows its rule ("Level 12") in grey and can't be picked;
+-- The ORE button: a menu tile (ExactNavButton.tile, the owner's ore icon) that opens the Ore Fields menu
+-- (NativeMenus.OreFields, one card per Config.Debris.Fields) and asks DebrisService to teleport you to the field you
+-- pick. Desktop places the tile in line with the backpack (HudLayout "ore"); elsewhere it sits just above SPRINT
+-- (FastWalkController places that). It hides while a menu is open, and the menu closes after a pick.
+-- A field still locked to you (Shared.FieldGate) shows its rule ("LEVEL 12") on a grey pill instead of TRAVEL;
 -- the server refuses it anyway.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +15,10 @@ local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
-local Cartoon = require(script.Parent.Parent.Cartoon)
+local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
+local MenuTheme = require(script.Parent.Parent.MenuTheme)
+local NativeUI = require(script.Parent.Parent.NativeUI)
+local OreFieldsMenu = require(script.Parent.Parent.NativeMenus.OreFields)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 
@@ -23,22 +27,8 @@ local FieldTravelController = Knit.CreateController({ Name = "FieldTravelControl
 
 local SIZE = Config.Hud.SideButtons.Size
 local GAP = Config.Hud.SideButtons.Gap
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
-
-local function label(parent: Instance, text: string, size: UDim2, position: UDim2?): TextLabel
-	local item = Instance.new("TextLabel")
-	item.BackgroundTransparency = 1
-	item.Size = size
-	item.Position = position or UDim2.new()
-	item.Font = UI.FONT
-	item.Text = text
-	item.TextScaled = true
-	item.TextColor3 = UI.WHITE
-	item.ZIndex = 3
-	item.Parent = parent
-	Cartoon.outlineLabel(item)
-	return item
-end
+local OPEN = "OreFieldsOpen"
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 
 function FieldTravelController:KnitStart()
 	local DebrisService = Knit.GetService("DebrisService")
@@ -54,70 +44,38 @@ function FieldTravelController:KnitStart()
 	gui.ResetOnSpawn = false
 	gui.IgnoreGuiInset = true
 	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-	gui.DisplayOrder = 2 -- the open list draws over the tutorial card (1), under every menu (10+)
+	gui.DisplayOrder = 2
 
+	-- drawn at the menu buttons' 80 x 80 and scaled to its rect, like the offer tiles
 	local button = Instance.new("TextButton")
-	button.Name = "OreButton"
-	button.Text = ""
-	button.AutoButtonColor = false
-	button.BackgroundTransparency = 1
-	button.Size = UDim2.fromOffset(SIZE, SIZE)
+	button.Name, button.Text, button.AutoButtonColor, button.BackgroundTransparency = "OreButton", "", false, 1
+	button.Size = UDim2.fromOffset(80, 80)
+	ExactNavButton.tile(button, "ore", "Ore")
+	local scale = Instance.new("UIScale")
+	scale.Name, scale.Parent = "LayoutScale", button
 	button.Parent = gui
-	Cartoon.surface("orange", { round = true, edge = 3, lip = 4, studs = 0.84, studSize = 18 }).Parent = button
-	local text = label(button, "ORE", UDim2.fromScale(1, 1))
-	local pad = Instance.new("UIPadding")
-	pad.PaddingLeft, pad.PaddingRight = UDim.new(0.14, 0), UDim.new(0.14, 0)
-	pad.PaddingTop, pad.PaddingBottom = UDim.new(0.3, 0), UDim.new(0.3, 0)
-	pad.Parent = text
 
-	-- The list: a title and one coloured row per field
-	local fields = Config.Debris.Fields
-	local panel = Instance.new("Frame")
-	panel.Name = "Panel"
-	panel.AnchorPoint = Vector2.new(0.5, 0.5)
-	panel.Position = UDim2.fromScale(0.5, 0.5)
-	local ROW, STEP = 40, 46
-	local panelHeight = 64 + #fields * STEP
-	panel.Size = UDim2.fromOffset(300, panelHeight)
-	local fit = Instance.new("UIScale") -- short screens shrink the list rather than cut it off
-	fit.Parent = panel
-	panel.BackgroundColor3 = Color3.fromRGB(30, 36, 62)
-	panel.Visible = false
-	panel.Parent = gui
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 16)
-	corner.Parent = panel
-	local stroke = Instance.new("UIStroke")
-	stroke.Thickness = 3
-	stroke.Color = Color3.fromRGB(255, 190, 70)
-	stroke.Parent = panel
-	label(panel, "ORE FIELDS", UDim2.new(1, -24, 0, 36), UDim2.fromOffset(12, 10))
-	local rows: { [any]: { row: TextButton, text: TextLabel } } = {}
+	local menu = NativeUI.getFresh("OreFieldsMenu", OreFieldsMenu.build, OreFieldsMenu.LAYOUT)
+	local panel = menu:WaitForChild("Panel") :: Frame
+	NativeUI.fitWhole(panel, OreFieldsMenu.SIZE)
+	local list = panel:WaitForChild("Fields")
+
 	-- mirrors DebrisService:IsFieldOpen: a map without gates (the archived v2 map) has no locked fields
 	local function isOpen(field: any): boolean
 		local map = WorldMap.find()
 		if not (map and map:FindFirstChild("Gates")) then return true end
 		return FieldGate.isOpen(field, if state then state.level or 1 else 1, if state then state.rebirths or 0 else 0)
 	end
-	for index, field in fields do
-		local row = Instance.new("TextButton")
-		row.Name = field.Id
-		row.AutoButtonColor = true
-		row.Text = ""
-		row.BackgroundColor3 = field.Color
-		row.Size = UDim2.new(1, -24, 0, ROW)
-		row.Position = UDim2.fromOffset(12, 54 + (index - 1) * STEP)
-		row.Parent = panel
-		local rowCorner = Instance.new("UICorner")
-		rowCorner.CornerRadius = UDim.new(0, 12)
-		rowCorner.Parent = row
-		rows[field] = { row = row, text = label(row, string.upper(field.Name), UDim2.new(1, -16, 1, -12), UDim2.fromOffset(8, 6)) }
-		row.Activated:Connect(function()
+	local cards: { [any]: Frame } = {}
+	for _, field in Config.Debris.Fields do
+		local card = list:WaitForChild(field.Id) :: Frame
+		cards[field] = card
+		;(card:WaitForChild("Travel") :: TextButton).Activated:Connect(function()
 			if not isOpen(field) then
 				Sfx.play("Click")
 				return
 			end
-			panel.Visible = false
+			player:SetAttribute(OPEN, false)
 			task.spawn(function()
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 				local from = root and root.Position
@@ -132,17 +90,21 @@ function FieldTravelController:KnitStart()
 		end)
 	end
 
-	local function paintRows()
-		for field, item in rows do
+	local function paintCards()
+		for field, card in cards do
 			local open = isOpen(field)
-			item.row.BackgroundColor3 = if open then field.Color else UI.DISABLED
-			item.row.AutoButtonColor = open
-			item.text.Text = if open then string.upper(field.Name) else string.upper(field.Name) .. "  ·  " .. string.upper(FieldGate.label(field))
+			local travel = card:FindFirstChild("Travel") :: TextButton
+			local lock = card:FindFirstChild("Lock") :: Frame
+			travel.Visible = open
+			MenuTheme.state(travel, open, "blue")
+			lock.Visible = not open
+			;(lock:FindFirstChild("Label") :: TextLabel).Text = string.upper(FieldGate.label(field))
+			card.BackgroundTransparency = if open then 0 else 0.25
 		end
 	end
 	PlayerStateService.State:Observe(function(value)
 		state = value
-		paintRows()
+		paintCards()
 	end)
 
 	local function panelOpen(): boolean
@@ -158,18 +120,19 @@ function FieldTravelController:KnitStart()
 		local rect = HudLayout.nudged(layout, "Ore", if layout.ore then table.clone(layout.ore) else {
 			x = anchor.Position.X.Offset, y = anchor.Position.Y.Offset - SIZE - GAP, w = SIZE, h = SIZE,
 		})
-		local camera = workspace.CurrentCamera
-		fit.Scale = if camera then math.min(1, (camera.ViewportSize.Y - 40) / panelHeight) else 1
 		button.Position = UDim2.fromOffset(rect.x, rect.y)
-		button.Size = UDim2.fromOffset(rect.w, rect.h)
-		local hidden = panelOpen()
-		button.Visible = not hidden and not HudLayout.isHidden(layout, "Ore")
-		if hidden or not button.Visible then panel.Visible = false end
+		scale.Scale = math.min(rect.w, rect.h) / 80
+		button.Visible = not panelOpen() and not HudLayout.isHidden(layout, "Ore")
 	end
 	scope:Observer(hud):onChange(refresh)
 	button.Activated:Connect(function()
-		panel.Visible = not panel.Visible
-		if panel.Visible then refresh() end
+		Sfx.play("Click")
+		paintCards()
+		player:SetAttribute(OPEN, true)
+	end)
+	player:SetAttribute(OPEN, false)
+	NativeUI.bindOpen(menu, OPEN, function()
+		player:SetAttribute(OPEN, false)
 	end)
 	anchor:GetPropertyChangedSignal("Position"):Connect(refresh)
 	for _, flag in PANEL_FLAGS do player:GetAttributeChangedSignal(flag):Connect(refresh) end

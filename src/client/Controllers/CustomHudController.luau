@@ -13,7 +13,7 @@ local Cartoon = require(script.Parent.Parent.Cartoon)
 local player = Players.LocalPlayer
 local CustomHudController = Knit.CreateController({ Name = "CustomHudController" })
 
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
 local ANCHORS: { [string]: Vector2 } = {
 	TopLeft = Vector2.new(0, 0), Top = Vector2.new(0.5, 0), TopRight = Vector2.new(1, 0),
 	Left = Vector2.new(0, 0.5), Center = Vector2.new(0.5, 0.5), Right = Vector2.new(1, 0.5),

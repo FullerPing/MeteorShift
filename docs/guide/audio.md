@@ -61,7 +61,7 @@ Three looping beds start on `KnitStart`: the hub track, the event track (from si
 | Mining (client prediction) | — | Swing on each swing, HitA/HitB alternating per spark, NodeBreak when the node's `Hp` attribute hits 0, CritHit+CritSparkle on a server-confirmed crit, OrePickup whose pitch climbs with a 1.2 s pickup streak, Bonus (pitched) on Rich/Super Vein | `MiningController.luau:394,249-254,411-416,428-431,316-338,520-526` |
 | Hatching | — | HatchTick, faster and higher as the wobble builds, then HatchCrack + a reveal keyed by rarity (premium uses the legendary sting) | `HatchController.luau:328-330,230-231`; rarity map `:37-40` |
 | Rebirth succeeds | `RebirthService:Rebirth()` returns | RebirthWarp, then Rebirth fanfare 0.7 s later + pillar | `RebirthController.luau:152-155` |
-| Field travel succeeds | `DebrisService:TravelTo` returns | Teleport + poofs | `FieldTravelController.luau:102-107` |
+| Field travel succeeds | `DebrisService:TravelTo` returns | Teleport + poofs | `FieldTravelController.luau` (Travel handler) |
 | Claims and buys elsewhere | — | Upgrade at 1.1× pitch: code redeem, daily claim, perk buy. Bonus: quest-complete toast | `CodesController.luau:68`, `DailyController.luau:155,239`, `PerksController.luau:96` |
 | UI buttons | — | Click: Fusion buttons, native menu buttons, intro pills, store offer tiles | `UI.luau:319,478`, `NativeUI.luau:94`, `IntroController.luau:68`, `OfferController.luau:58` |
 | Pet footfalls | — | graniteGolem HeavyStep (a HitA sample), drill-style pets a looped RotorHum plus an arrival AssemblyClick, scrapSparrow a MetalTing on every `Sold` | `PetVisualController.luau:221-227,366-370`; pooled helper `:58-71` |

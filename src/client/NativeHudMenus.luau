@@ -22,8 +22,8 @@ local PREFERENCES = {
 	{ name = "MusicOn", default = true, label = "Music" },
 	{ name = "SfxOn", default = true, label = "Sound effects" },
 }
-local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "RefineryOpen", "HatchOpen" }
-local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "SettingsOpen", "RefineryOpen" }
+local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "RefineryOpen", "HatchOpen" }
+local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "SettingsOpen", "RefineryOpen" }
 
 local function anotherMenuOpen(flags: { string }): boolean
 	for _, name in flags do if player:GetAttribute(name) == true then return true end end
