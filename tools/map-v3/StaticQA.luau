@@ -4,7 +4,9 @@
 --   Crown's parapet and fence;
 --   a chute UsePoint or field Entrance that can't walk straight to its nearest avenue paving on the same tier: the ray
 --   at chest height must hit nothing solid and the ground under the line must stay level (no cliff edge in between).
---   anything visible (not ground or road) in the 20 studs in front of a leaderboard's Screen, or inside the board.
+--   anything visible (not ground or road) in the 20 studs in front of a leaderboard's Screen, or inside the board;
+--   a locked field's Wall cutting into a road, cliff, ramp, the rampart, a rock, chute, Crown piece or the town, or a
+--   chute UsePoint or field Entrance standing inside a walled field (locked players couldn't reach it).
 -- Budgets: total parts <= 20,000, lights <= 24, emitters <= 32.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local map = A.map
@@ -170,6 +172,36 @@ do
 			if not h.part:IsDescendantOf(board) then fail(("leaderboard %s covered by %s"):format(board.Name, h.part:GetFullName())) end
 		end
 		probe:Destroy()
+	end
+end
+-- field walls: clear of everything players walk or use
+do
+	local O = assert(loadstring(game:GetService("HttpService"):GetAsync("http://127.0.0.1:8123/map-v3/Overlap.luau", true)))()
+	local blockers = O.index(24)
+	local groups = { map.Roads, map.Ground.Cliffs, map.Ground.Ramps, map.Boundary, map.Debris, map.Chutes, map.Crown, map.TownSquare }
+	for _, g in groups do
+		for _, p in g:GetDescendants() do if p:IsA("BasePart") and p.Transparency < 1 then blockers:add(p, p) end end
+	end
+	local points = {}
+	for _, chute in map.Chutes:GetChildren() do table.insert(points, { "chute " .. chute.Name, chute.UsePoint.Position }) end
+	for _, field in map.DebrisFields:GetChildren() do table.insert(points, { "entrance " .. field.Name, field.Entrance.Position }) end
+	for _, gate in map.Gates:GetChildren() do
+		local walls = {}
+		for _, w in gate:GetChildren() do if w.Name == "Wall" then table.insert(walls, w) end end
+		for _, w in walls do
+			for _, h in blockers:hits(w, 0.2) do
+				fail(("%s wall cuts into %s"):format(gate.Name, h.part:GetFullName()))
+			end
+		end
+		if #walls > 0 then
+			local floor = map.DebrisFields[gate.Name].FieldFloor
+			for _, pt in points do
+				local l = floor.CFrame:PointToObjectSpace(pt[2])
+				if math.abs(l.X) < floor.Size.X / 2 + 2.5 and math.abs(l.Z) < floor.Size.Z / 2 + 2.5 then
+					fail(("%s stands inside %s's walls"):format(pt[1], gate.Name))
+				end
+			end
+		end
 	end
 end
 for _, chute in map.Chutes:GetChildren() do reach("chute " .. chute.Name, chute.UsePoint.Position) end

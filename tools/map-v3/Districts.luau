@@ -6,7 +6,7 @@
 -- anything without one gets a labelled box, so nothing is skipped silently. Every built model carries PlanLabel.
 -- Skipped on purpose: the plateau (Ground), spawn, Refinery, Gear Hall, Hatchery and Commissary (Core). A footprint whose
 -- model cuts into the town Core placed (the plan's two "board" rows are the real leaderboards) or into a district model
--- built before it is dropped and reported in `dropped`.
+-- built before it is dropped and reported in `dropped`; so is one cutting into a field's gate or walls.
 -- The Crown's contract (Task 7, CrownService) goes to Map_Redesign.Crown: Lift (SkyLift mesh with a `Prompt` part) at
 -- the north avenue's end on T2, LiftTop on the Crown, DivePad at (-30, 475) with the Dive cannon behind it, and the
 -- Starfall Beacon.
@@ -330,6 +330,9 @@ local solid = O.index(24)
 for _, p in A.map.TownSquare:GetDescendants() do
 	if p:IsA("BasePart") and p.Transparency < 1 and not p:IsA("SpawnLocation") then solid:add(p, "town") end
 end
+for _, p in (A.map:FindFirstChild("Gates") and A.map.Gates:GetDescendants() or {}) do
+	if p:IsA("BasePart") and p.Transparency < 1 then solid:add(p, "a field gate or wall") end
+end
 local function visibleParts(g: Instance)
 	local parts = {}
 	for _, p in g:GetDescendants() do if p:IsA("BasePart") and p.Transparency < 1 then table.insert(parts, p) end end
@@ -357,7 +360,7 @@ for index, row in plan.footprints do
 	local parts, clash = visibleParts(g), nil
 	for _, p in parts do
 		local hit = solid:hits(p, 0.15, g)[1]
-		if hit then clash = if hit.tag == "town" then "town" else hit.tag.Name; break end
+		if hit then clash = if typeof(hit.tag) == "string" then hit.tag else hit.tag.Name; break end
 	end
 	if clash then
 		table.insert(dropped, g.Name .. " (into " .. clash .. ")")

@@ -1,6 +1,7 @@
 --!strict
 -- The field gates on the map (Map.Gates.<FieldId>, built by tools/map-v3/Fields): a gate still closed to this player
--- shows a solid force field and its rule ("Level 12") on the sign; an open one lets them walk through and says OPEN.
+-- shows a solid force field (the Barrier and the Walls round the field) and its rule ("Level 12") on the sign; an open
+-- one hides them, lets them walk through and says OPEN.
 -- This is the picture only; DebrisService refuses hits, travel and standing on a locked field on the server.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -22,10 +23,11 @@ function FieldGateController:KnitStart()
 		local field = FieldTravel.find(gate.Name)
 		if not field then return end
 		local open = state ~= nil and FieldGate.isOpen(field, state.level or 1, state.rebirths or 0)
-		local barrier = gate:FindFirstChild("Barrier")
-		if barrier and barrier:IsA("BasePart") then
-			barrier.CanCollide = not open
-			barrier.Transparency = if open then 1 else CLOSED_TRANSPARENCY
+		for _, part in gate:GetChildren() do
+			if part:IsA("BasePart") and (part.Name == "Barrier" or part.Name == "Wall") then
+				part.CanCollide = not open
+				part.Transparency = if open then 1 else CLOSED_TRANSPARENCY
+			end
 		end
 		local rule = gate:FindFirstChild("Rule", true)
 		if rule and rule:IsA("TextLabel") then
@@ -40,7 +42,7 @@ function FieldGateController:KnitStart()
 
 	-- gates stream in and out (StreamingEnabled): paint each one as its parts arrive
 	map.DescendantAdded:Connect(function(item)
-		if item.Name ~= "Barrier" and item.Name ~= "Rule" then return end
+		if item.Name ~= "Barrier" and item.Name ~= "Wall" and item.Name ~= "Rule" then return end
 		local gates = map:FindFirstChild("Gates")
 		if not gates then return end
 		local gate = item
