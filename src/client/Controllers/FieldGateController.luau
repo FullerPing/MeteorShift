@@ -29,9 +29,11 @@ function FieldGateController:KnitStart()
 				part.Transparency = if open then 1 else CLOSED_TRANSPARENCY
 			end
 		end
-		local rule = gate:FindFirstChild("Rule", true)
-		if rule and rule:IsA("TextLabel") then
-			rule.Text = if open then "OPEN" else string.upper(FieldGate.label(field))
+		-- a field beside an avenue on both sides has a gate (and sign) on each
+		for _, rule in gate:GetDescendants() do
+			if rule.Name == "Rule" and rule:IsA("TextLabel") then
+				rule.Text = if open then "OPEN" else string.upper(FieldGate.label(field))
+			end
 		end
 	end
 	local function paintAll()

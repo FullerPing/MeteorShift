@@ -35,24 +35,24 @@ WorldGeometry.Settings = {
 	Slides = { offset = 22, width = 8, list = { { angle = 45, side = -1 }, { angle = 135, side = 1 }, { angle = 90, side = 1 } } },
 	-- width/depth are the axis-aligned footprint. Buildings turned toward the crater also carry `facing` (the way their
 	-- front looks) and `lat` x `dep` (their own frame: across the front, then front-to-back); width/depth then bound
-	-- that rotated rectangle. Ore fields (`field = true`) bound their rocks, gate and chute; `entrance` is just
-	-- outside their gate. Positions come from tools/map-v3/plan.py.
+	-- that rotated rectangle. Ore fields (`field = true`) bound their rocks, gates and chute; `entrance` is on the
+	-- avenue in front of their gate (Rust and Frost: between their two blocks). Positions come from tools/map-v3/plan.py.
 	Zones = {
 		{ id = "Spawn", x = 0, z = -150.5, width = 48, depth = 13, entrance = Vector3.new(0, 0, -144), pathWidth = 24 },
 		{ id = "Refinery", x = 0, z = -177, width = 38, depth = 32, entrance = Vector3.new(0, 3, -158.5), pathWidth = 18 },
 		{ id = "GearHall", x = 76.5, z = -184.5, width = 61, depth = 53, lat = 50, dep = 36, facing = Vector3.new(-0.3827, 0, 0.9239), entrance = Vector3.new(68.5, 0, -165.4), pathWidth = 18 },
 		{ id = "Hatchery", x = -76.5, z = -184.5, width = 73, depth = 59, lat = 64, dep = 36, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-68.5, 0, -165.4), pathWidth = 18 },
-		{ id = "Commissary", x = 181, z = 75, width = 38, depth = 40, lat = 30, dep = 28, facing = Vector3.new(-0.9239, 0, -0.3827), entrance = Vector3.new(165.4, 0, 68.5), pathWidth = 18 },
+		{ id = "Commissary", x = 95.1, z = 151.1, width = 39, depth = 38, lat = 30, dep = 28, facing = Vector3.new(-0.3827, 0, -0.9239), entrance = Vector3.new(88.6, 0, 135.5), pathWidth = 18 },
 		-- the two leaderboards in front of the Gear Hall and the Hatchery, turned toward the crater
 		{ id = "LeaderboardEast", x = 33.5, z = -159.5, width = 19, depth = 13, lat = 18, dep = 5, facing = Vector3.new(-0.3827, 0, 0.9239), entrance = Vector3.new(31.4, 0, -154.2), pathWidth = 14 },
 		{ id = "LeaderboardWest", x = -33.5, z = -159.5, width = 19, depth = 13, lat = 18, dep = 5, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-31.4, 0, -154.2), pathWidth = 14 },
 		{ id = "Rebirth", x = 0, z = -320, width = 40, depth = 36, entrance = Vector3.new(0, 16, -299), pathWidth = 18 },
-		{ id = "RustWorks", x = -180, z = -77, width = 102, depth = 112, entrance = Vector3.new(-144.1, 0, -59.7), pathWidth = 18, field = true },
-		{ id = "FrostYard", x = 180, z = -77, width = 102, depth = 112, entrance = Vector3.new(144.1, 0, -59.7), pathWidth = 18, field = true },
-		{ id = "VioletQuarry", x = -301.5, z = 112.5, width = 85, depth = 169, entrance = Vector3.new(-269.8, 16, 111.7), pathWidth = 18, field = true },
-		{ id = "SulfurRidge", x = 301.5, z = 112.5, width = 85, depth = 169, entrance = Vector3.new(269.8, 16, 111.7), pathWidth = 18, field = true },
-		{ id = "EmberShelf", x = -406, z = 148.5, width = 118, depth = 181, entrance = Vector3.new(-351.1, 32, 145.4), pathWidth = 18, field = true },
-		{ id = "GlassScar", x = 422.5, z = 171, width = 151, depth = 148, entrance = Vector3.new(351.1, 32, 145.4), pathWidth = 18, field = true },
+		{ id = "RustWorks", x = -189, z = 0, width = 54, depth = 218, entrance = Vector3.new(-189, 0, 0), pathWidth = 18, field = true },
+		{ id = "FrostYard", x = 189, z = 0, width = 54, depth = 218, entrance = Vector3.new(189, 0, 0), pathWidth = 18, field = true },
+		{ id = "VioletQuarry", x = -311.25, z = 73.25, width = 37.5, depth = 115.5, entrance = Vector3.new(-306, 16, 10), pathWidth = 18, field = true },
+		{ id = "SulfurRidge", x = 311.25, z = 73.25, width = 37.5, depth = 115.5, entrance = Vector3.new(306, 16, 10), pathWidth = 18, field = true },
+		{ id = "EmberShelf", x = -422, z = 84.25, width = 76, depth = 137.5, entrance = Vector3.new(-422, 32, 10), pathWidth = 18, field = true },
+		{ id = "GlassScar", x = 455, z = 87.25, width = 123.1, depth = 143.5, entrance = Vector3.new(455, 32, 10), pathWidth = 18, field = true },
 		{ id = "Starfall", x = -91, z = 452, width = 88, depth = 74, entrance = Vector3.new(-85, 56, 425), pathWidth = 18, field = true },
 		{ id = "HaloLedge", x = 82, z = 450.5, width = 96, depth = 71, entrance = Vector3.new(70, 56, 425), pathWidth = 18, field = true },
 	},

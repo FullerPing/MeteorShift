@@ -243,12 +243,17 @@ function DebrisService:_ejectLocked()
 		for _, field in Config.Debris.Fields do
 			if not field.Unlock then continue end
 			local model = fields:FindFirstChild(field.Id)
-			local floor = model and model:FindFirstChild("FieldFloor")
 			local entrance = model and model:FindFirstChild("Entrance")
-			if not (floor and floor:IsA("BasePart") and entrance and entrance:IsA("BasePart")) then continue end
-			local p = floor.CFrame:PointToObjectSpace(root.Position)
-			local inside = math.abs(p.X) <= floor.Size.X / 2 + 2 and math.abs(p.Z) <= floor.Size.Z / 2 + 2
-				and p.Y >= -floor.Size.Y / 2 - 2 and p.Y <= floor.Size.Y / 2 + 40
+			if not (entrance and entrance:IsA("BasePart")) then continue end
+			-- one FieldFloor per block (Rust and Frost have a block each side of their avenue)
+			local inside = false
+			for _, floor in (model :: Instance):GetChildren() do
+				if floor.Name == "FieldFloor" and floor:IsA("BasePart") then
+					local p = floor.CFrame:PointToObjectSpace(root.Position)
+					inside = inside or (math.abs(p.X) <= floor.Size.X / 2 + 2 and math.abs(p.Z) <= floor.Size.Z / 2 + 2
+						and p.Y >= -floor.Size.Y / 2 - 2 and p.Y <= floor.Size.Y / 2 + 40)
+				end
+			end
 			if inside and not self:IsFieldOpen(player, field.Id) then
 				player.Character:PivotTo(entrance.CFrame + Vector3.new(0, 4, 0))
 				root.AssemblyLinearVelocity = Vector3.zero

@@ -21,13 +21,13 @@ def polar(theta, r):
     t = math.radians(theta)
     return r * math.cos(t), r * math.sin(t)
 
-def put(cell, theta, r, u, w, d, color, label="", band=None, kind="box", tag=""):
+def put(cell, theta, r, u, w, d, color, label="", band=None, kind="box", tag="", rot=None, **extra):
     """Box centred at radius r on the cell's centre line, shifted u studs along the tangent (CCW),
-    w across (tangent) x d deep (radial), facing the crater."""
+    w across (tangent) x d deep (radial), facing the crater (or the way `rot` says). `extra` (field, block) rides along."""
     t = math.radians(theta)
     x = r * math.cos(t) - u * math.sin(t)
     z = r * math.sin(t) + u * math.cos(t)
-    items.append(dict(kind=kind, label=label, x=x, z=z, w=w, d=d, rot=theta, color=color, band=band, cell=cell, tag=tag))
+    items.append(dict(kind=kind, label=label, x=x, z=z, w=w, d=d, rot=theta if rot is None else rot, color=color, band=band, cell=cell, tag=tag, **extra))
 
 def putxy(cell, x, z, w, d, color, label="", band=None, kind="box", tag=""):
     items.append(dict(kind=kind, label=label, x=x, z=z, w=w, d=d, rot=90, color=color, band=band, cell=cell, tag=tag))
@@ -49,6 +49,20 @@ def field(cell, theta, r, cols, rows, color, band, gate_r, chute_u, landmark=Non
         lr, lw, ld, lname = landmark
         put(cell, theta, lr, 0, lw, ld, color, lname, band, kind="landmark")
 
+# An ore field block beside an avenue, lined up with it: `cols` rocks across x `rows` along, `side` +1 = CCW of the
+# avenue, the first row `a0` studs out along it. Rocks start NEAR studs off the centre line, so between the avenue's kerb
+# and the field's walls (rocks + 4.5) there is a strip for the gate (u 15.5..19.5, barrier at 17.5, its gap `gate_a` +-12.5
+# along) and, at `chute_a`, the chute (u 16.5..25.5, facing the avenue: its UsePoint lands on the paving).
+NEAR, PITCH = 33, 22
+def avfield(fid, block, cell, ave, side, a0, cols, rows, color, band, gate_a, chute_a=None, skip=()):
+    for i in range(cols):
+        for j in range(rows):
+            if (i, j) not in skip:
+                put(cell, ave, a0 + 5 + j * PITCH, side * (NEAR + 5 + i * PITCH), 10, 10, color, band=band, kind="rock", field=fid, block=block)
+    put(cell, ave, gate_a, side * 17.5, 4, 26, "#1B2A4A", "gate", band, kind="gate", field=fid, block=block)
+    if chute_a is not None:
+        put(cell, ave, chute_a, side * 21, 9, 9, "#FFFFFF", "chute", band, kind="chute", rot=ave + side * 90, field=fid, block=block)
+
 # ---- Arena (inside the ring road): podium on the north terrace
 put("A", 90, 104, 0, 16, 8, "#FFD54A", "podium", "ARENA")
 
@@ -60,33 +74,31 @@ put("T0-SSW", -112.5, 200, 0, 64, 36, "#FFB0D9", "Hatchery", "T0")
 put("T0-SSW", -112.5, 160, 30, 18, 5, "#1B2A4A", "board", "T0")
 for u in (-26, 0, 26):
     put("T0-SSW", -112.5, 238, u, 10, 10, "#FFE9A8", "", "T0", tag="egg plinth")
-field("T0-WSW", -157.5, 202, 5, 3, "#E8763A", "T0", 160, 34, landmark=None)
+avfield("RustWorks", 1, "T0-WSW", 180, 1, 162, 4, 3, "#E8763A", "T0", 189, chute_a=170)
+avfield("RustWorks", 2, "T0-WNW", 180, -1, 162, 4, 3, "#E8763A", "T0", 189)
 put("T0-WSW", -157.5, 237, -30, 14, 8, "#B9572A", "derrick", "T0", kind="landmark")
-field("T0-ESE", -22.5, 202, 5, 3, "#A8E4FF", "T0", 160, -34, landmark=None)
+avfield("FrostYard", 1, "T0-ESE", 0, -1, 162, 4, 3, "#A8E4FF", "T0", 189, chute_a=170)
+avfield("FrostYard", 2, "T0-ENE", 0, 1, 162, 4, 3, "#A8E4FF", "T0", 189)
 put("T0-ESE", -22.5, 237, 30, 16, 8, "#7FD8FF", "ice falls", "T0", kind="landmark")
-put("T0-WNW", 157.5, 170, 0, 22, 6, "#D94F4F", "Quest Board", "T0")
-put("T0-WNW", 157.5, 196, -22, 10, 10, "#FFE27A", "chest", "T0")
-put("T0-WNW", 157.5, 196, 22, 9, 9, "#FFFFFF", "codes", "T0")
-put("T0-WNW", 157.5, 228, 0, 56, 26, "#FFF1D6", "Museum", "T0")
 for u in (-28, 0, 28):
     put("T0-NNW", 112.5, 180, u, 22, 18, "#C9F29B", "pen", "T0")
 put("T0-NNW", 112.5, 222, 0, 18, 18, "#7FD8FF", "egg fountain", "T0")
 put("T0-NNW", 112.5, 224, -38, 20, 12, "#FFB0D9", "pet shop", "T0")
-put("T0-NNE", 67.5, 226, 0, 46, 22, "#F06A3B", "Shower Stage", "T0")
-for i, r in enumerate((172, 184, 196)):
-    put("T0-NNE", 67.5, r, 0, 44 + i * 8, 4, "#FFFFFF", "", "T0", tag="seating")
-put("T0-ENE", 22.5, 196, 0, 30, 28, "#FF9F43", "Commissary", "T0")
-put("T0-ENE", 22.5, 236, -30, 20, 10, "#FFF1D6", "cafe", "T0")
-put("T0-ENE", 22.5, 236, 30, 20, 10, "#C9D3E0", "stats board", "T0")
+# NNE (where the Shower Stage was): the Commissary and the town's notice boards, the Museum behind them
+put("T0-NNE", 67.5, 176, -30, 30, 28, "#FF9F43", "Commissary", "T0")
+put("T0-NNE", 67.5, 170, 22, 22, 6, "#D94F4F", "Quest Board", "T0")
+put("T0-NNE", 67.5, 187, 12, 9, 9, "#FFFFFF", "codes", "T0")
+put("T0-NNE", 67.5, 190, 38, 10, 10, "#FFE27A", "chest", "T0")
+put("T0-NNE", 67.5, 206, -42, 20, 10, "#FFF1D6", "cafe", "T0")
+put("T0-NNE", 67.5, 205, 42, 20, 10, "#C9D3E0", "stats board", "T0")
+put("T0-NNE", 67.5, 228, 0, 56, 26, "#FFF1D6", "Museum", "T0")
 # South avenue specials (exempt from avenue clearance): spawn plaza and Refinery straddle it
 putxy("S", 0, -150.5, 48, 13, "#D8E8FF", "spawn", "T0", tag="axis")
 putxy("S", 0, -177, 38, 32, "#FF9F43", "Refinery", "T0", tag="axis")
 
 # ---- T1 cells (r 292..356)
-field("T1-WNW", 157.5, 326, 7, 2, "#9B6BE8", "T1", 296, 86, skip=((3, 1),))
-put("T1-WNW", 157.5, 337, 0, 14, 14, "#6A3BB8", "geode", "T1", kind="landmark")
-field("T1-ENE", 22.5, 326, 7, 2, "#F2D33B", "T1", 296, -86, skip=((3, 1),))
-put("T1-ENE", 22.5, 337, 0, 14, 14, "#C79A00", "springs", "T1", kind="landmark")
+avfield("VioletQuarry", 1, "T1-WNW", 180, -1, 298, 5, 2, "#9B6BE8", "T1", 316, chute_a=297)
+avfield("SulfurRidge", 1, "T1-ENE", 0, 1, 298, 5, 2, "#F2D33B", "T1", 316, chute_a=297)
 put("T1-NNE", 67.5, 324, 0, 40, 40, "#9C8B7A", "Cinder Scar", "T1", kind="scar")
 for k in range(8):
     a = 22.5 + k * 45
@@ -107,14 +119,15 @@ put("T1-ESE", -22.5, 326, 56, 12, 10, "#B5651D", "cocoa", "T1")
 putxy("S", 0, -320, 40, 36, "#FFFFFF", "Rebirth Terrace", "T1", tag="axis")
 
 # ---- T2 cells (r 376..wall)
-field("T2-WNW", 157.5, 440, 6, 4, "#FF6A4E", "T2", 384, 90)
+avfield("EmberShelf", 1, "T2-WNW", 180, -1, 384, 6, 4, "#FF6A4E", "T2", 422, chute_a=403)
 put("T2-WNW", 157.5, 510, 0, 60, 40, "#7A2E1E", "Ember vent", "T2", kind="landmark")
-put("T2-ENE", 22.5, 470, 0, 80, 80, "#3FB8C8", "Glass Scar", "T2", kind="scar")
+# Glass Scar: a ring of rocks round the scar, beside the east avenue (rocks from NEAR studs off it)
+put("T2-ENE", 0, 455, NEAR + 63, 80, 80, "#3FB8C8", "Glass Scar", "T2", kind="scar")
 for k in range(14):
     a = k * (360 / 14)
-    put("T2-ENE", 22.5, 470 + 58 * math.sin(math.radians(a)), 58 * math.cos(math.radians(a)), 10, 10, "#6FF0E0", "", "T2", kind="rock")
-put("T2-ENE", 22.5, 384, 0, 30, 4, "#1B2A4A", "gate", "T2", kind="gate")
-put("T2-ENE", 22.5, 385, -48, 9, 9, "#FFFFFF", "chute", "T2", kind="chute")
+    put("T2-ENE", 0, 455 + 58 * math.sin(math.radians(a)), NEAR + 63 + 58 * math.cos(math.radians(a)), 10, 10, "#6FF0E0", "", "T2", kind="rock", field="GlassScar", block=1)
+put("T2-ENE", 0, 455, 17.5, 4, 26, "#1B2A4A", "gate", "T2", kind="gate", field="GlassScar", block=1)
+put("T2-ENE", 0, 436, 21, 9, 9, "#FFFFFF", "chute", "T2", kind="chute", rot=90, field="GlassScar", block=1)
 # Crown plateau and its contents (absolute)
 putxy("CROWN", 0, 465, 300, 130, "#B8A6F0", "", "CROWN", kind="plateau")
 for i in range(4):
@@ -159,16 +172,17 @@ for sx, sz in ((1, 1), (-1, 1), (-1, -1), (1, -1)):
 
 # ---- More designed T2 content (the outer band was too empty)
 # Ember Shelf surroundings: lava pools and ash cones
-for (u, r) in ((-110, 410), (110, 415), (-120, 470), (120, 478)):
-    put("T2-WNW", 157.5, r, u, 22, 16, "#C2381E", "", "T2", tag="lava pool")
+for (a, u) in ((395, 180), (440, 184)):
+    put("T2-WNW", 180, a, -u, 22, 16, "#C2381E", "", "T2", tag="lava pool")
 for (u, r) in ((-80, 525), (80, 528)):
     put("T2-WNW", 157.5, r, u, 20, 20, "#5A3A2C", "", "T2", tag="ash cone")
 # Glass Scar: crystal spire ring outside the rocks
 for k in range(10):
     a = k * 36 + 18
-    if math.sin(math.radians(a)) < -0.5:
-        continue  # keep the gate side open
-    put("T2-ENE", 22.5, 470 + 82 * math.sin(math.radians(a)), 82 * math.cos(math.radians(a)), 9, 9, "#9AF5EA", "", "T2", tag="crystal spire")
+    along, off = 455 + 76 * math.sin(math.radians(a)), NEAR + 63 + 76 * math.cos(math.radians(a))
+    if off < NEAR + 40 or along > 525:
+        continue  # keep the gate side (the avenue) open and stay off the wall
+    put("T2-ENE", 0, along, off, 9, 9, "#9AF5EA", "", "T2", tag="crystal spire")
 # Iron Badlands: a second small scar, crane wrecks and rails
 put("T2-WSW", -157.5, 500, 110, 34, 34, "#6B7380", "old scar", "T2", kind="scar")
 for (u, r) in ((-110, 470), (120, 455)):
@@ -377,14 +391,12 @@ print(f"OK: {designed} designed footprints + {len(added)} scenery ({placed}), no
 # Each entry: x, z = centre (world studs); w = across (tangent), d = deep; yaw = degrees, the box's d axis points along
 # (cos yaw, sin yaw) in XZ, so its front (toward the crater for put()) is the opposite way; band = T0/T1/T2/CROWN/ARENA;
 # field = the ore field a rock, gate or chute belongs to (Config.Debris.Fields ids).
-FIELD_OF_CELL = {"T0-WSW": "RustWorks", "T0-ESE": "FrostYard", "T1-WNW": "VioletQuarry", "T1-ENE": "SulfurRidge",
-                 "T2-WNW": "EmberShelf", "T2-ENE": "GlassScar"}
 def field_of(it):
-    if it["kind"] not in ("rock", "gate", "chute") or it.get("tag") == "surge rock":
-        return None
-    if it["cell"] == "CROWN":
+    if it.get("field"):
+        return it["field"]
+    if it["cell"] == "CROWN" and it["kind"] in ("rock", "gate", "chute"):
         return "Starfall" if it["x"] < 0 else "HaloLedge"
-    return FIELD_OF_CELL.get(it["cell"])
+    return None
 def luau_str(v):
     return '"' + str(v).replace("\\", "\\\\").replace('"', '\\"') + '"'
 def luau_row(it):
@@ -394,6 +406,7 @@ def luau_row(it):
              f"cell = {luau_str(it['cell'])}", f"band = {luau_str(it['band'])}", f"color = {luau_str(it['color'])}"]
     if f:
         parts.append(f"field = {luau_str(f)}")
+        parts.append(f"block = {it.get('block', 1)}")
     return "		{ " + ", ".join(parts) + " },"
 if "--luau" in sys.argv:
     target = sys.argv[sys.argv.index("--luau") + 1]
@@ -413,6 +426,12 @@ if "--luau" in sys.argv:
     with open(target, "w", encoding="utf-8", newline="\n") as fh:
         fh.write("\n".join(lines))
     print("wrote", target, {k: v for k, v in sorted(fields.items())})
+    # WorldGeometry Zones rows for the fields: the axis-aligned bound of rocks, gates and chutes
+    for f in sorted(fields):
+        cs = [c for it in items[:designed] if field_of(it) == f for c in corners(it)]
+        x0, x1 = min(c[0] for c in cs), max(c[0] for c in cs)
+        z0, z1 = min(c[1] for c in cs), max(c[1] for c in cs)
+        print(f"  {f}: x = {(x0 + x1) / 2:g}, z = {(z0 + z1) / 2:g}, width = {x1 - x0:g}, depth = {z1 - z0:g}")
 
 # ---------------------------------------------------------------- draw
 MAP = 1400
@@ -513,8 +532,8 @@ map_html = "\n".join(out)
 
 legend = [
     ("1", "Gear Hall, leaderboard, anvil yard"), ("2", "Hatchery, leaderboard, egg plinths"), ("3", "Rust Works · open · 15 rocks"),
-    ("4", "Frost Yard · Lv 5 · 15 rocks"), ("5", "Quest Board, daily chest, codes, Museum"), ("6", "Pet Meadow: 3 pens, fountain, pet shop"),
-    ("7", "Shower Stage + seating rows"), ("8", "Commissary deposit, cafe, stats"), ("9", "Violet Quarry · Lv 12 · 13 rocks + geode"),
+    ("4", "Frost Yard · Lv 5 · 15 rocks"), ("5", "Rust Works, north block"), ("6", "Pet Meadow: 3 pens, fountain, pet shop"),
+    ("7", "Commissary deposit, Quest Board, chest, codes, cafe, stats, Museum"), ("8", "Frost Yard, north block"), ("9", "Violet Quarry · Lv 12 · 13 rocks + geode"),
     ("10", "Sulfur Ridge · Lv 20 · 13 rocks + springs"), ("11", "Cinder Scar: Scar Surge event, 8 rocks"), ("12", "Ledge Run obby, 6 pads"),
     ("13", "Prospector Camp, cart rail"), ("14", "Giant egg row"), ("15", "Hall of Fame, statues"), ("16", "Frost Rink, cocoa stand"),
     ("17", "Ember Shelf · Lv 30 · 24 rocks, vent, lava pools"), ("18", "Glass Scar · Lv 40 · 14 rocks, crystal spires"), ("19", "Crown: Starfall R1 (12), Halo R3 (6), lift, Dive, Beacon"),

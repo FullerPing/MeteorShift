@@ -139,10 +139,12 @@ for _, avenue in map.Roads:GetChildren() do
 					for _, side in { -1, 0, 1 } do
 						local at = (p.CFrame * CFrame.new(side * p.Size.X / 2, 0, t)).Position
 						for _, field in map.DebrisFields:GetChildren() do
-							local floor = field.FieldFloor
-							local l = floor.CFrame:PointToObjectSpace(at)
-							if math.abs(l.X) <= floor.Size.X / 2 + 2 and math.abs(l.Z) <= floor.Size.Z / 2 + 2 and l.Y > -2 and l.Y < 40 then
-								fail(("%s eject box reaches %s paving at (%.0f, %.0f)"):format(field.Name, avenue.Name, at.X, at.Z))
+							for _, floor in field:GetChildren() do
+								if floor.Name ~= "FieldFloor" then continue end
+								local l = floor.CFrame:PointToObjectSpace(at)
+								if math.abs(l.X) <= floor.Size.X / 2 + 2 and math.abs(l.Z) <= floor.Size.Z / 2 + 2 and l.Y > -2 and l.Y < 40 then
+									fail(("%s eject box reaches %s paving at (%.0f, %.0f)"):format(field.Name, avenue.Name, at.X, at.Z))
+								end
 							end
 						end
 					end
@@ -195,11 +197,13 @@ do
 			end
 		end
 		if #walls > 0 then
-			local floor = map.DebrisFields[gate.Name].FieldFloor
-			for _, pt in points do
-				local l = floor.CFrame:PointToObjectSpace(pt[2])
-				if math.abs(l.X) < floor.Size.X / 2 + 2.5 and math.abs(l.Z) < floor.Size.Z / 2 + 2.5 then
-					fail(("%s stands inside %s's walls"):format(pt[1], gate.Name))
+			for _, floor in map.DebrisFields[gate.Name]:GetChildren() do
+				if floor.Name ~= "FieldFloor" then continue end
+				for _, pt in points do
+					local l = floor.CFrame:PointToObjectSpace(pt[2])
+					if math.abs(l.X) < floor.Size.X / 2 + 2.5 and math.abs(l.Z) < floor.Size.Z / 2 + 2.5 then
+						fail(("%s stands inside %s's walls"):format(pt[1], gate.Name))
+					end
 				end
 			end
 		end

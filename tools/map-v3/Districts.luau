@@ -95,7 +95,6 @@ B.secret = function(g, F, y, row)
 	T.ball(g, "GeodeHollow", F, 0, s * .12, y + s * .25, s * .5, R.violet[3], nil, false)
 	crystal(g, F, 0, s * .1, y, s * .45)
 end
-B.seating = function(g, F, y, row) T.steps(g, "Bleacher", F, 0, row.d / 2, y, row.w, 3, 1.4, row.d / 3, R.blue[2]) end
 B.rail = function(g, F, y, row)
 	for _, u in { -1.5, 1.5 } do T.box(g, "Rail", F, u, 0, y + .3, .5, row.w + row.d, .5, R.stone[3], nil, false) end
 	for k = -2, 2 do T.box(g, "Tie", F, 0, k * (row.w + row.d) / 5, y, 5, 1.2, .3, R.wood[3], nil, false) end
@@ -173,18 +172,6 @@ B["Frost Rink"] = function(g, F, y, row)
 	T.roundPad(g, "Rink", F, row.w, row.d, y, .6, Color3.fromRGB(221, 243, 255))
 	T.roundPad(g, "Ice", F, row.w - 3, row.d - 3, y + .6, .2, Color3.fromRGB(190, 232, 255)).Material = Enum.Material.Glacier
 	for _, u in { -row.w / 3, 0, row.w / 3 } do T.box(g, "Bench", F, u, -row.d / 2 - 2.5, y, 8, 2, 2, R.blue[2]) end
-end
-B["Shower Stage"] = function(g, F, y, row)
-	local w, d = row.w, row.d
-	T.box(g, "Stage", F, 0, -d / 6, y, w, d * .6, 3, R.navy[2])
-	T.box(g, "StageEdge", F, 0, d * .14, y + 3, w, .8, .6, R.gold[2], nil, false)
-	T.box(g, "Backdrop", F, 0, -d / 2 + 1, y + 3, w - 4, 1, 14, R.red[2])
-	T.cylDep(g, "Arch", F, 0, -d / 2 + 1, y + 17, w - 4, 1, R.red[1], nil, false)
-	for _, u in { -w / 2 + 3, w / 2 - 3 } do
-		T.box(g, "Speaker", F, u, -d / 6, y + 3, 4, 4, 7, T.ink)
-		T.ball(g, "Light", F, u, -d / 6, y + 11.5, 2.4, R.pink[1], Enum.Material.Neon, false)
-	end
-	sign(g, F, 0, y + 11, -d / 2 + 1.6, math.min(w - 10, 24), 3.6, "METEOR SHOWER", R.navy[2])
 end
 B["Sky Garden"] = function(g, F, y, row)
 	T.box(g, "Terrace", F, 0, 0, y, row.w, row.d, 2.4, R.cream[2])
