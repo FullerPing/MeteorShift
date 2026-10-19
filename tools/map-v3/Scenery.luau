@@ -3,13 +3,17 @@
 -- Places every PlanData.scenery row under Map_Redesign.Scenery.<band>_<wedge> (eight 45-degree wedges round the crater,
 -- Atomic). Pieces stand on the ground found by a ray (so the 16-gon corner slivers are right), use the owner's MapArt
 -- scenery meshes where they exist, and are all non-colliding, query-free and untouchable. Lights inside cloned meshes
--- are removed (the lamps glow with Neon instead).
+-- are removed (the lamps glow with Neon instead). Rows are thinned to KEEP of the plan (the owner found the full set too
+-- crowded); lamps and watch posts are landmarks and always kept.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local T = assert(A.toon, "Run Toon first")
 local plan = assert(..., "Pass the plan: L(\"../map-v3/PlanData\")")
 local R = T.ramp
 local art = game:GetService("ServerStorage").MapArt
 local rng = Random.new(1080)
+local thin = Random.new(4510) -- its own stream, so the kept set doesn't depend on what the builders draw
+local KEEP = 0.55
+local ALWAYS = { lamp = true, ["watch post"] = true }
 
 local scenery = A.group(A.map, "Scenery")
 local params = RaycastParams.new()
@@ -103,11 +107,13 @@ B["watch post"] = function(g, p, w)
 	part(g, "PostKnob", Vector3.new(2, 2, 2), CFrame.new(p + Vector3.new(0, 18.4, 0)), R.gold[2], nil, Enum.PartType.Ball)
 end
 
-local placed, skipped, unknown = 0, 0, {}
+local placed, skipped, thinned, unknown = 0, 0, 0, {}
 for i, row in plan.scenery do
 	local key = row.tag
 	local builder = B[key]
-	if not builder then
+	if thin:NextNumber() >= KEEP and not ALWAYS[key] then
+		thinned += 1
+	elseif not builder then
 		unknown[key] = (unknown[key] or 0) + 1
 	else
 		local hit = workspace:Raycast(Vector3.new(row.x, 200, row.z), Vector3.new(0, -300, 0), params)
@@ -132,4 +138,4 @@ for _, v in scenery:GetDescendants() do
 		v:Destroy()
 	end
 end
-return { stage = "Scenery", placed = placed, skippedNoGround = skipped, unknown = unknown, groups = #scenery:GetChildren(), parts = parts, meshParts = meshes }
+return { stage = "Scenery", placed = placed, thinned = thinned, skippedNoGround = skipped, unknown = unknown, groups = #scenery:GetChildren(), parts = parts, meshParts = meshes }
