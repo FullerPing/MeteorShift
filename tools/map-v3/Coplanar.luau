@@ -9,7 +9,7 @@ local O, groups = ...
 assert(O, "Pass the overlap helpers")
 local EPS, MIN_AREA = 0.06, 1
 local map = A.map
-groups = groups or { "Ground", "Roads", "Boundary", "Gates", "Crown", "Districts", "TownSquare", "Chutes" }
+groups = groups or { "Ground", "Roads", "Boundary", "Gates", "Crown", "Districts", "TownSquare", "Chutes", "Crater", "CraterApron", "Scenery" }
 
 local function faces(p: BasePart)
 	local c, s = p.CFrame, p.Size / 2
@@ -29,20 +29,37 @@ local function faces(p: BasePart)
 	return out
 end
 
--- the shared area of two coplanar rectangles, sampled 6x6 over a's face, and one shared point
+-- the exact shared area of two coplanar rectangles (a's corners clipped by b's four edges, in a's plane) and the
+-- centroid of the shared patch. Sampling missed small overlaps on long faces, such as cliff turf past a 16-gon corner.
 local function shared(a, b): (number, Vector3?)
-	local function inside(pt: Vector3, f): boolean
-		local d = pt - f.c
-		return math.abs(d:Dot(f.u)) <= f.hu + 1e-3 and math.abs(d:Dot(f.v)) <= f.hv + 1e-3
-	end
-	local hits, N, at = 0, 6, nil
-	for i = 0, N - 1 do
-		for j = 0, N - 1 do
-			local pt = a.c + a.u * (((i + .5) / N) * 2 - 1) * a.hu + a.v * (((j + .5) / N) * 2 - 1) * a.hv
-			if inside(pt, b) then hits += 1; at = at or pt end
+	local function uv(pt: Vector3): Vector2 local d = pt - a.c return Vector2.new(d:Dot(a.u), d:Dot(a.v)) end
+	local poly = { Vector2.new(-a.hu, -a.hv), Vector2.new(a.hu, -a.hv), Vector2.new(a.hu, a.hv), Vector2.new(-a.hu, a.hv) }
+	local bc = uv(b.c)
+	local bu, bv = Vector2.new(b.u:Dot(a.u), b.u:Dot(a.v)), Vector2.new(b.v:Dot(a.u), b.v:Dot(a.v))
+	for _, edge in { { bu, b.hu }, { -bu, b.hu }, { bv, b.hv }, { -bv, b.hv } } do
+		local n, h = edge[1], edge[2]
+		local function keep(q: Vector2): number return h - (q - bc):Dot(n) end -- >= 0 inside this edge
+		local out = {}
+		for i, q in poly do
+			local r = poly[i % #poly + 1]
+			local kq, kr = keep(q), keep(r)
+			if kq >= 0 then table.insert(out, q) end
+			if (kq >= 0) ~= (kr >= 0) then table.insert(out, q + (r - q) * (kq / (kq - kr))) end
 		end
+		poly = out
+		if #poly < 3 then return 0, nil end
 	end
-	return hits / (N * N) * (4 * a.hu * a.hv), at
+	local area, cx, cy = 0, 0, 0
+	for i, q in poly do
+		local r = poly[i % #poly + 1]
+		local cross = q.X * r.Y - r.X * q.Y
+		area += cross
+		cx += (q.X + r.X) * cross
+		cy += (q.Y + r.Y) * cross
+	end
+	if math.abs(area) < 1e-9 then return 0, nil end
+	cx, cy = cx / (3 * area), cy / (3 * area)
+	return math.abs(area) / 2, a.c + a.u * cx + a.v * cy
 end
 
 local function tagOf(p: BasePart): string
