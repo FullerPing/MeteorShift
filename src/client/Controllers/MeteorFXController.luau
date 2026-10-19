@@ -30,6 +30,18 @@ local rumbleLevel = 0 -- sustained shake while the meteor approaches
 local streak: BasePart? = nil
 local streakTween: Tween? = nil
 local rumble: Sound? = nil
+local approach = Config.ImpactFX.Approach
+-- the sky warming as the fireball comes down (Config.ImpactFX.Approach); it peaks at impact, then eases off
+local skyTint: ColorCorrectionEffect? = nil
+
+local function releaseSky()
+	local tint = skyTint
+	skyTint = nil
+	if not tint then return end
+	local tween = TweenService:Create(tint, TweenInfo.new(approach.Release), { TintColor = Color3.new(1, 1, 1), Saturation = 0, Contrast = 0 })
+	tween.Completed:Once(function() tint:Destroy() end)
+	tween:Play()
+end
 
 local function spawnPoint(): Vector3?
 	local map = WorldMap.find()
@@ -67,6 +79,7 @@ function MeteorFXController:_clearStreak()
 		rumble = nil
 	end
 	rumbleLevel = 0
+	releaseSky()
 end
 
 -- The fireball crossing the sky before impact
@@ -101,13 +114,13 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	flame.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), color)
 	flame.Transparency = NumberSequence.new(0.1, 1)
 	flame.Lifetime = NumberRange.new(0.4, 0.7)
-	flame.Rate = 20
+	flame.Rate = approach.FlameRate
 	flame.LightEmission = 1
 	flame.SpreadAngle = Vector2.new(15, 15)
 	flame.Parent = ball
 
 	local light = Instance.new("PointLight")
-	light.Brightness = 6
+	light.Brightness = approach.LightBrightness
 	light.Range = geometry.Streak.LightRange
 	light.Color = color
 	light.Parent = ball
@@ -134,12 +147,36 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	smoke.Size = geometry.Streak.SmokeSize
 	smoke.Transparency = NumberSequence.new(0.3, 1)
 	smoke.Lifetime = NumberRange.new(2, 3)
-	smoke.Rate = 40
+	smoke.Rate = approach.SmokeRate
 	smoke.Speed = geometry.Streak.SmokeSpeed
 	smoke.Parent = ball
 
+	-- a soft glowing halo round the fireball, so it reads from anywhere on the map
+	local halo = Instance.new("Part")
+	halo.Name = "MeteorHalo"
+	halo.Shape = Enum.PartType.Ball
+	halo.Size = geometry.Streak.StartSize * approach.Halo
+	halo.Material = Enum.Material.Neon
+	halo.Color = color
+	halo.Transparency = approach.HaloTransparency
+	halo.Anchored, halo.CanCollide, halo.CanQuery, halo.CastShadow = true, false, false, false
+	halo.CFrame = ball.CFrame
+	halo.Parent = ball
+	ball:GetPropertyChangedSignal("CFrame"):Connect(function() halo.CFrame = ball.CFrame end)
+	ball:GetPropertyChangedSignal("Size"):Connect(function() halo.Size = ball.Size * approach.Halo end)
+
 	ball.Parent = workspace.CurrentCamera
 	streak = ball
+
+	if not skyTint then
+		local tint = Instance.new("ColorCorrectionEffect")
+		tint.Name = "MeteorApproach"
+		tint.Parent = Lighting
+		skyTint = tint
+	end
+	TweenService:Create(skyTint :: ColorCorrectionEffect, TweenInfo.new(math.max(secondsLeft, 0.2), Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		TintColor = approach.Tint, Saturation = approach.Saturation, Contrast = approach.Contrast,
+	}):Play()
 
 	streakTween = TweenService:Create(ball, TweenInfo.new(math.max(secondsLeft, 0.2), Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Position = target,
@@ -331,12 +368,12 @@ function MeteorFXController:_onImpact(position: Vector3, typeId: string?)
 	self:_shockwave(position, meteorType.GlowColor)
 	knockback(position)
 	addShake(0.4 + distanceScale(position, geometry.Shake.ImpactRadius) * 0.6)
-	flashScreen(0.5, 0.8)
+	flashScreen(0.7, 1.0)
 end
 
 function MeteorFXController:_onCoreCracked(position: Vector3)
-	flashScreen(0.8, 1.2)
-	addShake(0.3 + distanceScale(position, geometry.Shake.CoreRadius) * 0.5)
+	flashScreen(Config.ImpactFX.Crack.Flash, Config.ImpactFX.Crack.FlashSeconds)
+	addShake(0.4 + distanceScale(position, geometry.Shake.CoreRadius) * 0.6)
 	if player:GetAttribute("ReduceEffects") == true then return end
 
 	local burst = Instance.new("Part")
@@ -365,7 +402,7 @@ function MeteorFXController:_onCoreCracked(position: Vector3)
 	shards.Acceleration = geometry.Core.ShardsAcceleration
 	shards.Enabled = false
 	shards.Parent = burst
-	shards:Emit(80)
+	shards:Emit(Config.ImpactFX.Crack.Shards)
 
 	Sfx.play("CoreCrack", burst, geometry.Sound)
 	Sfx.play("CoreWhoosh", burst, geometry.Sound)

@@ -34,23 +34,35 @@ local ImpactFX = {}
 
 ImpactFX.Mobile = { Scale = 0.5 }
 
-ImpactFX.Pillar = { Height = 280, Radius = 7, Seconds = 1.5, Transparency = 0.25 }
-ImpactFX.Light = { Range = 130, Brightness = 9, Seconds = 1.4, Lift = 12 }
--- Three thin neon rings rolling out across the crater floor
+-- Owner, 2026-10-19: "make actual meteor effects more pronounced": the pillar, light, rings, dust, chips, embers,
+-- bloom and FOV punch were all raised, and the thrown rocks (Chunks) and the approach glow (Approach) are new.
+ImpactFX.Pillar = { Height = 420, Radius = 12, Seconds = 1.8, Transparency = 0.15 }
+ImpactFX.Light = { Range = 200, Brightness = 14, Seconds = 1.8, Lift = 14 }
+-- Three neon rings rolling out across the crater floor (MeteorFXController's shockwave carries the shock past the rim)
 ImpactFX.Rings = {
-	{ Delay = 0, Seconds = 1.0, ToDiameter = 112, Thickness = 0.5, Transparency = 0.1 },
-	{ Delay = 0.16, Seconds = 1.2, ToDiameter = 108, Thickness = 0.4, Transparency = 0.25 },
-	{ Delay = 0.34, Seconds = 1.4, ToDiameter = 104, Thickness = 0.3, Transparency = 0.4 },
+	{ Delay = 0, Seconds = 1.0, ToDiameter = 166, Thickness = 0.8, Transparency = 0.05 },
+	{ Delay = 0.16, Seconds = 1.2, ToDiameter = 150, Thickness = 0.6, Transparency = 0.2 },
+	{ Delay = 0.34, Seconds = 1.4, ToDiameter = 130, Thickness = 0.5, Transparency = 0.35 },
 }
 -- Dust thrown up around the bowl as the shock reaches it
-ImpactFX.Rim = { Count = 10, Radius = 70, Delay = 0.28, Puffs = 7, Height = 12 }
-ImpactFX.Chips = { Count = 40, Speed = { 55, 115 }, Size = { 2.4, 0 }, Lifetime = { 1.6, 2.6 }, Gravity = -115 }
-ImpactFX.Embers = { Count = 55, Speed = { 22, 75 }, Size = { 1.3, 0 }, Lifetime = { 2, 3.6 }, Gravity = -26 }
+ImpactFX.Rim = { Count = 12, Radius = 72, Delay = 0.28, Puffs = 12, Height = 20 }
+ImpactFX.Chips = { Count = 90, Speed = { 60, 130 }, Size = { 2.8, 0 }, Lifetime = { 1.6, 2.8 }, Gravity = -115 }
+ImpactFX.Embers = { Count = 120, Speed = { 25, 90 }, Size = { 1.6, 0 }, Lifetime = { 2, 4 }, Gravity = -26 }
+-- Real rocks of the meteor's crust thrown out of the crater on an arc; they bounce to rest and fade
+ImpactFX.Chunks = { Count = 12, Speed = { 35, 70 }, Up = { 45, 85 }, Size = { 2.5, 5.5 }, Gravity = 140, Spin = 6, Seconds = 4, Fade = 1.2 }
 -- A glowing pool left on the floor that cools off as the meteor does
-ImpactFX.Pool = { Diameter = 84, Thickness = 0.3, Transparency = 0.45, Seconds = 45 }
-ImpactFX.Bloom = { Intensity = 1.3, Size = 42, Threshold = 0.85, Seconds = 1.7 }
+ImpactFX.Pool = { Diameter = 84, Thickness = 0.3, Transparency = 0.35, Seconds = 45 }
+ImpactFX.Bloom = { Intensity = 2.2, Size = 56, Threshold = 0.8, Seconds = 2 }
 -- Degrees the camera widens by at the crater, easing back (skipped with Reduce Camera Shake)
-ImpactFX.Fov = { Punch = 9, In = 0.07, Out = 0.9 }
+ImpactFX.Fov = { Punch = 12, In = 0.07, Out = 1.0 }
+-- The approach (MeteorFXController): a glowing halo round the fireball, thicker flames and smoke, and the sky warming
+-- toward Tint as it comes down (a ColorCorrectionEffect that peaks at impact, then eases off)
+ImpactFX.Approach = {
+	Halo = 2.4, HaloTransparency = 0.65, FlameRate = 45, SmokeRate = 80, LightBrightness = 10,
+	Tint = Color3.fromRGB(255, 196, 150), Saturation = 0.25, Contrast = 0.12, Release = 2.5,
+}
+-- The core crack (MeteorFXController): screen flash brightness and the shard count
+ImpactFX.Crack = { Flash = 1.1, FlashSeconds = 1.4, Shards = 160 }
 -- Extra confetti when the meteor is golden
 ImpactFX.Golden = {
 	Burst = { Count = 70, Speed = { 30, 95 }, Size = { 1.6, 0 }, Lifetime = { 1.8, 3 }, Accel = Vector3.new(0, -48, 0),

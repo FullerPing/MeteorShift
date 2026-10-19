@@ -12,7 +12,7 @@ Meteor.ImpactDuration = 3
 Meteor.CrackedDuration = 5
 Meteor.CooledDuration = 5
 Meteor.CleanupDuration = 5
-Meteor.StreakLeadTime = 10 -- streak is visible for the last N seconds of the countdown
+Meteor.StreakLeadTime = 14 -- streak is visible for the last N seconds of the countdown (10 felt sudden; owner, 2026-10-19)
 -- In the last LeadTime seconds the camera swings behind the player: it looks at the countdown board over the crater
 -- until CountdownUntil seconds are left, then turns to follow the falling meteor down, and hands control back
 -- BlendOut seconds after impact. Players can turn it off with the ReduceCameraShake setting. It stays off while a menu
