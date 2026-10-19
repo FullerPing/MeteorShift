@@ -4,6 +4,10 @@
 -- per-minute action counter, the rows of the meteor event summary, the player_left and session_start rows,
 -- per-player meteor participation, and the id-to-key lookup for purchase prompts.
 --
+-- The dashboards SUM an event's values. So a count event (a leave, a session, a level-up) logs 1 and puts
+-- its detail in a bucketed field; only a total that means something when added up (seconds, hits, opens)
+-- goes in the value, and an average is that sum over a count event (e.g. seconds_to_core / meteor_event_ended).
+--
 -- Roblox custom and economy events take at most three custom fields
 -- (CustomField01..03) with low-cardinality string values, so the event summary
 -- is several custom events, each carrying one number as its value and the
@@ -116,13 +120,13 @@ function Telemetry.leavePhase(phase: string): string
 	return LEAVE_PHASES[phase] or "unknown"
 end
 
--- The player_left row: value = whole minutes this session, fields = cycle phase, session bucket and whether
--- the player had finished the tutorial (nil when the profile was already gone).
+-- The player_left row: value 1 (dashboards sum values, so a count event logs 1), fields = cycle phase,
+-- session-length bucket and whether the player had finished the tutorial (nil when the profile was already gone).
 function Telemetry.playerLeft(sessionSeconds: number, phase: string, tutorialDone: boolean?): Row
 	local onboarding = if tutorialDone == nil then "unknown" elseif tutorialDone then "tutorial_done" else "in_tutorial"
 	return {
 		Name = "player_left",
-		Value = math.floor(math.max(sessionSeconds, 0) / 60),
+		Value = 1,
 		Fields = { Telemetry.leavePhase(phase), Telemetry.sessionBucket(sessionSeconds), onboarding },
 	}
 end
@@ -157,12 +161,11 @@ function Telemetry.stage(rebirths: number?): string
 	return "r10+"
 end
 
--- The session_start row: value = whole days since the last session (0 for a new player), fields = the
--- daysAway bucket, the rebirth stage and the tutorial state.
+-- The session_start row: value 1 (a count), fields = the daysAway bucket, the rebirth stage and the tutorial state.
 function Telemetry.sessionStart(lastSeen: number, now: number, rebirths: number?, tutorialDone: boolean): Row
 	return {
 		Name = "session_start",
-		Value = if lastSeen > 0 then math.floor(math.max(now - lastSeen, 0) / 86400) else 0,
+		Value = 1,
 		Fields = { Telemetry.daysAway(lastSeen, now), Telemetry.stage(rebirths), if tutorialDone then "tutorial_done" else "in_tutorial" },
 	}
 end

@@ -6,7 +6,7 @@ local Meteor = {}
 
 -- Phase durations, in seconds (spec §5.1)
 Meteor.FirstCountdown = 90 -- first meteor after a server starts is ~1.5 minutes away (spec §4)
-Meteor.Countdown = 180 -- 3 minutes: a 343 s cycle gives a new player four meteors in the first 19 minutes (docs/design/economy-rework.md)
+Meteor.Countdown = 120 -- 2 minutes (owner, 2026-10-19: telemetry showed most new players leaving during the 3-minute wait): a 283 s cycle
 Meteor.ImpactDuration = 3
 -- The cooling timer (Active) is per type: Meteor.Types[id].ActiveDuration
 Meteor.CrackedDuration = 5

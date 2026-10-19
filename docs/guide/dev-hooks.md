@@ -70,7 +70,7 @@ Coverage note for A4: `README.md:222` and `CLAUDE.md:13` name only `/meteor`, `/
 
 ## Studio countdown override
 
-In Studio a countdown lasts `Config.Meteor.StudioCountdown` = 25 s (`MeteorService.luau:183-187`; `src/shared/Config/Meteor.luau:34`); on a live server the first countdown is 90 s and every later one 180 s (`src/shared/Config/Meteor.luau:8-9`, used via `MeteorService.luau:42`). To test the real timings, set `Meteor.StudioCountdown = nil` (`Config/Meteor.luau:34` is typed `number?` for exactly that). Note: `README.md:208` still calls the real timings "2:00 / 4:00" — stale; the code says 1:30 / 3:00 (`Meteor.luau:8-9`), and A4 must not carry the claim over.
+In Studio a countdown lasts `Config.Meteor.StudioCountdown` = 25 s (`MeteorService.luau:183-187`; `src/shared/Config/Meteor.luau:34`); on a live server the first countdown is 90 s and every later one 120 s (`src/shared/Config/Meteor.luau:8-9`, used via `MeteorService.luau:42`). To test the real timings, set `Meteor.StudioCountdown = nil` (`Config/Meteor.luau:34` is typed `number?` for exactly that). Note: `README.md:208` still calls the real timings "2:00 / 4:00" — stale; the code says 1:30 / 2:00 (`Meteor.luau:8-9`), and A4 must not carry the claim over.
 
 ## Safety, as coded
 

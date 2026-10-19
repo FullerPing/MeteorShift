@@ -14,7 +14,7 @@ shape of the saved profile itself, read `src/server/Lib/ProfileTemplate.luau`.
 
 | Stage | What runs | Numbers |
 |---|---|---|
-| Meteors land | one shared crater event; first 90 s after server start, then one per cycle | first 90 s, countdown 180 s, impact 3 s, end phases 5 s, cleanup 5 s (`src/shared/Config/Meteor.luau:8-14`), Iron cooling 150 s (`src/shared/Config/Meteor.luau:121`); cycle = their sum, 343 s (`src/shared/Pacing.luau:133-139`) |
+| Meteors land | one shared crater event; first 90 s after server start, then one per cycle | first 90 s, countdown 120 s, impact 3 s, end phases 5 s, cleanup 5 s (`src/shared/Config/Meteor.luau:8-14`), Iron cooling 150 s (`src/shared/Config/Meteor.luau:121`); cycle = their sum, 283 s (`src/shared/Pacing.luau:133-139`) |
 | Mining | validated swings put ore in the backpack | ore per hit flat 1→20 and swing 0.6→0.35 s across the 8 pickaxe tiers (`src/shared/Config/Pickaxes.luau:22-29`); server hopper drop at `src/server/Services/NodeService.luau:246` |
 | Clearance | a hit's ore scales by **player level**, never blocks | 40%→100% under an ore's clearance level (`src/shared/Config/Levels.luau:32-33`, formula `src/shared/Levels.luau:74-81`, applied at mine time `src/server/Services/MeteorService.luau:425-428`) |
 | Hauling | walk home, dump the backpack into the hopper | backpacks 50→1,800 ore (`src/shared/Config/Backpacks.luau:16-23`) |

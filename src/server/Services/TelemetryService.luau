@@ -9,20 +9,21 @@
 -- * Lifetime milestones, once per player, guarded by profile flags that this
 --   service sets when it logs them:
 --     first_meteor_joined     first validated hit on a crust node or the core (flags.firstMeteor)
---     first_core_reward       first Core Shards received, value = shards (flags.firstCoreReward)
+--     first_core_reward       first Core Shards received (flags.firstCoreReward)
 --     first_refinery_bought   first production line upgrade (flags.firstRefinery)
+--   Every milestone, session, leave, level-up and rebirth logs value 1: the dashboards sum values (Lib.Telemetry).
 -- * returned_offline_income on every join whose offline catch-up made bars (spec §13),
 --   value = bars, field = hours away (Lib.Telemetry.hoursAway bucket).
 -- * Per meteor event: the summary rows of Lib.Telemetry.eventSummary, logged against
 --   one player in the server since custom events need a player.
 -- * Economy: cash from selling bars and shards from core rewards are sources; pickaxe,
 --   backpack and station purchases are cash and shard sinks; a rebirth sinks the cash
---   it resets. Rebirths also log a "rebirth" custom event, value = rebirth count.
+--   it resets. Rebirths also log a "rebirth" custom event, field = the new rebirth stage.
 -- * active_actions_per_minute every Config.Telemetry.ActionsInterval seconds per player:
 --   swings, deposits, collects, sells and purchases. Players with none log nothing.
 --   On the same timer, field_rocks_mined per player and field (value = rocks broken, field = the ore field
 --   id or "Filler"), so we can see which fields people use between meteors.
--- * player_left on every leave (Lib.Telemetry.playerLeft): value = minutes this session, fields = the meteor
+-- * player_left on every leave (Lib.Telemetry.playerLeft): fields = the meteor
 --   cycle phase (countdown, meteor, aftermath), a session-length bucket and the tutorial state.
 -- * Tutorial funnel steps, which TutorialService sends through :funnel.
 -- * Monetization (spec §9): "pass_bought" when a game pass is bought in game
@@ -30,12 +31,11 @@
 --   (fields = product key, outcome: "called", "credited" or "granted"). "purchase_prompt" every time a
 --   pass or product prompt closes (fields = key, "pass"/"product", "bought"/"closed"): prompts vs buys is
 --   the conversion rate of each offer.
--- * session_start on every profile load (Lib.Telemetry.sessionStart): value = days since the last session,
---   fields = days-away bucket ("new" for a first join), rebirth stage, tutorial state. With player_left this
+-- * session_start on every profile load (Lib.Telemetry.sessionStart): fields = days-away bucket ("new" for a first join), rebirth stage, tutorial state. With player_left this
 --   gives D1/D7 return and how long each stage plays.
 -- * meteor_participation per player in the server when a meteor event ends: value = their hits on it,
 --   fields = meteor type, outcome and role (core, crust or none). meteor_event_seconds_to_core joins the summary.
--- * Progression: level_up (value = level, field = rebirth stage), egg_hatched (fields = egg, rarity,
+-- * Progression: level_up (fields = rebirth stage, level), egg_hatched (fields = egg, rarity,
 --   new/duplicate), perk_bought (value = perk level, field = perk), index_page_completed (field = page),
 --   field_travel (field = ore field, from DebrisService). Egg and perk shards are logged as sinks.
 -- * Reward sources through :earned: daily streak, quests, codes and field rocks' cash (their services call it).
@@ -301,7 +301,7 @@ function TelemetryService:KnitStart()
 	end)
 
 	RewardService.ShardsAwarded:Connect(function(player: Player, shards: number)
-		self:milestone(player, "firstCoreReward", "first_core_reward", shards)
+		self:milestone(player, "firstCoreReward", "first_core_reward")
 		local data = PlayerStateService:Get(player)
 		if data then
 			self:economy(player, SOURCE, SHARDS, shards, data.shards, GAMEPLAY, "core_reward")
@@ -346,7 +346,7 @@ function TelemetryService:KnitStart()
 	end)
 
 	RebirthService.Reborn:Connect(function(player: Player, rebirths: number, cashSpent: number)
-		self:custom(player, "rebirth", rebirths)
+		self:custom(player, "rebirth", 1, { Telemetry.stage(rebirths) })
 		self:economy(player, SINK, CASH, cashSpent, 0, GAMEPLAY, "rebirth")
 	end)
 
@@ -373,7 +373,7 @@ function TelemetryService:KnitStart()
 
 	LevelService.LeveledUp:Connect(function(player: Player, level: number)
 		local data = PlayerStateService:Get(player)
-		self:custom(player, "level_up", level, { Telemetry.stage(if data then data.rebirths else 0) })
+		self:custom(player, "level_up", 1, { Telemetry.stage(if data then data.rebirths else 0), tostring(level) })
 	end)
 
 	PetService.EggHatched:Connect(function(player: Player, eggId: string, petId: string, duplicate: boolean)
