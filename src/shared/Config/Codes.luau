@@ -7,7 +7,7 @@ local Codes = {}
 
 Codes.MaxLength = 32
 Codes.CashFloor = 500 -- a code with Minutes never pays less cash than this (the ceiling still wins)
-Codes.CashCeilingShare = 0.05 -- of the next rebirth's cost
+Codes.CashCeilingShare = 0.02 -- of the next rebirth's cost (0.05 let the three starter codes buy tier 3)
 
 -- Add codes here. The name is UPPER CASE letters, digits, "-" and "_" (players may type any case).
 --   Minutes  minutes of the player's income paid as cash   (optional)

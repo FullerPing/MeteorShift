@@ -14,10 +14,10 @@ export type Backpack = {
 
 local Backpacks: { Backpack } = {
 	{ Tier = 1, Name = "Canvas Sack", Capacity = 50, Cost = 0, Shards = 0 },
-	{ Tier = 2, Name = "Leather Pack", Capacity = 150, Cost = 180, Shards = 0 },
-	{ Tier = 3, Name = "Miner's Pack", Capacity = 250, Cost = 430, Shards = 0 },
-	{ Tier = 4, Name = "Reinforced Pack", Capacity = 400, Cost = 1300, Shards = 0 },
-	{ Tier = 5, Name = "Ore Hauler", Capacity = 600, Cost = 3900, Shards = 0 },
+	{ Tier = 2, Name = "Leather Pack", Capacity = 150, Cost = 1300, Shards = 0 },
+	{ Tier = 3, Name = "Miner's Pack", Capacity = 250, Cost = 5000, Shards = 0 },
+	{ Tier = 4, Name = "Reinforced Pack", Capacity = 400, Cost = 6500, Shards = 0 },
+	{ Tier = 5, Name = "Ore Hauler", Capacity = 600, Cost = 8000, Shards = 0 },
 	{ Tier = 6, Name = "Cargo Rig", Capacity = 900, Cost = 11500, Shards = 0 },
 	{ Tier = 7, Name = "Gravity Pack", Capacity = 1.3e3, Cost = 32e3, Shards = 0 },
 	{ Tier = 8, Name = "Void Pack", Capacity = 1.8e3, Cost = 100e3, Shards = 0 },

@@ -12,11 +12,11 @@ return function(t: any)
 	local at30 = Pacing.sampleAt(result, 30 * 60)
 	local at35 = Pacing.sampleAt(result, 35 * 60)
 
-	t.test("the model is deterministic and reports a cycle of about six minutes", function()
+	t.test("the model is deterministic and reports a cycle of about five minutes", function()
 		local again = Pacing.simulate(4 * 3600)
 		t.eq(#again.purchases, #result.purchases)
 		t.eq(again.samples[#again.samples].earned, result.samples[#result.samples].earned)
-		t.ok(result.cycle > 5 * 60 and result.cycle < 7 * 60, "cycle " .. result.cycle)
+		t.ok(result.cycle > 4 * 60 and result.cycle < 6 * 60, "cycle " .. result.cycle)
 	end)
 
 	-- A fresh player's loadout, the way Economy:ExpectedIncome reads it from a profile
@@ -70,6 +70,20 @@ return function(t: any)
 		t.ok(steel ~= nil, "Steel never in reach")
 		t.ok(steel >= Config.Meteor.FirstCountdown, "before the first meteor: " .. tostring(steel))
 		t.ok(steel <= result.firstCycleEnd + result.cycle, "later than one cycle after the first: " .. tostring(steel))
+	end)
+
+	-- Owner, 2026-10-19: the first meteor cycle used to hand a new player the Drill Pick outright
+	t.test("the Drill Pick is bought 8 to 10 minutes in, after the first meteor cycle", function()
+		local drill = nil
+		for _, purchase in result.purchases do
+			if purchase.id == "pickaxe3" then
+				drill = purchase.time
+				break
+			end
+		end
+		t.ok(drill ~= nil, "Drill Pick never bought")
+		t.ok((drill :: number) >= result.firstCycleEnd, "before the first cycle ended: " .. tostring(drill))
+		t.ok((drill :: number) >= 8 * 60 and (drill :: number) <= 10 * 60, "Drill Pick at " .. tostring(drill) .. " s")
 	end)
 
 	t.test("by 15 minutes the player owns Steel and the Drill Pick, so Ice meteors pay", function()

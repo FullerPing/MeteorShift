@@ -72,7 +72,7 @@ Gear never asks for shards: every pickaxe and backpack row carries `Shards = 0`
 
 ## Production line and gear costs
 
-- One line upgrade, levels 1-8: `Costs[n]` buys level n (level 2 = $840) times the rebirth price
+- One line upgrade, levels 1-8: `Costs[n]` buys level n (level 2 = $2,800) times the rebirth price
   inflation (`src/shared/Config/Home.luau:40-43`, `src/shared/Line.luau:40-46`). Each level sets
   hopper (2,000→1.25M ore), conveyor (0.3→18 ore/s), refinery (0.25→16 ore/s) and collection post
   (same table as the hopper) together (`src/shared/Config/Home.luau:46-67`).
@@ -80,7 +80,7 @@ Gear never asks for shards: every pickaxe and backpack row carries `Shards = 0`
   37.5 for the backpack (`src/shared/Config/Gear.luau:23,32`; depth/shared-level model
   `src/shared/Gear.luau:105-112`). Tier cap = 10 × tier levels (`src/shared/Config/Gear.luau:15`,
   `src/shared/Gear.luau:31-33`). Evolving a tier costs the row's cash
-  (pickaxe $250→$170K, backpack $180→$100K — `src/shared/Config/Pickaxes.luau:22-29`,
+  (pickaxe $2,000→$170K, backpack $1,300→$100K — `src/shared/Config/Pickaxes.luau:22-29`,
   `src/shared/Config/Backpacks.luau:16-23`).
 - Every cash price goes through `src/shared/Price.luau:26-28`, which applies the rebirth
   multiplier below.
@@ -99,7 +99,7 @@ $95K and the spec pins it there (`tests/Pacing.spec.luau:175-178`; `src/shared/P
 
 ## Rebirth
 
-- Costs are an explicit 16-rank list fitted with the pacing model — first rebirth $68K
+- Costs are an explicit 16-rank list fitted with the pacing model — first rebirth $30K
   (`src/shared/Config/Rebirth.luau:14`, read via `src/shared/Rebirth.luau:24-31`); beyond rank 16
   each cost ×2.3 ("Legacy", `src/shared/Config/Rebirth.luau:25`). Cash-only gate
   (`src/server/Services/RebirthService.luau:49-55`).
@@ -173,7 +173,7 @@ uses it to size cash packs and field-rocks (`src/shared/Pacing.luau:225-243`,
 | Cycle length | 5-7 minutes | `tests/Pacing.spec.luau:15-20` |
 | Steel Pickaxe in reach | within a cycle of the first meteor | `tests/Pacing.spec.luau:68-73` |
 | Drill Pick / Meteorite Pick | by 15 min / by 30 min | `tests/Pacing.spec.luau:75-82` |
-| **First rebirth** | **10-20 minutes in** — CLAUDE.md's "~14 min" is the middle of this window, not a number the spec computes | `tests/Pacing.spec.luau:84-89` |
+| **First rebirth** | **10-20 minutes in** — CLAUDE.md's "~15 min" is the middle of this window, not a number the spec computes | `tests/Pacing.spec.luau:84-89` |
 | Laps | grow through lap 4; laps 5-8 hold 18-32 min | `tests/Pacing.spec.luau:91-103` |
 | Rebirth pace | every rebirth ≤ 30 min after the last | `tests/Pacing.spec.luau:105-112` |
 | Price inflation | post-rebirth purchases cost `Price.scaled(base, priceMult(n))` | `tests/Pacing.spec.luau:114-132` |

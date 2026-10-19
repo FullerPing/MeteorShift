@@ -11,7 +11,10 @@ return {
 	-- They are not a clean x5: lap 1 pays for the gear ramp, and the tiers and ores that player
 	-- level opens keep arriving for the first hours. Edit them together with Config.Levels and
 	-- Config.Home, then re-run the model (docs/design/economy-rework.md).
-	Costs = { 68e3, 1.2e6, 12e6, 65e6, 530e6, 2.9e9, 14e9, 69e9, 380e9, 2.6e12, 13e12, 64e12, 340e12, 1.6e15, 8.5e15, 40e15 },
+	-- Re-fit 2026-10-19 (owner: the first meteor cycle got you straight to tier 3): tiers 2-4 and line levels 2-4
+	-- cost several times more, so the Drill Pick lands at about 8 minutes; ranks 1 and 4 were re-searched so the
+	-- laps run about 15, 16, 20, 24 and then 21-23 minutes on the 120 s countdown.
+	Costs = { 30e3, 1.2e6, 12e6, 90e6, 530e6, 2.9e9, 14e9, 69e9, 380e9, 2.6e12, 13e12, 64e12, 340e12, 1.6e15, 8.5e15, 40e15 },
 	CashMult = 5, -- bar sales multiplier gained per rebirth for the listed ranks, multiplicative (x5, x25, x125, ...)
 	-- Cash price inflation per rebirth: gear and production upgrades cost this much more for every rebirth
 	-- (Shared.Rebirth.priceMult). Income grows x5 and prices x3, so a rebirth is worth 5/3 in real terms
