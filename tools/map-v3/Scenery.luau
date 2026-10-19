@@ -4,7 +4,7 @@
 -- Atomic). Pieces stand on the ground found by a ray (so the 16-gon corner slivers are right), use the owner's MapArt
 -- scenery meshes where they exist, and are all non-colliding, query-free and untouchable. Lights inside cloned meshes
 -- are removed (the lamps glow with Neon instead). Rows are thinned to KEEP of the plan (the owner found the full set too
--- crowded); lamps and watch posts are landmarks and always kept.
+-- crowded); lamps keep LAMP_KEEP of theirs, watch posts are landmarks and always kept.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local T = assert(A.toon, "Run Toon first")
 local plan = assert(..., "Pass the plan: L(\"../map-v3/PlanData\")")
@@ -13,7 +13,8 @@ local art = game:GetService("ServerStorage").MapArt
 local rng = Random.new(1080)
 local thin = Random.new(4510) -- its own stream, so the kept set doesn't depend on what the builders draw
 local KEEP = 0.55
-local ALWAYS = { lamp = true, ["watch post"] = true }
+local LAMP_KEEP = 0.5
+local ALWAYS = { ["watch post"] = true }
 
 local scenery = A.group(A.map, "Scenery")
 local params = RaycastParams.new()
@@ -111,7 +112,7 @@ local placed, skipped, thinned, unknown = 0, 0, 0, {}
 for i, row in plan.scenery do
 	local key = row.tag
 	local builder = B[key]
-	if thin:NextNumber() >= KEEP and not ALWAYS[key] then
+	if thin:NextNumber() >= (if key == "lamp" then LAMP_KEEP else KEEP) and not ALWAYS[key] then
 		thinned += 1
 	elseif not builder then
 		unknown[key] = (unknown[key] or 0) + 1
