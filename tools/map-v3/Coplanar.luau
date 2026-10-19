@@ -2,14 +2,14 @@
 -- { list = { { p, q, normal, at, area } }, byGroup = { ["A x B"] = { n, examples } } }: every pair of visible block
 -- parts with a face pointing the same way in the same plane (within EPS) whose rectangles share more than MIN_AREA
 -- square studs, where the shared patch can be seen (not facing down, not buried in another part). Those flicker in game
--- (z-fighting). `p` is the part with the smaller face. Wedges count only their bottom and back; meshes, cylinders and
--- balls are skipped as candidates but still hide what they cover.
+-- (z-fighting). `p` is the part with the smaller face. Wedges count only their bottom and back; meshes, unions, cylinders
+-- and balls are skipped as candidates but still hide what they cover.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local O, groups = ...
 assert(O, "Pass the overlap helpers")
 local EPS, MIN_AREA = 0.06, 1
 local map = A.map
-groups = groups or { "Ground", "Roads", "Boundary", "Gates", "Crown", "Districts", "TownSquare", "Chutes", "Crater", "CraterApron", "Scenery" }
+groups = groups or { "Ground", "Roads", "Boundary", "Gates", "Crown", "Districts", "TownSquare", "Chutes", "Crater", "CraterApron", "Scenery", "CraterDetail" }
 
 local function faces(p: BasePart)
 	local c, s = p.CFrame, p.Size / 2
@@ -92,7 +92,8 @@ end
 
 local result = { list = {}, byGroup = {} }
 for i, p in all do
-	if not p:IsA("MeshPart") and (not p:IsA("Part") or (p :: Part).Shape == Enum.PartType.Block) then
+	-- unions (the ring road, the rim) are not boxes: their bounding box would read as a solid slab
+	if not p:IsA("MeshPart") and not p:IsA("PartOperation") and (not p:IsA("Part") or (p :: Part).Shape == Enum.PartType.Block) then
 		local fp = faces(p)
 		for _, h in candidates:hits(p, 0) do -- same-way faces can only share area when the parts interpenetrate
 			local q, fq = h.part, h.tag
