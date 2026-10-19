@@ -89,4 +89,24 @@ return function(t: any)
 			end
 		end
 	end)
+
+	t.test("text limits follow the draw scale so capped text grows with a menu on a big screen", function()
+		local min, max = MenuFit.textLimits(8, 18, 4 / 3) -- 2560 x 1440
+		t.eq(max, 24)
+		t.eq(min, 11)
+		min, max = MenuFit.textLimits(8, 18, 1)
+		t.eq(min, 8)
+		t.eq(max, 18)
+		-- a small screen shrinks the cap but keeps the authored floor, and the floor never passes the cap
+		min, max = MenuFit.textLimits(8, 18, 0.6)
+		t.eq(max, 11)
+		t.eq(min, 8)
+		min, max = MenuFit.textLimits(14, 16, 0.5)
+		t.eq(max, 8)
+		t.eq(min, 8)
+		-- Roblox's 1 to 100 range
+		t.eq(select(2, MenuFit.textLimits(10, 60, 2)), 100)
+		-- the same inputs give the same limits however often they are applied (the base is kept, not the result)
+		t.eq(select(2, MenuFit.textLimits(8, 18, 4 / 3)), 24)
+	end)
 end

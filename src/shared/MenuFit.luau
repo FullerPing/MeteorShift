@@ -49,4 +49,14 @@ function MenuFit.whole(view: View, natural: Vector2): (View, Rect)
 	return whole, MenuFit.centred(whole, natural)
 end
 
+-- A UITextSizeConstraint caps text in on-screen pixels, after the UIScales above it, so a cap authored for a menu drawn
+-- at 1080p would freeze its text while the menu grows on a bigger screen. These are the limits to set for an authored
+-- (baseMin, baseMax) under a drawn `scale`: the max follows the scale; the min grows with it but never shrinks below what
+-- was authored (small screens keep their legibility floor) and never passes the max. Roblox allows 1 to 100.
+function MenuFit.textLimits(baseMin: number, baseMax: number, scale: number): (number, number)
+	local max = math.clamp(math.floor(baseMax * scale + 0.5), 1, 100)
+	local min = math.clamp(math.floor(baseMin * math.max(scale, 1) + 0.5), 1, max)
+	return min, max
+end
+
 return MenuFit
