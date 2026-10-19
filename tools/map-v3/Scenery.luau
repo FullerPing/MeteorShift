@@ -1,13 +1,16 @@
 -- Map v3 scenery. Load Common, Brick and Toon first; run after Ground and Roads:
---   L("../map-v3/Scenery", L("../map-v3/PlanData"))
+--   L("../map-v3/Scenery", L("../map-v3/PlanData"), L("../map-v3/Overlap"))
 -- Places every PlanData.scenery row under Map_Redesign.Scenery.<band>_<wedge> (eight 45-degree wedges round the crater,
 -- Atomic). Pieces stand on the ground found by a ray (so the 16-gon corner slivers are right), use the owner's MapArt
 -- scenery meshes where they exist, and are all non-colliding, query-free and untouchable. Lights inside cloned meshes
 -- are removed (the lamps glow with Neon instead). Rows are thinned to KEEP of the plan (the owner found the full set too
--- crowded); lamps keep LAMP_KEEP of theirs, watch posts are landmarks and always kept.
+-- crowded); lamps keep LAMP_KEEP of theirs, watch posts are landmarks and always kept. Each piece is one Model; a piece
+-- that would stand on a road, or cut into anything solid (districts, town, Crown, gates, chutes, rocks, roads, slides,
+-- cliff faces and their turf, ramps, the rampart) or into a piece placed before it, is dropped.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local T = assert(A.toon, "Run Toon first")
-local plan = assert(..., "Pass the plan: L(\"../map-v3/PlanData\")")
+local plan, O = ...
+assert(plan and O, "Pass the plan and the overlap helpers: L(\"../map-v3/PlanData\"), L(\"../map-v3/Overlap\")")
 local R = T.ramp
 local art = game:GetService("ServerStorage").MapArt
 local rng = Random.new(1080)
@@ -108,7 +111,17 @@ B["watch post"] = function(g, p, w)
 	part(g, "PostKnob", Vector3.new(2, 2, 2), CFrame.new(p + Vector3.new(0, 18.4, 0)), R.gold[2], nil, Enum.PartType.Ball)
 end
 
-local placed, skipped, thinned, unknown = 0, 0, 0, {}
+local solid = O.index(24)
+local ground = A.map:FindFirstChild("Ground")
+for _, group in { "Districts", "TownSquare", "Crown", "Gates", "Chutes", "Debris", "Roads", "Boundary", ground and ground:FindFirstChild("Cliffs"), ground and ground:FindFirstChild("Ramps") } do
+	if typeof(group) == "string" then group = A.map:FindFirstChild(group) end
+	local name = if group then group.Name else ""
+	for _, p in (group and group:GetDescendants() or {}) do
+		if p:IsA("BasePart") and p.Transparency < 1 then solid:add(p, name) end
+	end
+end
+local roads = A.map:FindFirstChild("Roads")
+local placed, skipped, thinned, onRoad, clashed, unknown = 0, 0, 0, 0, 0, {}
 for i, row in plan.scenery do
 	local key = row.tag
 	local builder = B[key]
@@ -118,9 +131,26 @@ for i, row in plan.scenery do
 		unknown[key] = (unknown[key] or 0) + 1
 	else
 		local hit = workspace:Raycast(Vector3.new(row.x, 200, row.z), Vector3.new(0, -300, 0), params)
-		if hit then
-			builder(groupFor(row), hit.Position, math.max(row.w, row.d))
-			placed += 1
+		if hit and roads and hit.Instance:IsDescendantOf(roads) then
+			onRoad += 1
+		elseif hit then
+			local piece = Instance.new("Model")
+			piece.Name = key
+			piece.Parent = groupFor(row)
+			builder(piece, hit.Position, math.max(row.w, row.d))
+			local parts = {}
+			for _, p in piece:GetDescendants() do if p:IsA("BasePart") then table.insert(parts, p) end end
+			local clash = false
+			for _, p in parts do
+				if solid:hits(p, 0.3, piece)[1] then clash = true; break end
+			end
+			if clash or #parts == 0 then
+				clashed += 1
+				piece:Destroy()
+			else
+				for _, p in parts do solid:add(p, piece) end
+				placed += 1
+			end
 		else
 			skipped += 1
 		end
@@ -139,4 +169,4 @@ for _, v in scenery:GetDescendants() do
 		v:Destroy()
 	end
 end
-return { stage = "Scenery", placed = placed, thinned = thinned, skippedNoGround = skipped, unknown = unknown, groups = #scenery:GetChildren(), parts = parts, meshParts = meshes }
+return { stage = "Scenery", placed = placed, thinned = thinned, onRoad = onRoad, overlapping = clashed, skippedNoGround = skipped, unknown = unknown, groups = #scenery:GetChildren(), parts = parts, meshParts = meshes }

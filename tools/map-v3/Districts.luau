@@ -1,16 +1,19 @@
 -- Map v3 districts. Load Common, Brick and Toon first; run after Ground, Core and Fields:
---   L("../map-v3/Districts", L("../map-v3/PlanData"))
+--   L("../map-v3/Districts", L("../map-v3/PlanData"), L("../map-v3/Overlap"))
 -- Builds every PlanData footprint without a `field`, one Model per footprint, grouped per plan cell under
 -- Map_Redesign.Districts.<cell> (ModelStreamingMode Atomic). A footprint's frame faces the crater: lateral u across its
 -- width `w`, depth toward the front, standing on its band's Y. A builder is picked by the row's tag, else its label;
 -- anything without one gets a labelled box, so nothing is skipped silently. Every built model carries PlanLabel.
--- Skipped on purpose: the plateau (Ground), spawn, Refinery, Gear Hall, Hatchery and Commissary (Core).
+-- Skipped on purpose: the plateau (Ground), spawn, Refinery, Gear Hall, Hatchery and Commissary (Core). A footprint whose
+-- model cuts into the town Core placed (the plan's two "board" rows are the real leaderboards) or into a district model
+-- built before it is dropped and reported in `dropped`.
 -- The Crown's contract (Task 7, CrownService) goes to Map_Redesign.Crown: Lift (SkyLift mesh with a `Prompt` part) at
 -- the north avenue's end on T2, LiftTop on the Crown, DivePad at (-30, 475) with the Dive cannon behind it, and the
 -- Starfall Beacon.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local T = assert(A.toon, "Run Toon first")
-local plan = assert(..., "Pass the plan: L(\"../map-v3/PlanData\")")
+local plan, O = ...
+assert(plan and O, "Pass the plan and the overlap helpers: L(\"../map-v3/PlanData\"), L(\"../map-v3/Overlap\")")
 local G = A.geometry
 local R = T.ramp
 local BAND_Y = { T0 = G.Tiers[1].y, T1 = G.Tiers[2].y, T2 = G.Tiers[3].y, CROWN = G.Crown.y, ARENA = 0 }
@@ -322,7 +325,16 @@ crownPieces()
 -- the districts
 local districts = A.group(A.map, "Districts")
 local cells: { [string]: Model } = {}
-local built, labelled, placeholders, wanted = 0, {}, {}, {}
+local built, labelled, placeholders, wanted, dropped = 0, {}, {}, {}, {}
+local solid = O.index(24)
+for _, p in A.map.TownSquare:GetDescendants() do
+	if p:IsA("BasePart") and p.Transparency < 1 and not p:IsA("SpawnLocation") then solid:add(p, "town") end
+end
+local function visibleParts(g: Instance)
+	local parts = {}
+	for _, p in g:GetDescendants() do if p:IsA("BasePart") and p.Transparency < 1 then table.insert(parts, p) end end
+	return parts
+end
 for index, row in plan.footprints do
 	if row.field or row.kind == "plateau" or row.tag == "crownrock" or SKIP[row.label] then continue end
 	local key = if row.tag ~= "" and row.tag ~= "axis" and row.tag ~= "avenue-end" then row.tag else row.label
@@ -342,6 +354,17 @@ for index, row in plan.footprints do
 	local builder = B[key] or B[row.kind] or fallback
 	if builder == fallback then table.insert(placeholders, key ~= "" and key or row.kind) end
 	builder(g, F, y, row)
+	local parts, clash = visibleParts(g), nil
+	for _, p in parts do
+		local hit = solid:hits(p, 0.15, g)[1]
+		if hit then clash = if hit.tag == "town" then "town" else hit.tag.Name; break end
+	end
+	if clash then
+		table.insert(dropped, g.Name .. " (into " .. clash .. ")")
+		g:Destroy()
+		continue
+	end
+	for _, p in parts do solid:add(p, g) end
 	built += 1
 	if row.label ~= "" then wanted[row.label] = (wanted[row.label] or 0) + 1 end
 	if built % 12 == 0 then task.wait() end
@@ -352,5 +375,5 @@ for _, g in districts:GetDescendants() do
 end
 local missing = {}
 for label, n in wanted do if labelled[label] ~= n then table.insert(missing, label) end end
-return { stage = "Districts", built = built, cells = #districts:GetChildren(), placeholders = placeholders, missingLabels = missing,
+return { stage = "Districts", built = built, dropped = dropped, cells = #districts:GetChildren(), placeholders = placeholders, missingLabels = missing,
 	parts = A.count(districts) + A.count(crown) }

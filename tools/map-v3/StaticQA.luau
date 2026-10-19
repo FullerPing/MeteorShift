@@ -4,6 +4,7 @@
 --   Crown's parapet and fence;
 --   a chute UsePoint or field Entrance that can't walk straight to its nearest avenue paving on the same tier: the ray
 --   at chest height must hit nothing solid and the ground under the line must stay level (no cliff edge in between).
+--   anything visible (not ground or road) in the 20 studs in front of a leaderboard's Screen, or inside the board.
 -- Budgets: total parts <= 20,000, lights <= 24, emitters <= 32.
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local map = A.map
@@ -145,6 +146,30 @@ for _, avenue in map.Roads:GetChildren() do
 				end
 			end
 		end
+	end
+end
+-- leaderboards stay readable: nothing visible in or in front of a board but the board itself
+do
+	local O = assert(loadstring(game:GetService("HttpService"):GetAsync("http://127.0.0.1:8123/map-v3/Overlap.luau", true)))()
+	local others = O.index(24)
+	for _, child in map:GetChildren() do
+		if child.Name ~= "Ground" and child.Name ~= "Roads" then
+			for _, p in child:GetDescendants() do
+				if p:IsA("BasePart") and p.Transparency < 1 then others:add(p, p:FindFirstAncestorOfClass("Model")) end
+			end
+		end
+	end
+	for _, board in map.TownSquare.Leaderboards:GetChildren() do
+		local screen = board:FindFirstChild("Screen", true) :: BasePart
+		local gui = screen:FindFirstChildOfClass("SurfaceGui")
+		local n = screen.CFrame:VectorToWorldSpace(Vector3.fromNormalId(if gui then gui.Face else Enum.NormalId.Front))
+		local probe = Instance.new("Part")
+		probe.Size = Vector3.new(screen.Size.X, screen.Size.Y, 20)
+		probe.CFrame = CFrame.lookAt(screen.Position + n * 10.5, screen.Position + n * 11)
+		for _, h in others:hits(probe, 0.1) do
+			if not h.part:IsDescendantOf(board) then fail(("leaderboard %s covered by %s"):format(board.Name, h.part:GetFullName())) end
+		end
+		probe:Destroy()
 	end
 end
 for _, chute in map.Chutes:GetChildren() do reach("chute " .. chute.Name, chute.UsePoint.Position) end

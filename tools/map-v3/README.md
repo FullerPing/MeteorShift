@@ -18,8 +18,9 @@ These are Edit-time commands outside the Rojo tree, on top of the map-v2 grammar
    L("../map-v3/Rampart", L)
    L("../map-v3/Core")
    L("../map-v3/Fields", plan)
-   L("../map-v3/Districts", plan)
-   L("../map-v3/Scenery", plan)
+   local O = L("../map-v3/Overlap")
+   L("../map-v3/Districts", plan, O)
+   L("../map-v3/Scenery", plan, O)
    L("Surroundings", { lift = 32 })
    L("Backdrop")
    return L("../map-v3/StaticQA")
@@ -36,9 +37,10 @@ These are Edit-time commands outside the Rojo tree, on top of the map-v2 grammar
 | `Rampart` | `Boundary` | map-v2 `Boundary` at ±540 with `noLawn`, lifted onto T2, kill plane left at `KillPlaneY`; a parapet on the Crown's north edge and an invisible `CrownFence` along the whole north wall (the Crown's meadow is level with the wall top). |
 | `Core` | `Crater`, `CraterApron`, `TownSquare` | Cloned from the v2 map: the crater whole, the apron inside r 124, the Refinery and the six spawns in place, the Commissary, Gear Hall, Hatchery and both leaderboards turned onto their v3 zones. TradingPost and PickaxeShop are left out (their services treat them as optional). |
 | `Fields` | `Debris`, `DebrisFields`, `Gates`, `Chutes` | One rock per plan rock (an archived rock of the field's look, tinted for the new fields), `FieldFloor` under all of a field's rocks (+2 studs; it is the locked-field eject box) and `Entrance`, the gate (FieldGate mesh, `Barrier` on locked fields, the `Rule` sign) and the ore chute with its `UsePoint`. Asserts every entrance is outside its eject box and 3+ studs from its barrier. |
-| `Districts` | `Districts.<cell>` (Atomic), `Crown` | Every non-field footprint by its tag or label (meshes from MapArt, Toon builders, a labelled box for anything unknown), and the Crown's contract: `Lift` (SkyLift mesh, `Prompt`) at the north avenue's end on T2, `LiftTop`, `DivePad` with the Dive cannon, the Starfall Beacon. |
-| `Scenery` | `Scenery.<band>_<wedge>` (Atomic) | The plan's 3,181 scatter rows thinned to about 55% (`KEEP`; lamps 50%, `LAMP_KEEP`; watch posts always kept: 1,727 placed, 289 of 565 lamps) on the ground found by a ray; the owner's MapArt meshes (Tree, Pine tree, Blosom tree, LowPolyBushes, the crystal set, Big Stone); all non-colliding, query-free, no lights. |
-| `StaticQA` | nothing (read-only) | Counts per group, total, MeshParts, lights, emitters; fails on colliding decoration, on an eject box reaching avenue paving, and on a chute or entrance with no walk to an avenue (straight, one side-step, or round the terrace; Crown points walk to `LiftTop`). Gate barriers are `CanQuery = false`, so the walks can't see them. |
+| `Districts` | `Districts.<cell>` (Atomic), `Crown` | Every non-field footprint by its tag or label (meshes from MapArt, Toon builders, a labelled box for anything unknown), dropping any that cuts into the town (the plan's two `board` rows are the real leaderboards) or an earlier district model, and the Crown's contract: `Lift` (SkyLift mesh, `Prompt`) at the north avenue's end on T2, `LiftTop`, `DivePad` with the Dive cannon, the Starfall Beacon. |
+| `Scenery` | `Scenery.<band>_<wedge>` (Atomic) | The plan's 3,181 scatter rows thinned to about 55% (`KEEP`; lamps 50%, `LAMP_KEEP`; watch posts always kept), then any piece on a road or cutting into anything solid or an earlier piece dropped (1,601 placed) on the ground found by a ray; the owner's MapArt meshes (Tree, Pine tree, Blosom tree, LowPolyBushes, the crystal set, Big Stone); all non-colliding, query-free, no lights. |
+| `Overlap` | nothing (a library) | `depth(p, q)` (oriented-box penetration) and a spatial index; Districts, Scenery and StaticQA use it. |
+| `StaticQA` | nothing (read-only) | Counts per group, total, MeshParts, lights, emitters; fails on colliding decoration, on anything visible in front of a leaderboard screen, on an eject box reaching avenue paving, and on a chute or entrance with no walk to an avenue (straight, one side-step, or round the terrace; Crown points walk to `LiftTop`). Gate barriers are `CanQuery = false`, so the walks can't see them. |
 
 The map-v2 `Surroundings` (pass `{ lift = 32 }`) and `Backdrop` scale with `BoundaryHalf`; at 270 they reproduce v2.
 
@@ -48,7 +50,7 @@ A slide's deck is a conveyor: an anchored part whose `AssemblyLinearVelocity` (4
 
 ## Verified (18–19 October 2026, Studio)
 
-- StaticQA: 0 failures; 16,254 parts after the swap (16,574 with the Workbench; 12,489 after the scenery was thinned on 19 October), 7 lights, 6 emitters, 16 walks. Specs 704/704; Lune DebrisService harness 16/16.
+- StaticQA: 0 failures; 16,254 parts after the swap (16,574 with the Workbench; 12,279 after the scenery was thinned and the overlaps cleared on 19 October), 7 lights, 6 emitters, 16 walks. Specs 704/704; Lune DebrisService harness 16/16.
 - Ray-cast every 6 studs over the whole map: no holes. Heights match the tiers except a sliver up to 5 studs wide at each T2 16-gon corner, where `tierAt`'s circle (T2 from r 372) is inside the polygon (its corner reaches r 377).
 - Play: walking up the T0→T1 and T1→T2 ramps on a straight and a diagonal avenue and a slide tower ramp without jumping; slides 7.9 s (45° and 135°) and 8.6 s (north) to the ring road, the Express and T1 walkable under them; spawn to the Rust Works entrance 4.8 s; ORE travel to an open field, refused for a locked one; a Rust rock broken; all 8 chutes take deposits (a far deposit gets the "move closer" notice); every level gate opening live at level 50 and Starfall after a real rebirth; the eject from Frost Yard and Halo Ledge onto their entrances; the avenue kerbs beside Rust and Frost are clear of the eject; a rebirth-0 player on the Crown is put back at the lift; the Dive from the real pad lands standing at r 110; three meteor impacts; console clean.
 - Not verified here (the MCP session had no rendering viewport, so screenshots timed out and no ProximityPrompt was ever shown): the look of the map, pressing the Sky Lift prompt (its server rule was tested in Task 7), a meteor shockwave throw (analytically it can't reach T1: a throw's apex is at most 7.7 studs, the cliff is 16), phone frame rate, and whether the slide conveyors keep their velocity after the place is saved and reopened.
