@@ -655,6 +655,17 @@ return function(t: any)
 		end
 	end)
 
+	t.test("desktop: the bottom cards share one bottom line and the side stacks share one margin", function()
+		for _, size in { Vector2.new(1920, 1080), Vector2.new(1366, 768), Vector2.new(2560, 1440) } do
+			local l = HudLayout.compute(size, false)
+			local resources, production = l.leftCards.Resources, l.leftCards.Production
+			t.near(production.y + production.h, resources.y + resources.h, 1e-6, tostring(size) .. " foundry and wallet bottoms")
+			t.near(l.backpack.y + l.backpack.h, resources.y + resources.h, 1e-6, tostring(size) .. " backpack and wallet bottoms")
+			local index = l.buttons.INDEX
+			t.near(size.X - (index.x + index.w), l.buttons.SHOP.x, 1e-6, tostring(size) .. " right stack mirrors the left column")
+		end
+	end)
+
 	t.test("the jump button matches Roblox's small and large placement", function()
 		local small = HudLayout.jumpRect(Vector2.new(844, 390))
 		t.eq(small.w, 70)

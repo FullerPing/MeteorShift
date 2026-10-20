@@ -36,12 +36,16 @@ function RefineryLayout.compute(width: number, height: number): Layout
 	local cardW = math.floor((innerW - gap * 2) / 3)
 	local cards, arrows = {}, {}
 	for index = 1, 3 do
-		local x = pad + (index - 1) * (cardW + gap)
+		-- the last card sits flush with the right edge (the rounding remainder goes into its gap), so it lines up with
+		-- the order card under it
+		local x = if index == 3 then pad + innerW - cardW else pad + (index - 1) * (cardW + gap)
 		table.insert(cards, rect(x, cardsY, cardW, cardH))
-		if index < 3 then
-			local size = math.min(26, gap - 2)
-			table.insert(arrows, rect(x + cardW + (gap - size) / 2, cardsY + cardH / 2 - size / 2, size, size))
-		end
+	end
+	for index = 1, 2 do
+		local left, right = cards[index], cards[index + 1]
+		local space = right.x - (left.x + left.w)
+		local size = math.min(26, space - 2)
+		table.insert(arrows, rect(left.x + left.w + (space - size) / 2, cardsY + cardH / 2 - size / 2, size, size))
 	end
 	local feedback = rect(pad, height - 7 - 8 - 22, innerW, 22)
 	local orderY = cardsY + cardH + (if wells then 12 else 10)

@@ -145,6 +145,38 @@ Three Pockets no longer beat one Bundle, and a Bundle still never buys a whole r
   - Daily shows failed claims (B20).
 - **Tutorial copy:** the "RUN!" step has a sub-line (D8).
 
+## Follow-up: Overclock, smoothness, alignment
+
+**Overclock was only 12–20% faster.** Overclock and Mini Overclock doubled the refinery but not the conveyor. The line runs at `min(conveyor, refinery)`, and the conveyor is barely faster than the refinery, so the boost had almost no effect.
+
+- `Lib/Refining` now applies the speed to the whole line, so it is a true ×2.
+- `tests/Refining.spec` used to pin the old behaviour and now pins the fix.
+
+**The Foundry didn't show it.** The Foundry card now reads "OVERCLOCK ×2 speed, +50% bar value · m:ss left" in gold, and its rate shows ⚡. The countdown stays current while the line is idle (`RefineryService`).
+
+**Smoothness.**
+
+- **Native menus** now slide up 28 px and fade their dimmer in when they open, instead of snapping on. Closing stays instant. This is in `NativeUI.animateOpen`, so every menu built through `NativeUI.get` gets it.
+  - Only the position is animated. A scale tween would re-pin every label's text size each frame through `FixedTextSize`, and that stepping text is a big part of why the UI felt janky.
+- **Chunky buttons** lift 1 px on hover and sink 3 px into their lip while held (`NativeUI.pressable`).
+- **HUD side tiles** lift 2 px on hover and dip 3 px while held (`ExactNavButton`).
+- All of this is off with Reduce Effects.
+
+**Alignment and balance.** I measured these in Play on a virtual 1920×1080 screen.
+
+- **Gear Shop and Pets** were bottom-heavy: about 20 px of margin at the top but 5 px at the bottom. Everything now sits 6 px higher, giving about 14 px top and 11 px bottom.
+  - The Shop's preview well is 187 px tall, to match the stats card beside it.
+  - The Pets hint is as tall as its action button, so both columns end on one line.
+- **Rebirth:**
+  - The side gaps were 10/2/6/8 px and are now 8/4/6/8.
+  - Both columns end at y=456.
+  - The wallet sits on the same line and right edge (698) as the Shop's and Pets' wallets.
+- **Refinery:** the right card ended 1 px short of the order card. The rounding remainder now goes into the gap.
+- **HUD (desktop):**
+  - The Production card sat 2 px below the wallet and backpack. Its `Bottom` margin is now 18, like theirs.
+  - The right tile stack used a margin that shrank with the tiles. It now mirrors the left column.
+  - Both are pinned in `tests/HudLayout.spec`.
+
 ## Not done (needs the owner, a device, or a bigger design pass)
 - **C17:** badges. All 11 badge ids are 0: create them in Creator Hub and paste the ids into `Config/Badges.luau`.
 - **Dashboard prices:** VIP (C5), and the T4→T5 tier-up price mismatch, pickaxe 49 vs backpack 39 (C23). These are Creator Dashboard values, and the specs pin the current ones.

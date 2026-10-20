@@ -53,17 +53,19 @@ function EquipmentShopLayout.compute(viewport: Vector2, inset: number, wide: boo
 		local R = EquipmentShopLayout.RIBBON
 		return {
 			panel = { x = (viewport.X - W) / 2, y = (viewport.Y - H) / 2 + R, w = W, h = H - R },
-			evolvePanel = { x = 492, y = 109, w = 245, h = 355 },
+			-- everything sits 6 px higher than the first mockup pass: the columns ended 5 px above the body's bottom edge
+			-- against a 20 px top margin, so the menu read bottom-heavy (now about 14 top / 11 bottom)
+			evolvePanel = { x = 492, y = 103, w = 245, h = 355 },
 			popout = true,
 			padding = 22,
 			headerTop = 0,
-			headerH = 52, -- the band the ribbon, the notice line and the wallet chip share
-			tabsY = 61,
+			headerH = 46, -- the band the ribbon, the notice line and the wallet chip share
+			tabsY = 55,
 			tabsH = 42,
-			carouselY = 113,
+			carouselY = 107,
 			carouselH = 357,
 			contentW = 440,
-			footerY = 20, -- notices: a line between the ribbon and the wallet chip
+			footerY = 14, -- notices: a line between the ribbon and the wallet chip
 			footerH = 31,
 			gap = 12,
 			narrow = false,
@@ -223,7 +225,7 @@ function EquipmentShopLayout.screen(width: number, height: number, narrow: boole
 		out.card = rect(0, 0, w, 258)
 		out.name = rect(0, 6, 300, 28)
 		out.tier, out.cap = rect(0, 38, 84, 22), rect(94, 38, 200, 22)
-		out.well = rect(0, 70, 186, 185)
+		out.well = rect(0, 70, 186, 187) -- ends with the info card beside it
 		out.levelPill = rect(42, 223, 102, 22)
 		out.info = rect(199, 70, w - 199, 187)
 		out.levelRow = rect(199, 70, w - 199, 40)

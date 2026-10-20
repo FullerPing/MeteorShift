@@ -28,8 +28,10 @@ function Refining.collectorCapacity(data: HomeData, capacityMult: number?): numb
 	return math.floor((Line.station("collector", data.line).Capacity :: number) * (capacityMult or 1))
 end
 
-function Refining.conveyorRate(data: HomeData): number
-	return Line.station("conveyor", data.line).Rate :: number
+-- Overclock (`speedMult`) speeds up the conveyor too: the conveyor is barely faster than the
+-- refinery, so overclocking the refinery alone made the line only 12-20% faster, not ×2
+function Refining.conveyorRate(data: HomeData, speedMult: number?): number
+	return (Line.station("conveyor", data.line).Rate :: number) * (speedMult or 1)
 end
 
 function Refining.refineryRate(data: HomeData, speedMult: number?): number
@@ -39,7 +41,7 @@ end
 -- Bars per second the line can make right now (ignoring stock and room). `lineMult` is the
 -- Efficient Line perk (Shared.Perks.lineMult) and scales the whole line.
 function Refining.lineRate(data: HomeData, speedMult: number?, lineMult: number?): number
-	return math.min(Refining.conveyorRate(data), Refining.refineryRate(data, speedMult)) * (lineMult or 1)
+	return math.min(Refining.conveyorRate(data, speedMult), Refining.refineryRate(data, speedMult)) * (lineMult or 1)
 end
 
 local function sum(t: { [string]: number }): number

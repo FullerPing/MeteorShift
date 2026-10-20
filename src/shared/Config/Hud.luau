@@ -69,7 +69,7 @@ Hud.LeftCards = {
 	Gap = 6,
 	Resources = { Width = 250, Height = 116, Bottom = 18 },
 	Equipment = { Width = 88, Height = 88 },
-	Production = { Width = 218, Height = 84, ExpandedHeight = 322, Bottom = 16 },
+	Production = { Width = 218, Height = 84, ExpandedHeight = 322, Bottom = 18 }, -- 18 like Resources and the backpack: one bottom line
 }
 Hud.Backpack = { Width = 230, Height = 86, Right = 24, Bottom = 18 }
 Hud.Training = { Width = 332, Height = 125, Gap = 14 }
@@ -90,7 +90,7 @@ Hud.Desktop = {
 		Resources = { Width = 292, Height = 116, Bottom = 18 },
 		Equipment = { Width = 88, Height = 88 },
 		-- foundry and backpack are drawn at 0.88 of their 300 x 116 and 292 x 116 artwork
-		Production = { Width = 264, Height = 102, ExpandedHeight = 313, Bottom = 16 },
+		Production = { Width = 264, Height = 102, ExpandedHeight = 313, Bottom = 18 }, -- 18 like Resources and the backpack: one bottom line
 	},
 	Backpack = { Width = 257, Height = 102, Right = 24, Bottom = 18 },
 }

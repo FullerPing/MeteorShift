@@ -163,7 +163,7 @@ function Controller:KnitStart()
 			-- the mockup: the ribbon pokes out of the top left, Close sits on the corner, the chip under it
 			ribbon.Position, ribbon.Size, ribbon.Rotation = UDim2.fromOffset(10, -24), UDim2.fromOffset(256, 66), -1.5
 			p.Close.Position, p.Close.Size = UDim2.new(1, 8, 0, -14), UDim2.fromOffset(48, 50)
-			p.Wallet.Position, p.Wallet.Size = UDim2.fromOffset(556, 20), UDim2.fromOffset(141, 31)
+			p.Wallet.Position, p.Wallet.Size = UDim2.fromOffset(557, g.footerY), UDim2.fromOffset(141, 31)
 		else
 			-- a phone: the ribbon inside the top band, the wallet beside Close, or under the ribbon on a portrait screen
 			local titleRow = if g.narrow then 48 else g.headerH

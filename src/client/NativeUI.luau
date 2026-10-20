@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local GuiService = game:GetService("GuiService")
 local UserInputService = game:GetService("UserInputService")
 local StarterGui = game:GetService("StarterGui")
+local TweenService = game:GetService("TweenService")
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
 local HudEditConfig = require(ReplicatedStorage.Shared.Config.HudEdit)
@@ -90,14 +91,94 @@ function NativeUI.get(name: string, prepare: ((ScreenGui) -> ())?): ScreenGui
 	assert(gui and gui:IsA("ScreenGui"), "Missing StarterGui prefab: " .. name .. ". Run tools/build-native-ui.luau in Edit mode.")
 	if prepare then prepare(gui :: ScreenGui) end
 	MenuSkin.apply(gui :: ScreenGui)
-	for _, node in gui:GetDescendants() do
+	local function wire(node: Instance)
 		if node:IsA("GuiButton") then
 			-- gamepad selection must never land on the full-screen backdrop (A there would close the menu)
 			if node.Name == "Dimmer" then node.Selectable = false end
 			node.Activated:Connect(function() if node.Active then Sfx.play("Click") end end)
+			NativeUI.pressable(node)
 		end
 	end
+	for _, node in gui:GetDescendants() do wire(node) end
+	-- rows cloned from Templates later get the click and the press too
+	gui.DescendantAdded:Connect(function(node)
+		local templates = gui:FindFirstChild("Templates")
+		if not (templates and node:IsDescendantOf(templates)) then wire(node) end
+	end)
+	NativeUI.animateOpen(gui :: ScreenGui)
 	return gui :: ScreenGui
+end
+
+-- Motion (off with Reduce Effects). Only positions move: a UIScale or size tween would re-pin every label's text size
+-- each frame (FixedTextSize) and make the text step.
+local PRESS = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local SLIDE = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+local FADE = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local SLIDE_FROM = 28 -- px below its place a menu starts its slide
+local function calm(): boolean return Players.LocalPlayer:GetAttribute("ReduceEffects") == true end
+
+-- A chunky button (MenuTheme.button: a Face over a navy lip) lifts a pixel under the pointer and sinks into its lip while
+-- held, so every press is felt. Buttons that can't be pressed (Active false) stay still.
+function NativeUI.pressable(button: GuiButton)
+	local face = button:FindFirstChild("Face")
+	if not face or not face:IsA("GuiObject") or button:GetAttribute("Pressable") then return end
+	button:SetAttribute("Pressable", true)
+	local rest = face.Position
+	local hovered, held = false, false
+	local function go()
+		local dy = if not button.Active then 0 elseif held then 3 elseif hovered then -1 else 0
+		local target = rest + UDim2.fromOffset(0, dy)
+		if calm() then face.Position = target else TweenService:Create(face, PRESS, { Position = target }):Play() end
+	end
+	button.MouseEnter:Connect(function() hovered = true; go() end)
+	button.MouseLeave:Connect(function() hovered, held = false, false; go() end)
+	button.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+			or input.KeyCode == Enum.KeyCode.ButtonA then held = true; go() end
+	end)
+	button.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+			or input.KeyCode == Enum.KeyCode.ButtonA then held = false; go() end
+	end)
+	button:GetPropertyChangedSignal("Active"):Connect(go)
+end
+
+-- When a menu shows (its ScreenGui enabled with the Panel visible, either way round), the Panel slides up into place and
+-- the Dimmer fades in instead of both snapping on. Closing stays instant, so a close never feels slow.
+local slides: { [GuiObject]: Tween } = setmetatable({}, { __mode = "k" }) :: any
+local slideTargets: { [GuiObject]: UDim2 } = setmetatable({}, { __mode = "k" }) :: any
+function NativeUI.animateOpen(gui: ScreenGui)
+	local panel = gui:FindFirstChild("Panel") or gui:FindFirstChild("SettingsPanel")
+	if not panel or not panel:IsA("GuiObject") then return end
+	local dimmer = gui:FindFirstChild("Dimmer") or gui:FindFirstChild("SettingsBackdrop")
+	local shownBefore = gui.Enabled and panel.Visible
+	local function changed()
+		local shownNow = gui.Enabled and panel.Visible
+		if shownNow == shownBefore then return end
+		shownBefore = shownNow
+		if not shownNow or calm() then return end
+		-- read the place after this frame's layout: the controller may position the panel right after showing it
+		task.defer(function()
+			if not (gui.Enabled and panel.Visible) then return end
+			-- reopened mid-slide: aim for the place the last slide was heading to, not where it had got to
+			local running = slides[panel]
+			local target = if running and running.PlaybackState == Enum.PlaybackState.Playing then slideTargets[panel] or panel.Position else panel.Position
+			if running then running:Cancel() end
+			slideTargets[panel] = target
+			panel.Position = target + UDim2.fromOffset(0, SLIDE_FROM)
+			local tween = TweenService:Create(panel, SLIDE, { Position = target })
+			slides[panel] = tween
+			tween:Play()
+			if dimmer and dimmer:IsA("GuiObject") then
+				local alpha = dimmer:GetAttribute("RestTransparency")
+				if type(alpha) ~= "number" then alpha = dimmer.BackgroundTransparency; dimmer:SetAttribute("RestTransparency", alpha) end
+				dimmer.BackgroundTransparency = 1
+				TweenService:Create(dimmer, FADE, { BackgroundTransparency = alpha }):Play()
+			end
+		end)
+	end
+	gui:GetPropertyChangedSignal("Enabled"):Connect(changed)
+	panel:GetPropertyChangedSignal("Visible"):Connect(changed)
 end
 -- A menu authored in StarterGui is used as is; a place that has none yet gets one built from its NativeMenus module.
 function NativeUI.getOrBuild(name: string, build: () -> ScreenGui, prepare: ((ScreenGui) -> ())?): ScreenGui
@@ -162,6 +243,8 @@ function NativeUI.menuView(hud: HudLayout.Layout): MenuFit.View
 end
 function NativeUI.place(panel: GuiObject, rect: MenuFit.Rect, view: MenuFit.View)
 	local centre = MenuFit.centre(view, rect)
+	local slide = slides[panel]
+	if slide then slide:Cancel(); slides[panel] = nil end -- a resize mid-slide lands on the new place
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromOffset(centre.X, centre.Y)
 	panel.Size = UDim2.fromOffset(rect.w, rect.h)

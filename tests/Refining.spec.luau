@@ -25,13 +25,13 @@ return function(t: any)
 		t.eq(blocked, nil)
 	end)
 
-	t.test("a speed multiplier (Refinery Overclock) scales the refinery, still capped by the conveyor", function()
+	t.test("a speed multiplier (Refinery Overclock) doubles the whole line, conveyor included", function()
 		local data = freshData({ iron = 1000 }, {})
 		local _, n = Refining.run(data, 40, 2)
-		-- refinery 0.25 * 2 = 0.5/s, but the conveyor carries only 0.3/s: 0.3 * 40 = 12
-		t.eq(n, 12)
+		-- min(conveyor 0.3, refinery 0.25) * 2 = 0.5/s * 40 = 20 (was 12: only the refinery sped up)
+		t.eq(n, 20)
 		t.eq(Refining.refineryRate(data, 2), Refining.refineryRate(data) * 2)
-		t.eq(Refining.lineRate(data, 2), Refining.conveyorRate(data))
+		t.eq(Refining.lineRate(data, 2), Refining.lineRate(data) * 2)
 	end)
 
 	t.test("limited by hopper stock", function()

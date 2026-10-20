@@ -39,12 +39,14 @@ local function wideLayout(viewport: Vector2): Layout
 	local W, H, R = EquipmentShopLayout.WIDE_W, EquipmentShopLayout.WIDE_H, EquipmentShopLayout.RIBBON
 	return {
 		panel = { x = (viewport.X - W) / 2, y = (viewport.Y - H) / 2 + R, w = W, h = H - R },
-		narrow = false, compact = false, padding = 22, gap = 8, headerH = 52, tabsY = 61, tabsH = 42,
-		contentY = 113, contentH = 307, footerY = 420, footerH = 36, summaryH = 82,
-		list = { x = 22, y = 203, w = 440, h = 190 },
-		detail = { x = 493, y = 113, w = 245, h = 296 },
-		action = { x = 493, y = 420, w = 245, h = 42 },
-		more = { x = 22, y = 396, w = 440, h = 20 },
+		-- 6 px higher than the first pass, with the Gear Shop (EquipmentShopLayout); the hint is as tall as the action
+		-- button beside it so both columns end on one line
+		narrow = false, compact = false, padding = 22, gap = 8, headerH = 46, tabsY = 55, tabsH = 42,
+		contentY = 107, contentH = 307, footerY = 414, footerH = 42, summaryH = 82,
+		list = { x = 22, y = 197, w = 440, h = 190 },
+		detail = { x = 493, y = 107, w = 245, h = 296 },
+		action = { x = 493, y = 414, w = 245, h = 42 },
+		more = { x = 22, y = 390, w = 440, h = 20 },
 		cellW = 136, cellH = 168, columns = 3, wide = true,
 	}
 end

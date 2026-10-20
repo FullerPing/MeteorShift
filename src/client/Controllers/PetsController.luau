@@ -193,7 +193,7 @@ function Controller:KnitStart()
 		if g.wide then
 			ribbon.Position, ribbon.Size, ribbon.Rotation = UDim2.fromOffset(10, -24), UDim2.fromOffset(256, 66), -1.5
 			p.Close.Position, p.Close.Size = UDim2.new(1, 8, 0, -14), UDim2.fromOffset(48, 50)
-			box(p.Wallet, 533, 20, 165, 31)
+			box(p.Wallet, 533, 14, 165, 31) -- level with the Gear Shop's wallet (EquipmentShopLayout footerY)
 		else
 			local closeH = if g.compact then 40 else 44
 			ribbon.Rotation = 0

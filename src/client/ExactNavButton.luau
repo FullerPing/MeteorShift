@@ -146,6 +146,24 @@ function ExactNavButton.bind(button: TextButton)
 	end
 	for _, name in MENU_ATTRIBUTES do player:GetAttributeChangedSignal(name):Connect(covered) end
 	covered()
+	-- the tile lifts under the pointer and dips while pressed (position only, so its text never re-sizes; off with Reduce Effects)
+	if tile and not button:GetAttribute("Pressable") then
+		button:SetAttribute("Pressable", true)
+		local TweenService = game:GetService("TweenService")
+		local feel = TweenInfo.new(0.09, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+		local hovered, held = false, false
+		local function go()
+			local target = UDim2.fromOffset(0, if held then 3 elseif hovered then -2 else 0)
+			if player:GetAttribute("ReduceEffects") == true then tile.Position = target else TweenService:Create(tile, feel, { Position = target }):Play() end
+		end
+		local function isPress(input: InputObject): boolean
+			return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch or input.KeyCode == Enum.KeyCode.ButtonA
+		end
+		button.MouseEnter:Connect(function() hovered = true; go() end)
+		button.MouseLeave:Connect(function() hovered, held = false, false; go() end)
+		button.InputBegan:Connect(function(input) if isPress(input) then held = true; go() end end)
+		button.InputEnded:Connect(function(input) if isPress(input) then held = false; go() end end)
+	end
 	local tooltip = button:WaitForChild("Tooltip") :: TextLabel
 	if not tooltip:FindFirstChild("TextOutline") then
 		local Cartoon = require(script.Parent.Cartoon)

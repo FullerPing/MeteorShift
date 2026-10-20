@@ -368,7 +368,7 @@ function RefineryService:KnitStart()
 						end
 						if made > 0 or blocked ~= before or overclockEnded or oreBoostEnded or vaultChanged then
 							self:Refresh(player)
-						elseif data.progress ~= progressBefore or oreBoostBefore > 0 then
+						elseif data.progress ~= progressBefore or oreBoostBefore > 0 or speedMult > 1 then
 							PlayerStateService:Replicate(player)
 						end
 					end

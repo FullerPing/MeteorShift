@@ -245,7 +245,7 @@ function PlayerStateService:_sendState(player: Player)
 	local line = {
 		level = data.line, -- one level for the whole line (Shared.Line); each station repeats it
 		hopper = { level = data.line, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data, vaultMult) },
-		conveyor = { level = data.line, rate = Refining.conveyorRate(data) * lineMult },
+		conveyor = { level = data.line, rate = Refining.conveyorRate(data, speedMult) * lineMult },
 		refinery = {
 			level = data.line,
 			rate = Refining.refineryRate(data, speedMult) * lineMult,

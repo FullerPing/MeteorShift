@@ -230,12 +230,18 @@ function Controller:KnitStart()
 		middle.Quantity.Text = if not r then "Loading..." elseif r.blocked == "collector" then "Storage full"
 			elseif not r.activeOre then "Needs ore" else "Refining " .. ore
 		middle.Quantity.TextColor3 = if r and r.blocked == "collector" then STATUS_RED elseif r and r.activeOre then Palette.NAVY else STATUS_ICE
-		middle.Sub.Text = if line and r and r.activeOre and line.rate > 0 then Format.rate(line.rate) .. " bars/s" else ""
+		-- a running Overclock (Mini Overclock, Starter Pack) says so here, with its time left
+		local overclock = if state then state.overclockLeft or 0 else 0
+		local boosted = overclock > 0
+		middle.Sub.Text = if line and r and r.activeOre and line.rate > 0 then (if boosted then "⚡" else "") .. Format.rate(line.rate) .. " bars/s" else ""
 		middle.Sub.TextColor3 = STATUS_LIME
 		middle.Meter.Fill.Size = UDim2.fromScale(if r and r.activeOre then r.progress or 0 else 0, 1)
 		middle.Note.Text = if r and r.blocked == "collector" then "Claim bars to start it again."
+			elseif boosted then string.format("OVERCLOCK ×%s speed, +%d%% bar value · %s left",
+				Format.number(Config.Monetization.Overclock.SpeedMult), math.floor(Config.Monetization.Overclock.BarBonus * 100 + 0.5), Format.time(overclock))
 			elseif r and not r.activeOre then "Deposit ore to start the line."
 			else "Works while you mine. Faster with Upgrades."
+		middle.Note.TextColor3 = if boosted and not (r and r.blocked == "collector") then Palette.GOLD_TEXT else Palette.SECOND
 		setPulse("foundry", middle.Well.Icon, refining and l.wells and r ~= nil and r.activeOre ~= nil and r.blocked == nil, 1.1)
 
 		-- UPGRADES: one level for the whole line; every row shows its station now and after the chosen amount

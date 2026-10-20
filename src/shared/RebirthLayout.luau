@@ -42,14 +42,15 @@ function RebirthLayout.compute(viewport: Vector2, inset: number, wide: boolean?)
 			panel = rect((viewport.X - W) / 2, (viewport.Y - H) / 2 + R, W, h),
 			wide = true,
 			padding = pad,
-			content = rect(pad, 58, sideX - pad - 16, h - RebirthLayout.LIP - 58 - 14),
+			-- both columns end on PERKS's bottom edge; the side gaps run 8 / 4 (the note hugs its button) / 6 / 8
+			content = rect(pad, 58, sideX - pad - 16, h - RebirthLayout.LIP - 58 - 12),
 			requirement = rect(sideX, 58, side, 92),
-			confirm = rect(sideX, 160, side, 64),
+			confirm = rect(sideX, 158, side, 64),
 			footer = rect(sideX, 226, side, 40),
 			keepCard = rect(sideX, 272, side, 128),
 			keep = rect(sideX + 10, 344, side - 20, 48),
 			perks = rect(sideX, 408, side, 48),
-			wallet = rect(W - 56 - 150, 12, 150, 32),
+			wallet = rect(W - 62 - 150, 14, 150, 31), -- the same line and right edge (698) as the Gear Shop's and Pets' wallets
 			compareH = 150,
 		}
 	end

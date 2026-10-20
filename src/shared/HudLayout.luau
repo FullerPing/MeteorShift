@@ -497,7 +497,8 @@ function HudLayout.compute(
 			buttonY = buttons[name].y + columnHeight + Hud.Column.Gap * buttonScale
 		end
 		local indexTop = if stackDaily then stackIndexY(buttonScale, stackDaily, stackCodes) else nil
-		buttons.INDEX = sized(width - (Hud.EdgeMargin + Hud.Column.Width) * buttonScale,
+		-- the right stack mirrors the left column's margin (Column.Left × scale), not a margin shrunk with the tiles
+		buttons.INDEX = sized(width - Hud.Column.Left * scale - Hud.Column.Width * buttonScale,
 			indexTop or math.max(height * 0.48 - Hud.Column.Height * buttonScale / 2, eventPanel.y + eventPanel.h + 8),
 			Hud.Column.Width, Hud.Column.Height, buttonScale)
 		local index = buttons.INDEX
