@@ -47,7 +47,8 @@ local function buildView(parent: Instance)
 	}, parent)
 	-- The sky gradient lives on its own frame: a UIGradient on the CanvasGroup would tint every child.
 	local sky = frame("Sky", UDim2.fromScale(1, 1), UDim2.new(), white, root)
-	gradient(sky, Color3.fromRGB(62, 155, 255), Color3.fromRGB(191, 235, 255))
+	-- white until the config arrives (the plain screen is the default look, so it never flashes blue first)
+	local skyShade = gradient(sky, white, white)
 	local fallback = frame("FallbackIsland", UDim2.fromScale(1, 1), UDim2.new(), white, root)
 	fallback.BackgroundTransparency = 1
 	local sea = frame("Lagoon", UDim2.fromScale(1, .43), UDim2.fromScale(0, .57), Color3.fromRGB(39, 196, 211), fallback)
@@ -106,14 +107,14 @@ local function buildView(parent: Instance)
 	local logo = frame("Logo", UDim2.fromOffset(720, 190), UDim2.fromScale(.5, .24), white, root)
 	logo.AnchorPoint = Vector2.new(.5, .5)
 	logo.BackgroundTransparency = 1
-	local logoText = label("Title", "CRATERWORKS", UDim2.fromScale(1, .65), UDim2.new(), logo)
+	local logoText = label("Title", "METEOR MINING", UDim2.fromScale(1, .65), UDim2.new(), logo)
 	logoText.TextScaled = true
 	logoText.TextColor3 = gold
 	local ribbon = frame("Ribbon", UDim2.fromScale(.65, .27), UDim2.fromScale(.175, .66), Color3.fromRGB(30, 104, 232), logo)
 	rounded(ribbon, 9)
 	outline(ribbon, 3)
 	gradient(ribbon, Color3.fromRGB(86, 186, 255), Color3.fromRGB(30, 104, 232))
-	local subtitle = label("Subtitle", "METEOR MINING", UDim2.fromScale(.96, 1), UDim2.fromScale(.02, 0), ribbon)
+	local subtitle = label("Subtitle", "SIMULATOR", UDim2.fromScale(.96, 1), UDim2.fromScale(.02, 0), ribbon)
 	subtitle.TextScaled = true
 	local wordmark = picture("Wordmark", logo)
 	local logoShine = frame("Shine", UDim2.fromScale(.14, 1), UDim2.fromScale(-.2, 0), white, logo)
@@ -239,7 +240,9 @@ local function buildView(parent: Instance)
 	local HERO_SECONDS = 1.6 -- each meteor type stays this long
 	function view:setAssets(config: any, icons: any)
 		settings = config
-		backdrop.Image = config.Background or ""
+		-- Plain: no picture, the sky turns white
+		backdrop.Image = if config.Plain then "" else config.Background or ""
+		if not config.Plain then skyShade.Color = ColorSequence.new(Color3.fromRGB(62, 155, 255), Color3.fromRGB(191, 235, 255)) end
 		wordmark.Image = config.Wordmark or ""
 		trailSprite.Image = config.Trail or ""
 		meteorSprite.Image = icons.meteor or ""
@@ -265,14 +268,27 @@ local function buildView(parent: Instance)
 		local panelHeight = if compact then 130 else 150
 		panel.Size = UDim2.fromOffset(panelWidth, panelHeight)
 		panel.Position = UDim2.fromOffset(size.X * .5, math.min(size.Y * .86, size.Y - panelHeight * .5 - 14))
+		-- before the config arrives the screen is plain too (white, no island), so the first frames match
+		local plain = settings == nil or settings.Plain == true
 		local logoWidth = math.min(1100, size.X - 24, math.max(360, size.X * (if compact then .7 else .38)))
 		local impactAge = elapsed % 4.1 - 2.2
-		local landing = not (settings and settings.Showpiece) -- (a showpiece background has no meteor landing to shake the logo)
+		local landing = not (settings and settings.Showpiece) and not plain -- (no meteor landing to shake the logo)
 		local shake = if landing and not reduced and impactAge >= 0 and impactAge < .25 then math.sin(impactAge * 100) * 6 * (1 - impactAge / .25) else 0
-		logo.Size = UDim2.fromOffset(logoWidth, logoWidth * .27)
-		local wide = (settings and settings.LogoWide) or Vector2.new(.5, .24)
-		local logoY = math.max(logoWidth * .135 + 40, size.Y * (if compact then .2 else wide.Y))
-		logo.Position = UDim2.new(if compact then .5 else wide.X, shake, 0, logoY + (if reduced then 0 else math.sin(elapsed * math.pi / 1.2) * 6))
+		local bob = if reduced then 0 else math.sin(elapsed * math.pi / 1.2) * 6
+		local panelTopEdge = panel.Position.Y.Offset - panelHeight * .5
+		if plain and loaded(wordmark) then
+			-- the logo picture alone on white: as big as fits between the top and the progress card, centred in that space
+			local aspect = settings.WordmarkAspect or .627
+			local room = panelTopEdge - 48
+			local w = math.min(size.X * (if compact then .86 else .56), room / aspect, 1100)
+			logo.Size = UDim2.fromOffset(w, w * aspect)
+			logo.Position = UDim2.new(.5, 0, 0, 24 + room * .5 + bob)
+		else
+			logo.Size = UDim2.fromOffset(logoWidth, logoWidth * .27)
+			local wide = (settings and settings.LogoWide) or Vector2.new(.5, .24)
+			local logoY = math.max(logoWidth * .135 + 40, size.Y * (if compact then .2 else wide.Y))
+			logo.Position = UDim2.new(if compact then .5 else wide.X, shake, 0, logoY + bob)
+		end
 		status.Text = statusText
 		percent.Text = tostring(math.floor(progress * 100 + .00001)) .. "%"
 		fill.Size = UDim2.fromScale(progress, 1)
@@ -298,11 +314,12 @@ local function buildView(parent: Instance)
 		pickFallback.Position = pickaxe.Position
 		pickFallback.Rotation = pickaxe.Rotation
 		pickFallback.Visible = not loaded(pickaxe)
-		fallback.Visible = not loaded(backdrop)
+		fallback.Visible = not plain and not loaded(backdrop)
 		-- A background with the logo painted in (LogoBaked) replaces the live logo and the drifting clouds, which would cover it.
 		local baked = settings ~= nil and settings.LogoBaked == true and loaded(backdrop)
 		-- A showpiece background has its own art in the middle: nothing crosses or covers it but the live logo
-		local showpiece = settings ~= nil and settings.Showpiece == true and loaded(backdrop)
+		-- (the plain white screen counts as one: nothing but the logo and the progress card)
+		local showpiece = plain or (settings ~= nil and settings.Showpiece == true and loaded(backdrop))
 		logo.Visible = not baked
 		-- Crop centres the picture, so a screen wider than the art (phones, ultrawide) cuts the painted logo off the top.
 		-- A baked picture is scaled to cover the screen and pinned to the top instead, so only the bottom is trimmed.
@@ -585,7 +602,8 @@ local ok, startupError = pcall(function()
 			end
 			-- What the first screen shows: the loading art, then the HUD icons. The screen waits for these
 			-- (up to AssetTimeout), all requested at once in small parallel batches, not one by one.
-			for _, id in { config.Background, config.Wordmark, config.Cloud, config.Trail } do addId(id) end
+			-- (the plain white screen shows only the logo, so it doesn't wait for the other art)
+			for _, id in if config.Plain then { config.Wordmark } else { config.Background, config.Wordmark, config.Cloud, config.Trail } do addId(id) end
 			for _, id in config.Preload do addId(id) end
 			for _, id in icons do addId(id) end
 			local assetStarted, done = os.clock(), 0

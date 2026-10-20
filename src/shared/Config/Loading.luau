@@ -7,8 +7,14 @@ return table.freeze({
 	Weights = { engine = .15, assets = .45, state = .25, hud = .15 },
 	-- Owner uploads assets/marketing/v2/loading/*.png and supplies Image IDs.
 	-- Empty or unavailable images use the built-in sky, title and shape art.
-	Background = "rbxassetid://100691423203440", -- craterworks-background-space.png (1376x768)
-	Wordmark = "rbxassetid://91648609810870",
+	-- Plain: a full white screen with the Meteor Mining Simulator logo (owner, 2026-10-20). The background picture, the
+	-- clouds and the meteor animation stay off; the logo sits big and centred above the progress card. Set false to bring
+	-- the space background below back.
+	Plain = true,
+	Background = "rbxassetid://100691423203440", -- craterworks-background-space.png (1376x768), unused while Plain
+	-- assets/loading/logo-meteor-mining-simulator.png (1024x643, transparent); WordmarkAspect is its height / width
+	Wordmark = "rbxassetid://114567546796479",
+	WordmarkAspect = 643 / 1024,
 	Cloud = "rbxassetid://101223363381824",
 	Trail = "rbxassetid://140237715248790",
 	-- The space background carries its own glowing meteor in the middle (Showpiece): the live logo sits above it and the
