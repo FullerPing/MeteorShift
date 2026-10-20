@@ -1,31 +1,20 @@
 --!strict
 return table.freeze({
-	MinShow = 1.5, -- long enough to read the logo, short enough not to feel like a wait
-	MaxShow = 20,
+	-- A full white screen with the Meteor Mining Simulator logo over the progress card (owner, 2026-10-20)
+	MinShow = 4, -- at least this long, so the logo is seen and the bar fills at a readable pace
+	MaxShow = 35, -- the hard cap: a slow device still gets in (SKIP is there from 2 s)
 	TipSeconds = 3.5,
-	AssetTimeout = 5, -- the loading art and HUD icons only; meshes keep loading after the screen closes
-	Weights = { engine = .15, assets = .45, state = .25, hud = .15 },
-	-- Owner uploads assets/marketing/v2/loading/*.png and supplies Image IDs.
-	-- Empty or unavailable images use the built-in sky, title and shape art.
-	-- Plain: a full white screen with the Meteor Mining Simulator logo (owner, 2026-10-20). The background picture, the
-	-- clouds and the meteor animation stay off; the logo sits big and centred above the progress card. Set false to bring
-	-- the space background below back.
-	Plain = true,
-	Background = "rbxassetid://100691423203440", -- craterworks-background-space.png (1376x768), unused while Plain
+	-- The screen waits up to this long for the logo, the HUD icons and the menus' meshes and sounds (PreloadLimit of
+	-- them: pets, art, sounds)
+	AssetTimeout = 12,
+	PreloadLimit = 1500,
+	-- ...and up to this long for the world: the character, the map streamed in around it, the client's code started
+	-- and the downloads that map queued finished (the map streams, so without this it popped in after the screen)
+	WorldTimeout = 25,
+	Weights = { engine = .1, assets = .25, world = .35, state = .2, hud = .1 },
 	-- assets/loading/logo-meteor-mining-simulator.png (1024x643, transparent); WordmarkAspect is its height / width
 	Wordmark = "rbxassetid://114567546796479",
 	WordmarkAspect = 643 / 1024,
-	Cloud = "rbxassetid://101223363381824",
-	Trail = "rbxassetid://140237715248790",
-	-- The space background carries its own glowing meteor in the middle (Showpiece): the live logo sits above it and the
-	-- clouds, the flying meteor and the meteor-type strip stay off so the picture is the show.
-	-- The older sky background (rbxassetid://132108322743684, craterworks-background-v5-sky.png, 1672x941) had the logo
-	-- painted in: set LogoBaked = true for that one and LogoWide = Vector2.new(.21, .15). For a background with a crater,
-	-- leave both off and set Crater (where the meteor lands, as a fraction of the image) and LogoWide (logo position).
-	BackgroundSize = Vector2.new(1376, 768),
-	LogoBaked = false,
-	Showpiece = true,
-	LogoWide = Vector2.new(.5, .16),
 	Preload = {},
 	StatusThresholds = {
 		{ Percent = 0, Text = "Waking up the crater..." },

@@ -16,69 +16,49 @@ The art side of the screen is briefed in [docs/art-pipeline/store-art-plan.md](.
 
 ## What you see on a normal join today
 
-With the current config (`Showpiece = true`, `LogoBaked = false` — `Config/Loading.luau:20-21`) the owner's space background is the show (`:14-15` explains the intent): the picture fills the screen, the **live** logo floats above it at `LogoWide` `.5, .16` (`:22`; placed `LoadingScreen.client.luau:273-275`), and the animated clouds, the crossing meteor, its trail, the impact ring and the hero strip all stay switched off so nothing covers the art (`:323`, `:384-389`). Underneath sit the progress panel (white card on a navy lip, `:158-221`), the rotating tip on its gold chip (`:208-221`) and, after 2 s, a gold SKIP in the corner (`:226`, `:294`). A pickaxe icon rides the fill edge of the bar and swings (`:296-297`, fallback glyph `:204-207`). The status line steps through the thresholds "Waking up the crater..." → "Polishing the pickaxes..." → "Counting your ore..." → "Firing up the foundry..." → "Ready!" (`Config/Loading.luau:24-30`; consumed `:525`, final "Ready!" painted once at finish `:534`).
+A full white screen (owner, 2026-10-20) with the Meteor Mining Simulator logo (`Config.Loading.Wordmark`, source `assets/loading/logo-meteor-mining-simulator.png`) as big as fits between the top and the progress card, centred in that space with a gentle bob and a shine sweep every 5 s; its shape comes from `WordmarkAspect`. Underneath: the progress card (white body on a navy lip), the rotating tip on its gold chip and, after 2 s, a gold SKIP in the corner. A pickaxe icon (`Config.HudIcons.equipment`) rides the fill edge and swings. The status line steps through `Config.Loading.StatusThresholds` ("Waking up the crater..." → ... → "Ready!"). There is no background art and no animated scene: the old space/sky backgrounds, clouds, meteor flight and the block-built fallback island were removed (they live in git history before this change).
 
 ## How progress is computed
 
-Four weighted stages sum to the bar (`Config/Loading.luau:7`: engine .15, assets .45, state .25, hud .15):
+Five weighted stages sum to the bar (`Config.Loading.Weights`: engine .1, assets .25, world .35, state .2, hud .1):
 
-| Stage | Fires when (all cites `src/loading/LoadingScreen.client.luau`) |
+| Stage | Fires when (`src/loading/LoadingScreen.client.luau`) |
 |---|---|
-| `engine` | `game:IsLoaded()` flips true, checked per frame (`:507-508`) |
-| `assets` | each parallel PreloadAsync batch of the first-screen art completes (`:591-601`, fraction `:599`); forced complete at the AssetTimeout or when the list is empty (`:602`, `:604`) |
-| `state` | the local player's `HudReady` attribute flips true (`:509-511`) |
-| `hud` | one further render frame after that, confirming the HUD had a chance to draw (`:512-513`, comment `:511`) |
+| `engine` | `game:IsLoaded()` flips true, checked per frame |
+| `assets` | each parallel PreloadAsync batch completes (see Preload strategy); forced complete at `AssetTimeout` |
+| `world` | in four steps: the character exists (.25); the streamed map around it has stopped growing (part count within 160 studs unchanged for three 0.3 s checks) (.5); the client's Knit start resolved, signalled by the player attribute `ClientStarted` set in `src/client/Main.client.luau` (.75); `ContentProvider.RequestQueueSize` quiet (≤ 2) for three 0.2 s checks, i.e. the textures and meshes the map queued have downloaded (1). Forced complete at `WorldTimeout` |
+| `state` | the local player's `HudReady` attribute flips true (`HUDController`, first replicated state snapshot) |
+| `hud` | one further render frame after that, confirming the HUD had a chance to draw |
 
-`LoadingProgress` clamps each stage, keeps a high-water mark and snaps a near-one total to exactly 1 (`LoadingProgress.luau:9-18`), the display eases toward the target without ever regressing (`:22-27`; monotonic target `:517-518`), and until the logic module even arrives the bar self-crawls to 12% while the status shows the fallback line (`:516`, `:525`, fallback tip `:446`).
-
-**What gates the reveal** is one boolean: `shouldFinish(elapsed, total, MinShow, MaxShow−0.65)` — done when all stages are at 1 **and** the minimum display time has passed, or when the deadline hits (`LoadingProgress.luau:54-56`, called with the fade budget subtracted at `:527-528`). The `state` stage is the real handshake with gameplay: `HUDController` sets `HudReady` the moment the first replicated player-state snapshot exists (`src/client/Controllers/HUDController.luau:488` — i.e. the profile has loaded and is being rendered; snapshot pipeline in [architecture.md](architecture.md), saved-data lifecycle in [profile-schema.md](profile-schema.md)). So the screen waits for engine download + first-screen art + profile snapshot + one drawn frame, never longer than the deadline. When the HUD genuinely draws first on a real device is Studio/Play behaviour — unverified here (no Studio this session).
+`LoadingProgress` clamps each stage, keeps a high-water mark and snaps a near-one total to exactly 1; the display eases toward the target without regressing. **What gates the reveal** is `shouldFinish(elapsed, total, MinShow, MaxShow - 0.65)`: all stages at 1 **and** `MinShow` passed, or the deadline. So the screen waits for engine + art + a drawn, streamed-in world + the profile snapshot + one HUD frame, never longer than `MaxShow`. The `world` stage is why the screen is longer on real connections: before it existed the map streamed in after the screen had gone. In Studio everything is local, so a Studio join still closes at `MinShow`.
 
 ## Preload strategy
 
-Once `Shared` has appeared — the script polls for `Shared.LoadingProgress`, `Shared.Config.Loading` and `Shared.Config.HudIcons` by name instead of assuming they are there (`:549-565`, because `ReplicatedFirst` can run first) — it requires them, re-reads the config numbers with clamps (`:571-575`), swaps in the 14 real tips (`:575`; `Config/Loading.luau:31-46`) and hands `view:setAssets` the art ids (`:577`; assignment table `:240-254`). The preload list is: the four loading-art ids, then `Config.Loading.Preload` (currently empty, `:23`), then every image id in `Config.HudIcons` — de-duplicated, and only `rbxassetid://` strings count (`:578-590`). They are requested all at once in parallel batches of 8 (`:592-601`) — deliberately not one by one (comment `:587-588`). The screen waits for the batches at most `AssetTimeout` (5 s — `Config/Loading.luau:6`; clamped 0–12 at `:574`) and then completes the `assets` stage anyway (`:603-604`); the stragglers are owned threads and die with the cleanup (`:462-466`, `:456-458`). Pet and mesh art are *not* waited on: up to 300 MeshParts under `ReplicatedStorage.PetModels`/`MeshArt` are warmed in an unowned `task.spawn` that intentionally outlives the screen (`:605-618`). If `Shared` never arrives or a require fails, the screen simply keeps its built-in fallbacks until the deadline, silently (`:620-621`).
+Once `Shared` appears (polled by name, because `ReplicatedFirst` can run first) the script requires `LoadingProgress`, `Config.Loading` and `Config.HudIcons`, re-reads the numbers with clamps, and builds the preload list: the logo, `Config.Loading.Preload`, every `rbxassetid://` in `Config.HudIcons` (de-duplicated), then up to `PreloadLimit` (1500) MeshParts, SpecialMeshes, Decals, Textures, SurfaceAppearances and Sounds under `ReplicatedStorage.PetModels`, `ReplicatedStorage.MeshArt` and `SoundService`: what the menus and effects show. They are requested in parallel batches of 32 and waited on for at most `AssetTimeout` (12 s, clamped 0-12). The map itself is the `world` stage's job (with streaming most of it is not on the client yet when the list is built). If `Shared` never arrives or a require fails, the screen keeps its white page and text title until the deadline, silently.
 
 ## Timing, deadline and warnings
 
-| Number | Value | Where |
-|---|---|---|
-| Minimum display | 1.5 s (skippable by SKIP) | `Config/Loading.luau:3`; clamp `:572`; gate `LoadingProgress.luau:54-56` |
-| Hard deadline | 20 s (config-read, clamped 0.65–25) | `Config/Loading.luau:4`; `:571` |
-| Fade budget | 0.65 s reserved *inside* the deadline (flash 0.15 + group fade 0.5) | `:527-528`; fade `:500-505` |
-| SKIP appears | after 2 s (`SKIP_AFTER`) | `:226`, visibility `:294` |
-| Tip rotation | every 3.5 s, first swap at 4.5 s, cross-fade in/out | `Config/Loading.luau:5`; `:447`, `:519-524` |
-| Asset wait | 5 s, meshes exempt | `Config/Loading.luau:6`; `:603`, `:605-618` |
+| Number | Value |
+|---|---|
+| Minimum display | 4 s (`MinShow`; skippable by SKIP) |
+| Hard deadline | 35 s (`MaxShow`, clamped 0.65-45) |
+| Fade budget | 0.65 s reserved inside the deadline (flash 0.15 + fade 0.5) |
+| SKIP appears | after 2 s (`SKIP_AFTER`) |
+| Tip rotation | every 3.5 s (`TipSeconds`), first swap at 4.5 s |
+| Asset wait | 12 s (`AssetTimeout`) |
+| World wait | 25 s (`WorldTimeout`) |
 
-An independent watchdog polls every 0.05 s and force-finishes at the deadline even if `Shared`, PlayerGui, require, PreloadAsync or RenderStepped have all stalled — it shares none of them (comment `:476`; loop `:476-486`). Warnings are deliberate and rare: once on timeout ("Startup deadline reached", `:470-475`, `:533`), once on a render-loop error (which also cleans up, `:541-547`) and once on a startup error (`:624-627`); a clean finish and a player skip are silent (`:531-533`).
+An independent watchdog polls every 0.05 s and force-finishes at the deadline even if `Shared`, PlayerGui, require, PreloadAsync or RenderStepped have stalled. Warnings are rare: once on timeout ("Startup deadline reached"), once on a render-loop error and once on a startup error; a clean finish and a skip are silent.
 
-## Three background modes, one screen
+## Art and fallbacks
 
-The view has one body and three personalities, keyed off two config flags plus whether the background has actually loaded (`:302-305`). The feature commit `9b93170` (11 Oct 2026) states the motive for the second mode: "The sky background has the logo painted in, so a LogoBaked flag hides the live logo and clouds and the meteor flies across the whole screen with a larger trail instead of landing." Commit `cc6c56d` (15 Oct 2026) then moved the live config to the third mode.
-
-- **Crater landing (default — neither flag set).** The background renders `Crop`-centred (`:64-65`); every 4.1 s a meteor dives from the top-right into the crater spot, given as a fraction of the source image and mapped through the crop scale to screen pixels (`:329-341`, `:351`), with an expanding gold ring (`:93-98`, `:370-374`), six flying chips (`:99-105`, `:375-381`) and a logo shake on impact (`:269-271`). `Crater` and `LogoWide` in config steer it (recipe in the `Config/Loading.luau:17-18` comment).
-- **`LogoBaked` painted-logo sky.** While the baked background is loaded (`:302-303`), the live logo (`:306`) and clouds (`:323`) hide, and the picture is switched from Crop to cover-the-screen, pinned to the top — because Crop would slice a painted logo off on wide phones (rationale `:307-308`; code `:309-316`). The meteor then **flies across the whole screen instead of landing** (`:335-337`): bigger, with a 6× trail, straight corner-to-corner until the tail has left too (`:340-351`), no ring/chips/shake (`:371`, `:376`, landing test `:270`); the empty middle hosts a hero strip cycling all four meteor types every 1.6 s on a turning sunburst, sized to stay clear of the painted logo (≈ its lower third, `:394`), with pop-in overshoot (`:126-157`, `:239`, `:382-415`, sprites from `Config.HudIcons` `:248-253`). The old sky background was this kind of art; the config comment at `Config/Loading.luau:16-18` documents how to switch back.
-- **`Plain` (current, owner 2026-10-20).** A full white screen with the Meteor Mining Simulator logo (`Wordmark`, source `assets/loading/logo-meteor-mining-simulator.png`) as big as fits between the top and the progress card, centred in that space with a gentle bob; its shape comes from `WordmarkAspect`. No background picture, island, clouds, meteor, trail or hero strip, and only the logo is preloaded. White is also the look before the config arrives, so the first frames never flash the blue sky. `Plain = false` brings back whichever mode below the other flags pick.
-- **`Showpiece` art.** The background has its own centrepiece, so clouds (`:323`), the meteor, trail, ring and chips are all forced off (`:384-389`) and the logo shake is off (`landing = not Showpiece`, `:270`); the live logo rides above at `LogoWide` (`:273-275`) and the panel/tips/skip keep working. Flags: `Config/Loading.luau:19-22`.
-
-## Art, ids and fallbacks
-
-The four art slots are `Background`, `Wordmark`, `Cloud`, `Trail` — their uploaded image ids live only at `Config/Loading.luau:10-13` (Image IDs, filled by the owner; the comment at `:8-9` says uploads come from `assets/marketing/v2/loading/*.png`, and that folder — currently untracked in git — holds the PNG sources named in those comments). Empty, failed or still-loading art must never blank the screen: `loaded()` checks `Image ~= ""` and `IsLoaded` without ever hiding the ImageLabel itself (hiding it would stop the load — comment `:255-259`), and every slot has hand-built vector fallbacks:
-
-| Slot | Built-in fallback (instance names in `buildView`) | Swap rule |
-|---|---|---|
-| `Background` | `FallbackIsland`: sky gradient + lagoon, isle, rampart and crater frames (`:48-63`) | island visible until the backdrop loads (`:301`) |
-| `Wordmark` | `Title` "METEOR MINING" + blue `Ribbon` with "SIMULATOR" (`:109-117`) | hidden once the wordmark loads (`:317-319`) |
-| `Cloud` | three rounded gradient frames with a puff each (`:66-77`) | shapes hidden per-cloud once its sprite loads (`:325-327`) |
-| `Trail` | plain gold tapered frame (`:78-84`) | shape alpha ramps with the flight until the sprite loads (`:369`) |
-| meteor / hero sprites | rounded rock with core and ink outline (`:86-92`, `:148-151`) | rock hides when the sprite loads (`:357-360`, `:413-414`) |
-| pickaxe marker | `⛏` glyph label (`:204-207`) | hidden once the icon loads (`:300`) |
-
-The meteor-type sprites and the pickaxe icon are deliberately the same `Config.HudIcons` images the HUD uses (`:245-253`; keys `Config/HudIcons.luau:6-9`, `:13`), so nothing loads twice and the preload covers both screens.
+Only two images: the logo (`Wordmark`) and the pickaxe marker (`Config.HudIcons.equipment`). Until (or if never) the logo loads, the `Title` "METEOR MINING" with a blue `Ribbon` "SIMULATOR" stands in for it; `loaded()` checks `Image ~= ""` and `IsLoaded` without hiding the ImageLabel (a hidden one is never requested). The pickaxe simply stays blank until its icon loads.
 
 ## Skip, HoldLoading and ReduceEffects
 
 - **SKIP** (visible after 2 s, `:294`) short-circuits the finish gate at once — past the minimum display and any unfinished progress — and dismisses through the normal flash-and-fade, with no timeout warning (`:529-533`). On phones, where the panel reaches the corner, it lifts above the panel instead (`:286-293`).
 - **`HoldLoading`** — `ReplicatedFirst:GetAttribute("HoldLoading") == true` suspends *every* dismissal path: the watchdog (`:479`) and the finish/skip gate (`:529`) both check it first, so a held screen cannot even be skipped (`held()` `:467-469`). Nothing in `src` ever sets it; it is a developer screenshot hook you set from Studio itself (command bar or Properties) and **must clear afterwards** — the same recipe appears in the art brief's checklist ([store-art-plan.md](../art-pipeline/store-art-plan.md) `:346`, `:362`).
-- **`ReduceEffects`** is read fresh every render frame (`:499`), so the Settings toggle applies mid-screen. It freezes cloud drift, logo bob, shine sweeps, the gloss animation, the pickaxe swing, the flight, the ring/chips and the hero motion, and swaps the flash+fade for a plain fade (`:502-503`, `:271`, `:275`, `:295`, `:297`, `:320`, `:323`, `:352`, `:368`, `:371`, `:376`, `:400-414`). It is one of the game-wide preference attributes written by the Settings menu's toggle rows (`src/client/NativeHudMenus.luau:17-24`, writer `:125-137`); the roster with all consumers is in [ui-hud.md](ui-hud.md), and the two sound rows in the same menu belong to the audio guide.
+- **`ReduceEffects`** is read fresh every render frame (`:499`), so the Settings toggle applies mid-screen. It freezes the logo bob, the shine sweep, the gloss animation and the pickaxe swing, and swaps the flash+fade for a plain fade. It is one of the game-wide preference attributes written by the Settings menu's toggle rows (`src/client/NativeHudMenus.luau:17-24`, writer `:125-137`); the roster with all consumers is in [ui-hud.md](ui-hud.md), and the two sound rows in the same menu belong to the audio guide.
 
 ## The self-destruct contract
 
