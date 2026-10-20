@@ -37,8 +37,10 @@ local RewardService
 
 -- Opens one Supply Crate for a level gained (Config.Hooks.SupplyCrate). Its cash is a stretch of the
 -- player's own line income, so it is as big as the level they are at, never a flat amount.
-local function openCrate(player: Player, data: any)
-	local income = Refining.lineRate(data, nil, Perks.lineMult(data.perks)) * Purchases.averageBarPrice(data.level) * EconomyService:SaleMultiplier(player)
+-- `level` is the level it was gained for (several can come at once). Only permanent sale multipliers
+-- count: a running Overclock must not pump crate cash.
+local function openCrate(player: Player, data: any, level: number)
+	local income = Refining.lineRate(data, nil, Perks.lineMult(data.perks)) * Purchases.averageBarPrice(level) * EconomyService:SaleMultiplier(player, true)
 	local ceiling = Rebirth.cost(data.rebirths) * Config.Hooks.CrateCeilingShare
 	local crate = Hooks.crate(income, ceiling, math.random(), math.random(), math.random())
 	if crate.cash > 0 then
@@ -54,7 +56,7 @@ local function openCrate(player: Player, data: any)
 	if crate.shards > 0 then
 		table.insert(parts, "+" .. crate.shards .. " ◆")
 	end
-	RewardService:Bonus(player, "crate", "Level " .. data.level .. " Supply Crate: " .. table.concat(parts, " and "))
+	RewardService:Bonus(player, "crate", "Level " .. level .. " Supply Crate: " .. table.concat(parts, " and "))
 end
 
 -- Adds XP to the player's profile. Returns the validated scholar-adjusted award,
@@ -72,7 +74,9 @@ function LevelService:AddXp(player: Player, amount: number): number
 	if gained > 0 then
 		self.Client.LevelUp:Fire(player, data.level)
 		self.LeveledUp:Fire(player, data.level)
-		openCrate(player, data)
+		for level = data.level - gained + 1, data.level do -- one crate per level gained
+			openCrate(player, data, level)
+		end
 	end
 	return awarded
 end

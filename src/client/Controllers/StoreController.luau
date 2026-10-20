@@ -84,8 +84,20 @@ function StoreController:KnitStart()
 	setUpChatTags()
 	local gui = NativeUI.get("Store", function(store)
 		-- The authored copy keeps the owner's STORE nav button, but its panel can predate the sectioned page
-		-- (no tab strip): swap in the panel built by NativeMenus.Store.
-		if store:GetAttribute("StoreLayout") ~= StoreMenu.LAYOUT then
+		-- (no tab strip) or lack a card Config.Store now lists: swap in the panel built by NativeMenus.Store.
+		local function missingCard(): boolean
+			local saved = store:FindFirstChild("Panel")
+			local list = saved and saved:FindFirstChild("List")
+			for _, section in Config.Store.Sections do
+				local frame = list and list:FindFirstChild("Section_" .. section.Id)
+				local cardsFrame = frame and frame:FindFirstChild("Cards")
+				for _, key in section.Keys do
+					if not (cardsFrame and cardsFrame:FindFirstChild(key)) then return true end
+				end
+			end
+			return false
+		end
+		if store:GetAttribute("StoreLayout") ~= StoreMenu.LAYOUT or missingCard() then
 			local fresh = StoreMenu.build()
 			store:WaitForChild("Panel"):Destroy()
 			-- the dimmer too (the cartoon light menus sit on a light navy wash), moved first so the panel draws over it
@@ -109,6 +121,16 @@ function StoreController:KnitStart()
 	local sectionsLayout = list:WaitForChild("Sections") :: UIListLayout
 	local listPadding = list:WaitForChild("ListPadding") :: UIPadding
 	local open = false
+	-- purchase notices and refusals: a toast, and the header line while the Store is open
+	local subtitleText = subtitle.Text
+	local noticeToken = 0
+	local function storeNotice(message: string)
+		HUDController:Toast(message)
+		noticeToken += 1
+		local token = noticeToken
+		subtitle.Text = message
+		task.delay(6, function() if noticeToken == token then subtitle.Text = subtitleText end end)
+	end
 	local ownedPasses: { [string]: boolean } = {}
 	local callMeteor = { available = false, reason = "" }
 	local playerState: any = nil
@@ -125,6 +147,16 @@ function StoreController:KnitStart()
 		local unlocked, why = CallMeteorRules.bossUnlocked(if playerState then playerState.rebirths or 0 else 0)
 		return if unlocked then nil else why
 	end
+	-- Max Pet Level needs an equipped pet below the max level (a purchase without one is banked for the next pet)
+	local function petBelowMax(): boolean
+		local pets = if playerState then playerState.pets else nil
+		if not pets or not pets.owned then return false end
+		for _, id in pets.equipped or {} do
+			local entry = pets.owned[id]
+			if entry and (entry.level or 1) < Config.Pets.MaxLevel then return true end
+		end
+		return false
+	end
 	local function buttonState(card: Card): ButtonState
 		if card.kind == "pass" and ownedPasses[card.key] then return "owned" end
 		if card.kind == "product" then
@@ -132,6 +164,7 @@ function StoreController:KnitStart()
 			local bought = if playerState then playerState.purchased else nil
 			if bought and ((card.key == "StarterPack" and bought.starterPack) or (card.key == "PetSlot" and bought.extraPetSlot)) then return "owned" end
 			if card.key == "OreRush" and ownedPasses.TwoXOre then return "unavailable" end
+			if card.key == "PetMax" and card.id ~= 0 and not petBelowMax() then return "unavailable" end
 			if card.key == "CallMeteor" or card.key == "BossMeteor" then
 				local locked = card.key == "BossMeteor" and bossLocked() ~= nil
 				if credits(creditKey(card)) > 0 and callMeteor.available and not locked then return "credit"
@@ -154,6 +187,12 @@ function StoreController:KnitStart()
 			local n = credits(creditKey(card))
 			if n > 0 then table.insert(parts, "Credits: " .. Format.number(n)) end
 			return table.concat(parts, "  ·  ")
+		elseif card.key == "PetMax" then
+			local parts = {}
+			if not petBelowMax() then table.insert(parts, "Equip a pet below level " .. Format.number(Config.Pets.MaxLevel) .. " first") end
+			local n = credits("petMax")
+			if n > 0 then table.insert(parts, "Banked: " .. Format.number(n)) end
+			return table.concat(parts, "  ·  ")
 		elseif card.key == "RebirthKeep" then
 			local n = credits("rebirthKeep")
 			return if n > 0 then "Ready for your next rebirth: " .. Format.number(n) else ""
@@ -168,6 +207,7 @@ function StoreController:KnitStart()
 		return ""
 	end
 	local function renderCards()
+		if not open then return end -- a closed Store renders when it opens (setOpen)
 		for _, card in cards do
 			local current, info = buttonState(card), card.details
 			card.price.Text = if current == "credit" then "1 CREDIT" elseif info.loading then "LOADING PRICE"
@@ -214,6 +254,11 @@ function StoreController:KnitStart()
 	end
 	local function bindCard(key: string, kind: "pass" | "product", definition: any, cardsFrame: Instance, color: string)
 		local frame = cardsFrame:WaitForChild(key) :: Frame
+		-- an item that is not on sale yet (Id 0) is left out; the meteor calls stay, as credits still spend there
+		if definition.Id == 0 and key ~= "CallMeteor" and key ~= "BossMeteor" then
+			frame.Visible = false
+			return
+		end
 		local well = frame:WaitForChild("IconWell") :: Frame
 		local buy = frame:WaitForChild("Buy") :: TextButton
 		local icon = well:WaitForChild("ItemIcon") :: ImageLabel
@@ -236,7 +281,7 @@ function StoreController:KnitStart()
 					local ok, called, reason = pcall(function()
 						return if card.key == "BossMeteor" then MonetizationService:UseBossMeteorCredit() else MonetizationService:UseCallMeteorCredit()
 					end)
-					if ok and not called and reason then HUDController:Toast(reason) end
+					if ok and not called and reason then storeNotice(reason) end
 				end)
 			end
 		end)
@@ -268,13 +313,16 @@ function StoreController:KnitStart()
 			view.tabIcon = tab:WaitForChild("Face"):WaitForChild("Icon") :: ImageLabel
 			tab.Activated:Connect(function() jumpTo(view.frame) end)
 		end
+		-- a section with nothing on sale is left out, with its tab
+		frame.Visible = #view.cards > 0
+		if tab then tab.Visible = frame.Visible end
 		table.insert(sectionViews, view)
 	end
 	-- the tab of the section at the top of the page is lit, as the page scrolls
 	local function lightTab()
 		local current = sectionViews[1]
 		for _, view in sectionViews do
-			if view.frame.AbsolutePosition.Y <= list.AbsolutePosition.Y + 40 * drawScale then current = view end
+			if view.frame.Visible and view.frame.AbsolutePosition.Y <= list.AbsolutePosition.Y + 40 * drawScale then current = view end
 		end
 		for _, view in sectionViews do
 			if view.tab then Theme.tab(view.tab, view == current) end
@@ -293,6 +341,7 @@ function StoreController:KnitStart()
 		player:SetAttribute("StoreOpen", value)
 		updateNav()
 		if value and changed then
+			renderCards()
 			for _, card in cards do
 				if card.id ~= 0 and not card.details.loading and card.details.price == nil then loadPrice(card) end
 			end
@@ -301,7 +350,7 @@ function StoreController:KnitStart()
 	MonetizationService.Owned:Observe(function(value) ownedPasses = value or {} renderCards() end)
 	MonetizationService.CallMeteor:Observe(function(value) if value then callMeteor = value renderCards() end end)
 	PlayerStateService.State:Observe(function(value) playerState = value renderCards() end)
-	MonetizationService.Notice:Connect(function(message: string) HUDController:Toast(message) end)
+	MonetizationService.Notice:Connect(storeNotice)
 	nav.Activated:Connect(function() setOpen(true) end)
 	close.Activated:Connect(function() setOpen(false) end)
 	dimmer.Activated:Connect(function() setOpen(false) end)
@@ -360,7 +409,7 @@ function StoreController:KnitStart()
 		listPadding.PaddingTop, listPadding.PaddingBottom = UDim.new(0, g.paddingList), UDim.new(0, g.paddingList)
 		for _, view in sectionViews do
 			local style = view.section.Style
-			local columns = StoreLayout.columns(g, style, #view.section.Keys)
+			local columns = StoreLayout.columns(g, style, #view.cards)
 			local c = StoreLayout.card(StoreLayout.cardWidth(g, columns), style, g.short)
 			view.grid.CellSize, view.grid.CellPadding = UDim2.fromOffset(c.cardWidth, c.cardHeight), UDim2.fromOffset(g.gap, g.gap)
 			view.grid.FillDirectionMaxCells = columns

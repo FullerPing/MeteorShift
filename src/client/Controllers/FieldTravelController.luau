@@ -28,7 +28,7 @@ local FieldTravelController = Knit.CreateController({ Name = "FieldTravelControl
 local SIZE = Config.Hud.SideButtons.Size
 local GAP = Config.Hud.SideButtons.Gap
 local OPEN = "OreFieldsOpen"
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = require(script.Parent.Parent.MenuFlags).ALL
 
 function FieldTravelController:KnitStart()
 	local DebrisService = Knit.GetService("DebrisService")

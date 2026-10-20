@@ -62,7 +62,7 @@ function Shop.build(): ScreenGui
 	gui:SetAttribute("NativePrefab", true)
 	gui:SetAttribute("ShopLayout", Shop.LAYOUT)
 	-- the screen behind the menu: 20% alpha
-	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY,
+	N.create("TextButton", { Name = "Dimmer", Selectable = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY,
 		BackgroundTransparency = .8, BorderSizePixel = 0, AutoButtonColor = false, Modal = true }, gui)
 	local p = Theme.panel(gui, "Panel", UDim2.fromOffset(760, 475)) :: any
 	p.AnchorPoint, p.Position = Vector2.new(.5, .5), UDim2.fromScale(.5, .5)

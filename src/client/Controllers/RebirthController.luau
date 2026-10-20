@@ -77,10 +77,11 @@ function RebirthController:KnitStart()
 	local tooltip = navRefs.tooltip
 	local state: any = nil
 	local open, armed, busy, notice = wantOpen, false, false, ""
+	local keepArmed = false -- the KEEP button's first press with a credit (spending a paid credit takes two presses too)
 	local keepProduct = Config.Monetization.Products.RebirthKeep
 	local keepPrice: number? = if keepProduct.Id == 0 then keepProduct.Robux else nil -- the live price replaces it
 	local pendingKeep = false -- the player is buying Rebirth and Keep Everything: rebirth as soon as it is theirs
-	local perform: () -> ()
+	local perform: (boolean) -> ()
 	local armToken = 0
 	local GOLD, MINT = Color3.fromRGB(255, 219, 100), Color3.fromRGB(139, 240, 195)
 	local function affordable(): boolean
@@ -88,7 +89,7 @@ function RebirthController:KnitStart()
 	end
 	local function disarm()
 		armToken += 1
-		armed = false
+		armed, keepArmed = false, false
 	end
 	local function update()
 		local cash = if state then state.cash else 0
@@ -111,25 +112,27 @@ function RebirthController:KnitStart()
 		percent.Text = math.floor(ratio * 100) .. "%"
 		local unlock = Rebirth.unlock(rebirths + 1)
 		local bonus = Rebirth.overstayShards(if state then state.overflow or 0 else 0, cost)
-		local keep = state ~= nil and state.credits ~= nil and (state.credits.rebirthKeep or 0) > 0 -- a Keep Everything credit
+		local credits = if state and state.credits then state.credits.rebirthKeep or 0 else 0 -- Keep Everything credits
+		local keep = credits > 0
 		-- grey until you can afford it, lime when you can, red while the second press is pending
 		Theme.state(confirm, canAfford and not busy, if armed then "red" else "lime")
 		confirm.Text = if busy then "REBIRTHING..." elseif armed then "CONFIRM REBIRTH" else "REBIRTH · " .. Format.cash(cost)
 		footer.Text = if notice ~= "" then notice elseif busy then "Rebirthing..."
-			elseif armed then "Press again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s. "
-				.. (if keep then "You keep everything this time." else "This can't be undone.")
+			elseif keepArmed then "Press KEEP again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s to use 1 Keep credit. Nothing resets."
+			elseif armed then "Press again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s. This can't be undone."
 			elseif not canAfford then (if ratio >= 0.8 then "Almost there! Earn " else "Earn ") .. Format.cash(cost - cash) .. " more"
-			else (if keep then "Keep Everything is ready: nothing resets. " else "")
+			else (if keep then "REBIRTH spends cash; your Keep credit stays for the KEEP button. " else "")
 				.. (if unlock then "Unlocks: " .. unlock .. ". " else "Index bonuses stay and stack with this multiplier. ")
 				.. (if bonus > 0 then "+" .. bonus .. " bonus shards now." else "Rebirth now: waiting never beats the x" .. Format.number(Config.Rebirth.CashMult) .. ".")
-		footer.TextColor3 = if armed or notice ~= "" then Palette.UNMET else Palette.SECOND
+		footer.TextColor3 = if armed or keepArmed or notice ~= "" then Palette.UNMET else Palette.SECOND
 		-- "Rebirth without losing anything": usable at any time, even before you can afford the rebirth.
 		-- Uses a credit when you have one, otherwise sells the product
 		local usable = not busy and (keep or keepProduct.Id ~= 0)
-		Theme.state(keepButton, usable, "gold")
+		Theme.state(keepButton, usable, if keepArmed then "red" else "gold")
 		-- the wide card already says "Rebirth and Keep Everything", so its button carries just the price
 		keepButton.Text = if busy then "REBIRTHING..."
-			elseif keep then (if wide then "USE 1 CREDIT" else "KEEP EVERYTHING · 1 CREDIT")
+			elseif keepArmed then "CONFIRM KEEP"
+			elseif keep then "USE KEEP CREDIT (" .. Format.number(credits) .. ")"
 			elseif keepProduct.Id == 0 then (if wide then "NOT ON SALE YET" else "KEEP EVERYTHING: NOT ON SALE YET")
 			else (if wide then "" else "KEEP EVERYTHING · ") .. Format.ROBUX .. " " .. Format.number(keepPrice or keepProduct.Robux)
 
@@ -141,12 +144,13 @@ function RebirthController:KnitStart()
 		update()
 	end
 	requestOpen = setOpen
-	function perform()
+	-- useKeep: spend a Keep Everything credit (the server only does when asked); otherwise the cash rebirth
+	function perform(useKeep: boolean)
 		disarm()
 		busy = true
 		update()
 		task.spawn(function()
-			local ok, reborn = pcall(function() return RebirthService:Rebirth() end)
+			local ok, reborn = pcall(function() return RebirthService:Rebirth(useKeep) end)
 			busy = false
 			if not ok then notice = "Couldn't rebirth. Please try again."
 			elseif reborn then
@@ -170,15 +174,26 @@ function RebirthController:KnitStart()
 			end)
 			return
 		end
-		perform()
+		perform(false)
 	end
 	local function hasKeepCredit(): boolean
 		return state ~= nil and state.credits ~= nil and (state.credits.rebirthKeep or 0) > 0
 	end
-	-- The keep button asks first (it is a purchase or a one-time credit), so there is no second press
+	-- With a credit the KEEP button arms first (a second press spends it); without one it prompts the purchase,
+	-- which is its own confirmation
 	local function pressKeep()
 		if busy then return end
-		if hasKeepCredit() then perform() return end
+		if hasKeepCredit() then
+			if keepArmed then perform(true) return end
+			disarm()
+			local token = armToken
+			keepArmed, notice = true, ""
+			update()
+			task.delay(Config.Rebirth.ConfirmWindow, function()
+				if armToken == token then keepArmed = false update() end
+			end)
+			return
+		end
 		if keepProduct.Id == 0 then return end
 		pendingKeep = true
 		local ok, err = pcall(function() MarketplaceService:PromptProductPurchase(player, keepProduct.Id) end)
@@ -201,12 +216,13 @@ function RebirthController:KnitStart()
 	end
 	PlayerStateService.State:Observe(function(value)
 		state = value
-		if not affordable() then disarm() end
+		if not affordable() and armed then disarm() end
+		if keepArmed and not hasKeepCredit() then disarm() end
 		update()
 		-- the purchase just landed as a credit: rebirth now, as the button promised
 		if pendingKeep and hasKeepCredit() then
 			pendingKeep = false
-			if not busy then perform() end
+			if not busy then perform(true) end
 		end
 	end)
 	RebirthService.Notice:Connect(function(message: string)

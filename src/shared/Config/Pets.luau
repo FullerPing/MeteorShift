@@ -56,7 +56,8 @@ Pets.XpPerHit = { Crust = 1, Core = 2, Debris = 0.2 } :: { [string]: number }
 Pets.Slots = { Base = 1, PerRebirth = 1, Max = 3, ExtraAtRebirth = 4 }
 
 Pets.Roles = {
-	miner = { Name = "Miner", Cap = 1.00, Text = "Mines for you at %s of your pickaxe. Its ore goes straight to the hopper." },
+	-- 1.5 so a second miner adds to a maxed Solar Phoenix (its 1.0 alone used to fill the cap, leaving Drillbot's miner role idle)
+	miner = { Name = "Miner", Cap = 1.50, Text = "Mines for you at %s of your pickaxe. Its ore goes straight to the hopper." },
 	hauler = { Name = "Hauler", Cap = 0.06, Text = "Carries %s of your backpack to the hopper every second." },
 	pack = { Name = "Pack", Cap = 0.60, Text = "Expands your backpack by %s." },
 	swift = { Name = "Swift", Cap = 0.30, Text = "Shortens your swing by %s." },

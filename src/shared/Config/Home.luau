@@ -72,6 +72,14 @@ Home.StationOrder = { "hopper", "conveyor", "refinery", "collector" }
 -- free cap; the pass is the 8-hour step.
 Home.OfflineCap = 2 * 3600
 Home.OfflineCapPass = 8 * 3600
+-- The line only refines what was left in the hopper, which is next to nothing when a player logs out after
+-- depositing, so the colony crew also earns cash while you're away: OfflineCrewShare of your expected income
+-- (Shared.Pacing.expectedIncome, passes but no timed boosts) for the capped time away, at most
+-- OfflineCeilingShare of the next rebirth's cost so time away never buys a rebirth outright.
+Home.OfflineCrewShare = 0.25
+Home.OfflineCeilingShare = 0.5
+-- The crew and the Welcome Back roll need this long away, so a rejoin or a server hop earns nothing extra
+Home.OfflineMinAway = 15 * 60
 
 Home.TickInterval = 1 -- online production tick, seconds
 

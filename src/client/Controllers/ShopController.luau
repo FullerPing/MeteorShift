@@ -387,8 +387,15 @@ function Controller:KnitStart()
 	end)
 	shop.Open:Connect(function() self:Open() end)
 	shop.Notice:Connect(function(message) notice = message; update() end)
-	player:GetAttributeChangedSignal("ShopOpen"):Connect(update)
-	Knit.GetService("PlayerStateService").State:Observe(function(snapshot) state = snapshot; update() end)
+	-- a closed shop drops its notice and skips State flushes; opening renders the latest snapshot
+	player:GetAttributeChangedSignal("ShopOpen"):Connect(function()
+		if player:GetAttribute("ShopOpen") ~= true then notice = "" end
+		update()
+	end)
+	Knit.GetService("PlayerStateService").State:Observe(function(snapshot)
+		state = snapshot
+		if player:GetAttribute("ShopOpen") == true then update() end
+	end)
 	N.onLayoutChanged(function(hud)
 		view = ShopLayout.view(hud.viewport, hud.inset)
 		geometry = ShopLayout.compute(view.viewport, view.inset, view.wide)

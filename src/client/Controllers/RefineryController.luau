@@ -21,7 +21,7 @@ local Palette = require(RS.Shared.MenuPalette)
 local UpgradePanel = require(script.Parent.Parent.UpgradePanel)
 local player = Players.LocalPlayer
 local Controller = Knit.CreateController({ Name = "RefineryController" })
-local OTHER_MENUS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen" }
+local OTHER_MENUS = require(script.Parent.Parent.MenuFlags).except("RefineryOpen", "BackpackOpen")
 local ORE_TINTS: { [string]: Color3 } = {
 	iron = Color3.fromRGB(255, 196, 36), frost = Color3.fromRGB(120, 220, 255),
 	crystal = Color3.fromRGB(221, 161, 255), alien = Color3.fromRGB(130, 255, 150),
@@ -114,7 +114,7 @@ function Controller:KnitStart()
 			transaction = nil
 			if not ok then feedback = "Couldn't complete that. Please try again."
 			elseif type(amount) == "number" and amount > 0 then
-				feedback = (if action == "deposit" then "Deposited " else "Claimed ") .. Format.number(amount) .. (if action == "deposit" then " ore." else " bars. Sell them at the Trading Post.")
+				feedback = (if action == "deposit" then "Deposited " else "Claimed ") .. Format.number(amount) .. (if action == "deposit" then " ore." else " bars. Tap SELL on your HUD.")
 			elseif feedback == "" then feedback = if action == "deposit" then "No ore deposited. Check your backpack and hopper space." else "No finished bars to claim yet." end
 			update()
 		end)
@@ -311,7 +311,7 @@ function Controller:KnitStart()
 			elseif state and state.carried > 0 and (not r or not r.activeOre) then "Press Deposit to start refining your ore."
 			elseif #rows > 1 then "Use the arrows to choose which ore is refined first."
 			elseif state and state.carried <= 0 then "Mine ore in the fields, then come back and deposit it."
-			else "Mine ore, deposit it, claim the bars, then sell them at the Trading Post."
+			else "Mine ore, deposit it, claim the bars, then tap SELL on your HUD."
 	end
 	p.depositCard.Action.Activated:Connect(function() transact("deposit") end)
 	p.claimCard.Action.Activated:Connect(function() transact("claim") end)

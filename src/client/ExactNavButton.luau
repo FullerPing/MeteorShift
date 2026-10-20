@@ -5,8 +5,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local ExactNavButton = {}
 local REFERENCE = "MY index button"
--- player attributes the full-screen menus set while open
-local MENU_ATTRIBUTES = { "ShopOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "StoreOpen", "IndexOpen", "RebirthOpen", "RefineryOpen", "SettingsOpen", "PerksOpen", "HatchOpen", "IntroOpen" }
+-- player attributes the full-screen menus set while open (the small Backpack popup leaves the tiles live)
+local MenuFlags = require(script.Parent.MenuFlags)
+local MENU_ATTRIBUTES = MenuFlags.except("BackpackOpen")
 
 function ExactNavButton.author(parent: Instance, name: string, label: string, icon: string): TextButton
 	local reference = StarterGui:FindFirstChild(REFERENCE)
@@ -124,7 +125,10 @@ end
 function ExactNavButton.bind(button: TextButton)
 	local design = button:FindFirstChild("Design") :: Frame?
 	if not button:FindFirstChild("CartoonTile") then cartoonTile(button, design) end
-	local badge = button:WaitForChild("ReadyBadge") :: Frame
+	local tile = button:FindFirstChild("CartoonTile") :: Frame?
+	-- the badge rides inside the tile, so hiding the tile under an open menu hides the badge too
+	local badge = ((if tile then tile:FindFirstChild("ReadyBadge") else nil) or button:WaitForChild("ReadyBadge")) :: Frame
+	if tile then badge.Parent = tile end
 	if not badge:FindFirstChildOfClass("UIStroke") then
 		local round = Instance.new("UICorner"); round.CornerRadius, round.Parent = UDim.new(0.5, 0), badge
 		local ink = Instance.new("UIStroke"); ink.Color, ink.Thickness, ink.Parent = Color3.fromRGB(14, 24, 52), 2, badge
@@ -134,11 +138,9 @@ function ExactNavButton.bind(button: TextButton)
 	-- Each menu lives in its own ScreenGui, so a higher DisplayOrder would draw this tile over another open
 	-- menu: hide the tile (and take no taps) while any full menu is open. Its own controller still hides the
 	-- button outright while its own menu is open.
-	local tile = button:FindFirstChild("CartoonTile") :: Frame?
 	local player = game:GetService("Players").LocalPlayer
 	local function covered()
-		local open = false
-		for _, name in MENU_ATTRIBUTES do if player:GetAttribute(name) == true then open = true; break end end
+		local open = MenuFlags.anyOpen(MENU_ATTRIBUTES)
 		if tile then tile.Visible = not open end
 		button.Interactable = not open
 	end
@@ -156,7 +158,7 @@ function ExactNavButton.bind(button: TextButton)
 	return {
 		caption = (button:FindFirstChild("CartoonTile") :: Frame):WaitForChild("Caption") :: TextLabel,
 		tooltip = button:WaitForChild("Tooltip") :: TextLabel,
-		badge = button:WaitForChild("ReadyBadge") :: Frame,
+		badge = badge,
 		scale = button:WaitForChild("LayoutScale") :: UIScale,
 	}
 end

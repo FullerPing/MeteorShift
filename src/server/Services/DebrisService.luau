@@ -34,6 +34,7 @@ local Levels = require(ReplicatedStorage.Shared.Levels)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local DebrisService = Knit.CreateService({
 	Name = "DebrisService",
@@ -45,6 +46,7 @@ DebrisService.RockBroken = Signal.new()
 
 local lastTravel: { [Player]: number } = {}
 local lastRefusal: { [Player]: number } = {} -- the last "this field is locked" notice, so swings don't spam it
+local warnedNoGates = false
 
 local NodeService
 local ActivityService
@@ -161,7 +163,7 @@ function DebrisService:_track(part: BasePart)
 		end,
 		OnBroken = function(player: Player)
 			if reward then
-				self:_payCash(player, reward)
+				self:_payCash(player, reward, rock)
 			end
 			local field = part:GetAttribute("Field")
 			self.RockBroken:Fire(player, if reward and type(field) == "string" then field else "Filler")
@@ -179,14 +181,17 @@ function DebrisService:_track(part: BasePart)
 	table.insert(rocks, rock)
 end
 
--- A cash rock pays the player who broke it a stretch of their own expected income, so it is as big as
--- their setup is and a veteran can't farm a field of newcomer-sized rocks.
-function DebrisService:_payCash(player: Player, reward: DebrisField.Reward)
+-- A cash rock pays the player who broke it a stretch of their own expected income, cut to the share of
+-- their pickaxe the rock was sized for (DebrisField.sizedShare): a veteran one-shotting a rock sized for a
+-- newcomer earns that small share, not seconds of their own big income.
+function DebrisService:_payCash(player: Player, reward: DebrisField.Reward, rock: Rock)
 	local data = PlayerStateService:Get(player)
 	if not data then
 		return
 	end
-	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond, Rebirth.cost(data.rebirths))
+	local _, maxHp = NodeService:GetHp(rock.Id)
+	local share = DebrisField.sizedShare(maxHp, rock.Hits, PlayerStateService:GetPickaxe(player).Power)
+	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond * share, Rebirth.cost(data.rebirths))
 	if cash > 0 then
 		PlayerStateService:AddCash(player, cash)
 		TelemetryService:earned(player, "field_cash", cash, 0)
@@ -221,13 +226,20 @@ function DebrisService:_fieldSpot(id: string): Vector3?
 	return Vector3.new(floor.Position.X + dx, top + 3.6, floor.Position.Z + dz)
 end
 
--- Whether the ore field `id` is open to the player (their saved level and rebirths). A map without gates (the
--- archived v2 map) has no locked fields.
+-- Whether the ore field `id` is open to the player (their saved level and rebirths). A gated field on a map
+-- without its Gates folder stays locked (fail closed, warned once): a missing folder must not open every gate.
 function DebrisService:IsFieldOpen(player: Player, id: string): boolean
 	local field = FieldTravel.find(id)
 	if not field then return false end
+	if not field.Unlock then return true end
 	local map = WorldMap.find()
-	if not field.Unlock or not (map and map:FindFirstChild("Gates")) then return true end
+	if not (map and map:FindFirstChild("Gates")) then
+		if not warnedNoGates then
+			warnedNoGates = true
+			warn("[DebrisService] Map.Gates is missing: gated ore fields stay locked")
+		end
+		return false
+	end
 	local data = PlayerStateService:Get(player)
 	return data ~= nil and FieldGate.isOpen(field, data.level or 1, data.rebirths or 0)
 end
@@ -310,13 +322,17 @@ function DebrisService:KnitStart()
 	task.spawn(function()
 		while true do
 			task.wait(Config.Debris.RerollInterval)
-			self:_reroll()
+			SafeLoop.step("DebrisReroll", function()
+				self:_reroll()
+			end)
 		end
 	end)
 	task.spawn(function()
 		while true do
 			task.wait(0.5)
-			self:_ejectLocked()
+			SafeLoop.step("DebrisEject", function()
+				self:_ejectLocked()
+			end)
 		end
 	end)
 end

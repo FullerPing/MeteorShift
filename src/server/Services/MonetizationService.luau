@@ -59,8 +59,10 @@ local Price = require(ReplicatedStorage.Shared.Price)
 local Income = require(ReplicatedStorage.Shared.Income)
 local Purchases = require(ReplicatedStorage.Shared.Purchases)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local Monetization = Config.Monetization
+local RECEIPT_WAIT = 10 -- seconds a receipt waits for another one of the same player's to finish saving
 
 local MonetizationService = Knit.CreateService({
 	Name = "MonetizationService",
@@ -87,6 +89,7 @@ local ShopService
 
 local owned: { [Player]: { [string]: boolean } } = {}
 local resolved: { [Player]: boolean } = {}
+local lookupFailed: { [Player]: { [string]: boolean } } = {} -- passes whose ownership check errored this session
 local passById: { [number]: string } = {}
 local productById: { [number]: string } = {}
 local processing: { [Player]: boolean } = {}
@@ -127,9 +130,17 @@ function MonetizationService:PassesResolved(player: Player): boolean
 	return resolved[player] == true
 end
 
-function MonetizationService:OreMult(player: Player): number
+-- True only when Roblox answered that the player does not own the pass (refunded or revoked), never after a
+-- failed lookup or before the lookups finish, so nothing is taken away by mistake
+function MonetizationService:PassKnownNotOwned(player: Player, key: string): boolean
+	local failed = lookupFailed[player]
+	return resolved[player] == true and not self:HasPass(player, key) and not (failed and failed[key])
+end
+
+-- passOnly leaves out a running Ore Rush (income quotes)
+function MonetizationService:OreMult(player: Player, passOnly: boolean?): number
 	local data = PlayerStateService:Get(player)
-	return Purchases.oreMultiplier(self:HasPass(player, "TwoXOre"), if data then data.oreBoostLeft else nil)
+	return Purchases.oreMultiplier(self:HasPass(player, "TwoXOre"), if data and not passOnly then data.oreBoostLeft else nil)
 end
 
 -- The Extra Pet Slot product is saved on the profile (flags.extraPetSlot): it is not a pass
@@ -165,6 +176,12 @@ end
 -- Refinery speed multiplier while Overclock time is left (online only).
 function MonetizationService:RefinerySpeedMult(data: any): number
 	return if data and (data.overclockLeft or 0) > 0 then Monetization.Overclock.SpeedMult else 1
+end
+
+-- Bars sold while Overclock time is left are worth more too, so an Overclock pays even when the
+-- player's mining, not the line, is what holds their income back
+function MonetizationService:OverclockSaleMult(data: any): number
+	return if data and (data.overclockLeft or 0) > 0 then 1 + Monetization.Overclock.BarBonus else 1
 end
 
 -- Publishes the player's passes and refreshes what depends on them.
@@ -203,6 +220,9 @@ function MonetizationService:_resolve(player: Player)
 				table.insert(found, key)
 			elseif not ok then
 				warn("[MonetizationService] UserOwnsGamePassAsync failed for", player.Name, key, has)
+				local failed = lookupFailed[player] or {}
+				lookupFailed[player] = failed
+				failed[key] = true
 			end
 		end
 	end
@@ -263,18 +283,24 @@ function MonetizationService:_grantProduct(player: Player, data: any, key: strin
 	elseif key == "RebirthKeep" then
 		effect.notice = "Your next rebirth keeps everything."
 	elseif key == "PetMax" then
-		effect.notice = "Your equipped pets are at max level!"
+		effect.notice = if grant.banked
+			then "Pet Max saved: the next pet you equip below max level goes straight to max."
+			else "Your equipped pets are at max level!"
 	elseif key == "PetSlot" then
-		effect.notice = "Extra pet slot unlocked!"
+		effect.notice = if grant.repeated
+			then "You already had the extra pet slot, so you got +" .. Format.number(grant.shards or 0) .. " Core Shards instead."
+			else "Extra pet slot unlocked!"
 	elseif key == "StreakShield" then
 		effect.notice = "Streak Shield added: it covers one missed day of your streak."
 	elseif key == "StarterPack" then
-		effect.notice = "Starter Value Pack: +$" .. Format.number(grant.cash) .. ", 20 minutes of Overclock and pet XP."
+		effect.notice = "Starter Value Pack: +$" .. Format.number(grant.cash) .. ", 20 minutes of Overclock and "
+			.. (if (grant.shards or 0) > 0 then "+" .. Format.number(grant.shards :: number) .. " Core Shards." else "pet XP.")
 	elseif grant.shards and grant.shards > 0 then
 		effect.notice = "+" .. Format.number(grant.shards) .. " Core Shards."
 	elseif key == "Overclock" or key == "MiniOverclock" then
 		effect.notice = "Refinery Overclock! ×" .. Format.number(Monetization.Overclock.SpeedMult)
-			.. " refinery speed for " .. Format.number(math.ceil(data.overclockLeft / 60)) .. " min."
+			.. " refinery speed and +" .. Format.number(Monetization.Overclock.BarBonus * 100) .. "% bar value for "
+			.. Format.number(math.ceil(data.overclockLeft / 60)) .. " min."
 	elseif key == "OreRush" then
 		effect.notice = "Ore Rush! ×2 ore per hit for " .. Format.number(math.ceil(data.oreBoostLeft / 60)) .. " min."
 	elseif grant.cash > 0 then
@@ -326,7 +352,13 @@ function MonetizationService:_processReceipt(receipt: { [string]: any }): Enum.P
 		warn("[MonetizationService] receipt for an unknown product", receipt.ProductId)
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
-	if receipt.PurchaseId == nil or processing[player] then
+	-- A second receipt during another's save waits its turn (ProcessReceipt may yield): turning it away would
+	-- leave it for Roblox to retry on the player's next join, so a quick double buy looked like a lost purchase
+	local deadline = os.clock() + RECEIPT_WAIT
+	while processing[player] and player.Parent and os.clock() < deadline do
+		task.wait(0.1)
+	end
+	if receipt.PurchaseId == nil or processing[player] or not player.Parent then
 		return Enum.ProductPurchaseDecision.NotProcessedYet
 	end
 	local purchaseId = tostring(receipt.PurchaseId)
@@ -467,6 +499,7 @@ function MonetizationService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		owned[player] = nil
 		resolved[player] = nil
+		lookupFailed[player] = nil
 		pendingEffects[player] = nil
 		lastCreditRequest[player] = nil
 	end)
@@ -508,7 +541,7 @@ function MonetizationService:KnitStart()
 
 	task.spawn(function()
 		while true do
-			self:_publishAvailability()
+			SafeLoop.step("CallMeteorAvailability", self._publishAvailability, self)
 			task.wait(Monetization.AvailabilityInterval)
 		end
 	end)

@@ -3,6 +3,7 @@
 -- state and its Escape/ButtonB dismissal; this module creates no GUI controls.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local Format = require(ReplicatedStorage.Shared.Format)
 local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local NativeUI = require(script.Parent.NativeUI)
@@ -25,7 +26,7 @@ local function noteText(report: any): string
 	if report.blocked == "hopper" then return "Your hopper ran dry. Fill it up before you log off!" end
 	if report.blocked == "collector" then return "Your collection post filled up. Upgrade it to store more!" end
 	if report.capped then return "The Offline Training perk keeps your line going longer. Pick your bars up at the Foundry." end
-	return "Pick your bars up at the Foundry, then sell them at the Trading Post."
+	return "Pick your bars up at the Foundry, then tap SELL on your HUD."
 end
 
 function WelcomeBack.start(onDismiss: () -> ()): (any?) -> ()
@@ -42,18 +43,24 @@ function WelcomeBack.start(onDismiss: () -> ()): (any?) -> ()
 	local nice = panel:WaitForChild("Nice") :: TextButton
 	local close = panel:WaitForChild("Close") :: TextButton
 	local dimmer = gui:WaitForChild("Dimmer") :: TextButton
+	-- WelcomeBackOpen (MenuFlags) keeps Daily, the nav tiles and mining out while it is up
+	local player = Players.LocalPlayer
+	local function setShown(shown: boolean)
+		gui.Enabled = shown
+		player:SetAttribute("WelcomeBackOpen", shown)
+	end
 	local function dismiss()
 		if not gui.Enabled then return end
-		gui.Enabled = false
+		setShown(false)
 		onDismiss()
 	end
 	nice.Activated:Connect(dismiss)
 	close.Activated:Connect(dismiss)
 	dimmer.Activated:Connect(dismiss)
 	NativeUI.fitWhole(panel, Menu.SIZE)
-	gui.Enabled = false
+	setShown(false)
 	return function(data: any?)
-		gui.Enabled = data ~= nil
+		setShown(data ~= nil)
 		if not data then return end
 		intro.Text = string.format("While you were away for <font color=\"#%s\">%s</font>, your production line kept working.",
 			Palette.UP:ToHex(), duration(data.away))

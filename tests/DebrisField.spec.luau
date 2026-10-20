@@ -18,6 +18,13 @@ return function(t: any)
 		t.eq(Income.grant(1, 2.6, 0, 100), 2, "whole cash only")
 	end)
 
+	t.test("sizedShare: a rock sized for a weaker pickaxe pays the breaker that fraction", function()
+		t.eq(DebrisField.sizedShare(40, 4, 10), 1, "sized for the breaker")
+		t.eq(DebrisField.sizedShare(40, 4, 1), 1, "sized for a stronger pickaxe: never more than full")
+		t.near(DebrisField.sizedShare(4, 4, 100), 0.01, 1e-9, "a veteran on a newcomer rock")
+		t.eq(DebrisField.sizedShare(4, 4, 0), 1, "no power: unchanged")
+	end)
+
 	t.test("every field has a reward and unknown or missing fields are filler", function()
 		for _, field in Config.Debris.Fields do
 			t.ok(DebrisField.reward(field.Id) ~= nil, field.Id)

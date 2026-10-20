@@ -65,15 +65,13 @@ return function(t: any)
 		t.eq(Perks.keptStation(owned, 0), 1)
 	end)
 
-	t.test("Head Start raises the start tier but holds it to the player level", function()
+	t.test("Head Start pays a percent of the next rebirth's cost", function()
 		local owned = Perks.fresh()
-		local function gate(tier: number): number return ({ 1, 1, 1, 1, 10, 16, 24, 34 })[tier] end
-		t.eq(Perks.startTier(owned, 50, 8, gate), 1)
-		owned.headStart = 3
-		t.eq(Perks.startTier(owned, 50, 8, gate), 4)
+		t.eq(Perks.startCash(owned, 1e6), 0)
+		owned.headStart = 1
+		t.eq(Perks.startCash(owned, 1e6), 30000)
 		owned.headStart = 4
-		t.eq(Perks.startTier(owned, 50, 8, gate), 5)
-		t.eq(Perks.startTier(owned, 5, 8, gate), 4, "level 5 cannot wield tier 5 yet")
-		t.eq(Perks.startTier(owned, 50, 3, gate), 3, "capped by the highest tier")
+		t.eq(Perks.startCash(owned, 1e6), 150000)
+		t.eq(Perks.startCash(owned, -5), 0, "never negative")
 	end)
 end

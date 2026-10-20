@@ -27,6 +27,7 @@ local EquipmentModels = require(ReplicatedStorage.Shared.EquipmentModels)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 
 local ShopService = Knit.CreateService({
 	Name = "ShopService",
@@ -53,6 +54,9 @@ local CATALOG: { [string]: { List: { Item }, Key: string } } = {
 local PlayerStateService
 local lastUpgradeRequest: { [Player]: number } = {}
 local lastEvolveRequest: { [Player]: number } = {}
+-- The per-player and per-character connections watch() makes, dropped on leave / respawn
+local playerConnections: { [Player]: { RBXScriptConnection } } = {}
+local characterConnection: { [Player]: RBXScriptConnection } = {}
 
 local function styleTool(tool: Tool, pickaxe: typeof(Config.Pickaxes[1]))
 	tool.Name = pickaxe.Name
@@ -117,7 +121,7 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 	end
 
 	data.cash -= evolution.cost
-	data.shards -= evolution.shards
+	ShardWallet.spend(data, evolution.shards)
 	data[entry.Key] = evolution.tier
 	data[LEVEL_KEY[kind]] = Gear.levelsForTier(evolution.tier)
 	self:ApplyPickaxe(player)
@@ -239,10 +243,19 @@ function ShopService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastUpgradeRequest[player] = nil
 		lastEvolveRequest[player] = nil
+		for _, connection in playerConnections[player] or {} do
+			connection:Disconnect()
+		end
+		playerConnections[player] = nil
+		if characterConnection[player] then
+			characterConnection[player]:Disconnect()
+			characterConnection[player] = nil
+		end
 	end)
 
 	-- StarterPack hands out a fresh Basic Pickaxe on every spawn; restyle it
 	local function watch(player: Player)
+		if playerConnections[player] then return end -- PlayerAdded and the startup sweep can both see a player
 		local function added(descendant: Instance)
 			-- Generated model parts never schedule another restyle. A deferred
 			-- call also lets a newly cloned Tool finish receiving its Handle.
@@ -257,7 +270,6 @@ function ShopService:KnitStart()
 				end)
 			end
 		end
-		player.DescendantAdded:Connect(added)
 		local function characterAdded(character: Model)
 			task.spawn(function()
 				local torso = character:WaitForChild("UpperTorso", 3) or character:FindFirstChild("Torso")
@@ -283,12 +295,13 @@ function ShopService:KnitStart()
 					self:ApplyPickaxe(player)
 				end
 			end)
-			character.DescendantAdded:Connect(added)
+			if characterConnection[player] then characterConnection[player]:Disconnect() end
+			characterConnection[player] = character.DescendantAdded:Connect(added)
 			for _, descendant in character:GetChildren() do
 				added(descendant)
 			end
 		end
-		player.CharacterAdded:Connect(characterAdded)
+		playerConnections[player] = { player.DescendantAdded:Connect(added), player.CharacterAdded:Connect(characterAdded) }
 		if player.Character then
 			characterAdded(player.Character)
 		end

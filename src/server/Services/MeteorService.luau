@@ -332,9 +332,10 @@ function MeteorService:_unlockCore(meteor: Meteor)
 end
 
 -- Variable rewards for breaking a crust node (Config.Hooks): a chance of a shard crumb for the player
--- who broke it, and the Golden Node's ore lumps for its breaker and everyone else who hit it. Lumps
+-- who broke it, and the Golden Node's ore lumps for its breaker and everyone else who dealt a real share
+-- of its Mining Power (Hooks.goldenAssist; `hitters` maps each hitter to the power they dealt). Lumps
 -- go straight to the hopper, so a full backpack never wastes them.
-function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: { [Player]: boolean }, oreFor: (Player) -> (string?, number))
+function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: { [Player]: number }, oreFor: (Player) -> (string?, number))
 	local crumb = Hooks.shardCrumb(math.random(), math.random())
 	if crumb > 0 and PlayerStateService:Get(breaker) then
 		PlayerStateService:AddShards(breaker, crumb)
@@ -343,9 +344,13 @@ function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: 
 	if not golden then
 		return
 	end
-	hitters[breaker] = true
-	for hitter in hitters do
-		if hitter.Parent and PlayerStateService:Get(hitter) then
+	local total = 0
+	for _, power in hitters do
+		total += power
+	end
+	hitters[breaker] = hitters[breaker] or 0 -- the breaker is always paid (a pet's hit can break it)
+	for hitter, power in hitters do
+		if hitter.Parent and PlayerStateService:Get(hitter) and (hitter == breaker or Hooks.goldenAssist(power, total)) then
 			local oreId, oreMult = oreFor(hitter)
 			if oreId then
 				local ore = Hooks.goldenNodeOre(NodeService:OrePerHit(hitter, oreMult), hitter == breaker)
@@ -449,7 +454,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		end
 		goldenIndex = if #candidates > 0 then candidates[math.random(1, #candidates)] else math.random(1, #slots)
 	end
-	local goldenHitters: { [Player]: boolean } = {}
+	local goldenHitters: { [Player]: number } = {} -- Mining Power each player dealt the Golden Node
 	for index, slot in slots do
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index
@@ -477,16 +482,20 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 			OnHit = function(player, power, ore)
 				ContributionService:AddCrust(player, power, ore)
 				if index == goldenIndex then
-					goldenHitters[player] = true
+					goldenHitters[player] = (goldenHitters[player] or 0) + power
 				end
 			end,
 			OnBroken = function(breaker)
-				self:_crustBonuses(breaker, index == goldenIndex, goldenHitters, oreFor)
+				-- count, hide and unlock first: a failing bonus must not leave the core locked
 				meteor.CrustBroken += 1
 				self:_breakPart(piece)
 				self:_publish({ crustBroken = meteor.CrustBroken })
 				if not meteor.Unlocked and meteor.CrustBroken >= meteor.UnlockAt then
 					self:_unlockCore(meteor)
+				end
+				local ok, err = pcall(self._crustBonuses, self, breaker, index == goldenIndex, goldenHitters, oreFor)
+				if not ok then
+					warn("[MeteorService] crust bonuses failed:", err)
 				end
 			end,
 		})

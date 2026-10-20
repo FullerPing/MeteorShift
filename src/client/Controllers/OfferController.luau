@@ -29,7 +29,7 @@ local OfferController = Knit.CreateController({ Name = "OfferController" })
 
 local SIZE, GAP = 54, 14 -- the tile's caption hangs a little below it
 local OPEN = "OfferPreviewOpen"
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen" }
+local PANEL_FLAGS = require(script.Parent.Parent.MenuFlags).ALL
 
 type Offer = { key: string, kind: "pass" | "product", caption: string, icon: string }
 -- bottom to top in the column, nearest the INDEX button first

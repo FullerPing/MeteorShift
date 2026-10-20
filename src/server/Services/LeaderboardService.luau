@@ -14,6 +14,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Leaderboards = require(ReplicatedStorage.Shared.Leaderboards)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local LeaderboardService = Knit.CreateService({ Name = "LeaderboardService", Client = {} })
 
@@ -148,6 +149,9 @@ function LeaderboardService:KnitStart()
 	end
 	Players.PlayerRemoving:Connect(function(player)
 		names[player.UserId] = nil
+		for _, written in saved do
+			written[player.UserId] = nil
+		end
 	end)
 
 	task.spawn(function()
@@ -170,13 +174,15 @@ function LeaderboardService:KnitStart()
 		end
 		task.wait(5) -- let the first profiles load
 		while true do
-			for _, board in Config.Leaderboards.Boards do
-				local rows = screens[board.Id]
-				if rows then
-					local top = globalTop(board)
-					render(rows, top or localTop(board))
+			SafeLoop.step("LeaderboardRefresh", function()
+				for _, board in Config.Leaderboards.Boards do
+					local rows = screens[board.Id]
+					if rows then
+						local top = globalTop(board)
+						render(rows, top or localTop(board))
+					end
 				end
-			end
+			end)
 			task.wait(Config.Leaderboards.RefreshInterval)
 		end
 	end)

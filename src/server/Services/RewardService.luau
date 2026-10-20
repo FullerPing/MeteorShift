@@ -74,7 +74,7 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 			-- flags.firstMeteor and flags.firstCoreReward are TelemetryService's
 			-- (first validated hit, first shards received; spec §13)
 			data.stats.meteorsJoined += 1
-			if reward then
+			if reward and cracked then -- a consolation payout isn't a crack (badges and telemetry read this)
 				data.stats.coresCracked += 1
 			end
 			-- Player level (Shared.Levels): hits already paid XP as they landed; a cracked core adds a bonus

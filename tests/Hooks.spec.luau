@@ -33,6 +33,12 @@ return function(t: any)
 		t.eq(Hooks.goldenNodeOre(10, false), 10 * Settings.GoldenNode.Contributor)
 	end)
 
+	t.test("a Golden Node assist needs a real share of the node's Mining Power, not one tap", function()
+		t.eq(Hooks.goldenAssist(30, 100), true)
+		t.eq(Hooks.goldenAssist(1, 100), false, "1% is a tap")
+		t.eq(Hooks.goldenAssist(0, 0), false)
+	end)
+
 	t.test("shard crumbs drop under the chance and stay within range", function()
 		t.eq(Hooks.shardCrumb(Settings.ShardCrumb.Chance + 0.01, 0.5), 0)
 		t.eq(Hooks.shardCrumb(0, 0), Settings.ShardCrumb.Min)

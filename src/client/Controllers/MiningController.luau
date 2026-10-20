@@ -18,6 +18,7 @@ local MiningReach = require(ReplicatedStorage.Shared.MiningReach)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
+local MenuFlags = require(script.Parent.Parent.MenuFlags)
 
 local player = Players.LocalPlayer
 
@@ -58,14 +59,10 @@ local floaters: { BasePart } = {} -- oldest first
 local oreChunks: { BasePart } = {} -- oldest first
 
 -- Any primary menu open blocks mining (each menu sets its own attribute on the player)
-local MENU_FLAGS = { "ShopOpen", "SettingsOpen", "RefineryOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "HatchOpen", "IntroOpen" }
+-- (the small Backpack popup doesn't block)
+local MENU_FLAGS = MenuFlags.except("BackpackOpen")
 local function menuOpen(): boolean
-	for _, flag in MENU_FLAGS do
-		if player:GetAttribute(flag) then
-			return true
-		end
-	end
-	return false
+	return MenuFlags.anyOpen(MENU_FLAGS)
 end
 
 -- Swing distance to a target (Shared.MiningReach): meteor crust and core also reach upward

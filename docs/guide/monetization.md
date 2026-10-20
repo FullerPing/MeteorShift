@@ -19,7 +19,7 @@ Ownership comes from Roblox, never a profile flag: it is resolved on join with a
 | `BiggerBackpack` | 2025488489 | 99 | Backpack capacity ×2 on every tier (`MonetizationService.luau:146-148`) | `:71-77`, `BackpackMult :369` |
 | `OfflineHours` | 0 — off sale | — | Offline catch-up cap raised to `Config.Home.OfflineCapPass` (`MonetizationService.luau:151-155`) | `:78-83` |
 | `AutoDeposit` | 2026682466 | 129 | Mined ore goes straight to the hopper, overflowing into the backpack (`MonetizationService.luau:157-159`) | `:84-90` |
-| `VIP` | 2027090469 | 199 | +10% bar sales (`MonetizationService.luau:161-163`) and a [VIP] chat tag (`:177`; tag text `Monetization.luau:371-372`) | `:105-111`, `VIPBarBonus :370` |
+| `VIP` | 2027090469 | 199 | +25% bar sales (`MonetizationService.luau:161-163`) and a [VIP] chat tag (`:177`; tag text `Monetization.luau:371-372`) | `:105-111`, `VIPBarBonus :370` |
 | `Drillbot` | 2026256458 | 129 | The fixed Drillbot pet permanently (`src/shared/Config/Pets.luau:132-133`) | `:91-97` |
 | `SolarPhoenix` | 2026178485 | 249 | The fixed Solar Phoenix pet permanently (`Pets.luau:134-135`) | `:98-104` |
 
@@ -101,8 +101,8 @@ Roblox policy is resolved in the background per session, independent of profile 
 
 The store as built matches that posture, and that is the product policy:
 
-- **Eggs cost earned Core Shards only, never Robux.** Every egg has a shard `Cost` (Meteor 30 / Crystal 120 / Aurora 250, `src/shared/Config/Pets.luau:86-95`) and the server charges `data.shards` (`src/server/Services/PetService.luau:102-119`, charged at `:114-119`). No product touches an egg, and eggs keep their published odds and pity rules (`Pets.luau:84-85`).
-- **No product changes mineral odds or grants a random pet.** 2x Ore doubles quantity only; cash packs are bounded income estimates; shard packs add fixed shards (`Monetization.luau:16-20`, `Purchases.luau:2-4`). Paid randomness is therefore not used anywhere — if it is ever introduced, the policy check above is mandatory.
+- **Eggs cost earned Core Shards only, never Robux.** Every egg has a shard `Cost` (Meteor 30 / Crystal 120 / Aurora 250, `src/shared/Config/Pets.luau:86-95`) and the server charges them through `Shared.ShardWallet` (`PetService:Hatch`): earned shards first, and where `:CanUsePaidRandomItems` is false only earned shards (`paidShards` tracks the Robux-bought part since profile v13). No product touches an egg, and eggs keep their published odds and pity rules (`Pets.luau:84-85`).
+- **No product changes mineral odds or grants a random pet.** 2x Ore doubles quantity only; cash packs are bounded income estimates; shard packs add fixed shards (`Monetization.luau:16-20`, `Purchases.luau:2-4`). Bought shards *can* reach an egg where the policy allows paid random items, so the egg hatch runs the policy check above.
 - **Premium pets are fixed passes, never egg prizes** (`Pets.luau:100`, `:131`).
 
 ## Sold on purpose (owner decisions — not bugs)

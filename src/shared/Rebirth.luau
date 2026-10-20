@@ -27,7 +27,7 @@ function Rebirth.cost(rebirths: number?): number
 	if n < #costs then
 		return costs[n + 1]
 	end
-	return costs[#costs] * Config.Legacy.CostGrowth ^ (n - #costs + 1)
+	return costs[#costs] * Config.Legacy.FirstStep * Config.Legacy.CostGrowth ^ (n - #costs)
 end
 
 function Rebirth.multiplier(rebirths: number?): number

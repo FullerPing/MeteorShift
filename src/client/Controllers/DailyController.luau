@@ -17,13 +17,11 @@ local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local player = Players.LocalPlayer
 local DailyController = Knit.CreateController({ Name = "DailyController" })
 
-local OTHER_MENUS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "IntroOpen", "BackpackOpen", "PerksOpen" }
+local MenuFlags = require(script.Parent.Parent.MenuFlags)
+local OTHER_MENUS = MenuFlags.except("DailyOpen")
 
 local function otherMenuOpen(): boolean
-	for _, name in OTHER_MENUS do
-		if player:GetAttribute(name) == true then return true end
-	end
-	return false
+	return MenuFlags.anyOpen(OTHER_MENUS)
 end
 
 local function clock(seconds: number): string
@@ -85,6 +83,7 @@ function DailyController:KnitStart()
 	local busy = false
 	local popupShown = false
 	local tutorialDone = false
+	local failNote: string? = nil -- shown in the footer after a claim the server refused
 
 	local function update()
 		local s = summary
@@ -138,7 +137,9 @@ function DailyController:KnitStart()
 				row.Visible = false
 			end
 		end
-		;(body:WaitForChild("Footer") :: TextLabel).Text = "Quests and the streak reset at midnight UTC."
+		local footer = body:WaitForChild("Footer") :: TextLabel
+		footer.Text = failNote or "Quests and the streak reset at midnight UTC."
+		footer.TextColor3 = if failNote then Palette.UNMET else Palette.SECOND
 		local ready = s.anyReady == true and tutorialDone
 		player:SetAttribute("DailyReady", ready)
 		navRefs.badge.Visible = ready
@@ -148,12 +149,15 @@ function DailyController:KnitStart()
 	local function request(call: () -> boolean)
 		if busy then return end
 		busy = true
+		failNote = nil
 		update()
 		task.spawn(function()
 			local ok, paid = pcall(call)
 			if ok and paid then
 				Sfx.play("Upgrade", nil, nil, 1.1)
 				RewardFX.burst(Config.RewardFX.Colors.Rebirth, 0.8)
+			else
+				failNote = if ok then "Couldn't claim that yet. Check the quest and try again." else "Couldn't reach the server. Try again in a moment."
 			end
 			busy = false
 			update()
@@ -211,6 +215,9 @@ function DailyController:KnitStart()
 	end)
 	NativeUI.bindOpen(gui, "DailyOpen", function()
 		player:SetAttribute("DailyOpen", false)
+	end)
+	player:GetAttributeChangedSignal("DailyOpen"):Connect(function()
+		if player:GetAttribute("DailyOpen") ~= true and failNote then failNote = nil; update() end
 	end)
 	DailyService.TutorialDone:Observe(function(done)
 		tutorialDone = done == true

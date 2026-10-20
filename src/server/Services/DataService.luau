@@ -26,13 +26,17 @@ local Pets = require(ReplicatedStorage.Shared.Pets)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local Line = require(ReplicatedStorage.Shared.Line)
 local Perks = require(ReplicatedStorage.Shared.Perks)
+local PlayerSettings = require(ReplicatedStorage.Shared.PlayerSettings)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
 local GearMigration = require(script.Parent.Parent.Lib.GearMigration)
 
 local STORE_NAME = "PlayerData_v1"
 local AUTOSAVE_INTERVAL = 60
-local LOCK_STALE_AFTER = 30 * 60 -- a lock older than this belongs to a dead server
+-- A lock older than this belongs to a dead server: a live one refreshes it with every autosave, so after a crash
+-- the player waits minutes, not half an hour (they retry LOAD_RETRIES x RETRY_DELAY, then get a rejoin message)
+local LOCK_STALE_AFTER = 5 * AUTOSAVE_INTERVAL
 local LOAD_RETRIES = 8
 local RETRY_DELAY = 5
 
@@ -137,6 +141,11 @@ local function migrate(data: { [any]: any }): { [any]: any }
 		data.stations = nil
 	end
 	data.line = Line.clean(data.line)
+	-- v12 was an unreleased trial (a `trialFlag` key nothing read). v13 tracks the Robux-bought share of the
+	-- shards (paidShards; shards bought before now count as earned), saved settings and the Pet Max credit
+	data.trialFlag = nil
+	data.paidShards = ShardWallet.paid(data)
+	data.settings = PlayerSettings.clean(data.settings)
 	-- v5 -> v6 (economy rework): colony perks and the rebirth overflow counter. Nothing is refunded or
 	-- taken: the gear and stations a profile owns stay, only the prices and gates change.
 	data.perks = Perks.clean(data.perks)

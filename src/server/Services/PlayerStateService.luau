@@ -21,6 +21,7 @@ local Levels = require(ReplicatedStorage.Shared.Levels)
 local CharacterSpeed = require(ReplicatedStorage.Shared.CharacterSpeed)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
+local PlayerSettings = require(ReplicatedStorage.Shared.PlayerSettings)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -58,6 +59,8 @@ local petSpeed: { [Player]: SpeedState } = {}
 local fastWalk: { [Player]: boolean } = {}
 local onRoad: { [Player]: boolean } = {} -- standing on the ring road (CharacterSpeed.onRoad), checked a few times a second
 local lastFastRequest: { [Player]: number } = {}
+local lastSettingRequest: { [Player]: number } = {}
+local characterAdded: { [Player]: RBXScriptConnection } = {}
 
 local function sum(t: { [string]: number }): number
 	local total = 0
@@ -123,12 +126,13 @@ function PlayerStateService:GetPickaxe(player: Player): any
 	return pickaxe
 end
 
--- Backpack capacity: the leveled Capacity, the Bigger Backpack pass and a Pack pet
+-- Backpack capacity: the leveled Capacity, the Bigger Backpack pass and a Pack pet, in whole ore
+-- (a fractional capacity left fractional ore in the backpack, hopper and bars)
 function PlayerStateService:GetCapacity(player: Player): number
 	local data = self:Get(player)
 	local base = if data then Gear.capacity(data.backpackTier, data.backpackLevel) else Gear.capacity(1, 1)
 	local pack = if data then self:GetPetBonuses(player).pack else 0
-	return base * MonetizationService:BackpackMult(player) * (1 + pack)
+	return math.floor(base * MonetizationService:BackpackMult(player) * (1 + pack))
 end
 
 function PlayerStateService:GetHopperCapacity(player: Player): number
@@ -294,7 +298,19 @@ function PlayerStateService:_sendState(player: Player)
 		purchased = { starterPack = data.flags.starterPack == true, extraPetSlot = data.flags.extraPetSlot == true }, -- one-off products
 		overclockLeft = data.overclockLeft, -- seconds of Refinery Overclock left
 		oreBoostLeft = data.oreBoostLeft,
+		settings = table.clone(data.settings), -- saved Settings toggles (Shared.PlayerSettings); missing = default
 	})
+end
+
+-- Saves one Settings toggle. The client has already applied it as a player attribute.
+function PlayerStateService.Client:SetSetting(player: Player, name: any, value: any)
+	local allowed, stamp = RequestGate.check(lastSettingRequest[player], os.clock(), 0.1)
+	lastSettingRequest[player] = stamp
+	local data = self.Server:Get(player)
+	if not allowed or not data or typeof(name) ~= "string" or PlayerSettings.Defaults[name] == nil or typeof(value) ~= "boolean" then
+		return
+	end
+	data.settings[name] = value
 end
 
 -- Writes leaderstats only when the shown value changed, so small cash gains
@@ -479,7 +495,7 @@ end
 
 function PlayerStateService:KnitStart()
 	local function addLeaderstats(player: Player)
-		player.CharacterAdded:Connect(function(character)
+		characterAdded[player] = player.CharacterAdded:Connect(function(character)
 			task.spawn(function()
 				character:WaitForChild("Humanoid", 5)
 				if player.Character == character then self:PublishPets(player) end
@@ -516,6 +532,10 @@ function PlayerStateService:KnitStart()
 		lastFullNotice[player] = nil
 		stateDirty[player] = nil
 		leaderstatsDirty[player] = nil
+		lastSettingRequest[player] = nil
+		local connection = characterAdded[player]
+		if connection then connection:Disconnect() end
+		characterAdded[player] = nil
 	end)
 
 	local sinceFlush, sinceRoad = 0, 0

@@ -54,6 +54,7 @@ local Pets = require(ReplicatedStorage.Shared.Pets)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Telemetry = require(script.Parent.Parent.Lib.Telemetry)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local TelemetryService = Knit.CreateService({
 	Name = "TelemetryService",
@@ -450,7 +451,9 @@ function TelemetryService:KnitStart()
 	task.spawn(function()
 		while true do
 			task.wait(Config.Telemetry.ActionsInterval)
-			self:_logActions()
+			SafeLoop.step("TelemetryActions", function()
+				self:_logActions()
+			end)
 		end
 	end)
 end

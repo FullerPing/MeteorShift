@@ -33,7 +33,7 @@ return table.freeze({
 		"A meteor lands every few minutes. Run to the crater!",
 		"Hit the core together to earn Core Shards.",
 		"Deposit ore at the Foundry, then claim your bars.",
-		"Sell bars at the Trading Post for cash.",
+		"Tap SELL on your HUD to turn bars into cash.",
 		"Hold SPRINT to run faster.",
 		"Tap ORE to teleport to an ore field.",
 		"Hatch eggs with Core Shards you earn by playing.",

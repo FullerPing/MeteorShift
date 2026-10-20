@@ -121,7 +121,7 @@ $95K and the spec pins it there (`tests/Pacing.spec.luau:175-178`; `src/shared/P
 | Fate | What | Cite |
 |---|---|---|
 | Survives | pickaxe and backpack **tiers**; anything the function never assigns — shards, pets, Colony Perks, mineral index, player level/XP, credits | `src/server/Lib/RebirthReset.luau:26-27` (tiers), keys absent from `:17-37` |
-| Partially survives | production line level — Station Memory keeps that share of it (`src/shared/Perks.luau:76-79`); Head Start floors the gear tiers up to the level gate (`src/shared/Perks.luau:83-90`) | `src/server/Lib/RebirthReset.luau:33,26-27` |
+| Partially survives | production line level — Station Memory keeps that share of it (`src/shared/Perks.luau:76-79`); Head Start adds starting cash, a share of the next rebirth's cost (`Perks.startCash`) | `src/server/Lib/RebirthReset.luau:33,26-27` |
 | Resets | cash; gear stat levels back to 1 inside the kept tier (`src/shared/Gear.luau:36-38`); carried ore, hopper stock, bars, bins, decor; overflow | `src/server/Lib/RebirthReset.luau:23,28-32,34-36` |
 
 **Rebirth and Keep Everything** is a paid option: a purchased credit rebirths without the cash and

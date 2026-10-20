@@ -148,27 +148,17 @@ return function(t: any)
 		t.eq(full.line, 6, "the top rank keeps all of it")
 	end)
 
-	t.test("Head Start is a floor for gear below it, held to the player level, and never lowers owned gear", function()
-		local Levels = require(t.shared.Levels)
+	t.test("Head Start starts the new rank with a share of its rebirth cost; tiers are kept as they are", function()
+		local Rebirth = require(t.shared.Rebirth)
 		local data = profile()
-		data.pickaxeTier, data.backpackTier = 1, 2
-		data.perks = { headStart = 4 }
-		data.level = Levels.evolveLevel(5)
+		data.perks = { headStart = 4 } -- 15%
 		Reset.apply(data, 1000)
-		t.eq(data.pickaxeTier, 5)
-		t.eq(data.backpackTier, 5)
-		t.eq(data.pickaxeLevel, require(t.shared.Gear).levelsForTier(5), "the level follows the raised tier, not the old one")
-		local low = profile()
-		low.pickaxeTier, low.backpackTier = 1, 1
-		low.perks = { headStart = 4 }
-		low.level = 1
-		Reset.apply(low, 1000)
-		t.eq(low.pickaxeTier, 4, "level 1 can only hold the tiers that are free")
-		local high = profile()
-		high.perks = { headStart = 4 }
-		high.level = 1
-		Reset.apply(high, 1000)
-		t.eq(high.pickaxeTier, 7, "owned gear above the perk's tier is kept")
+		t.eq(data.cash, math.floor(0.15 * Rebirth.cost(data.rebirths + 1)), "priced for the rank after this rebirth")
+		t.eq(data.pickaxeTier, 7, "owned tiers are untouched")
+		t.eq(data.pickaxeLevel, require(t.shared.Gear).levelsForTier(7))
+		local none = profile()
+		Reset.apply(none, 1000)
+		t.eq(none.cash, 0, "no perk, no starting cash")
 	end)
 
 	t.test("keep everything resets nothing except the overstay counter", function()

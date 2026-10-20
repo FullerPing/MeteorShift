@@ -80,7 +80,7 @@ end
 function Daily.reward(cycleDay: number, perSecond: number, ceiling: number): Reward
 	local entry = Settings.Days[cycleDay] or Settings.Days[#Settings.Days]
 	return {
-		cash = Income.grant(entry.Minutes * 60, clean(perSecond), Settings.CashFloor, clean(ceiling)),
+		cash = Income.grant(entry.Minutes * 60, clean(perSecond), Settings.CashFloor, clean(ceiling) * (entry.CeilingMult or 1)),
 		shards = entry.Shards, petXp = entry.PetXp, shield = entry.Shield,
 	}
 end

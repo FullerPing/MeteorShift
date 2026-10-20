@@ -17,6 +17,7 @@ local Pets = require(ReplicatedStorage.Shared.Pets)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Badges = require(script.Parent.Parent.Lib.Badges)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local DailyService = Knit.CreateService({
 	Name = "DailyService",
@@ -243,10 +244,13 @@ function DailyService:KnitStart()
 			task.wait(PUBLISH_INTERVAL)
 			local today = Daily.dayKey(now())
 			for _, player in Players:GetPlayers() do
-				local data = PlayerStateService:Get(player)
-				if data and (dirty[player] or data.daily.day ~= today or tutorialSent[player] ~= (data.flags.tutorialDone == true)) then
-					publish(player)
-				end
+				-- per player, so one bad profile doesn't stop everyone else's summaries
+				SafeLoop.step("DailyPublish", function()
+					local data = PlayerStateService:Get(player)
+					if data and (dirty[player] or data.daily.day ~= today or tutorialSent[player] ~= (data.flags.tutorialDone == true)) then
+						publish(player)
+					end
+				end)
 			end
 		end
 	end)

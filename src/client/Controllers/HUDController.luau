@@ -168,16 +168,30 @@ function HUDController:KnitStart()
 		end)
 	end)
 
-	local toastToken = 0
-	local function showRichToast(text: string)
-		toastToken += 1
-		local token = toastToken
+	-- Toasts queue: each shows at least TOAST_MIN s (TOAST_TIME when nothing waits); a repeat of one shown or waiting is
+	-- dropped, and only the newest TOAST_QUEUE wait
+	local TOAST_MIN, TOAST_TIME, TOAST_QUEUE = 1.2, 2.5, 3
+	local toastQueue: { string } = {}
+	local toastBusy = false
+	local function pumpToasts()
+		if toastBusy then return end
+		local text = table.remove(toastQueue, 1)
+		if not text then toast:set(nil); return end
+		toastBusy = true
 		toast:set(text)
-		task.delay(2.5, function()
-			if toastToken == token then
-				toast:set(nil)
-			end
+		local started = os.clock()
+		task.spawn(function()
+			task.wait(TOAST_MIN)
+			while #toastQueue == 0 and os.clock() - started < TOAST_TIME do task.wait(0.1) end
+			toastBusy = false
+			pumpToasts()
 		end)
+	end
+	local function showRichToast(text: string)
+		if text == Fusion.peek(toast) or table.find(toastQueue, text) then return end
+		table.insert(toastQueue, text)
+		if #toastQueue > TOAST_QUEUE then table.remove(toastQueue, 1) end
+		pumpToasts()
 	end
 	local function showToast(text: string, color: Color3?, highlighted: string?)
 		showRichToast(HudMessages.toast(text, color, highlighted))
@@ -385,6 +399,65 @@ function HUDController:KnitStart()
 				meteorState = meteorState, standing = standing, coreHp = coreHp,
 				coreMaxHp = coreMaxHp, inEvent = inEvent,
 			}),
+			-- Studio-only playtest helpers
+			if RunService:IsStudio()
+				then scope:New("Frame")({
+					Name = "Dev",
+					AnchorPoint = Vector2.new(1, 1),
+					Position = UDim2.new(1, -12, 1, -12),
+					Size = UDim2.fromOffset(170, 66),
+					BackgroundTransparency = 1,
+					Visible = workspace:GetAttribute("DevHudHelpersVisible") == true,
+					[Children] = {
+						scope:New("UIListLayout")({
+							Padding = UDim.new(0, 6),
+							VerticalAlignment = Enum.VerticalAlignment.Bottom,
+						}),
+						scope:New("TextButton")({
+							Name = "DevSkip",
+							Size = UDim2.new(1, 0, 0, 30),
+							BackgroundColor3 = Color3.fromRGB(164, 118, 82),
+							Font = FONT,
+							Text = "[Studio] Meteor now",
+							TextSize = 16,
+							TextColor3 = WHITE,
+							Visible = scope:Computed(function(use)
+								return use(phase) == Phase.Countdown
+							end),
+							[OnEvent("Activated")] = function()
+								MeteorService:DevSkipCountdown()
+							end,
+							[Children] = { corner(scope, 8), stroke(scope) },
+						}),
+						scope:New("TextButton")({
+							Name = "DevAway",
+							Size = UDim2.new(1, 0, 0, 30),
+							BackgroundColor3 = Color3.fromRGB(164, 118, 82),
+							Font = FONT,
+							Text = "[Studio] Away 1 hour",
+							TextSize = 16,
+							TextColor3 = WHITE,
+							[OnEvent("Activated")] = function()
+								RefineryService:DevSimulateAway(3600)
+							end,
+							[Children] = { corner(scope, 8), stroke(scope) },
+						}),
+					},
+				})
+				else nil,
+
+		},
+	})
+
+	-- Toasts and the meteor reward lines draw over open menus (DisplayOrder 20-100), so they get their own ScreenGui
+	scope:New("ScreenGui")({
+		Name = "HudToasts",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 110,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		Parent = player:WaitForChild("PlayerGui"),
+		[Children] = {
 			-- One reserved notification area: keep the personal reward directly below
 			-- the announcement, with toasts retaining priority in the first row.
 			UI.label(scope, {
@@ -434,54 +507,6 @@ function HUDController:KnitStart()
 					MaxTextSize = scope:Computed(function(use) return if use(hud).notificationCompact then 16 elseif use(hud).touch then 20 else 24 end),
 				}) },
 			}),
-
-			-- Studio-only playtest helpers
-			if RunService:IsStudio()
-				then scope:New("Frame")({
-					Name = "Dev",
-					AnchorPoint = Vector2.new(1, 1),
-					Position = UDim2.new(1, -12, 1, -12),
-					Size = UDim2.fromOffset(170, 66),
-					BackgroundTransparency = 1,
-					Visible = workspace:GetAttribute("DevHudHelpersVisible") == true,
-					[Children] = {
-						scope:New("UIListLayout")({
-							Padding = UDim.new(0, 6),
-							VerticalAlignment = Enum.VerticalAlignment.Bottom,
-						}),
-						scope:New("TextButton")({
-							Name = "DevSkip",
-							Size = UDim2.new(1, 0, 0, 30),
-							BackgroundColor3 = Color3.fromRGB(164, 118, 82),
-							Font = FONT,
-							Text = "[Studio] Meteor now",
-							TextSize = 16,
-							TextColor3 = WHITE,
-							Visible = scope:Computed(function(use)
-								return use(phase) == Phase.Countdown
-							end),
-							[OnEvent("Activated")] = function()
-								MeteorService:DevSkipCountdown()
-							end,
-							[Children] = { corner(scope, 8), stroke(scope) },
-						}),
-						scope:New("TextButton")({
-							Name = "DevAway",
-							Size = UDim2.new(1, 0, 0, 30),
-							BackgroundColor3 = Color3.fromRGB(164, 118, 82),
-							Font = FONT,
-							Text = "[Studio] Away 1 hour",
-							TextSize = 16,
-							TextColor3 = WHITE,
-							[OnEvent("Activated")] = function()
-								RefineryService:DevSimulateAway(3600)
-							end,
-							[Children] = { corner(scope, 8), stroke(scope) },
-						}),
-					},
-				})
-				else nil,
-
 		},
 	})
 

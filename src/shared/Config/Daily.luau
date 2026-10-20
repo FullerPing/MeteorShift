@@ -2,7 +2,9 @@
 -- Daily streak, quests and shields (Shared.Daily rules, DailyService). Cash is a stretch of the player's own
 -- expected income (Shared.Income) so a reward is as big as their setup is, capped under the next rebirth cost.
 -- Nothing here is sold except Streak Shields (Config.Monetization) and nothing touches any odds.
-export type Day = { Minutes: number, Shards: number, PetXp: number, Shield: number }
+-- CeilingMult raises the day's cash ceiling (CashCeilingShare of the next rebirth's cost): with one flat ceiling
+-- every day paid the same once income outgrew it, so the streak's ramp was invisible
+export type Day = { Minutes: number, Shards: number, PetXp: number, Shield: number, CeilingMult: number }
 export type Quest = {
 	Id: string, Event: string, Target: number, Title: string, Minutes: number, Shards: number,
 	MinLevel: number?, MinRebirths: number?,
@@ -21,13 +23,13 @@ Daily.DailyCount = 3
 -- The first days are small on purpose: a new player earns about 25 cash a second, so the first claim must not
 -- be able to buy the early pickaxe tiers outright (day 1 is about 40 seconds of play, not a skip).
 Daily.Days = {
-	{ Minutes = 0.5, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 2, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 4, Shards = 10, PetXp = 0, Shield = 0 },
-	{ Minutes = 6, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 10, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 15, Shards = 0, PetXp = 0, Shield = 0 },
-	{ Minutes = 30, Shards = 40, PetXp = 300, Shield = 1 },
+	{ Minutes = 0.5, Shards = 0, PetXp = 0, Shield = 0, CeilingMult = 1 },
+	{ Minutes = 2, Shards = 0, PetXp = 0, Shield = 0, CeilingMult = 1.5 },
+	{ Minutes = 4, Shards = 10, PetXp = 0, Shield = 0, CeilingMult = 2 },
+	{ Minutes = 6, Shards = 0, PetXp = 0, Shield = 0, CeilingMult = 2.5 },
+	{ Minutes = 10, Shards = 0, PetXp = 0, Shield = 0, CeilingMult = 3.5 },
+	{ Minutes = 15, Shards = 0, PetXp = 0, Shield = 0, CeilingMult = 5 },
+	{ Minutes = 30, Shards = 40, PetXp = 300, Shield = 1, CeilingMult = 7.5 },
 } :: { Day }
 
 -- Events: crustHit (a validated hit on a meteor crust node), meteorJoin (first hit of each meteor), coreCrack

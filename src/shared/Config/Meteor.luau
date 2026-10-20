@@ -38,7 +38,7 @@ Meteor.PowerGrowth = 1.25 -- Mining Power per pickaxe tier: tier 1 = 1.0, tier 4
 Meteor.CrustSeconds = 70
 Meteor.CoreSeconds = 45
 Meteor.CoreUnlockFraction = 0.6
-Meteor.ActiveWindow = 120 -- players with no input for this long don't count toward HP
+Meteor.ActiveWindow = 120 -- players with no validated swing for this long don't count toward HP
 Meteor.FloorPlayers = 1 -- a meteor is never smaller than this many Basic Pickaxes (HP scales with power, so the event lasts the same for any lobby size; a floor above the real player count made 1-3 players unable to crack it)
 Meteor.RescaleThreshold = 0.15 -- rescale remaining HP when server power drifts more than this
 Meteor.RescaleCooldown = 10 -- at most one rescale per this many seconds

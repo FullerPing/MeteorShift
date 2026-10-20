@@ -11,7 +11,8 @@
 --             (PlayerStateService, EconomyService)
 --
 -- Pets level on your own validated hits (Config.Pets.XpPerHit), never on a pet's. Pets are
--- hatched with earned Core Shards and visible odds/pity. Pass pets are fixed
+-- hatched with Core Shards and visible odds/pity. Where PolicyService restricts paid random items,
+-- only shards earned in game open eggs (Shared.ShardWallet). Pass pets are fixed
 -- entitlements; no purchase can roll a pet or change odds.
 
 local Players = game:GetService("Players")
@@ -23,6 +24,8 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
+local Purchases = require(ReplicatedStorage.Shared.Purchases)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 
 local PetService = Knit.CreateService({
@@ -41,10 +44,12 @@ PetService.EggHatched = Signal.new() -- (player, eggId, petId, duplicate) after 
 
 local TICK = 0.1
 local IDLE_RETRY = 0.4 -- how soon a miner pet looks again when it found nothing in reach
+local WORK_RANGE = 150 -- studs: pet work effects only go to players near enough to see them
 
 local PlayerStateService
 local NodeService
 local MonetizationService
+local PlayerPolicyService
 
 -- Per player: when the miner pet swings next, and the fraction of ore the hauler owes
 local nextSwing: { [Player]: number } = {}
@@ -63,7 +68,27 @@ function PetService:Work(player: Player, role: string, targetPosition: Vector3?)
 	local now = os.clock()
 	if now - (times[role] or 0) < .25 then return end
 	times[role] = now
-	self.Client.Working:FireAll(player.UserId, role, targetPosition)
+	-- Presentation only, and frequent while mining: send it to the owner and players close by, not the server
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local origin = if root then root.Position else targetPosition
+	for _, other in Players:GetPlayers() do
+		local otherCharacter = other.Character
+		local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if other == player or (origin and otherRoot and (otherRoot.Position - origin).Magnitude <= WORK_RANGE) then
+			self.Client.Working:Fire(other, player.UserId, role, targetPosition)
+		end
+	end
+end
+
+-- Puts a pet out and spends a banked Pet Max on it (Shared.Purchases.applyPetMaxCredit)
+function PetService:_putOut(player: Player, data: any, petId: string)
+	table.insert(data.pets.equipped, petId)
+	local maxed = Purchases.applyPetMaxCredit(data, petId)
+	if maxed then
+		self.Client.Leveled:Fire(player, petId, maxed)
+		self.Client.Notice:Fire(player, "Your saved Pet Max took this pet to max level!")
+	end
 end
 
 function PetService:Equip(player: Player, petId: string): boolean
@@ -79,7 +104,7 @@ function PetService:Equip(player: Player, petId: string): boolean
 		self.Client.Notice:Fire(player, string.format("All %d pet slots are in use. Unequip a pet first. Rebirths, Pet Bond and Extra Pet Slot open more.", PlayerStateService:PetSlots(player)))
 		return false
 	end
-	table.insert(data.pets.equipped, petId)
+	self:_putOut(player, data, petId)
 	PlayerStateService:ReplicateNow(player)
 	return true
 end
@@ -116,7 +141,15 @@ function PetService:Hatch(player: Player, eggId: string): string?
 		self.Client.Notice:Fire(player, shortfall)
 		return nil
 	end
-	data.shards -= egg.Cost
+	-- Eggs are random: where paid random items are restricted, Robux-bought shards can't open them
+	local restricted = not PlayerPolicyService:CanUsePaidRandomItems(player)
+	if ShardWallet.forEggs(data, restricted) < egg.Cost then
+		self.Client.Notice:Fire(player, string.format(
+			"Eggs open with Core Shards earned in game here. You have %d earned shards; the %s needs %d. Bought shards still buy perks and evolves.",
+			ShardWallet.earned(data), egg.Name, egg.Cost))
+		return nil
+	end
+	ShardWallet.spend(data, egg.Cost, true)
 	local petId, pity = Pets.roll(egg, math.random(), data.pets.hatches[eggId] or 0, math.random())
 	data.pets.hatches[eggId] = pity
 	local entry = data.pets.owned[petId]
@@ -126,7 +159,7 @@ function PetService:Hatch(player: Player, eggId: string): string?
 	else
 		data.pets.owned[petId] = { level = 1, xp = 0 }
 		if slotsFree(player, data) then
-			table.insert(data.pets.equipped, petId)
+			self:_putOut(player, data, petId)
 		end
 		self.PetBought:Fire(player, petId)
 	end
@@ -137,7 +170,8 @@ function PetService:Hatch(player: Player, eggId: string): string?
 end
 
 -- Gives the player every pet whose pass they own and don't have yet (equipped if a slot is
--- free). Called when a profile and the passes are known and when a pass is bought.
+-- free), and takes back a pass pet whose pass Roblox says they no longer own (refunded or revoked;
+-- never on a failed lookup). Called when a profile and the passes are known and when a pass is bought.
 function PetService:SyncPassPets(player: Player)
 	local data = PlayerStateService:Get(player)
 	if not data then
@@ -147,10 +181,17 @@ function PetService:SyncPassPets(player: Player)
 		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:ExtraPetSlots(player) > 0, Perks.petSlots(data.perks))
 	end
 	for _, def in Config.Pets.List do
+		if def.Pass and data.pets.owned[def.Id] and MonetizationService:PassKnownNotOwned(player, def.Pass) then
+			data.pets.owned[def.Id] = nil
+			local index = table.find(data.pets.equipped, def.Id)
+			if index then table.remove(data.pets.equipped, index) end
+		end
+	end
+	for _, def in Config.Pets.List do
 		if def.Pass and not data.pets.owned[def.Id] and MonetizationService:HasPass(player, def.Pass) then
 			data.pets.owned[def.Id] = { level = 1, xp = 0 }
 			if slotsFree(player, data) then
-				table.insert(data.pets.equipped, def.Id)
+				self:_putOut(player, data, def.Id)
 			end
 			PlayerStateService:ReplicateNow(player)
 			self.Client.Bought:Fire(player, def.Id)
@@ -287,6 +328,7 @@ function PetService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	NodeService = Knit.GetService("NodeService")
 	MonetizationService = Knit.GetService("MonetizationService")
+	PlayerPolicyService = Knit.GetService("PlayerPolicyService")
 end
 
 function PetService:KnitStart()

@@ -11,6 +11,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 
 local AdminGive = {}
 
@@ -31,6 +32,8 @@ export type Result = {
 export type Candidate = { Name: string, DisplayName: string }
 
 AdminGive.Usage = "Usage: /give <player|all> cash|shards <amount>, pickaxe|backpack <tier>, pet <pet> [level]"
+-- Largest cash or shards gift: far above any real price, far below where multipliers could overflow to inf
+AdminGive.MaxAmount = 1e30
 
 -- The recipient names that mean everyone in the server ("/give all cash 1000", "/giveall cash 1000")
 local EVERYONE = { all = true, everyone = true, ["*"] = true }
@@ -76,6 +79,9 @@ function AdminGive.parse(text: string): (string?, Gift?, string?)
 		local amount = whole(words[4])
 		if not amount or amount < 1 then
 			return nil, nil, "Give a whole amount of at least 1. " .. AdminGive.Usage
+		end
+		if amount > AdminGive.MaxAmount then
+			return nil, nil, "Give at most " .. Format.number(AdminGive.MaxAmount) .. ". " .. AdminGive.Usage
 		end
 		return target, { kind = kind, amount = amount }, nil
 	elseif kind == "pickaxe" or kind == "backpack" then
@@ -139,7 +145,7 @@ function AdminGive.apply(data: any, gift: Gift, petSlots: number): Result
 		data.cash += gift.amount :: number
 		return { changed = true, gear = false, text = Format.cash(gift.amount :: number) .. " cash" }
 	elseif kind == "shards" then
-		data.shards += gift.amount :: number
+		ShardWallet.add(data, gift.amount :: number) -- earned, not bought
 		return { changed = true, gear = false, text = Format.number(gift.amount :: number) .. " shards" }
 	elseif kind == "pickaxe" or kind == "backpack" then
 		local tier = gift.tier :: number

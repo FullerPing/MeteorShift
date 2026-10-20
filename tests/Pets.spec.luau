@@ -43,7 +43,7 @@ return function(t: any)
 	end
 
 	t.test("the 11 roles carry their display text and caps without shared ranges", function()
-		local caps = { miner = 1, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
+		local caps = { miner = 1.5, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
 			yield = 0.40, sprint = 0.30, vault = 1, crit = 0.15, scholar = 0.60, shards = 0.30 }
 		t.eq(#Config.RoleOrder, 11)
 		local seen = {}
@@ -191,7 +191,7 @@ return function(t: any)
 			table.insert(saved.equipped, def.Id)
 		end
 		local bonuses = Pets.bonuses(saved)
-		local capped = { miner = 1, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
+		local capped = { miner = 1.5, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
 			yield = 0.40, sprint = 0.15, vault = 1, crit = 0.10, scholar = 0.51, shards = 0.30 }
 		for role, value in capped do
 			t.near(bonuses[role], value, 1e-9, role)

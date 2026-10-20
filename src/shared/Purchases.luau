@@ -9,6 +9,7 @@ local Income = require(script.Parent.Income)
 local Levels = require(script.Parent.Levels)
 local Pets = require(script.Parent.Pets)
 local Price = require(script.Parent.Price)
+local ShardWallet = require(script.Parent.ShardWallet)
 
 local Purchases = {}
 local Rules = Config.Monetization
@@ -16,9 +17,11 @@ local Rules = Config.Monetization
 export type Grant = {
 	cash: number,
 	leveled: { [string]: number },
-	shards: number?, -- shard packs, and the shards a tier-up refunds
+	shards: number?, -- shard packs, and the shards a tier-up or a repeated one-off refunds (counted as bought)
 	evolved: boolean?, -- tier-ups: the item went up a tier (false when it had already passed it)
 	tier: number?, -- tier-ups: the tier the item is on now
+	banked: boolean?, -- Pet Max with no equipped pet below max: saved as credits.petMax for the next pet equipped
+	repeated: boolean?, -- a one-off product that was already owned: refunded in shards
 }
 
 -- A meteor's weight is multiplied by the share of its ore a hit yields at the player's level
@@ -90,8 +93,18 @@ function Purchases.grant(data: any, key: string, cash: number?): Grant?
 				end
 			end
 		end
+		if next(result.leveled) == nil then
+			-- Nothing to level now: the purchase waits for the next pet equipped below max
+			data.credits.petMax = (data.credits.petMax or 0) + 1
+			result.banked = true
+		end
 	elseif key == "PetSlot" then
-		markFlag(data, "extraPetSlot")
+		if data.flags and data.flags.extraPetSlot == true then
+			result.shards, result.repeated = Rules.RepeatRefundShards.PetSlot, true
+			ShardWallet.add(data, result.shards :: number, true)
+		else
+			markFlag(data, "extraPetSlot")
+		end
 	elseif key == "StreakShield" then
 		data.daily.shields = (data.daily.shields or 0) + 1
 	elseif key == "StarterPack" then
@@ -101,7 +114,13 @@ function Purchases.grant(data: any, key: string, cash: number?): Grant?
 		result.cash = math.floor(cash)
 		data.cash += result.cash
 		data.overclockLeft = (data.overclockLeft or 0) + Rules.StarterPack.Overclocks * Rules.MiniOverclock.Duration
-		giveEquippedXp(data, Rules.StarterPack.PetXp, result)
+		if #data.pets.equipped > 0 then
+			giveEquippedXp(data, Rules.StarterPack.PetXp, result)
+		else
+			-- A new player has no pet for the XP yet: shards toward their first egg instead
+			result.shards = Rules.StarterPack.ShardsWithoutPets
+			ShardWallet.add(data, result.shards :: number, true)
+		end
 		markFlag(data, "starterPack")
 	elseif key == "Overclock" or key == "MiniOverclock" then
 		local duration = if key == "Overclock" then Rules.Overclock.Duration else Rules.MiniOverclock.Duration
@@ -116,7 +135,7 @@ function Purchases.grant(data: any, key: string, cash: number?): Grant?
 		data.credits.rebirthKeep = (data.credits.rebirthKeep or 0) + 1
 	elseif Rules.ShardPacks[key] then
 		result.shards = Rules.ShardPacks[key]
-		data.shards += result.shards
+		ShardWallet.add(data, result.shards :: number, true)
 	else
 		return nil
 	end
@@ -149,8 +168,20 @@ function Purchases.gearSkip(data: any, key: string, priceMult: number): Grant?
 	result.cash = Price.scaled(target.Cost, priceMult)
 	result.shards = target.Shards
 	data.cash += result.cash
-	data.shards += result.shards
+	ShardWallet.add(data, result.shards :: number, true)
 	return result
+end
+
+-- A banked Pet Max (credits.petMax) takes the pet just equipped to max level, if it is below it.
+-- Returns the new level when a credit was spent.
+function Purchases.applyPetMaxCredit(data: any, petId: string): number?
+	local entry = data.pets.owned[petId]
+	if (data.credits.petMax or 0) <= 0 or not entry or entry.level >= Config.Pets.MaxLevel then
+		return nil
+	end
+	data.credits.petMax -= 1
+	entry.level, entry.xp = Config.Pets.MaxLevel, 0
+	return entry.level
 end
 
 -- A failed save keeps the grant and id together in memory; retrying saves again

@@ -63,7 +63,7 @@ function Refinery.build(): ScreenGui
 	gui:SetAttribute("NativePrefab", true)
 	gui:SetAttribute("RefineryLayout", Refinery.LAYOUT)
 	-- the screen behind the menu: 20% navy, as behind the Gear Shop
-	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY, BackgroundTransparency = 0.8,
+	N.create("TextButton", { Name = "Dimmer", Selectable = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY, BackgroundTransparency = 0.8,
 		BorderSizePixel = 0, AutoButtonColor = false, Modal = true }, gui)
 	local p = Theme.panel(gui, "Panel", UDim2.fromOffset(860, 572)) :: any
 	p.AnchorPoint, p.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)

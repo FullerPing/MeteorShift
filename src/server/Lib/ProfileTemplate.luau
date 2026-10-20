@@ -1,12 +1,16 @@
 --!strict
--- Profile schema v11 (spec §12.4, with the plot production line instead of
+-- Profile schema v13 (spec §12.4, with the plot production line instead of
 -- refinery slots, one pickaxe and backpack with a single level each: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
+-- (v12 was skipped: an unreleased trial build saved v12 profiles with a `trialFlag` key; v13 removes it.)
 
 return {
-	version = 11,
+	version = 13,
 	cash = 0,
 	shards = 0,
+	-- The part of `shards` that came from Robux (shard packs, refunds paid in shards). Eggs are random, so where
+	-- paid random items are restricted they can only be opened with the rest (Shared.ShardWallet)
+	paidShards = 0,
 	pickaxeTier = 1, -- evolution tier: caps the stat levels (Shared.Gear)
 	backpackTier = 1,
 	pickaxeLevel = 1, -- one level per item, 1 to the tier's cap; every tier starts over at 1 (Shared.Gear)
@@ -48,6 +52,7 @@ return {
 		callMeteor = 0, -- Call a Meteor purchases that couldn't run yet, usable later
 		bossMeteor = 0, -- the same for Call a Boss Meteor
 		rebirthKeep = 0, -- Rebirth and Keep Everything purchases waiting for the next rebirth
+		petMax = 0, -- Pet Max purchases made with no pet to level: applied to the next pet equipped below max
 	},
 	receipts = {}, -- all processed PurchaseIds; do not trim paid-grant idempotency history
 	overclockLeft = 0, -- seconds of Refinery Overclock left, counted down while online
@@ -71,4 +76,6 @@ return {
 	},
 	-- Codes already redeemed (Shared.Codes, CodesService): code name -> true
 	codes = {},
+	-- Settings menu toggles the player changed (PlayerStateService.SETTINGS): name -> boolean; missing = default
+	settings = {},
 }

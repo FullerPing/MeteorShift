@@ -40,7 +40,8 @@ local RefineryService
 local lastRebirthRequest: { [Player]: number } = {}
 
 -- Rebirths the player if they can pay for it. Returns true when it went through.
-function RebirthService:Rebirth(player: Player): boolean
+-- useKeep spends a Keep Everything credit; a plain rebirth never does, so a paid credit is only used on purpose.
+function RebirthService:Rebirth(player: Player, useKeep: boolean?): boolean
 	local data = PlayerStateService:Get(player)
 	if not data then
 		return false
@@ -48,7 +49,11 @@ function RebirthService:Rebirth(player: Player): boolean
 	local rebirths = data.rebirths or 0
 	local cost = Rebirth.cost(rebirths)
 	-- A paid Keep Everything credit rebirths at any time, without the cash (nothing is spent or reset)
-	local keepAll = (data.credits.rebirthKeep or 0) > 0
+	local keepAll = useKeep == true and (data.credits.rebirthKeep or 0) > 0
+	if useKeep == true and not keepAll then
+		self.Client.Notice:Fire(player, "You have no Keep Everything credit.")
+		return false
+	end
 	if data.cash < cost and not keepAll then
 		self.Client.Notice:Fire(player, "You need " .. Format.cash(cost) .. " to relocate the colony.")
 		return false
@@ -94,11 +99,11 @@ function RebirthService:Rebirth(player: Player): boolean
 	return true
 end
 
-function RebirthService.Client:Rebirth(player: Player): boolean
+function RebirthService.Client:Rebirth(player: Player, useKeep: any): boolean
 	local allowed, stamp = RequestGate.check(lastRebirthRequest[player], os.clock(), 1)
 	lastRebirthRequest[player] = stamp
 	if not allowed then return false end
-	return self.Server:Rebirth(player)
+	return self.Server:Rebirth(player, useKeep == true)
 end
 
 function RebirthService:KnitInit()

@@ -21,9 +21,11 @@ Perks.List = {
 	headStart = {
 		Id = "headStart",
 		Name = "Head Start",
-		Text = "After a rebirth your pickaxe and backpack are at least tier %s above the first (never past what your level allows).",
+		-- Starting cash after a rebirth, as a percent of the next rebirth's cost. (It used to floor the gear tiers,
+		-- but tiers survive a rebirth anyway, so it almost never did anything.)
+		Text = "After a rebirth you start with %s%% of the next rebirth's cost in cash.",
 		Costs = { 40, 80, 160, 320 },
-		Effect = { 1, 2, 3, 4 },
+		Effect = { 3, 6, 10, 15 },
 	},
 	stationMemory = {
 		Id = "stationMemory",

@@ -17,6 +17,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 local Cartoon = require(script.Parent.Parent.Cartoon)
+local MenuFlags = require(script.Parent.Parent.MenuFlags)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -292,9 +293,12 @@ local function makePointer(): (ScreenGui, TextLabel, Frame)
 	return gui, hand, ring
 end
 
+-- the steps point at HUD buttons, so the hand hides while a menu covers the HUD or the button takes no taps
+local POINTER_BLOCKERS = MenuFlags.except("BackpackOpen")
 local function findButton(name: string): GuiObject?
+	if MenuFlags.anyOpen(POINTER_BLOCKERS) then return nil end
 	local found = player:WaitForChild("PlayerGui"):FindFirstChild(name, true)
-	return if found and found:IsA("GuiObject") and found.Visible then found else nil
+	return if found and found:IsA("GuiObject") and found.Visible and found.Interactable then found else nil
 end
 
 function TutorialController:KnitStart()

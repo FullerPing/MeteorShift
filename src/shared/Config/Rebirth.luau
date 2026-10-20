@@ -23,9 +23,11 @@ return {
 
 	-- Past the last listed rank ("Legacy"): the cost keeps growing by CostGrowth per rebirth and the
 	-- multiplier by MultGrowth. Both are far below the x5 of the early ranks so the numbers stop
-	-- racing toward the suffix limit, and cost outpaces the multiplier a little, so laps stretch
-	-- gently instead of the treadmill staying flat forever.
-	Legacy = { CostGrowth = 2.3, MultGrowth = 2, PriceGrowth = 1.2 }, -- 2 / 1.2 keeps the same 5/3 ratio
+	-- racing toward the suffix limit. The last listed rank still multiplies sales x5, so the first Legacy
+	-- cost steps up by FirstStep (about the listed ranks' own ratio) and the lap after it stays as long as
+	-- the one before (it used to halve). After that cost outpaces the multiplier by 2.05 / 2, so laps stretch
+	-- about 2.5% a rank (Shared.Pacing: about 21 min at rank 17 to about 35 at rank 40; 2.3 compounded to 3 hours).
+	Legacy = { FirstStep = 4.7, CostGrowth = 2.05, MultGrowth = 2, PriceGrowth = 1.2 }, -- 2 / 1.2 keeps the 5/3 price ratio
 
 	-- Overstay shards: bar-sale cash you earned after you could first afford the rebirth is
 	-- progress you didn't need. Rebirthing pays min(Cap, round(PerDoubling × log2(1 + r))) shards

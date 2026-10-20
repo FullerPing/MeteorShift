@@ -1,10 +1,8 @@
 --!strict
--- Who counts as active (spec §5.3): players with any input in the last 2 minutes.
--- Meteor HP is sized from active players only, so AFK players don't make the
--- meteor impossible for everyone else.
---
--- Clients ping on input (ActivityController, throttled); swings count too, and a
--- player who just joined starts out active.
+-- Who counts as active (spec §5.3): players with a validated swing in the last ActiveWindow
+-- seconds (NodeService touches on each one). Meteor and debris HP are sized from active
+-- players only, so AFK, anti-idle and just-joined players add no HP until they mine.
+-- Client pings (ActivityController) no longer count: they kept idlers active (audit A9).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -14,7 +12,6 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
-local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local ActivityService = Knit.CreateService({
 	Name = "ActivityService",
@@ -22,7 +19,6 @@ local ActivityService = Knit.CreateService({
 })
 
 local lastInput: { [Player]: number } = {}
-local lastPingRequest: { [Player]: number } = {}
 
 function ActivityService:Touch(player: Player)
 	lastInput[player] = os.clock()
@@ -71,23 +67,12 @@ function ActivityService:GetActiveRates(): { number }
 	return rates
 end
 
-function ActivityService.Client:Ping(player: Player)
-	local allowed, stamp = RequestGate.check(lastPingRequest[player], os.clock(), 1)
-	lastPingRequest[player] = stamp
-	if not allowed then return end
-	self.Server:Touch(player)
-end
+-- Still called by ActivityController; input alone doesn't make a player active (see header)
+function ActivityService.Client:Ping(_player: Player) end
 
 function ActivityService:KnitStart()
-	for _, player in Players:GetPlayers() do
-		self:Touch(player)
-	end
-	Players.PlayerAdded:Connect(function(player)
-		self:Touch(player)
-	end)
 	Players.PlayerRemoving:Connect(function(player)
 		lastInput[player] = nil
-		lastPingRequest[player] = nil
 	end)
 end
 

@@ -25,4 +25,16 @@ function RequestGate.check(previous: number?, now: number, cooldown: number): (b
 	return true, now
 end
 
+-- A paced action (swings): `due` is when the next one is due on average (nil at first). One can come up
+-- to `tolerance` of an `interval` early (latency jitter), but every admitted one pushes `due` a full
+-- interval on, so the long-run rate never beats 1 / interval. Returns whether it's admitted and the
+-- `due` to keep if the caller goes on to accept it.
+function RequestGate.pace(due: number?, now: number, interval: number, tolerance: number): (boolean, number)
+	local at = due or now
+	if now + interval * tolerance + 1e-9 < at then
+		return false, at
+	end
+	return true, math.max(at, now) + interval
+end
+
 return RequestGate

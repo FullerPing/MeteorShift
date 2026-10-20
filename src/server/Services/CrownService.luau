@@ -15,6 +15,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local DiveArc = require(ReplicatedStorage.Shared.DiveArc)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local WorldGeometry = require(ReplicatedStorage.Shared.WorldGeometry)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local CrownService = Knit.CreateService({
 	Name = "CrownService",
@@ -111,7 +112,9 @@ function CrownService:KnitStart()
 		task.spawn(function()
 			while crown.Parent do
 				task.wait(0.5)
-				self:_returnUnready(crown)
+				SafeLoop.step("CrownEject", function()
+					self:_returnUnready(crown)
+				end)
 			end
 		end)
 		self:_wire(crown)

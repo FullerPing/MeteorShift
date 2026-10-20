@@ -19,6 +19,7 @@ local Theme = require(script.Parent.Parent.MenuTheme)
 local Preview = require(script.Parent.Parent.NativePreview)
 local ExactNavButton = require(script.Parent.Parent.ExactNavButton)
 local PetsMenu = require(script.Parent.Parent.NativeMenus.Pets)
+local RobuxPrice = require(script.Parent.Parent.RobuxPrice)
 
 local player = Players.LocalPlayer
 local Controller = Knit.CreateController({ Name = "PetsController" })
@@ -76,6 +77,21 @@ function Controller:KnitStart()
 		object.Position, object.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(math.max(0, w), math.max(0, h))
 	end
 	local function rarityOf(id: string): any return Config.Pets.Rarities[(Pets.def(id) :: any).Rarity] end
+	-- a pet pass's live Robux price (RobuxPrice; the Config price until the lookup answers)
+	local livePrice: { [number]: number } = {}
+	local asked: { [number]: boolean } = {}
+	local function robuxOf(pass: any): number
+		if not asked[pass.Id] then
+			asked[pass.Id] = true
+			local now = true -- RobuxPrice answers once straight away: don't re-render from inside a render
+			RobuxPrice.get("pass", pass, function(price)
+				if price then livePrice[pass.Id] = price end
+				if not now then update() end
+			end)
+			now = false
+		end
+		return livePrice[pass.Id] or pass.Robux or 0
+	end
 
 	local function purchase(id: string, message: string, callback: () -> any)
 		if busyId then return end
@@ -139,7 +155,7 @@ function Controller:KnitStart()
 		else
 			local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
 			table.insert(lines, '<font color="#' .. SOFT .. '">Perks: ???</font>')
-			table.insert(lines, '<font color="#' .. DIM .. '">' .. (if def.Pass then "A game pass pet: " .. Format.ROBUX .. " " .. ((pass and pass.Robux) or 0) .. ", a fixed price." else "Hatch it from an egg. Eggs that can drop it:") .. "</font>")
+			table.insert(lines, '<font color="#' .. DIM .. '">' .. (if def.Pass then "A game pass pet: " .. Format.ROBUX .. " " .. Format.number(if pass then robuxOf(pass) else 0) .. ", a fixed price." else "Hatch it from an egg. Eggs that can drop it:") .. "</font>")
 			for _, egg in PetsLayout.eggsFor(def) do
 				table.insert(lines, string.format('<font color="#%s">• %s</font> (%s%%)', strong, egg.Name, tostring(egg.Odds[def.Rarity])))
 			end
@@ -151,6 +167,14 @@ function Controller:KnitStart()
 		return if tab == "index" then PetsLayout.indexOrder() else PetsLayout.ownedOrder(saved())
 	end
 
+	-- the nav dot: a free slot and a pet in the bag (kept live while the menu is closed)
+	local function updateBadge()
+		local s = saved()
+		local free = s ~= nil and #s.equipped < slotCount()
+		local spare = false
+		if s then for id in s.owned do if not equipped(id) then spare = true end end end
+		navRefs.badge.Visible = free and spare
+	end
 	update = function()
 		local g = geometry
 		local open = player:GetAttribute("PetsOpen") == true
@@ -358,7 +382,7 @@ function Controller:KnitStart()
 					action.Text = if busyId == "pet_" .. def.Id then "PLEASE WAIT" elseif isOut then "PUT AWAY" elseif free then "EQUIP" else "ALL " .. slotCount() .. " SLOTS IN USE"
 				elseif pass then
 					Theme.state(action, busyId == nil and onSale, "gold")
-					action.Text = if onSale then "GET FOR " .. Format.ROBUX .. " " .. (pass.Robux or 0) else "NOT ON SALE YET"
+					action.Text = if onSale then "GET FOR " .. Format.ROBUX .. " " .. Format.number(robuxOf(pass)) else "NOT ON SALE YET"
 				else
 					Theme.state(action, false, "gold")
 					action.Text = "HATCH AT THE HATCHERY"
@@ -381,10 +405,7 @@ function Controller:KnitStart()
 			elseif tab == "index" then "Hatch eggs at the Hatchery with Core Shards. Duplicates level up your pet."
 			elseif g.wide then "Pets gain XP while you mine!"
 			else "Pets gain XP while you mine! More slots: Rebirths · Pet Bond · Extra Pet Slot"
-		local free = s ~= nil and #s.equipped < slotCount()
-		local spare = false
-		if s then for id in s.owned do if not equipped(id) then spare = true end end end
-		navRefs.badge.Visible = free and spare
+		updateBadge()
 	end
 	refresh = update
 
@@ -404,7 +425,10 @@ function Controller:KnitStart()
 		if not def then return end
 		if not owned(selected) then
 			local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
-			if pass and pass.Id ~= 0 then MarketplaceService:PromptGamePassPurchase(player, pass.Id) end
+			if pass and pass.Id ~= 0 then
+				local ok, err = pcall(function() MarketplaceService:PromptGamePassPurchase(player, pass.Id) end)
+				if not ok then warn("[PetsController] purchase prompt failed:", err) end
+			end
 		elseif equipped(selected) then
 			purchase("pet_" .. selected, def.Name .. " put away.", function() return petService:Unequip(def.Id) end)
 		else
@@ -420,8 +444,15 @@ function Controller:KnitStart()
 	end)
 	petService.Notice:Connect(function(message) notice = message; update() end)
 	petService.Hatched:Connect(function(_eggId: string, petId: string) selected = petId; update() end)
-	player:GetAttributeChangedSignal("PetsOpen"):Connect(update)
-	Knit.GetService("PlayerStateService").State:Observe(function(snapshot) state = snapshot; update() end)
+	-- a closed menu drops its notice and only keeps the nav dot live; opening renders the latest snapshot
+	player:GetAttributeChangedSignal("PetsOpen"):Connect(function()
+		if player:GetAttribute("PetsOpen") ~= true then notice = "" end
+		update()
+	end)
+	Knit.GetService("PlayerStateService").State:Observe(function(snapshot)
+		state = snapshot
+		if player:GetAttribute("PetsOpen") == true then update() else updateBadge() end
+	end)
 	N.onLayoutChanged(function(hud)
 		view = ShopLayout.view(hud.viewport, hud.inset)
 		geometry = PetsLayout.compute(view.viewport, view.inset, view.wide)

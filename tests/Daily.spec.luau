@@ -116,6 +116,16 @@ return function(t: any)
 		end
 	end)
 
+	t.test("the streak ramp shows even when income outgrows every ceiling", function()
+		local first = Daily.reward(1, 1e12, 1000).cash
+		local last = Daily.reward(Settings.CycleLength, 1e12, 1000).cash
+		t.eq(first, 1000)
+		t.eq(last, 1000 * Settings.Days[Settings.CycleLength].CeilingMult, "day 7 pays its raised ceiling, not day 1's")
+		for day = 2, Settings.CycleLength do
+			t.ok(Settings.Days[day].CeilingMult >= Settings.Days[day - 1].CeilingMult, "the ceiling never drops along the week")
+		end
+	end)
+
 	t.test("quests are deterministic, distinct, and respect level gates", function()
 		local a = Daily.pickQuests(20000, 1, 0, 42)
 		local b = Daily.pickQuests(20000, 1, 0, 42)

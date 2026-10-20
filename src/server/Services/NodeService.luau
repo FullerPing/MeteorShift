@@ -81,6 +81,7 @@ local MonetizationService
 local targets: { [number]: Target } = {}
 local nextId = 0
 local lastSwing: { [Player]: number } = {}
+local swingDue: { [Player]: number } = {} -- RequestGate.pace: when the next swing is due on average
 local lastSwingRequest: { [Player]: number } = {}
 local SWING_REQUEST_INTERVAL = 0.10 -- below the fastest legal swing, including Swift and tolerance
 
@@ -276,7 +277,9 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 
 	local pickaxe = PlayerStateService:GetPickaxe(player)
 	local now = os.clock()
-	if now - (lastSwing[player] or 0) < pickaxe.Swing * Config.Meteor.SwingTolerance then
+	-- One swing may come up to (1 - SwingTolerance) of a swing early (jitter); the average can't beat Swing
+	local paced, due = RequestGate.pace(swingDue[player], now, pickaxe.Swing, 1 - Config.Meteor.SwingTolerance)
+	if not paced then
 		return false
 	end
 
@@ -311,6 +314,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 	end
 
 	lastSwing[player] = now
+	swingDue[player] = due
 	target.LastHit = now
 	ActivityService:Touch(player)
 
@@ -400,6 +404,7 @@ function NodeService:KnitStart()
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastSwing[player] = nil
+		swingDue[player] = nil
 		lastSwingRequest[player] = nil
 	end)
 end

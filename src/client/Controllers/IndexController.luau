@@ -156,7 +156,7 @@ function IndexController:KnitStart()
 		open = value
 		panel.Visible, dimmer.Visible = value, value
 		player:SetAttribute("IndexOpen", value)
-		if value then fresh = false end
+		if value then fresh = false; refreshIndex() end -- a closed Index skips State flushes (below)
 		refreshButton()
 	end
 
@@ -219,7 +219,7 @@ function IndexController:KnitStart()
 	refreshIndex()
 	PlayerStateService.State:Observe(function(value)
 		index = if value and value.index then value.index else {}
-		refreshIndex()
+		if open then refreshIndex() end
 	end)
 
 	local function floatUp(text: string, color: Color3)

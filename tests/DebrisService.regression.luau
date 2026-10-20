@@ -34,6 +34,7 @@ local currentMap = { FindFirstChild = function(_, name) return if name == "Gates
 modules.WorldMap = { find = function() return currentMap end }
 modules.RequestGate = {}
 modules.StudSkin = { apply = function() end }
+modules.SafeLoop = { step = function(_, fn) fn() end }
 
 local passed, failed = 0, 0
 local function eq(actual, expected, message)
@@ -58,6 +59,7 @@ local function fixture(tier, field)
 			if name == "PlayerStateService" then
 				return {
 					Get = function() return { level = state.level, rebirths = state.rebirths } end,
+					GetPickaxe = function() return { Power = state.breakerPower or 1.25 ^ (state.tier - 1) } end,
 					AddCash = function(_, _, amount) state.cash += amount end,
 				}
 			end
@@ -71,6 +73,7 @@ local function fixture(tier, field)
 		Levels = "Levels", Rebirth = "Rebirth", Format = "Format", FieldGate = "FieldGate", WorldMap = "WorldMap", RequestGate = "RequestGate", StudSkin = "StudSkin" }
 	local players = { PlayerRemoving = { Connect = function() end } }
 	local service = load("src/server/Services/DebrisService.luau", {
+		script = { Parent = { Parent = { Lib = { SafeLoop = "SafeLoop" } } } },
 		game = { GetService = function(_, name)
 			if name == "Players" then return players end
 			eq(name, "ReplicatedStorage")
@@ -205,13 +208,22 @@ test("a rebirth field ignores level", function()
 	eq(service:IsFieldOpen({}, "HaloLedge"), false)
 end)
 
-test("on a map without gates (the v2 map) every field stays open", function()
+test("cash scales down for a breaker stronger than the pickaxe the rock was sized for", function()
+	local _, state = fixture(1, "RustWorks")
+	state.breakerPower = 10 -- the rock was sized for Power 1
+	state.def.OnBroken({})
+	eq(state.cash, 30, "a tenth of three seconds of a 100-a-second income")
+end)
+
+test("on a map without gates, gated fields fail closed and open fields stay open", function()
 	local saved = currentMap
 	currentMap = { FindFirstChild = function() return nil end }
 	local ok, err = pcall(function()
 		local service, state = fixture(1, "GlassScar")
-		eq(service:IsFieldOpen({}, "GlassScar"), true)
-		eq(state.def.CanHit({}), true)
+		state.level = 99
+		eq(service:IsFieldOpen({}, "GlassScar"), false)
+		eq(state.def.CanHit({}), false)
+		eq(service:IsFieldOpen({}, "RustWorks"), true)
 	end)
 	currentMap = saved
 	assert(ok, err)

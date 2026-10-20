@@ -34,6 +34,7 @@ return function(t: any)
 		t.eq(a.gift.kind, "cash")
 		t.eq(a.gift.amount, 1500)
 		t.eq(gift("/give Bob cash 1e6").gift.amount, 1000000)
+		t.eq(gift("/give Bob cash 1e30").gift.amount, 1e30, "the cap itself is allowed")
 		t.eq(gift("/give Bob shards 12.9").gift.amount, 12, "whole shards only")
 		t.eq(gift("/GIVE bob SHARDS 5").gift.kind, "shards", "case does not matter")
 	end)
@@ -68,7 +69,7 @@ return function(t: any)
 
 	t.test("bad commands change nothing and say how to use /give", function()
 		for _, text in { "/give", "/give Bob", "/give Bob cash", "/give Bob cash -5", "/give Bob cash 0", "/give Bob cash abc",
-			"/give Bob cash 1e999", "/give Bob gold 5", "/give Bob cash 0.4" } do
+			"/give Bob cash 1e999", "/give all cash 1e308", "/give Bob shards 1e31", "/give Bob gold 5", "/give Bob cash 0.4" } do
 			refuses(text)
 		end
 		local _, _, err = AdminGive.parse("/give")

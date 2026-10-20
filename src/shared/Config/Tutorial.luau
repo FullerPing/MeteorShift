@@ -22,7 +22,7 @@ local Tutorial = {}
 Tutorial.Steps = {
 	{ Id = "mine_debris", Text = "MINE!", Icon = "⛏️", Action = "tap" },
 	{ Id = "meteor_lands", Text = "WATCH!", Icon = "☄️", Action = "watch" },
-	{ Id = "reach_crater", Text = "RUN!", Icon = "🏃", Action = "go" },
+	{ Id = "reach_crater", Text = "RUN!", Sub = "Follow the trail to the crater", Icon = "🏃", Action = "go" },
 	{ Id = "mine_node", Text = "MINE IT!", Sub = "Break nodes to open the core", Icon = "⛏️", Action = "tap" },
 	{ Id = "hit_core", Text = "HIT THE CORE!", Sub = "Keep hitting until it cracks", Icon = "💥", Action = "tap" },
 	{ Id = "core_shards", Text = "CRACK IT!", Icon = "💎", Action = "tap" },

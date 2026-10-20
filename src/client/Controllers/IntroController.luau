@@ -7,6 +7,8 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local GuiService = game:GetService("GuiService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
@@ -91,13 +93,13 @@ function IntroController:KnitStart()
 		}))
 	end
 
-	scope:New("ScreenGui")({
+	local gui = scope:New("ScreenGui")({
 		Name = "Intro", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 30,
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling, Enabled = open,
 		Parent = player:WaitForChild("PlayerGui"),
 		[Children] = {
 			scope:New("TextButton")({
-				Name = "Dim", Size = UDim2.fromScale(1, 1), Text = "", AutoButtonColor = false, Active = true,
+				Name = "Dim", Size = UDim2.fromScale(1, 1), Text = "", AutoButtonColor = false, Active = true, Selectable = false,
 				BackgroundColor3 = Color3.fromRGB(8, 14, 32), BackgroundTransparency = 0.35, BorderSizePixel = 0,
 			}),
 			scope:New("Frame")({
@@ -150,6 +152,21 @@ function IntroController:KnitStart()
 			}),
 		},
 	})
+
+	-- gamepad: B skips, and the pad starts on NEXT
+	table.insert(scope, UserInputService.InputBegan:Connect(function(input)
+		if input.KeyCode == Enum.KeyCode.ButtonB and Fusion.peek(open) then close() end
+	end))
+	scope:Observer(open):onChange(function()
+		task.defer(function() -- after the ScreenGui's Enabled follows `open`
+			local nextButton = gui:FindFirstChild("Next", true)
+			if Fusion.peek(open) and string.find(UserInputService:GetLastInputType().Name, "Gamepad") and nextButton and nextButton:IsA("GuiObject") then
+				GuiService.SelectedObject = nextButton
+			elseif not Fusion.peek(open) and GuiService.SelectedObject and GuiService.SelectedObject:IsDescendantOf(gui) then
+				GuiService.SelectedObject = nil
+			end
+		end)
+	end)
 
 	local function sync(due: boolean)
 		if due and not Fusion.peek(open) then

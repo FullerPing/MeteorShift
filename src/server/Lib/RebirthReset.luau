@@ -1,16 +1,15 @@
 --!strict
 -- Active gameplay resets (gear levels and the production line included); the pickaxe and backpack tiers, pets, shards, colony
--- perks and index rewards survive. Station Memory keeps part of the production line level and Head Start
--- is a floor for the gear tier, up to what the player level allows (Shared.Perks), for players who own less than that.
+-- perks, index rewards and settings survive. Station Memory keeps part of the production line level and Head Start
+-- gives starting cash, a share of the next rebirth's cost (Shared.Perks). Call it before the rebirth count goes up.
 -- With keepAll (the Rebirth and Keep Everything product) nothing resets: the rebirth count
 -- still goes up (RebirthService), but cash, gear levels, production and carried ore all stay.
 -- Keep the profile/maps in place so existing service references remain valid.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
-local Levels = require(ReplicatedStorage.Shared.Levels)
 local Perks = require(ReplicatedStorage.Shared.Perks)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Template = require(script.Parent.ProfileTemplate)
 local RebirthReset = {}
 
@@ -20,11 +19,8 @@ function RebirthReset.apply(data: any, now: number, keepAll: boolean?)
 		data.lastSeen = now
 		return
 	end
-	data.cash = Template.cash
 	local perks = Perks.clean(data.perks)
-	local playerLevel = data.level or 1
-	data.pickaxeTier = math.max(data.pickaxeTier or 1, Perks.startTier(perks, playerLevel, #Config.Pickaxes, Levels.evolveLevel))
-	data.backpackTier = math.max(data.backpackTier or 1, Perks.startTier(perks, playerLevel, #Config.Backpacks, Levels.evolveLevel))
+	data.cash = Template.cash + Perks.startCash(perks, Rebirth.cost((data.rebirths or 0) + 1))
 	data.pickaxeLevel = Gear.levelsForTier(data.pickaxeTier)
 	data.backpackLevel = Gear.levelsForTier(data.backpackTier)
 	for _, key in { "backpack", "hopper", "bin", "bars", "decor" } do

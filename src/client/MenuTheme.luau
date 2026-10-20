@@ -99,7 +99,7 @@ function MenuTheme.menu(name: string, title: string, icon: string, size: Vector2
 		ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, nil) :: ScreenGui
 	gui:SetAttribute("NativePrefab", true)
 	gui:SetAttribute("MenuLayout", layout)
-	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY, BackgroundTransparency = 0.8,
+	N.create("TextButton", { Name = "Dimmer", Selectable = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY, BackgroundTransparency = 0.8,
 		BorderSizePixel = 0, AutoButtonColor = false, Modal = true }, gui)
 	local panel = MenuTheme.panel(gui, "Panel", UDim2.fromOffset(size.X, size.Y))
 	panel.AnchorPoint, panel.Position = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5)

@@ -10,6 +10,7 @@ local MenuFit = require(ReplicatedStorage.Shared.MenuFit)
 local HudEditConfig = require(ReplicatedStorage.Shared.Config.HudEdit)
 local Sfx = require(script.Parent.Sfx)
 local MenuSkin = require(script.Parent.MenuSkin)
+local MenuFlags = require(script.Parent.MenuFlags)
 local NativeUI = {}
 NativeUI.FONT = Enum.Font.FredokaOne
 NativeUI.WHITE = Color3.new(1, 1, 1)
@@ -70,7 +71,7 @@ function NativeUI.menu(name: string, title: string, color: Color3, width: number
 	}, nil)
 	gui:SetAttribute("NativePrefab", true)
 	NativeUI.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = NativeUI.OUTLINE,
-		BackgroundTransparency = .35, BorderSizePixel = 0, AutoButtonColor = false, Modal = true }, gui)
+		BackgroundTransparency = .35, BorderSizePixel = 0, AutoButtonColor = false, Modal = true, Selectable = false }, gui)
 	local panel = NativeUI.create("Frame", { Name = "Panel", Size = UDim2.fromOffset(width, height),
 		AnchorPoint = Vector2.new(.5, .5), Position = UDim2.fromScale(.5, .5), BackgroundColor3 = NativeUI.PANEL,
 		BorderSizePixel = 0, Active = true, ZIndex = 2 }, gui)
@@ -91,6 +92,8 @@ function NativeUI.get(name: string, prepare: ((ScreenGui) -> ())?): ScreenGui
 	MenuSkin.apply(gui :: ScreenGui)
 	for _, node in gui:GetDescendants() do
 		if node:IsA("GuiButton") then
+			-- gamepad selection must never land on the full-screen backdrop (A there would close the menu)
+			if node.Name == "Dimmer" then node.Selectable = false end
 			node.Activated:Connect(function() if node.Active then Sfx.play("Click") end end)
 		end
 	end
@@ -200,8 +203,47 @@ function NativeUI.bindOpen(gui: ScreenGui, attribute: string, close: () -> ())
 	dimmer.Activated:Connect(close)
 	closeButton.Activated:Connect(close)
 	UserInputService.InputBegan:Connect(function(input)
-		if gui.Enabled and (input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB) then close() end
+		if not gui.Enabled or UserInputService:GetFocusedTextBox() then return end -- Escape while typing only leaves the box
+		if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then close() end
 	end)
 	update()
+end
+-- Gamepad: when a menu opens, select its Close button (the shown one in the topmost ScreenGui) so the pad drives the
+-- menu, not a covered HUD tile; when the last menu closes, drop the selection.
+local function shown(object: Instance): boolean
+	local node: Instance? = object
+	while node and not node:IsA("ScreenGui") do
+		if node:IsA("GuiObject") and not node.Visible then return false end
+		node = node.Parent
+	end
+	return node ~= nil and (node :: ScreenGui).Enabled
+end
+function NativeUI.watchGamepadFocus(flags: { string })
+	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
+	local function refocus()
+		task.defer(function()
+			local selected = GuiService.SelectedObject
+			if not MenuFlags.anyOpen(flags) then
+				if selected then GuiService.SelectedObject = nil end
+				return
+			end
+			if not string.find(UserInputService:GetLastInputType().Name, "Gamepad") then return end
+			if selected and shown(selected) and selected.Interactable then return end
+			local best: GuiObject? = nil
+			local order = -math.huge
+			for _, gui in playerGui:GetChildren() do
+				if gui:IsA("ScreenGui") and gui.Enabled and gui.DisplayOrder > order then
+					for _, close in gui:GetDescendants() do
+						if close.Name == "Close" and close:IsA("GuiButton") and shown(close) then
+							best, order = close, gui.DisplayOrder
+							break
+						end
+					end
+				end
+			end
+			GuiService.SelectedObject = best
+		end)
+	end
+	MenuFlags.onChanged(flags, refocus)
 end
 return NativeUI

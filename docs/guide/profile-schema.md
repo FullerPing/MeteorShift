@@ -26,7 +26,7 @@ that: only existing keys are assigned — `tests/ProfileTemplate.spec.luau:94-11
 | `level`, `xp` | 1, 0 (`:16-17`) | `src/server/Services/LevelService.luau:69` via `Levels.addXp` (`src/shared/Levels.luau`) | survives |
 | `rebirths` | 0 (`:34`) | `src/server/Services/RebirthService.luau:64` | survives — the function never touches the count (`RebirthReset.luau:17-37`) |
 | `overflow` (overstay tracking) | 0 (`:22`) | tallied on every sale (`EconomyService.luau:87`), paid at rebirth (`RebirthService.luau:58`) | cleared (`RebirthReset.luau:35`, and under keep-all `:19`) |
-| `pickaxeTier`, `backpackTier` | 1, 1 (`:10-11`) | evolutions write tier + first level (`src/shared/Purchases.luau:140-141`, used by Robux tier-ups); see `ShopService.luau`; load clamps to Config (`DataService.luau:116-117`) | survive as *tiers*: kept, floored up by Head Start (`RebirthReset.luau:26-27`) |
+| `pickaxeTier`, `backpackTier` | 1, 1 (`:10-11`) | evolutions write tier + first level (`src/shared/Purchases.luau:140-141`, used by Robux tier-ups); see `ShopService.luau`; load clamps to Config (`DataService.luau:116-117`) | survive as *tiers*: kept (Head Start now grants starting cash instead) |
 | `pickaxeLevel`, `backpackLevel` | 1, 1 (`:12-13`) | stat-level buys in `src/server/Services/ShopService.luau` (cost `:165`); load re-cleans (`DataService.luau:131-132`) | reset to the kept tier's first level (`RebirthReset.luau:28-29`) |
 | `line` (production line level) | 1 (`:26`) | `src/server/Services/UpgradeService.luau:55`; load cleans (`DataService.luau:139`) | partial — Station Memory keeps its share (`RebirthReset.luau:33`) |
 | `hopper` (ore waiting) | empty (`:27`) | deposits (`src/server/Services/RefineryService.luau:117`, auto-deposit `PlayerStateService.luau:374,417,445`); the line sim consumes it (`src/server/Lib/Refining.luau:91`) | emptied in place (`RebirthReset.luau:30-32`) |
@@ -42,7 +42,11 @@ that: only existing keys are assigned — `tests/ProfileTemplate.spec.luau:94-11
 | `flags.tutorialDone` / `flags.introSeen` | false (`:38-39`) | `TutorialService.luau:72,92` and `:81` | survive |
 | `flags.firstMeteor` / `firstCoreReward` / `firstRefinery` | false (`:41-43`) | analytics milestones in `src/server/Services/TelemetryService.luau:284,304,345` | survive |
 | `flags.gearRefund` | *not in the template* | written once by a migration (`DataService.luau:123-124`), cleared when the shop tells the player (`ShopService.luau:307-309`) | transient |
-| `trialFlag` | false (`:74`) | only the migration pin today (`DataService.luau:142-144`; no gameplay writer in `src` as of 2026-10-18) | survives (pinned: `tests/RebirthReset.spec.luau:105-106`) |
+| `paidShards` | 0 | the Robux-bought part of `shards` (`Shared.ShardWallet`: shard packs, tier-up and repeat refunds); eggs spend earned shards first, perks/evolves spend bought first; v13 migration starts it at 0 | survives |
+| `settings` | {} | saved Settings toggles (`Shared.PlayerSettings`, `PlayerStateService:SetSetting`) | survives |
+| `credits.petMax` | 0 | a Pet Max bought with nothing to level, spent by `Purchases.applyPetMaxCredit` on the next pet put out | survives |
+
+(v13 removed `trialFlag`, written only by an unreleased v12 trial build.)
 | `lastSeen` (offline checkpoint) | 0 (`:35`) | DataService on every autosave and release (`DataService.luau:365,305`); read for offline catch-up (`:44`) | re-stamped, never removed (`RebirthReset.luau:36`) |
 | `receipts` (all processed PurchaseIds) | empty (`:52`) | `src/shared/Purchases.luau:167`; never trim (template comment) | survives (`tests/RebirthReset.spec.luau:92,98`) |
 | `credits.callMeteor` / `bossMeteor` / `rebirthKeep` | 0 (`:48-50`) | bought via `src/server/Services/MonetizationService.luau`; spent at `:387`, `:409` and `RebirthService.luau:60` | survive |
@@ -138,8 +142,8 @@ guide's story, not this one.
 | keep-everything preserves the whole shape | `:120-132` |
 
 `tests/RebirthReset.spec.luau` pins the **behaviour**: gear keeps tiers, loses levels (`:35-45`);
-the line resets, or keeps the Station Memory share (`:47-51`, `:143-152`); Head Start floors gear
-without lowering owned tiers (`:154-175`); inventories empty in place (`:53-63`); shards, index
+the line resets, or keeps the Station Memory share (`:47-51`, `:143-152`); Head Start grants a share of
+the next rebirth's cost as cash (`:154-175`); inventories empty in place (`:53-63`); shards, index
 bonuses and titles, pets, credits, receipts, flags, stats and preferences are untouched (`:65-107`);
 no reset produces bars (`:109-117`); repeated resets don't touch the template (`:119-130`);
 keep-all moves only `overflow` and `lastSeen` (`:177-197`).

@@ -15,6 +15,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Intro = require(ReplicatedStorage.Shared.Intro)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local Steps = Config.Tutorial.Steps
 
@@ -100,20 +101,22 @@ function TutorialService:_watchCrater()
 	local radius = Config.Tutorial.CraterRadius
 	while true do
 		task.wait(0.5)
-		local phase = MeteorService:GetPhase()
-		if phase ~= Phase.Impact and phase ~= Phase.Active then
-			continue
-		end
-		local center = spawn.Position * Vector3.new(1, 0, 1)
-		for _, player in Players:GetPlayers() do
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if root and self:IsBefore(player, "reach_crater") then
-				if (root.Position * Vector3.new(1, 0, 1) - center).Magnitude <= radius then
-					self:Did(player, "reach_crater")
+		SafeLoop.step("TutorialCrater", function()
+			local phase = MeteorService:GetPhase()
+			if phase ~= Phase.Impact and phase ~= Phase.Active then
+				return
+			end
+			local center = spawn.Position * Vector3.new(1, 0, 1)
+			for _, player in Players:GetPlayers() do
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if root and self:IsBefore(player, "reach_crater") then
+					if (root.Position * Vector3.new(1, 0, 1) - center).Magnitude <= radius then
+						self:Did(player, "reach_crater")
+					end
 				end
 			end
-		end
+		end)
 	end
 end
 
@@ -124,8 +127,13 @@ function TutorialService:KnitInit()
 end
 
 function TutorialService:KnitStart()
+	local characterAdded: { [Player]: RBXScriptConnection } = {}
 	Players.PlayerRemoving:Connect(function(player)
 		lastSkipRequest[player] = nil
+		if characterAdded[player] then
+			characterAdded[player]:Disconnect()
+			characterAdded[player] = nil
+		end
 	end)
 	local DataService = Knit.GetService("DataService")
 	local NodeService = Knit.GetService("NodeService")
@@ -160,7 +168,8 @@ function TutorialService:KnitStart()
 		end)
 	end
 	local function watch(player: Player)
-		player.CharacterAdded:Connect(function(character) startInField(player, character) end)
+		if characterAdded[player] then return end -- PlayerAdded and the startup sweep can both see a player
+		characterAdded[player] = player.CharacterAdded:Connect(function(character) startInField(player, character) end)
 		if player.Character then startInField(player, player.Character) end
 	end
 	Players.PlayerAdded:Connect(watch)

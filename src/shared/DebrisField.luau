@@ -30,6 +30,17 @@ function DebrisField.cash(reward: Debris.Reward?, perSecond: number, rebirthCost
 	return Income.grant(reward.Seconds or 0, perSecond, reward.CashFloor or 0, rebirthCost * (reward.CeilingShare or 0))
 end
 
+-- How much of a full payout a rock is worth to its breaker: rocks are sized for one random active player's
+-- pickaxe (`maxHp` = hits × that Power), so a rock sized for a weaker pickaxe than the breaker's pays only
+-- that fraction (a veteran one-shotting newcomer rocks earns proportionally). Never more than 1.
+function DebrisField.sizedShare(maxHp: number, hits: number, breakerPower: number): number
+	local full = hits * breakerPower
+	if not (full > 0 and full < math.huge and maxHp >= 0) then
+		return 1
+	end
+	return math.min(1, maxHp / full)
+end
+
 -- The ore and per-hit multiplier a rock drops, with `yieldShare` the part of a full hit the player's level
 -- lets an ore rock's ore yield (Levels.oreYield). A cash rock drops no ore; filler drops the default ore.
 function DebrisField.ore(reward: Debris.Reward?, yieldShare: number): (string?, number)

@@ -11,6 +11,7 @@ local Icons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local UI = require(script.Parent.NativeUI)
 local SettingsMenu = require(script.Parent.NativeMenus.Settings)
 local MenuTheme = require(script.Parent.MenuTheme)
+local MenuFlags = require(script.Parent.MenuFlags)
 local player = Players.LocalPlayer
 local NativeHudMenus = {}
 local started = false
@@ -22,13 +23,10 @@ local PREFERENCES = {
 	{ name = "MusicOn", default = true, label = "Music" },
 	{ name = "SfxOn", default = true, label = "Sound effects" },
 }
-local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "RefineryOpen", "HatchOpen" }
-local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen" }
-
-local function anotherMenuOpen(flags: { string }): boolean
-	for _, name in flags do if player:GetAttribute(name) == true then return true end end
-	return false
-end
+-- Settings opening closes the Backpack popup (below), so the popup doesn't block Settings
+local SETTINGS_BLOCKERS = MenuFlags.except("SettingsOpen", "BackpackOpen")
+local BACKPACK_BLOCKERS = MenuFlags.except("BackpackOpen")
+local anotherMenuOpen = MenuFlags.anyOpen
 
 function NativeHudMenus.start()
 	if started then return end
@@ -50,10 +48,15 @@ function NativeHudMenus.start()
 	local oreImage = (template:WaitForChild("Icon") :: ImageLabel).Image
 	-- The popup is a short list under a slim ribbon: a small red X badge on the
 	-- corner, and rows that shrink to fit instead of scrolling.
-	backpackClose.AnchorPoint, backpackClose.Position, backpackClose.Size = Vector2.zero, UDim2.new(1, -24, 0, -12), UDim2.fromOffset(32, 32)
+	backpackClose.AnchorPoint = Vector2.zero
 	backpackClose.ZIndex = math.max(backpackClose.ZIndex, 8)
 	local closeIcon = backpackClose:FindFirstChild("Icon")
-	if closeIcon and closeIcon:IsA("GuiObject") then closeIcon.Size = UDim2.fromOffset(16, 16) end
+	-- 32 px with a mouse; at least Hud.MinTouch on touch (the popup is drawn unscaled)
+	local function sizeClose(touch: boolean)
+		local size = if touch then HudLayout.closeSize(32, 1) else 32
+		backpackClose.Position, backpackClose.Size = UDim2.new(1, 8 - size, 0, -12), UDim2.fromOffset(size, size)
+		if closeIcon and closeIcon:IsA("GuiObject") then closeIcon.Size = UDim2.fromOffset(size // 2, size // 2) end
+	end
 	inventory.Position, inventory.Size = UDim2.fromOffset(8, 34), UDim2.new(1, -16, 1, -40)
 	inventory.ScrollingEnabled, inventory.Active, inventory.ScrollBarThickness = false, false, 0
 	local padding = inventory:FindFirstChildOfClass("UIPadding")
@@ -114,6 +117,7 @@ function NativeHudMenus.start()
 	end
 	local function updateLayout(nextLayout: HudLayout.Layout)
 		layout = nextLayout
+		sizeClose(layout.touch)
 		local button = layout.settings
 		openSettings.Visible = button ~= nil
 		if button then
@@ -121,7 +125,10 @@ function NativeHudMenus.start()
 		end
 		updateBackpack()
 	end
-	-- each switch row (a Frame in a section card, named after its attribute) has a chunky Toggle: lime ON, pale OFF
+	-- each switch row (a Frame in a section card, named after its attribute) has a chunky Toggle: lime ON, pale OFF.
+	-- Saved values arrive with the first State (state.settings) and a toggle is saved with PlayerStateService:SetSetting.
+	local stateService = Knit.GetService("PlayerStateService")
+	local touched: { [string]: boolean } = {} -- toggled this session: a late State must not undo them
 	for _, preference in PREFERENCES do
 		if player:GetAttribute(preference.name) == nil then player:SetAttribute(preference.name, preference.default) end
 		local row = preferences:FindFirstChild(preference.name, true) :: Frame
@@ -131,7 +138,12 @@ function NativeHudMenus.start()
 			toggle.Text = if enabled then "ON" else "OFF"
 			MenuTheme.paint(toggle, if enabled then "lime" else "tabOff")
 		end
-		toggle.Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
+		toggle.Activated:Connect(function()
+			local value = player:GetAttribute(preference.name) ~= true
+			touched[preference.name] = true
+			player:SetAttribute(preference.name, value)
+			task.spawn(function() pcall(function() stateService:SetSetting(preference.name, value) end) end)
+		end)
 		player:GetAttributeChangedSignal(preference.name):Connect(update)
 		update()
 	end
@@ -184,7 +196,17 @@ function NativeHudMenus.start()
 		if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then closeSettings(); closeBackpack() end
 	end)
 	UI.onLayoutChanged(updateLayout)
-	Knit.GetService("PlayerStateService").State:Observe(function(state)
+	UI.watchGamepadFocus(MenuFlags.except("IntroOpen")) -- the Intro selects its own NEXT
+	local savedApplied = false
+	stateService.State:Observe(function(state)
+		if not state then return end
+		if not savedApplied and state.settings then
+			savedApplied = true
+			for _, preference in PREFERENCES do
+				local saved = state.settings[preference.name]
+				if type(saved) == "boolean" and not touched[preference.name] then player:SetAttribute(preference.name, saved) end
+			end
+		end
 		rows = HudResources.ores(state) :: { any }
 		for _, bar in HudResources.bars(state) do
 			if bar.amount > 0 then table.insert(rows, { id = bar.id, name = bar.name, amount = bar.amount, bar = true }) end

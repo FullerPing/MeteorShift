@@ -19,12 +19,13 @@ export type HomeData = {
 
 local Refining = {}
 
+-- Capacities are whole ore / bars: a Vault pet's fractional multiplier must not leave fractional stock
 function Refining.hopperCapacity(data: HomeData, capacityMult: number?): number
-	return (Line.station("hopper", data.line).Capacity :: number) * (capacityMult or 1)
+	return math.floor((Line.station("hopper", data.line).Capacity :: number) * (capacityMult or 1))
 end
 
 function Refining.collectorCapacity(data: HomeData, capacityMult: number?): number
-	return (Line.station("collector", data.line).Capacity :: number) * (capacityMult or 1)
+	return math.floor((Line.station("collector", data.line).Capacity :: number) * (capacityMult or 1))
 end
 
 function Refining.conveyorRate(data: HomeData): number

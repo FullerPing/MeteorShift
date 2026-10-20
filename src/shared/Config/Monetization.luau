@@ -111,7 +111,7 @@ Monetization.Passes = {
 		Id = 2027090469,
 		Name = "VIP",
 		Robux = 199,
-		Description = "+10% bar value and a VIP chat tag.",
+		Description = "+25% bar value and a VIP chat tag.",
 	} :: Pass,
 }
 
@@ -146,14 +146,14 @@ Monetization.Products = {
 		Id = 3717721006,
 		Name = "Pocket Change",
 		Robux = 19,
-		Description = "10 minutes of current line income. Minimum $2,000; capped at 30% of your next rebirth cost.",
+		Description = "10 minutes of current line income. Minimum $2,000; capped at 25% of your next rebirth cost.",
 	} :: Product,
 	MiniOverclock = {
 		Key = "MiniOverclock",
 		Id = 3717721310,
 		Name = "Mini Overclock",
 		Robux = 19,
-		Description = "Refinery ×2 speed for 10 minutes of play time. Adds to your Overclock time.",
+		Description = "Overclock for 10 minutes of play time: refinery ×2 speed and bars sell for +50%. Adds to your Overclock time.",
 	} :: Product,
 	OreRush = {
 		Key = "OreRush",
@@ -167,7 +167,7 @@ Monetization.Products = {
 		Id = 3717721086,
 		Name = "Cash Bundle",
 		Robux = 59,
-		Description = "60 minutes of current line income. Minimum $20,000; capped at 80% of your next rebirth cost.",
+		Description = "60 minutes of current line income. Minimum $20,000; capped at 90% of your next rebirth cost.",
 	} :: Product,
 	CallMeteor = {
 		Key = "CallMeteor",
@@ -181,15 +181,15 @@ Monetization.Products = {
 		Id = 3717721351,
 		Name = "Refinery Overclock",
 		Robux = 39,
-		Description = "Your refinery runs ×2 speed for 30 minutes of play time (online only).",
+		Description = "Overclock for 30 minutes of play time (online only): refinery ×2 speed and bars sell for +50%.",
 	} :: Product,
 	StarterPack = {
 		Key = "StarterPack",
 		Id = 3717709173,
 		Name = "Starter Value Pack",
 		Robux = 49,
-		Description = "Two Mini Overclocks (20 minutes of ×2 refinery), 1,500 XP for each equipped pet and 10 minutes of line income. One per player.",
-		Highlights = { "2 Mini Overclocks: 20 min of x2 refinery", "1,500 XP for each equipped pet", "10 minutes of line income", "One per player" },
+		Description = "Two Mini Overclocks (20 minutes of Overclock), 1,500 XP for each equipped pet (or 30 Core Shards if you have none out) and 10 minutes of line income. One per player.",
+		Highlights = { "2 Mini Overclocks: 20 min of Overclock", "1,500 XP per equipped pet, or 30 Core Shards", "10 minutes of line income", "One per player" },
 	} :: Product,
 	PetMax = {
 		Key = "PetMax",
@@ -372,7 +372,7 @@ Monetization.Products = {
 Monetization.OreMult = 2 -- 2x Ore: ore quantity per hit
 Monetization.CashMult = 2 -- 2x Cash: every bar sale (multiplies with rebirth, index, VIP and pets)
 Monetization.BackpackMult = 2 -- Bigger Backpack: backpack capacity
-Monetization.VIPBarBonus = 0.1 -- VIP: +10% bar sales (multiplies with rebirth and index)
+Monetization.VIPBarBonus = 0.25 -- VIP: +25% bar sales (multiplies with rebirth and index; +10% was a tenth of 2x Cash at a higher price)
 Monetization.VIPTag = "[VIP]"
 Monetization.VIPTagColor = "#FFCF37"
 Monetization.SupporterTag = "[Supporter]"
@@ -388,20 +388,28 @@ Monetization.CallMeteor = {
 	CapWindow = 3600, -- the rolling window, seconds
 }
 
--- Refinery Overclock (spec §9.2): online only, the offline catch-up ignores it
+-- Refinery Overclock (spec §9.2): online only, the offline catch-up ignores it. Speed alone did nothing once mining,
+-- not the line, held income back (audit C4), so bars sold while it runs are worth BarBonus more as well.
 Monetization.Overclock = {
 	SpeedMult = 2,
+	BarBonus = 0.5,
 	Duration = 30 * 60, -- seconds of online time per purchase; purchases stack
 }
 
 Monetization.ShardPacks = { Shards50 = 50, Shards250 = 250, Shards1000 = 1000 } :: { [string]: number }
+-- A one-off product bought again after it is owned (stale UI, two prompts) pays these Core Shards instead of
+-- nothing: about its Robux at the Shards250 rate
+Monetization.RepeatRefundShards = { PetSlot = 175 } :: { [string]: number }
 Monetization.MiniOverclock = { Duration = 10 * 60 }
--- Starter Value Pack: Overclocks of MiniOverclock.Duration, PetXp to each equipped pet, and the StarterPack cash pack
-Monetization.StarterPack = { Overclocks = 2, PetXp = 1500 }
+-- Starter Value Pack: Overclocks of MiniOverclock.Duration, PetXp to each equipped pet (ShardsWithoutPets Core Shards
+-- instead when none is equipped: one Meteor Egg), and the StarterPack cash pack
+Monetization.StarterPack = { Overclocks = 2, PetXp = 1500, ShardsWithoutPets = 30 }
 Monetization.OreRush = { Multiplier = 2, Duration = 30 * 60 }
 Monetization.CashPacks = {
-	PocketChange = { Minutes = 10, Floor = 2000, CeilingShare = 0.3 },
-	CashBundle = { Minutes = 60, Floor = 20000, CeilingShare = 0.8 },
+	-- The ceilings bind mid-lap, so they set the value: the Bundle (about 3x the Robux) pays 3.6x the Pocket's cap
+	-- and still never a whole rebirth. At 0.3 / 0.8 three Pocket Changes beat one Cash Bundle.
+	PocketChange = { Minutes = 10, Floor = 2000, CeilingShare = 0.25 },
+	CashBundle = { Minutes = 60, Floor = 20000, CeilingShare = 0.9 },
 	StarterPack = { Minutes = 10, Floor = 2000, CeilingShare = 0.3 },
 } :: { [string]: CashPack }
 

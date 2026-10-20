@@ -62,7 +62,7 @@ function Menu.build(): ScreenGui
 	tooltip.Visible, tooltip.ZIndex = false, 2
 
 	-- the screen behind the menu: 20% navy, as behind the Gear Shop
-	N.create("TextButton", { Name = "Dimmer", Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY,
+	N.create("TextButton", { Name = "Dimmer", Selectable = false, Text = "", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Palette.NAVY,
 		BackgroundTransparency = 0.8, BorderSizePixel = 0, AutoButtonColor = false, Visible = false, Modal = true }, gui)
 	local p = Theme.panel(gui, "Panel", UDim2.fromOffset(760, 475)) :: any
 	p.AnchorPoint, p.Position, p.Visible = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5), false

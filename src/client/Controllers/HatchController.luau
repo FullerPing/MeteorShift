@@ -158,9 +158,11 @@ function HatchController:KnitStart()
 		equip.Visible, again.Visible = revealedNow, revealedNow
 		local hatch = active
 		if not revealedNow or not hatch then return end
-		local equipped = state and state.pets and table.find(state.pets.equipped or {}, hatch.petId) ~= nil
-		equip.Text = if equipped then "EQUIPPED" else "EQUIP"
-		MenuTheme.state(equip, not equipped and not busy, "lime")
+		local pets = state and state.pets
+		local equipped = pets and table.find(pets.equipped or {}, hatch.petId) ~= nil
+		local full = not equipped and pets ~= nil and #(pets.equipped or {}) >= (pets.slots or 1)
+		equip.Text = if equipped then "EQUIPPED" elseif full then "SLOTS FULL" else "EQUIP"
+		MenuTheme.state(equip, not equipped and not full and not busy, "lime")
 		local egg = Pets.egg(hatch.eggId)
 		local cost = if egg then egg.Cost else 0
 		again.Text = "AGAIN · " .. Format.number(cost)
@@ -273,13 +275,16 @@ function HatchController:KnitStart()
 		busy = true
 		showActions(true)
 		task.spawn(function()
-			pcall(function() return PetService:Equip(hatch.petId) end)
+			local ok, equippedNow = pcall(function() return PetService:Equip(hatch.petId) end)
 			busy = false
-			-- the State snapshot follows the equip shortly; show it as equipped now
-			if active == hatch then
+			if active ~= hatch then return end
+			if ok and equippedNow == true then
+				-- the State snapshot follows the equip shortly; show it as equipped now
 				equip.Text = "EQUIPPED"
 				MenuTheme.state(equip, false, "lime")
 				MenuTheme.state(again, true, "blue")
+			else
+				showActions(true) -- refused (the server's notice toasts): back to what the snapshot says
 			end
 		end)
 	end)

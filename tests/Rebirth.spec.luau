@@ -20,9 +20,10 @@ return function(t: any)
 		end
 	end)
 
-	t.test("past the list, Legacy ranks multiply the cost by Legacy.CostGrowth", function()
+	t.test("past the list, Legacy ranks step up by FirstStep, then multiply the cost by Legacy.CostGrowth", function()
 		local last = #Config.Costs
-		t.near(Rebirth.cost(last), Config.Costs[last] * Config.Legacy.CostGrowth, 1e-3)
+		t.near(Rebirth.cost(last), Config.Costs[last] * Config.Legacy.FirstStep, 1e-3)
+		t.near(Rebirth.cost(last + 1) / Rebirth.cost(last), Config.Legacy.CostGrowth, 1e-9)
 		t.near(Rebirth.cost(last + 3) / Rebirth.cost(last + 2), Config.Legacy.CostGrowth, 1e-9)
 	end)
 

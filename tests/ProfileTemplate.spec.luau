@@ -28,13 +28,14 @@ return function(t: any)
 			"pickaxeLevel", "backpackLevel", "pets", "level", "xp", "perks", "overflow",
 			"backpack", "line", "hopper", "refinePriority", "bin", "progress", "bars",
 			"decor", "index", "rebirths", "lastSeen", "tutorialStep", "flags", "credits",
-			"receipts", "overclockLeft", "oreBoostLeft", "stats", "daily", "codes", "trialFlag" } do
+			"receipts", "overclockLeft", "oreBoostLeft", "stats", "daily", "codes", "paidShards", "settings" } do
 			t.ok(Template[key] ~= nil, key .. " is in the schema")
 		end
+		t.eq(Template.trialFlag, nil, "the unreleased v12 trial key is gone")
 	end)
 
 	t.test("scalar defaults: counters at zero, gear and progression at rank 1", function()
-		for _, key in { "cash", "shards", "xp", "overflow", "progress", "rebirths",
+		for _, key in { "cash", "shards", "paidShards", "xp", "overflow", "progress", "rebirths",
 			"lastSeen", "overclockLeft", "oreBoostLeft" } do
 			t.eq(type(Template[key]), "number", key)
 			t.eq(Template[key], 0, key .. " starts at zero")
@@ -44,12 +45,11 @@ return function(t: any)
 			t.eq(type(Template[key]), "number", key)
 			t.ok(Template[key] >= 1, key .. " starts at rank 1 or above")
 		end
-		t.eq(Template.trialFlag, false, "the trial flag starts unset")
 	end)
 
 	t.test("inventory, index and history maps start empty", function()
 		for _, key in { "backpack", "hopper", "refinePriority", "bin", "bars", "decor",
-			"index", "receipts", "codes" } do
+			"index", "receipts", "codes", "settings" } do
 			t.eq(type(Template[key]), "table", key)
 			t.eq(next(Template[key]), nil, key .. " starts empty")
 		end
@@ -70,7 +70,7 @@ return function(t: any)
 			t.eq(type(value), "boolean", "flag " .. key)
 			t.eq(value, false, "flag " .. key .. " starts unset")
 		end
-		for _, key in { "callMeteor", "bossMeteor", "rebirthKeep" } do
+		for _, key in { "callMeteor", "bossMeteor", "rebirthKeep", "petMax" } do
 			t.eq(Template.credits[key], 0, "credit " .. key .. " waits at zero")
 		end
 		for _, key in { "meteorsJoined", "coresCracked", "barsSold" } do
