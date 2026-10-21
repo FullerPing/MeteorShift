@@ -160,4 +160,9 @@ for k = 0, 15 do
 	end
 end
 
+-- the Neon fissures glow on their own; the PointLights A.part gives Neon parts would blow StaticQA's light budget
+for _, d in detail:GetDescendants() do
+	if d:IsA("Light") then d:Destroy() end
+end
+
 return { stage = "CraterDetail", parts = A.count(detail), hiddenLoops = 64, hiddenRim = #crater.Rim:GetDescendants() }
