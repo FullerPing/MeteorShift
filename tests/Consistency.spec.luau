@@ -95,16 +95,20 @@ return function(t: any)
 		t.ok(string.find(M.Passes.OfflineHours.Description, "instead of " .. Config.Home.OfflineCap // 3600, 1, true) ~= nil, "OfflineHours free cap (Config.Home)")
 	end)
 
-	-- B1 row Rebirth.luau Unlocks (the "+1 pet slot" skip: B2 refused a Config->Config
-	-- require and said to assert the claim instead): the shown number equals Slots.PerRebirth.
-	t.test("rebirth unlock lines' pet-slot number equals Pets.Slots.PerRebirth", function()
-		local lines = 0
-		for _, line in Config.Rebirth.Unlocks do
-			if string.find(line, "pet slot", 1, true) then
-				lines += 1
-				t.eq(tonumber(string.match(line, "%+(%d+) pet slot")), Config.Pets.Slots.PerRebirth, line)
+	-- Rebirth.luau Unlocks: every rank's "+N pet slot" is the slots that rank really adds (Shared.Pets.slots; rank 2 used
+	-- to add one unannounced), and every field a rebirth opens is named on its rank.
+	t.test("rebirth unlock lines announce the pet slots and fields each rank opens", function()
+		local Pets = require(t.shared.Pets)
+		for rank = 1, 8 do
+			local line = Config.Rebirth.Unlocks[rank] or ""
+			local shown = tonumber(string.match(line, "%+(%d+) pet slot")) or 0
+			t.eq(shown, Pets.slots(rank) - Pets.slots(rank - 1), "pet slots at rank " .. rank)
+		end
+		for _, field in Config.Debris.Fields do
+			local rank = field.Unlock and field.Unlock.Rebirths
+			if rank then
+				t.ok(string.find(Config.Rebirth.Unlocks[rank] or "", field.Name, 1, true) ~= nil, field.Name .. " at rank " .. rank)
 			end
 		end
-		t.eq(lines, 2, "exactly the two pet-slot lines the B1 table found")
 	end)
 end

@@ -36,11 +36,12 @@ return {
 	Overstay = { PerDoubling = 20, Cap = 60 },
 
 	-- What each rank adds, for the rebirth panel (the rules that act on it live where the feature does:
-	-- Config.Pets.Slots, Config.Meteor.Types.Alien.MinRebirths, Config.Pets eggs)
+	-- Config.Pets.Slots, Config.Meteor.Boss.MinRebirths, Config.Pets eggs, Config.Debris.Fields unlocks;
+	-- tests/Consistency.spec checks the pet slots and fields against them)
 	Unlocks = {
-		[1] = "Colony Perks panel, +1 pet slot",
-		[2] = "Aurora Egg (Epic or better only)",
-		[3] = "Alien Boss meteor every hour, new Alien ore",
+		[1] = "Colony Perks panel, +1 pet slot, the Starfall field",
+		[2] = "Aurora Egg (Epic or better only), +1 pet slot",
+		[3] = "Alien Boss meteor every hour, new Alien ore, the Halo Ledge field",
 		[4] = "+1 pet slot",
 	},
 
