@@ -388,6 +388,12 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 				TextStrokeColor3 = INK, TextStrokeTransparency = 0,
 			}),
 			hide(meter(scope, "RemainingTime", 14, 90, 532, data.timeProgress, glow, 12)),
+			show(scope:Hydrate(text(scope, "CountdownTip", Config.Hud.CountdownTip.Text, 14, 104, 532, 22, timerFont(17, 10), LIME))({
+				TextXAlignment = Enum.TextXAlignment.Center,
+			}), scope:Computed(function(use)
+				local s = state(use)
+				return use(data.phase) == Phase.Countdown and (s == nil or (s.level or 1) <= Config.Hud.CountdownTip.MaxLevel)
+			end)),
 		}, true), -- no card behind the clock
 	}
 end

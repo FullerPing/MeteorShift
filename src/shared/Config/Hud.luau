@@ -61,6 +61,9 @@ Hud.TouchCardScale = 0.65
 Hud.EventPanel = { Width = 284, Height = 170, Top = 153, Gap = 6 }
 -- Figma event clock at the top centre (base units).
 Hud.Timer = { Width = 593, Height = 130, Top = 49 }
+-- A line under the clock during the countdown, for players up to MaxLevel (telemetry: most new players left while
+-- waiting for the meteor, not knowing the fields are open between meteors)
+Hud.CountdownTip = { Text = "TIP: Mine the ore fields while you wait - press ORE!", MaxLevel = 10 }
 
 -- Transparent wallet and backpack occupy opposite bottom corners. The foundry
 -- summary is centred, with training above it. Equipment aliases the SHOP rect.
