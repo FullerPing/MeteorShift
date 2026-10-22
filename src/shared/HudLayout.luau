@@ -475,13 +475,17 @@ function HudLayout.compute(
 			return math.clamp(height * 0.48 - Hud.Column.Height * candidate / 2, lowest, highest)
 		end
 		local order = table.clone(Hud.DesktopButtonOrder)
-		-- ORE is a tile in the column, straight under STORE (it is taken back out of `buttons` below)
-		table.insert(order, (table.find(order, "STORE") or #order) + 1, "ORE")
 		local stackDaily, stackCodes = true, true
 		if not stackIndexY(fitted(#order), true, true) then stackCodes = false end
 		if not stackCodes and not stackIndexY(fitted(#order), true, false) then stackDaily = false end
 		if not stackDaily then table.insert(order, "DAILY") end
 		if not stackCodes then table.insert(order, "CODES") end
+		-- ORE is a tile in the column, straight under STORE (taken back out of `buttons` below), when the column still
+		-- fits at the smallest tile size; a window too short for it leaves ORE to sit above SPRINT
+		local roomy = (resources.y - 8 - (topInset + 6)) / ((#order + 1) * Hud.Column.Height * NavigationCaptionBottom / NavigationFaceSize)
+		if roomy >= Hud.MinTouch / Hud.Column.Height then
+			table.insert(order, (table.find(order, "STORE") or #order) + 1, "ORE")
+		end
 		buttonScale = fitted(#order)
 		local columnHeight = navigationHeight(Hud.Column.Width * buttonScale, Hud.Column.Height * buttonScale)
 		local columnTop = math.min(Hud.Column.Top * scale,

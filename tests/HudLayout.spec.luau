@@ -125,8 +125,10 @@ return function(t: any)
 			local l = HudLayout.compute(size, false, 58)
 			local sprint, ore, store, pack = l.fastWalk, l.ore, l.buttons.STORE, l.backpack
 			local context = tostring(size)
-			t.ok(ore ~= nil, context .. " ORE is placed")
-			ore = ore :: any
+			if not ore then
+				t.ok(size.Y <= 600, context .. " only a short window leaves ORE out of the column")
+				continue
+			end
 			t.eq(ore.x, store.x, context .. " ORE is in the left column")
 			t.near(ore.w, store.w, 1e-6, context .. " ORE is as wide as STORE")
 			t.near(ore.h, store.h, 1e-6, context .. " ORE is as tall as STORE")
