@@ -18,7 +18,7 @@ Hatchery in the world, never in a menu.
 | Gates | the egg must exist, the rebirths gate must be met, and the shard balance must cover the cost (shortfall notice otherwise) | `src/server/Services/PetService.luau:104-118` |
 | The roll | shards are deducted, then two uniform rolls: one lands in the egg's odds, one picks inside the rarity (catalog order is the pick order) | `src/server/Services/PetService.luau:119-120`, `src/shared/Pets.luau:109-138`, order rule `src/shared/Config/Pets.luau:99-100` |
 | Pity | each egg keeps a counter of hatches since the last `PityFrom`-or-better pet; on the egg's Pity-th such hatch the pool is PityFrom-or-better only; any such pet resets it | `src/shared/Pets.luau:113-137`, saved under `pets.hatches` (`src/server/Services/PetService.luau:121`), repaired on load (`src/shared/Pets.luau:252-259`) |
-| Outcome | a new pet arrives at level 1 and is equipped if a slot is free; a duplicate instead pays 400 XP to the pet you own | `src/server/Services/PetService.luau:122-131`, `src/shared/Config/Pets.luau:96-97` |
+| Outcome | a new pet arrives at level 1; a duplicate is one more copy of the pet you own (`copies` on its saved entry, sharing that pet's level). Either way it goes out if a slot is free, and each copy out adds its perks again, up to the role caps | `PetService:Hatch`, `Shared.Pets.copies` / `outCount` |
 | Throttle | client Equip/Unequip/Hatch requests are throttled to one per 0.15 s | `src/server/Services/PetService.luau:227-234,236-255` |
 
 ### Eggs (`src/shared/Config/Pets.luau:86-94`)
@@ -206,7 +206,7 @@ Edit pets and the spec's first to tell you. The load-bearing guarantees, by test
 - every egg's odds sum to 100 and name rarities that have pets; costs and pity positive (`:275-285`)
 - paid pets never in eggs and stronger than free pets at shared roles (`:287-310`); level-10 strength
   monotone in rarity (`:312-330`)
-- roll bands, deterministic catalog picks, the meteor/crystal costs-odds-pity pin and DuplicateXp=400
+- roll bands, deterministic catalog picks, the meteor/crystal costs-odds-pity pin, and duplicate copies (`copies`, `outCount`, clean never puts out more copies than owned)
   (`:332-369`); the pity guarantee and reset (`:371-381`); a 20,000-hatch simulation with no drought
   past pity and odds within ±3 pts (`:383-402`); Solar Phoenix's exact 50→100% miner (`:404-409`)
 

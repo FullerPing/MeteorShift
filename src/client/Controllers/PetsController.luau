@@ -54,6 +54,7 @@ function Controller:KnitStart()
 	gui.Enabled = true
 	gui.DisplayOrder = 30
 	local p: any = gui.Panel
+	local putAway = p.PutAway
 	local nav = ExactNavButton.author(gui, "PetsButton", "Pets", Config.HudIcons.pets)
 	local navRefs = ExactNavButton.bind(nav)
 
@@ -71,7 +72,10 @@ function Controller:KnitStart()
 
 	local function saved(): any return if state then state.pets else nil end
 	local function owned(id: string): any local s = saved(); return s and s.owned[id] end
-	local function equipped(id: string): boolean local s = saved(); return s ~= nil and table.find(s.equipped, id) ~= nil end
+	local function outCount(id: string): number local s = saved(); return if s then Pets.outCount(s.equipped, id) else 0 end
+	local function equipped(id: string): boolean return outCount(id) > 0 end
+	-- a copy of this pet still in the bag (duplicates are extra copies)
+	local function spare(id: string): boolean return outCount(id) < Pets.copies(owned(id)) end
 	local function slotCount(): number local s = saved(); return if s then s.slots else 1 end
 	local function box(object: GuiObject, x: number, y: number, w: number, h: number)
 		object.Position, object.Size = UDim2.fromOffset(x, y), UDim2.fromOffset(math.max(0, w), math.max(0, h))
@@ -133,7 +137,8 @@ function Controller:KnitStart()
 		card.Lock.Visible = not found
 		tint(card.Well, if isEquipped then Palette.LIME_BOTTOM else rarity.Color)
 		card.PetLabel.Text = if found then (Pets.def(id) :: any).Name else "???"
-		card.Level.Text = if found and level then "Level " .. level else string.upper(rarity.Name)
+		local copies = Pets.copies(owned(id))
+		card.Level.Text = if found and level then "Level " .. level .. (if copies > 1 then "  ×" .. copies else "") else string.upper(rarity.Name)
 		card.Level.TextColor3 = if found and level then Palette.SECOND else rarity.Color:Lerp(Palette.NAVY, 0.35)
 		card.Level.TextSize = if wide then 14 else 12
 		showPreview(card.Well.Preview, if found and live then id else nil, level or 1)
@@ -171,9 +176,9 @@ function Controller:KnitStart()
 	local function updateBadge()
 		local s = saved()
 		local free = s ~= nil and #s.equipped < slotCount()
-		local spare = false
-		if s then for id in s.owned do if not equipped(id) then spare = true end end end
-		navRefs.badge.Visible = free and spare
+		local inBag = false
+		if s then for id in s.owned do if spare(id) then inBag = true end end end
+		navRefs.badge.Visible = free and inBag
 	end
 	update = function()
 		local g = geometry
@@ -316,7 +321,7 @@ function Controller:KnitStart()
 			for _, name in { "Rarity", "PreviewWell", "Level", "XpText", "XpBar", "HowButton", "PerkText" } do body[name].Visible = false end
 			local action = p.Action
 			box(action, g.action.x, g.action.y, g.action.w, g.action.h)
-			action.Visible = def ~= nil
+			action.Visible, putAway.Visible = def ~= nil, false
 			detail.Banner.Visible, detail.PetName.Visible = def ~= nil, def ~= nil
 			if def then
 				local rarity = Config.Pets.Rarities[def.Rarity]
@@ -373,13 +378,25 @@ function Controller:KnitStart()
 				body.PerkText.Text = perkText(def, level, found)
 				body.PerkText.Position, body.PerkText.Size = UDim2.fromOffset(0, y), UDim2.fromOffset(innerW, 0)
 
-				-- the action: lime EQUIP for a pet in the bag, red PUT AWAY for one that is out
+				-- the action: lime EQUIP for a pet in the bag, red PUT AWAY for one that is out; with a copy out and
+				-- another in the bag and a free slot, it splits into EQUIP +1 and PUT AWAY
 				local onSale = pass ~= nil and pass.Id ~= 0
 				if found then
 					local isOut = equipped(def.Id)
 					local free = s ~= nil and #s.equipped < slotCount()
-					Theme.state(action, busyId == nil and (isOut or free), if isOut then "red" else "lime")
-					action.Text = if busyId == "pet_" .. def.Id then "PLEASE WAIT" elseif isOut then "PUT AWAY" elseif free then "EQUIP" else "ALL " .. slotCount() .. " SLOTS IN USE"
+					local addOne = free and spare(def.Id)
+					local wait = busyId == "pet_" .. def.Id
+					if isOut and addOne then
+						local half = math.floor((g.action.w - 8) / 2)
+						box(action, g.action.x, g.action.y, half, g.action.h)
+						box(putAway, g.action.x + g.action.w - half, g.action.y, half, g.action.h)
+						putAway.Visible = true
+						Theme.state(putAway, busyId == nil, "red")
+						putAway.Text = if wait then "WAIT" else "PUT AWAY"
+						putAway.TextSize = if g.wide then 20 else 17
+					end
+					Theme.state(action, busyId == nil and (isOut or free), if isOut and not addOne then "red" else "lime")
+					action.Text = if wait then "PLEASE WAIT" elseif isOut and addOne then "EQUIP +1" elseif isOut then "PUT AWAY" elseif free then "EQUIP" else "ALL " .. slotCount() .. " SLOTS IN USE"
 				elseif pass then
 					Theme.state(action, busyId == nil and onSale, "gold")
 					action.Text = if onSale then "GET FOR " .. Format.ROBUX .. " " .. Format.number(robuxOf(pass)) else "NOT ON SALE YET"
@@ -402,7 +419,7 @@ function Controller:KnitStart()
 		hint.Visible = g.footerH > 0
 		box(hint, g.padding, g.footerY, if g.wide then g.list.w else g.panel.w - g.padding * 2, g.footerH)
 		hint.Footer.Text = if notice ~= "" then notice elseif not s then "Loading your pets..."
-			elseif tab == "index" then "Hatch eggs at the Hatchery with Core Shards. Duplicates level up your pet."
+			elseif tab == "index" then "Hatch eggs at the Hatchery with Core Shards. Duplicates are extra copies to equip."
 			elseif g.wide then "Pets gain XP while you mine!"
 			else "Pets gain XP while you mine! More slots: Rebirths · Pet Bond · Extra Pet Slot"
 		updateBadge()
@@ -429,11 +446,16 @@ function Controller:KnitStart()
 				local ok, err = pcall(function() MarketplaceService:PromptGamePassPurchase(player, pass.Id) end)
 				if not ok then warn("[PetsController] purchase prompt failed:", err) end
 			end
-		elseif equipped(selected) then
+		elseif equipped(selected) and not (spare(selected) and #state.pets.equipped < slotCount()) then
 			purchase("pet_" .. selected, def.Name .. " put away.", function() return petService:Unequip(def.Id) end)
 		else
 			purchase("pet_" .. selected, def.Name .. " is out.", function() return petService:Equip(def.Id) end)
 		end
+	end)
+	putAway.Activated:Connect(function()
+		if busyId or not state or not selected or not equipped(selected) then return end
+		local def = Pets.def(selected)
+		if def then purchase("pet_" .. selected, def.Name .. " put away.", function() return petService:Unequip(def.Id) end) end
 	end)
 	p.Close.Activated:Connect(close)
 	gui.Dimmer.Activated:Connect(close)

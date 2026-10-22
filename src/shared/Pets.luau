@@ -9,16 +9,18 @@
 --   slots(rebirths, extra, bonus)  how many pets can be out, including the optional slot pass
 --                           and the Pet Bond perk's bonus slots
 --   minerActive(last, now)  whether a real validated swing is inside the miner window
+--   copies(entry)           how many of a pet you own (every duplicate hatch is one more; all share its level)
+--   outCount(equipped, id)  how many copies of a pet are out
 --   xpToNext(level)         XP to the next level, nil at the max
 --   addXp(entry, xp)        adds XP to a { level, xp } entry, levelling up; returns levels gained
 --   clean(saved, rebirths, extra) a saved `pets` table made legal: known pets, levels in range,
---                           equipped ones owned, unique and within the slots
+--                           equipped ones owned, no more copies out than owned, and within the slots
 
 local Config = require(script.Parent.Config.Pets)
 
 local Pets = {}
 
-export type Entry = { level: number, xp: number }
+export type Entry = { level: number, xp: number, copies: number? } -- copies: nil means 1
 export type Saved = { owned: { [string]: Entry }, equipped: { string }, hatches: { [string]: number }? }
 export type PerkValue = { role: string, value: number }
 export type Bonuses = {
@@ -47,6 +49,20 @@ end
 
 local function finite(value: number): boolean
 	return value == value and math.abs(value) < math.huge
+end
+
+function Pets.copies(entry: Entry?): number
+	if not entry then return 0 end
+	local n = entry.copies
+	return if type(n) == "number" and finite(n) and n >= 1 then math.floor(n) else 1
+end
+
+function Pets.outCount(equipped: { string }, petId: string): number
+	local n = 0
+	for _, id in equipped do
+		if id == petId then n += 1 end
+	end
+	return n
 end
 
 function Pets.minerActive(lastSwing: number?, now: number): boolean
@@ -182,12 +198,12 @@ function Pets.bonuses(pets: Saved): Bonuses
 	for _, role in Config.RoleOrder do
 		totals[role] = 0
 	end
-	local seen: { [string]: boolean } = {}
+	local out: { [string]: number } = {}
 	for _, petId in pets.equipped do
 		local def = byId[petId]
 		local entry = pets.owned[petId]
-		if def and entry and not seen[petId] then
-			seen[petId] = true
+		if def and entry and (out[petId] or 0) < Pets.copies(entry) then
+			out[petId] = (out[petId] or 0) + 1
 			for _, perk in Pets.perksOf(def, entry.level) do
 				totals[perk.role] += perk.value
 			end
@@ -203,7 +219,7 @@ end
 function Pets.cloneOwned(owned: { [string]: Entry }): { [string]: Entry }
 	local copy = {}
 	for petId, entry in owned do
-		copy[petId] = { level = entry.level, xp = entry.xp }
+		copy[petId] = { level = entry.level, xp = entry.xp, copies = entry.copies }
 	end
 	return copy
 end
@@ -229,7 +245,8 @@ function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?, bonusSlo
 			if type(petId) == "string" and byId[petId] and type(entry) == "table" then
 				local level = if type(entry.level) == "number" then math.clamp(math.floor(entry.level), 1, Config.MaxLevel) else 1
 				local xp = if type(entry.xp) == "number" and level < Config.MaxLevel then math.max(entry.xp, 0) else 0
-				owned[petId] = { level = level, xp = xp }
+				local copies = Pets.copies(entry)
+				owned[petId] = { level = level, xp = xp, copies = if copies > 1 then copies else nil }
 			end
 		end
 	end
@@ -237,12 +254,12 @@ function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?, bonusSlo
 		owned[petId] = owned[petId] or entry
 	end
 	local equipped: { string } = {}
-	local seen: { [string]: boolean } = {}
+	local out: { [string]: number } = {}
 	local limit = Pets.slots(rebirths, extraSlot, bonusSlots)
 	if type(saved) == "table" and type(saved.equipped) == "table" then
 		for _, petId in saved.equipped do
-			if type(petId) == "string" and owned[petId] and not seen[petId] and #equipped < limit then
-				seen[petId] = true
+			if type(petId) == "string" and owned[petId] and (out[petId] or 0) < Pets.copies(owned[petId]) and #equipped < limit then
+				out[petId] = (out[petId] or 0) + 1
 				table.insert(equipped, petId)
 			end
 		end

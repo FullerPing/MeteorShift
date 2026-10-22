@@ -76,9 +76,13 @@ local function pay(player: Player, data: any, sku: string, label: string, cash: 
 	if shards > 0 then PlayerStateService:AddShards(player, shards) end
 	TelemetryService:earned(player, sku, cash, shards)
 	if petXp and petXp > 0 then
+		local seen: { [string]: boolean } = {}
 		for _, petId in data.pets.equipped do
 			local entry = data.pets.owned[petId]
-			if entry then Pets.addXp(entry, petXp) end
+			if entry and not seen[petId] then
+				seen[petId] = true
+				Pets.addXp(entry, petXp)
+			end
 		end
 	end
 	local parts = {}

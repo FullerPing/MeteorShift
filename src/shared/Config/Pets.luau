@@ -7,7 +7,8 @@
 -- How you get them, with no paid randomness (spec §9.4):
 --   eggs      hatched with Core Shards, which are only earned in play. Odds are shown in the
 --             shop and a pity count guarantees an Epic or better every Pity hatches. A
---             duplicate pays DuplicateXp to the pet you already have.
+--             duplicate is another copy of the pet (it shares the level of the ones you have) that
+--             can go out in its own slot.
 --   passes    two fixed-price Robux pets (game passes, Config.Monetization), always the best
 --             looking and the strongest in their role. They are not in any egg.
 -- Nothing here changes mineral odds.
@@ -93,9 +94,6 @@ Pets.Eggs = {
 	{ Id = "auroraEgg", Name = "Aurora Egg", Cost = 250, MinRebirths = 2,
 		Odds = { epic = 88, legendary = 12 }, Pity = 10, PityFrom = "legendary" },
 } :: { Egg }
-
--- A duplicate pet gives this much XP to the one you already own
-Pets.DuplicateXp = 400
 
 -- Each perk's Min is level 1 and Max is level 10. Keep catalog order stable: egg picks
 -- choose within a rarity in this order. Premium pets are fixed passes, never egg prizes.

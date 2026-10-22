@@ -97,7 +97,7 @@ function PetService:Equip(player: Player, petId: string): boolean
 	if not data or not def or not data.pets.owned[petId] then
 		return false
 	end
-	if table.find(data.pets.equipped, petId) then
+	if Pets.outCount(data.pets.equipped, petId) >= Pets.copies(data.pets.owned[petId]) then
 		return false
 	end
 	if not slotsFree(player, data) then
@@ -125,7 +125,7 @@ end
 
 -- Buys a pet with Core Shards (never random) and puts it out when a slot is free.
 -- Hatches an egg for Core Shards. The pet comes from Pets.roll (the egg's published odds plus
--- its pity count); a duplicate gives DuplicateXp to the pet you own. Returns the pet id.
+-- its pity count); a duplicate is one more copy of the pet you own. Returns the pet id.
 function PetService:Hatch(player: Player, eggId: string): string?
 	local data = PlayerStateService:Get(player)
 	local egg = Pets.egg(eggId)
@@ -155,13 +155,13 @@ function PetService:Hatch(player: Player, eggId: string): string?
 	local entry = data.pets.owned[petId]
 	local duplicate = entry ~= nil
 	if entry then
-		Pets.addXp(entry, Config.Pets.DuplicateXp)
+		entry.copies = Pets.copies(entry) + 1
 	else
 		data.pets.owned[petId] = { level = 1, xp = 0 }
-		if slotsFree(player, data) then
-			self:_putOut(player, data, petId)
-		end
 		self.PetBought:Fire(player, petId)
+	end
+	if slotsFree(player, data) then
+		self:_putOut(player, data, petId)
 	end
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Hatched:Fire(player, eggId, petId, duplicate)
@@ -201,16 +201,18 @@ function PetService:SyncPassPets(player: Player)
 	PlayerStateService:ReplicateNow(player)
 end
 
--- Every equipped pet earns XP from one validated hit of the owner's.
+-- Every equipped pet earns XP from one validated hit of the owner's (copies share one level, so once per pet).
 function PetService:_award(player: Player, kind: string)
 	local xp = Config.Pets.XpPerHit[kind]
 	local data = PlayerStateService:Get(player)
 	if not xp or not data then
 		return
 	end
+	local seen: { [string]: boolean } = {}
 	for _, petId in PlayerStateService:GetActivePets(player) do
 		local entry = data.pets.owned[petId]
-		if entry then
+		if entry and not seen[petId] then
+			seen[petId] = true
 			local gained = Pets.addXp(entry, xp)
 			if gained > 0 then
 				self.Client.Leveled:Fire(player, petId, entry.level)

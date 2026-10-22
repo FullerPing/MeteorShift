@@ -159,7 +159,9 @@ function HatchController:KnitStart()
 		local hatch = active
 		if not revealedNow or not hatch then return end
 		local pets = state and state.pets
-		local equipped = pets and table.find(pets.equipped or {}, hatch.petId) ~= nil
+		-- "equipped" once every copy you own of it is out (a duplicate is another copy that can go out)
+		local entry = pets and pets.owned and pets.owned[hatch.petId]
+		local equipped = pets ~= nil and Pets.outCount(pets.equipped or {}, hatch.petId) >= math.max(Pets.copies(entry), 1)
 		local full = not equipped and pets ~= nil and #(pets.equipped or {}) >= (pets.slots or 1)
 		equip.Text = if equipped then "EQUIPPED" elseif full then "SLOTS FULL" else "EQUIP"
 		MenuTheme.state(equip, not equipped and not full and not busy, "lime")
@@ -216,7 +218,7 @@ function HatchController:KnitStart()
 			pill.Parent = perks
 		end
 		newTag.Visible = not hatch.duplicate
-		duplicate.Text = if hatch.duplicate then "Duplicate! +" .. tostring(Config.Pets.DuplicateXp) .. " pet XP" else def.Blurb
+		duplicate.Text = if hatch.duplicate then "Duplicate! You own ×" .. Pets.copies(owned) .. " now. Equip copies to stack perks." else def.Blurb
 		showActions(true)
 		preview = PetModel.clone(hatch.petId, level)
 		if preview then

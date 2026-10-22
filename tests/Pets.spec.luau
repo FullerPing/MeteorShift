@@ -179,7 +179,9 @@ return function(t: any)
 		t.eq(bonuses.scholar, 0)
 		t.eq(bonuses.shards, 0)
 		saved.equipped = { "drillbot", "drillbot", "ghost" }
-		t.near(Pets.bonuses(saved).miner, 0.25, 1e-9, "a pet only counts once, unknown ones never")
+		t.near(Pets.bonuses(saved).miner, 0.25, 1e-9, "one copy only counts once, unknown pets never")
+		saved.owned.drillbot.copies = 2
+		t.near(Pets.bonuses(saved).miner, 0.50, 1e-9, "two copies out count twice")
 		saved.equipped = { "coinMagpie", "jetWisp" }
 		t.eq(Pets.bonuses(saved).swift, 0, "unowned pets do not count")
 	end)
@@ -218,6 +220,22 @@ return function(t: any)
 		t.eq(#cleaned.equipped, 2, "limited to the slots")
 		t.eq(cleaned.equipped[1], "packMule")
 		t.eq(cleaned.equipped[2], "jetWisp")
+	end)
+
+	t.test("copies: duplicates are extra copies, and no more are out than owned", function()
+		t.eq(Pets.copies(nil), 0)
+		t.eq(Pets.copies({ level = 1, xp = 0 }), 1)
+		t.eq(Pets.copies({ level = 1, xp = 0, copies = 3.7 }), 3)
+		t.eq(Pets.copies({ level = 1, xp = 0, copies = 0 / 0 }), 1)
+		local cleaned = Pets.clean({
+			owned = { packMule = { level = 4, xp = 0, copies = 2 }, jetWisp = { level = 1, xp = 0, copies = -5 } },
+			equipped = { "packMule", "packMule", "packMule", "jetWisp", "jetWisp" },
+		}, 4)
+		t.eq(cleaned.owned.packMule.copies, 2)
+		t.eq(cleaned.owned.jetWisp.copies, nil, "a single copy saves as nil")
+		t.eq(Pets.outCount(cleaned.equipped, "packMule"), 2)
+		t.eq(Pets.outCount(cleaned.equipped, "jetWisp"), 1)
+		t.eq(Pets.cloneOwned(cleaned.owned).packMule.copies, 2)
 	end)
 
 	t.test("clean preserves a fourth owned pet when ExtraPetSlot is validated", function()
@@ -365,7 +383,6 @@ return function(t: any)
 		for _, case in { { 0, "packMule" }, { 0.39, "jetWisp" }, { 0.80, "crystalStag" }, { 0.99, "meteorDrake" } } do
 			t.eq(Pets.roll(crystal, case[1], 0, 0), case[2])
 		end
-		t.eq(Config.DuplicateXp, 400)
 	end)
 
 	t.test("pity: the Pity-th hatch is Epic or better and the count resets on one", function()

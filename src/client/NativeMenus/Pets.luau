@@ -13,7 +13,7 @@ local PetsLayout = require(RS.Shared.PetsLayout)
 local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 local Pets = {}
-Pets.LAYOUT = 4 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
+Pets.LAYOUT = 5 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
 
 -- One pet tile: a white card with a preview well tinted by rarity, the name and level under it, a lime "EQUIPPED" tab on its
 -- top edge while it is out, a blue ring while it is selected and a "?" cover for pets you have not found.
@@ -145,6 +145,7 @@ function Pets.build(): ScreenGui
 	local perkText = Theme.label(body, "PerkText", "", 14, Palette.NAVY)
 	perkText.RichText, perkText.TextWrapped, perkText.AutomaticSize, perkText.TextYAlignment = true, true, Enum.AutomaticSize.Y, Enum.TextYAlignment.Top
 	Theme.button(p, "Action", "", "lime", 20)
+	Theme.button(p, "PutAway", "PUT AWAY", "red", 20).Visible = false -- beside EQUIP +1 when a duplicate copy is in the bag
 	return gui
 end
 
