@@ -103,8 +103,9 @@ function RebirthController:KnitStart()
 		percent.TextColor3 = if canAfford then Palette.UP else Palette.NAVY
 		currentMultiplier.Text, nextMultiplier.Text = multiplierText(rebirths), multiplierText(rebirths + 1)
 		local gain = Rebirth.multiplier(rebirths + 1) / math.max(Rebirth.multiplier(rebirths), 1e-9)
-		priceNote.Text = "Every bar sells for ×" .. string.format("%.3g", gain) .. " more. Upgrade prices rise ×"
-			.. string.format("%.3g", Rebirth.priceMult(rebirths + 1) / Rebirth.priceMult(rebirths)) .. ", so you come out ahead."
+		local priceGain = Rebirth.priceMult(rebirths + 1) / Rebirth.priceMult(rebirths)
+		priceNote.Text = "Every bar sells for ×" .. string.format("%.3g", gain) .. ". "
+			.. (if priceGain > 1 then "Upgrade prices rise ×" .. string.format("%.3g", priceGain) .. ", so you come out ahead." else "Upgrade prices stay the same.")
 		local ratio = math.clamp(cash / math.max(cost, 1), 0, 1)
 		cashProgress.Text = Format.cash(cash) .. " of " .. Format.cash(cost)
 		wallet.Text = Format.cash(cash)

@@ -99,16 +99,13 @@ $95K and the spec pins it there (`tests/Pacing.spec.luau:175-178`; `src/shared/P
 
 ## Rebirth
 
-- Costs are an explicit 16-rank list fitted with the pacing model — first rebirth $30K
+- Costs are an explicit 16-rank list fitted with the pacing model — first rebirth $34K
   (`src/shared/Config/Rebirth.luau:14`, read via `src/shared/Rebirth.luau:24-31`); beyond rank 16
-  each cost ×2.3 ("Legacy", `src/shared/Config/Rebirth.luau:25`). Cash-only gate
+  each cost ×2.05 ("Legacy", `src/shared/Config/Rebirth.luau:25`). Cash-only gate
   (`src/server/Services/RebirthService.luau:49-55`).
-- Each listed rebirth pays **×5 on every bar sale** (`src/shared/Config/Rebirth.luau:15`,
-  multiplicative via `src/shared/Rebirth.luau:33-40`) and makes **every cash price ×3 dearer**
-  (`src/shared/Config/Rebirth.luau:19`, `src/shared/Rebirth.luau:42-49`). Income ×5 with prices ×3
-  means each rebirth is worth 5/3 in real terms while both sides stay big; shard prices and Robux
-  products never inflate (`src/shared/Config/Rebirth.luau:16-18`). Legacy keeps the ratio at
-  ×2/×1.2 (`src/shared/Config/Rebirth.luau:25`).
+- Each rebirth pays **×2 on every bar sale** (`CashMult`, multiplicative via `Rebirth.multiplier`),
+  and cash prices do **not** rise (`PriceGrowth = 1`, `Rebirth.priceMult`), so a rebirth is a plain ×2
+  (owner, 2026-10-22; it used to be ×5 sales with ×3 prices). Legacy ranks keep ×2 with costs ×2.05.
 - Unlocks per rank (Perks panel, Aurora Egg, Alien boss, extra pet slot) are listed in
   `src/shared/Config/Rebirth.luau:35-40`.
 - Overstay shards reward cash you earned *after* the rebirth was affordable:
@@ -190,16 +187,17 @@ The fitted lap targets (first ~13 min, then ~18/23/24 and about 25) are recorded
 
 - **Underleveled is a fraction, not a wall.** Clearance scales yield 40%→100% and every hit counts;
   the refinery and prices never change by level (cited above).
-- **Inflation is symmetric.** Cash sales and cash prices inflate together (5 vs 3) so the numbers
-  stay huge without the treadmill stalling (`src/shared/Config/Rebirth.luau:16-25`).
+- **A rebirth is a plain ×2.** Sales double and cash prices stay put (`CashMult = 2`, `PriceGrowth = 1`
+  in `src/shared/Config/Rebirth.luau`), so the rebirth costs alone set the pace.
 - **Variable-ratio rewards sit on a fixed baseline** with floors, pity and no paid randomness —
   the hooks house rules are law in this economy (`src/shared/Config/Hooks.luau:6-12`).
-- **No ore field outearns the meteors.** `Shared.Pacing` earns its laps from the meteors, and the line
-  refines every ore into a bar at the same speed, so a field is worth its ore's *bar price* per second
-  (or its cash, which skips the line). Mined nonstop, every field pays about 0.4-0.85x the player's
-  expected income, the higher fields more; `tests/DebrisField.spec` measures each field against
-  `Pacing.expectedIncome` along the road and fails at 0.95x. Raise an `OreMult` or `Seconds` only with
-  that spec green (2026-10-22: Halo Ledge had been paying ~13x, Starfall ~1.8x).
+- **A field pays about 1.5x the meteors, never many times more.** The line refines every ore into a
+  bar at the same speed, so a field is worth its ore's *bar price* per second (or its cash, which skips
+  the line). Mined nonstop, every field pays about 1.2-1.7x the player's expected income (Rust Works'
+  quick rocks about 0.9-1.2x); `tests/DebrisField.spec` measures each field against
+  `Pacing.expectedIncome` along the road and keeps it between 0.9x and 2x (owner, 2026-10-22: Halo
+  Ledge had been paying ~13x). `Shared.Pacing` models meteors only, so a field farmer rebirths
+  somewhat faster than its laps.
 
 ## History
 

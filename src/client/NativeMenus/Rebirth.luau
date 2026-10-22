@@ -78,7 +78,7 @@ function Menu.build(): ScreenGui
 	-- the scroll clips at its edges: room so the cards' outlines are not cut off at the top and sides
 	N.create("UIPadding", { PaddingTop = UDim.new(0, 4), PaddingLeft = UDim.new(0, 4), PaddingRight = UDim.new(0, 2), PaddingBottom = UDim.new(0, 4) }, content)
 
-	-- the reward: BAR VALUE, NOW x1 -> AFTER x5
+	-- the reward: BAR VALUE, NOW x1 -> AFTER x2
 	local compare = Theme.card(content, "Compare", Palette.WHITE, Palette.DETAIL_BOTTOM, 14)
 	compare.LayoutOrder, compare.Size, compare.ZIndex = 1, UDim2.new(1, -6, 0, 150), 3
 	Theme.stroke(compare, Palette.NAVY, 3)

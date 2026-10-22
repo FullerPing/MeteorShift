@@ -28,7 +28,7 @@ return function(t: any)
 		t.eq(Line.cost(1), nil)
 		t.eq(Line.cost(Line.max() + 1), nil)
 		t.eq(Line.cost(2), Home.Line.Costs[2])
-		t.eq(Line.cost(2, Rebirth.priceMult(2)), Home.Line.Costs[2] * 9)
+		t.eq(Line.cost(2, Rebirth.priceMult(2)), Home.Line.Costs[2] * require(t.shared.Config.Rebirth).PriceGrowth ^ 2)
 	end)
 
 	t.test("plan buys in a row until the wanted count, the cash, a level gate or the top", function()

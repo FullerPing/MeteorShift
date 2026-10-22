@@ -49,7 +49,7 @@ return function(t: any)
 	-- "You own" line). Anchors on purpose, tests/Purchases.spec price style: changing
 	-- CashMult or a pass Name must re-fit this line, never drift from the display quietly.
 	t.test("the B2 display sites still render from their Config fields", function()
-		t.eq(Format.number(Config.Rebirth.CashMult), "5", "rebirth footer reads x" .. Config.Rebirth.CashMult)
+		t.eq(Format.number(Config.Rebirth.CashMult), "2", "rebirth footer reads x" .. Config.Rebirth.CashMult)
 		t.eq(Config.Monetization.Passes.TwoXCash.Name, "2x Cash", "offer tile caption")
 		t.eq(Config.Monetization.Passes.TwoXOre.Name, "2x Ore", "offer tile caption + the You-own line")
 	end)
