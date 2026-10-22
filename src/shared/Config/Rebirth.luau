@@ -4,23 +4,23 @@
 -- applies them. The multiplier is the main inflation lever of the economy (spec §16): tune here.
 
 return {
-	-- Cash for rebirth 1, 2, ... 16, fitted with Shared.Pacing (gear tiers kept through a rebirth) so the laps take
-	-- about 15, 11, 13 and 15 minutes and then 14-15 up to rank 16 on the 120 s countdown (tests/Pacing.spec holds
-	-- them there). Each cost was searched on its own lap with the earlier ones fixed. Past rank 4 they double like
-	-- the multiplier; the first lap pays for the gear ramp (it can't go much under 14 minutes:
-	-- the model buys gear before it rebirths). Edit them together with Config.Levels and Config.Home,
-	-- then re-run the model (docs/design/economy-rework.md).
-	-- Re-fit 2026-10-22 (owner: a rebirth is a plain x2, not the old x5 sales with x3 prices; then faster laps).
-	Costs = { 34e3, 280e3, 1.2e6, 2.9e6, 6.7e6, 18e6, 35e6, 75e6, 160e6, 320e6, 630e6, 1.3e9, 3.6e9, 7.3e9, 15e9, 30e9 },
+	-- Cash for rebirth 1, 2, ... 24, fitted with Shared.Pacing together with the gear and line prices (gear tiers
+	-- kept through a rebirth): laps of about 15, 11, 14 and 16 minutes, then x2.3 a rank, which alternates about
+	-- 17-20 minutes (the lap that buys a newly opened gear tier, Config.Levels.EvolveRebirths) with 10-12 (the one
+	-- after it), about 14 on average (tests/Pacing.spec holds them there). Edit them together with Config.Pickaxes,
+	-- Config.Backpacks and Config.Home, then re-run the model (docs/guide/economy.md).
+	-- Re-fit 2026-10-22 (owner: a rebirth is a plain x2, faster laps, 16 gear tiers).
+	Costs = { 34e3, 280e3, 1.3e6, 4.1e6, 9.4e6, 22e6, 50e6, 110e6, 260e6, 610e6, 1.4e9, 3.2e9, 7.4e9, 17e9, 39e9, 90e9,
+		210e9, 480e9, 1.1e12, 2.5e12, 5.8e12, 13e12, 31e12, 70e12 },
 	CashMult = 2, -- bar sales multiplier gained per rebirth, multiplicative (x2, x4, x8, ...)
 	-- Cash price inflation per rebirth (Shared.Rebirth.priceMult). 1 = gear and production prices never rise,
 	-- so each rebirth really is worth x2. Shard prices and Robux products never inflate.
 	PriceGrowth = 1,
 
 	-- Past the last listed rank ("Legacy"): the cost keeps growing by CostGrowth per rebirth and the
-	-- multiplier by MultGrowth. FirstStep is the listed ranks' own ratio, and cost outpaces the multiplier
-	-- by 2.05 / 2, so laps stretch about 2.5% a rank.
-	Legacy = { FirstStep = 2, CostGrowth = 2.05, MultGrowth = 2, PriceGrowth = 1 },
+	-- multiplier by MultGrowth. FirstStep is the listed ranks' own ratio; no gear tier opens past them, and
+	-- cost outpaces the multiplier by 2.05 / 2, so laps stretch about 2.5% a rank.
+	Legacy = { FirstStep = 2.3, CostGrowth = 2.05, MultGrowth = 2, PriceGrowth = 1 },
 
 	-- Overstay shards: bar-sale cash you earned after you could first afford the rebirth is
 	-- progress you didn't need. Rebirthing pays min(Cap, round(PerDoubling × log2(1 + r))) shards

@@ -87,6 +87,8 @@ end
 -- worn backpack and the Gear Hall mounts line up the same either way.
 local PICKAXE_MESH_PIVOT = CFrame.new(0, 0.85, 0)
 local BACKPACK_MESH_PIVOT = CFrame.new(0, 0, -0.65)
+-- Tiers past this have no model of their own yet: they wear the last modeled tier's look in their own colour
+local MODELED_TIERS = 8
 local PICKAXE_GLOW: { [number]: Color3 } = { [7] = Color3.fromRGB(150, 97, 255) }
 local BACKPACK_GLOW: { [number]: Color3 } = { [3] = GOLD, [7] = Color3.fromRGB(169, 126, 255) }
 
@@ -136,15 +138,15 @@ end
 
 function EquipmentModels.pickaxe(tier: number): Model
 	local item = Config.Pickaxes[tier] or Config.Pickaxes[1]
-	tier = item.Tier
+	tier = math.min(item.Tier, MODELED_TIERS) -- the look; the model still records item.Tier
 	local accent = item.Color
-	local mesh = meshModel("pickaxe_t" .. tier, item.Name, tier, PICKAXE_MESH_PIVOT, accent, PICKAXE_GLOW[tier] or accent)
+	local mesh = meshModel("pickaxe_t" .. tier, item.Name, item.Tier, PICKAXE_MESH_PIVOT, accent, PICKAXE_GLOW[tier] or accent)
 	if mesh then
 		return mesh
 	end
 	local model = Instance.new("Model")
 	model.Name = item.Name
-	model:SetAttribute("EquipmentTier", tier)
+	model:SetAttribute("EquipmentTier", item.Tier)
 	shaft(model, tier, accent)
 	if tier == 1 then
 		block(model, "ForgedHead", V(2.7, 0.46, 0.55), V(0, 1.65, 0), accent, METAL)
@@ -234,15 +236,15 @@ end
 
 function EquipmentModels.backpack(tier: number): Model
 	local item = Config.Backpacks[tier] or Config.Backpacks[1]
-	tier = item.Tier
-	local accent = Config.Pickaxes[tier].Color
-	local mesh = meshModel("backpack_t" .. tier, item.Name, tier, BACKPACK_MESH_PIVOT, accent, BACKPACK_GLOW[tier] or accent)
+	tier = math.min(item.Tier, MODELED_TIERS) -- the look; the model still records item.Tier
+	local accent = Config.Pickaxes[item.Tier].Color
+	local mesh = meshModel("backpack_t" .. tier, item.Name, item.Tier, BACKPACK_MESH_PIVOT, accent, BACKPACK_GLOW[tier] or accent)
 	if mesh then
 		return mesh
 	end
 	local model = Instance.new("Model")
 	model.Name = item.Name
-	model:SetAttribute("EquipmentTier", tier)
+	model:SetAttribute("EquipmentTier", item.Tier)
 	straps(model, 2.3, DARK)
 	if tier == 1 then
 		block(model, "CanvasBody", V(1.8, 2.1, 1.05), V(0, -0.12, 0), Color3.fromRGB(160, 134, 93), Enum.Material.Fabric)

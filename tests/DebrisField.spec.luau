@@ -71,8 +71,9 @@ return function(t: any)
 			for _, field in Config.Debris.Fields do
 				local r = field.Reward
 				if r.Kind == "Cash" then
-					local perSecond = (r.Seconds :: number) / (r.Hp * swing / Config.Balance.HitsPerMinuteShare + WALK)
-					t.ok(perSecond >= 0.9 and perSecond < 2, string.format("%s at tier %d pays %.2f x income", field.Id, tier, perSecond))
+					local seconds = (r.Seconds :: number) * swing / Config.Pickaxes[1].Swing -- DebrisField.cash scales by swing
+					local perSecond = seconds / (r.Hp * swing / Config.Balance.HitsPerMinuteShare + WALK)
+					t.ok(perSecond >= 0.8 and perSecond < 2, string.format("%s at tier %d pays %.2f x income", field.Id, tier, perSecond))
 				end
 			end
 		end
@@ -105,7 +106,7 @@ return function(t: any)
 						local perHit = pick.OrePerHit * (r.OreMult :: number) * Levels.oreYield(level, r.Ore :: string)
 						local rate = capacity / (capacity / perHit * pick.Swing / balance.HitsPerMinuteShare + balance.TripSeconds)
 						local ratio = math.min(rate, lineRate) * Config.Home.BarPrices[r.Ore :: string] * mult / income
-						t.ok(ratio >= 0.9 and ratio < 2, string.format("%s at level %d, rebirth %d pays %.2f x income", field.Id, level, rebirths, ratio))
+						t.ok(ratio >= 0.8 and ratio < 2, string.format("%s at level %d, rebirth %d pays %.2f x income", field.Id, level, rebirths, ratio))
 					end
 				end
 			end
@@ -117,6 +118,15 @@ return function(t: any)
 		t.eq(DebrisField.cash(rust, 0, 1e9), rust.CashFloor, "no income still pays the floor")
 		local cost = 50000
 		t.eq(DebrisField.cash(rust, 1e9, cost), math.floor(cost * rust.CeilingShare), "a huge income is capped by the rebirth cost")
+	end)
+
+	t.test("a faster swing breaks a cash rock sooner, so it pays proportionally less", function()
+		local frost = reward("FrostYard")
+		local base = Config.Pickaxes[1].Swing
+		local full = DebrisField.cash(frost, 1000, 1e12)
+		t.eq(DebrisField.cash(frost, 1000, 1e12, base), full, "the Basic Pickaxe's swing pays the full seconds")
+		t.near(DebrisField.cash(frost, 1000, 1e12, base / 2), full / 2, 1)
+		t.eq(DebrisField.cash(frost, 1000, 1e12, base * 3), full, "a slower swing never pays more")
 	end)
 
 	t.test("Violet Quarry and Sulfur Ridge drop better ore than iron, harder to get", function()

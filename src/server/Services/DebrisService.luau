@@ -190,8 +190,9 @@ function DebrisService:_payCash(player: Player, reward: DebrisField.Reward, rock
 		return
 	end
 	local _, maxHp = NodeService:GetHp(rock.Id)
-	local share = DebrisField.sizedShare(maxHp, rock.Hits, PlayerStateService:GetPickaxe(player).Power)
-	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond * share, Rebirth.cost(data.rebirths))
+	local pickaxe = PlayerStateService:GetPickaxe(player)
+	local share = DebrisField.sizedShare(maxHp, rock.Hits, pickaxe.Power)
+	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond * share, Rebirth.cost(data.rebirths), pickaxe.Swing)
 	if cash > 0 then
 		PlayerStateService:AddCash(player, cash)
 		TelemetryService:earned(player, "field_cash", cash, 0)

@@ -74,14 +74,18 @@ Gear never asks for shards: every pickaxe and backpack row carries `Shards = 0`
 
 - One line upgrade, levels 1-8: `Costs[n]` buys level n (level 2 = $2,800) times the rebirth price
   inflation (`src/shared/Config/Home.luau:40-43`, `src/shared/Line.luau:40-46`). Each level sets
-  hopper (2,000→1.25M ore), conveyor (0.3→18 ore/s), refinery (0.25→16 ore/s) and collection post
-  (same table as the hopper) together (`src/shared/Config/Home.luau:46-67`).
-- One pickaxe, one backpack. A stat level costs `Base × 1.12^(depth-1)` — base 45 for the pickaxe,
-  37.5 for the backpack (`src/shared/Config/Gear.luau:23,32`; depth/shared-level model
-  `src/shared/Gear.luau:105-112`). Tier cap = 10 × tier levels (`src/shared/Config/Gear.luau:15`,
-  `src/shared/Gear.luau:31-33`). Evolving a tier costs the row's cash
-  (pickaxe $2,000→$170K, backpack $1,300→$100K — `src/shared/Config/Pickaxes.luau:22-29`,
-  `src/shared/Config/Backpacks.luau:16-23`).
+  hopper (2,000→1.9B ore), conveyor (0.3→260 ore/s), refinery (0.25→235 ore/s) and collection post
+  (same table as the hopper) together, over 16 levels (`src/shared/Config/Home.luau`).
+- One pickaxe, one backpack, 16 tiers each (tiers 9-16 added 2026-10-22, no models yet: they show tier 8's
+  model in their own colour, `EquipmentModels`; the Gear Hall walls show tiers 1-8). A tier's levels together
+  cost its row's `LevelCost`, each `LevelGrowth^(1/tier)` dearer than the last (`Shared.Gear.price`); evolving
+  costs its row's `Cost`. Tier cap = 10 × tier levels. Reach stops growing at `ReachMax` (+12 studs).
+- Gates (`Config.Levels`): tiers 5 and 6 need player level 10 and 14; tiers 7-16 (and the same-numbered
+  line levels) need rebirths 4, 6, ... 22. Prices don't rise with rebirths, so each tier is priced for the
+  income of the rank that opens it: its evolve about 2 minutes of that income, its levels 2-3 more, the line
+  level 1.5 (fitted with `Shared.Pacing` together with the rebirth costs; `tests/Pacing.spec` checks every
+  tier is bought within a lap of opening). The model then rebirths about every 14 minutes, a lap that buys a
+  new tier running ~18 and the one after ~11. The R$ tier-up products stop at tier 8 (no ids for 8→9 and up).
 - Every cash price goes through `src/shared/Price.luau:26-28`, which applies the rebirth
   multiplier below.
 

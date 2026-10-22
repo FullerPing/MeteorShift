@@ -7,6 +7,8 @@ local Format = require(script.Parent.Format)
 local Display = {}
 local View = {}
 View.__index = View
+-- The Gear Hall's tier walls have mounts for the first eight tiers; later tiers show on the current stand only
+local WALL_TIERS = 8
 local STATUS_COLORS = {
 	CURRENT = Color3.fromRGB(255, 215, 54),
 	UNLOCKED = Color3.fromRGB(130, 245, 183),
@@ -46,6 +48,7 @@ function Display.ready(hall: Instance?): boolean
 	for _, kind in { "pickaxe", "backpack" } do
 		local catalog = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
 		for _, item in catalog do
+			if item.Tier > WALL_TIERS then break end
 			local card = walls:FindFirstChild(kind .. item.Tier)
 			if not card or not card:IsA("BasePart") or typeof(card:GetAttribute("DisplayOffset")) ~= "CFrame" then return false end
 			local label = card:FindFirstChild("Status", true)
@@ -71,6 +74,7 @@ function Display.mount(hall: Instance): any
 	for _, kind in { "pickaxe", "backpack" } do
 		local catalog = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
 		for _, item in catalog do
+			if item.Tier > WALL_TIERS then break end
 			local card = walls:FindFirstChild(kind .. item.Tier)
 			assert(card and card:IsA("BasePart"), "Missing tier mount")
 			local model = make(kind, item.Tier, mountFrame(card), card:GetAttribute("DisplayScale") or 1.5, folder)

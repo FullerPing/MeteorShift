@@ -33,13 +33,13 @@ local function levels(list: { number }, key: string): { Level }
 end
 
 -- The one production upgrade. Costs[n] is the cash to raise the line to level n (times the
--- rebirth price inflation, Shared.Rebirth.priceMult); level n also needs player level
--- Config.Levels.EvolveLevel[n] (levels 5 to 8). A level costs what the conveyor and refinery
+-- rebirth price inflation, Shared.Rebirth.priceMult); level n also needs what gear tier n needs
+-- (Config.Levels: a player level for 5 and 6, a rebirth count from 7). A level costs what the conveyor and refinery
 -- levels used to cost together, since those two set the line's speed; the hopper and collection
 -- post capacity come with it. Shards buy Colony Perks (Config.Perks), not production.
 Home.Line = {
 	Name = "Production Line",
-	Costs = { 0, 2.8e3, 8.5e3, 14e3, 45e3, 177e3, 645e3, 2.5e6 },
+	Costs = { 0, 2.8e3, 8.5e3, 14e3, 45e3, 177e3, 930e3, 5.7e6, 35e6, 190e6, 1.1e9, 5.8e9, 31e9, 170e9, 890e9, 4.8e12 },
 }
 
 -- What each station does at each line level (index = line level)
@@ -47,22 +47,22 @@ Home.Stations = {
 	hopper = {
 		Id = "hopper",
 		Name = "Hopper",
-		Levels = levels({ 2e3, 5e3, 12e3, 30e3, 75e3, 190e3, 500e3, 1.25e6 }, "Capacity"),
+		Levels = levels({ 2e3, 5e3, 12e3, 30e3, 75e3, 190e3, 500e3, 1.25e6, 3.1e6, 7.8e6, 20e6, 50e6, 120e6, 300e6, 760e6, 1.9e9 }, "Capacity"),
 	} :: Station,
 	conveyor = {
 		Id = "conveyor",
 		Name = "Conveyor",
-		Levels = levels({ 0.3, 0.8, 1.6, 3, 5, 8, 12, 18 }, "Rate"),
+		Levels = levels({ 0.3, 0.8, 1.6, 3, 5, 8, 12, 18, 25, 35, 49, 68, 95, 133, 186, 260 }, "Rate"),
 	} :: Station,
 	refinery = {
 		Id = "refinery",
 		Name = "Refinery",
-		Levels = levels({ 0.25, 0.7, 1.4, 2.6, 4.5, 7, 11, 16 }, "Rate"),
+		Levels = levels({ 0.25, 0.7, 1.4, 2.6, 4.5, 7, 11, 16, 22.5, 31.5, 44, 62, 86, 120, 168, 235 }, "Rate"),
 	} :: Station,
 	collector = {
 		Id = "collector",
 		Name = "Collection Post",
-		Levels = levels({ 2e3, 5e3, 12e3, 30e3, 75e3, 190e3, 500e3, 1.25e6 }, "Capacity"),
+		Levels = levels({ 2e3, 5e3, 12e3, 30e3, 75e3, 190e3, 500e3, 1.25e6, 3.1e6, 7.8e6, 20e6, 50e6, 120e6, 300e6, 760e6, 1.9e9 }, "Capacity"),
 	} :: Station,
 }
 

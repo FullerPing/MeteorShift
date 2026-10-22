@@ -267,7 +267,7 @@ function Controller:KnitStart()
 				evolveShown = e ~= nil
 				body.Visible = e ~= nil
 				if e then
-					local ready = e.ready and state ~= nil and state.level >= Levels.evolveLevel(e.tier)
+					local ready = e.ready and state ~= nil and Levels.canEvolve(e.tier, state.level, state.rebirths)
 					local affordable = state ~= nil and Price.canAfford(state, e.cost, e.shards)
 					local alt = skipAlt(kind, tier, e)
 					local inner = if g.popout then g.evolvePanel.w else box.evolve.w
@@ -294,11 +294,16 @@ function Controller:KnitStart()
 					body.NextTier.Text = "Tier " .. e.tier .. " / " .. #tiers
 					local nextWant = kind .. ":" .. e.tier
 					if previews.next ~= nextWant then Preview.gear(body.NextWell.Preview, kind, e.tier); previews.next = nextWant end
-					local needLevel = Levels.evolveLevel(e.tier)
+					-- the second gate is a player level, or from tier 7 a rebirth count (Config.Levels)
+					local needRebirths = Levels.evolveRebirths(e.tier)
+					local gateName, have, need = "Player level", state and state.level or 1, Levels.evolveLevel(e.tier)
+					if needRebirths > 0 then
+						gateName, have, need = "Rebirths", state and state.rebirths or 0, needRebirths
+					end
 					requirement(body.Req1, "Gear level", level .. " / " .. Gear.cap(tier), level >= Gear.cap(tier))
-					requirement(body.Req2, "Player level", (state and state.level or 1) .. " / " .. needLevel, state ~= nil and state.level >= needLevel)
+					requirement(body.Req2, gateName, have .. " / " .. need, state ~= nil and have >= need)
 					body.ReqBar.Fill.Size = UDim2.fromScale(math.clamp(level / Gear.cap(tier), 0, 1), 1)
-					body.ReqBar2.Fill.Size = UDim2.fromScale(math.clamp((state and state.level or 1) / needLevel, 0, 1), 1)
+					body.ReqBar2.Fill.Size = UDim2.fromScale(math.clamp(have / math.max(need, 1), 0, 1), 1)
 					-- the cost is on the button, which shows the plain face until the item is ready and you can pay
 					Theme.state(body.Evolve, ready and affordable and busyId == nil, "lime")
 					body.Evolve.TextSize = S.evolve
@@ -357,7 +362,7 @@ function Controller:KnitStart()
 	local function evolve(kind: string)
 		if not state or busyId then return end
 		local e = Gear.evolution(kind, state[kind .. "Tier"], state[kind .. "Level"] or 1, Rebirth.priceMult(state.rebirths))
-		if not e or not e.ready or state.level < Levels.evolveLevel(e.tier) or not Price.canAfford(state, e.cost, e.shards) then return end
+		if not e or not e.ready or not Levels.canEvolve(e.tier, state.level, state.rebirths) or not Price.canAfford(state, e.cost, e.shards) then return end
 		purchase(kind .. "_evolve", "Evolved.", function() return shop:Evolve(kind) end)
 	end
 	local function evolveNow(kind: string)

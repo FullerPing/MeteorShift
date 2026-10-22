@@ -82,7 +82,7 @@ function Gear.pickaxe(tier: number, level: number): any
 		Damage = knot("pickaxe", "Damage", tier, level),
 		Swing = knot("pickaxe", "Swing", tier, level),
 		Power = Gear.power(tier, level),
-		Reach = Config.Meteor.MineRange + pickaxe.ReachPerLevel * (depth(tier, level) - 1),
+		Reach = Config.Meteor.MineRange + math.min(pickaxe.ReachPerLevel * (depth(tier, level) - 1), pickaxe.ReachMax),
 		CritChance = pickaxe.CritPerLevel * (depth(tier, level) - 1),
 		CritMult = pickaxe.CritMult,
 		Cost = item.Cost,
@@ -94,21 +94,22 @@ function Gear.capacity(tier: number, level: number): number
 	return knot("backpack", "Capacity", tier, level)
 end
 
-local function settingsFor(kind: string): any
-	return if kind == "pickaxe" then Settings.Pickaxe else Settings.Backpack
-end
-
 -- Cash for the next level, nil when the level is the game's last. The tier cap is
--- Gear.canLevel's business, so the shop can still show the price while it is locked. The price
--- follows how far along the game the item is; a later tier has more levels to buy, so each one is
--- cheaper and a tier's levels together cost about what LevelsPerTier levels of tier 1 would.
+-- Gear.canLevel's business, so the shop can still show the price while it is locked. A tier's
+-- levels together cost its row's LevelCost; each is LevelGrowth^(1 / tier) dearer than the one
+-- before it, so a later tier's many levels climb as steeply as tier 1's ten.
 function Gear.price(kind: string, tier: number, level: number, priceMult: number?): number?
-	if tier >= tierCount(kind) and level >= Gear.cap(tier) then
+	local count = tierCount(kind)
+	if tier >= count and level >= Gear.cap(tier) then
 		return nil
 	end
-	local cost = settingsFor(kind).Cost
-	local share = (LevelsPerTier - 1) / math.max(Gear.cap(tier) - 1, 1)
-	return math.floor(cost.Base * cost.Growth ^ (depth(tier, level) - 1) * share * (priceMult or 1) + 0.5)
+	local t = math.clamp(tier, 1, count)
+	local list: any = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
+	local step = Settings.LevelGrowth ^ (1 / t)
+	local steps = Gear.cap(t) - 1 -- the levels bought inside the tier: 1 to cap - 1
+	local total = (step ^ steps - 1) / (step - 1)
+	local at = math.clamp(level, 1, Gear.cap(t)) - 1
+	return math.floor(list[t].LevelCost * step ^ at / total * (priceMult or 1) + 0.5)
 end
 
 -- Whether the item can take its next level at this tier

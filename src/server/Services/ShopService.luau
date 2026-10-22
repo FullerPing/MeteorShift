@@ -114,6 +114,11 @@ function ShopService:Evolve(player: Player, kind: Kind): boolean
 		self.Client.Notice:Fire(player, string.format("Reach player level %d to evolve to the %s. Take part in meteors to earn XP.", levelNeeded, item.Name))
 		return false
 	end
+	local rebirthsNeeded = Levels.evolveRebirths(evolution.tier)
+	if (data.rebirths or 0) < rebirthsNeeded then
+		self.Client.Notice:Fire(player, string.format("The %s opens at rebirth %d.", item.Name, rebirthsNeeded))
+		return false
+	end
 	local shortfall = Price.shortfall(data, evolution.cost, evolution.shards, "the " .. item.Name)
 	if shortfall then
 		self.Client.Notice:Fire(player, shortfall)

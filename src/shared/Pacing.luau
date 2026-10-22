@@ -22,7 +22,7 @@
 -- player's own side budget and don't move income in the model.
 --
 -- Purchases are greedy: whenever the player sells, of the next pickaxe, backpack and production
--- line levels (Shared.Line) that their player level allows (Config.Levels.EvolveLevel) and that
+-- line levels (Shared.Line) that their player level and rebirths allow (Config.Levels) and that
 -- raise income, the one with the shortest payback (cost / income gained) is chosen, and the
 -- player saves up for it if it is out of reach. Shards buy nothing here (Colony Perks are not modeled). The line level also
 -- raises the hopper and collection post, which only matter for offline income (spec §6.4, `offlineCap`).
@@ -245,10 +245,10 @@ end
 type Candidate = { id: string, name: string, cost: number, shards: number, apply: (Owned) -> () }
 
 -- The next level of every track a player buys from.
-local function candidates(owned: Owned, level: number, priceMult: number): { Candidate }
+local function candidates(owned: Owned, level: number, priceMult: number, rebirths: number): { Candidate }
 	local out: { Candidate } = {}
 	local pickaxe = Config.Pickaxes[owned.pickaxe + 1]
-	if pickaxe and level >= Levels.evolveLevel(pickaxe.Tier) then
+	if pickaxe and Levels.canEvolve(pickaxe.Tier, level, rebirths) then
 		table.insert(out, {
 			id = "pickaxe" .. pickaxe.Tier,
 			name = pickaxe.Name,
@@ -260,7 +260,7 @@ local function candidates(owned: Owned, level: number, priceMult: number): { Can
 		})
 	end
 	local backpack = Config.Backpacks[owned.backpack + 1]
-	if backpack and level >= Levels.evolveLevel(backpack.Tier) then
+	if backpack and Levels.canEvolve(backpack.Tier, level, rebirths) then
 		table.insert(out, {
 			id = "backpack" .. backpack.Tier,
 			name = backpack.Name,
@@ -273,7 +273,7 @@ local function candidates(owned: Owned, level: number, priceMult: number): { Can
 	end
 	local nextLine = owned.line + 1
 	local lineCost = Line.cost(nextLine, priceMult)
-	if lineCost and level >= Line.levelNeeded(nextLine) then
+	if lineCost and Levels.canEvolve(nextLine, level, rebirths) then
 		table.insert(out, {
 			id = "line" .. nextLine,
 			name = Config.Home.Line.Name .. " level " .. nextLine,
@@ -388,7 +388,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 					result.earnedAt["backpack" .. tier.Tier] = time
 				end
 			end
-			for _, item in candidates(owned, level, priceMult) do
+			for _, item in candidates(owned, level, priceMult, rebirths) do
 				if cash >= item.cost and shards >= item.shards and result.affordableAt[item.id] == nil then
 					result.affordableAt[item.id] = time
 				end
@@ -399,7 +399,7 @@ function Pacing.simulate(horizon: number?, options: Options?): Result
 				local best: Candidate? = nil
 				local bestPayback = math.huge
 				local now = income(owned, cycle, level, mult, petBonuses)
-				for _, item in candidates(owned, level, priceMult) do
+				for _, item in candidates(owned, level, priceMult, rebirths) do
 					if item.shards > shards then
 						continue
 					end

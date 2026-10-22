@@ -31,16 +31,19 @@ return function(t: any)
 		t.eq(Line.cost(2, Rebirth.priceMult(2)), Home.Line.Costs[2] * require(t.shared.Config.Rebirth).PriceGrowth ^ 2)
 	end)
 
-	t.test("plan buys in a row until the wanted count, the cash, a level gate or the top", function()
+	t.test("plan buys in a row until the wanted count, the cash, a level or rebirth gate or the top", function()
 		local c2, c3 = Line.cost(2) :: number, Line.cost(3) :: number
-		local count, total, stop = Line.plan(1, 1, 1e12, 99)
+		local count, total, stop = Line.plan(1, 1, 1e18, 99)
 		t.eq(count, 1); t.eq(total, c2); t.eq(stop, nil)
 		count, total, stop = Line.plan(1, 5, c2 + c3, 99)
 		t.eq(count, 2); t.eq(total, c2 + c3); t.eq(stop, "cash")
-		count, total, stop = Line.plan(1, 99, 1e12, 99)
+		count, total, stop = Line.plan(1, 99, 1e18, 99, nil, 99)
 		t.eq(count, Line.max() - 1); t.eq(stop, "max")
-		count, _, stop = Line.plan(Line.max(), 1, 1e12, 99)
+		count, _, stop = Line.plan(Line.max(), 1, 1e18, 99, nil, 99)
 		t.eq(count, 0); t.eq(stop, "max")
+		-- line level 7 opens by rebirth, like gear tier 7
+		count, _, stop = Line.plan(1, 99, 1e18, 99, nil, Line.rebirthsNeeded(7) - 1)
+		t.eq(count, 5); t.eq(stop, "rebirth")
 		-- level 5 needs a player level; a level-1 player stops before it
 		t.ok(Levels.evolveLevel(5) > 1, "line level 5 is gated")
 		count, _, stop = Line.plan(1, 99, 1e12, 1)
