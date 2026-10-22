@@ -60,8 +60,8 @@ return function(t: any)
 		t.ok(rich > poor * 50)
 	end)
 
-	t.test("mined nonstop, a cash field pays less than the player's expected income", function()
-		-- Fields fill the wait between meteors; the pacing model's laps come from the meteors. Time per rock is its hits
+	t.test("mined nonstop, a cash field pays about 1.5x the player's expected income", function()
+		-- Owner, 2026-10-22: a field is a little better than the meteors, never many times better. Time per rock is its hits
 		-- at the swing (HitsPerMinuteShare of swings land) plus WALK seconds between rocks; checked for every pickaxe
 		-- tier at its fastest level, where the swing is shortest.
 		local Gear = require(t.shared.Gear)
@@ -72,13 +72,13 @@ return function(t: any)
 				local r = field.Reward
 				if r.Kind == "Cash" then
 					local perSecond = (r.Seconds :: number) / (r.Hp * swing / Config.Balance.HitsPerMinuteShare + WALK)
-					t.ok(perSecond < 0.95, string.format("%s at tier %d pays %.2f x income", field.Id, tier, perSecond))
+					t.ok(perSecond >= 0.9 and perSecond < 2, string.format("%s at tier %d pays %.2f x income", field.Id, tier, perSecond))
 				end
 			end
 		end
 	end)
 
-	t.test("mined nonstop, an ore field pays less than the player's expected income", function()
+	t.test("mined nonstop, an ore field pays about 1.5x the player's expected income", function()
 		-- The line turns any ore into a bar at the same speed, so the ore's bar price is what a field is worth. At
 		-- stages along the road (gear tiers maxed, the line, player level, rebirths), from each field's opening on.
 		local Pacing = require(t.shared.Pacing)
@@ -105,7 +105,7 @@ return function(t: any)
 						local perHit = pick.OrePerHit * (r.OreMult :: number) * Levels.oreYield(level, r.Ore :: string)
 						local rate = capacity / (capacity / perHit * pick.Swing / balance.HitsPerMinuteShare + balance.TripSeconds)
 						local ratio = math.min(rate, lineRate) * Config.Home.BarPrices[r.Ore :: string] * mult / income
-						t.ok(ratio < 0.95, string.format("%s at level %d, rebirth %d pays %.2f x income", field.Id, level, rebirths, ratio))
+						t.ok(ratio >= 0.9 and ratio < 2, string.format("%s at level %d, rebirth %d pays %.2f x income", field.Id, level, rebirths, ratio))
 					end
 				end
 			end

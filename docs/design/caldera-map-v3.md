@@ -35,7 +35,7 @@ Nothing within 117 studs of the crater is raised, so the shockwave's landing ray
 | Starfall | Crown | Rebirth 1 | Cash, Hp 28, Seconds 13 (was 30), CashFloor 200, CeilingShare 0.03 |
 | HaloLedge | Crown | Rebirth 3 | Ore alien 0.02 (was 0.6), Hp 32 |
 
-Re-tuned 2026-10-22 so no field mined nonstop pays more than the player's expected income (`Config.Debris`, `tests/DebrisField.spec`).
+Re-tuned 2026-10-22 so a field mined nonstop pays about 1.5x the player's expected income (between 0.9x and 2x) (`Config.Debris`, `tests/DebrisField.spec`).
 
 - Tiers are always walkable; only fields are gated.
 - A locked field:

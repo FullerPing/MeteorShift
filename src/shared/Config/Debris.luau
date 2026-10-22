@@ -34,28 +34,27 @@ return {
 	-- full OrePerHit), so the fields never replace the meteors. Gates open only through play.
 	-- The line refines any ore into a bar at the same speed, so what an ore field is worth is its ore's bar price, not
 	-- its ore per hit: at 0.4/0.3/0.4/0.6 Halo Ledge's Alien ore (1,800 a bar) filled the line at about 13x the meteors'
-	-- income. OreMult is now set so each ore field mined nonstop pays about 0.55, 0.65, 0.75 and 0.8 of the player's
-	-- expected income: a Halo rock drops a few Alien ore, rare and precious, not a backpack of it.
-	-- Cash fields are tuned the same way: mined nonstop they pay about 0.4 to 0.85 of the player's expected income
-	-- (Shared.Pacing, which earns its laps from the meteors) and never all of it (tests/DebrisField.spec). At 3/9/16/30
-	-- seconds they paid up to 1.8x, so a field farmer halved the fitted rebirth laps and skipped the meteors.
+	-- income. Owner, 2026-10-22: a field should be a little better than the meteors, about 1.5x. OreMult is set so each
+	-- ore field mined nonstop pays about 1.2 to 1.7x the player's expected income (Violet tops out where it fills the
+	-- line), and the cash fields' Seconds the same (Rust Works' quick rocks a little less; tests/DebrisField.spec keeps
+	-- every field under 2x). A Halo rock still drops a few Alien ore, not a backpack of it.
 	Fields = {
 		{ Id = "RustWorks", Name = "Rust Works", Color = Color3.fromRGB(255, 124, 56),
-			Reward = { Kind = "Cash", Hp = 4, Seconds = 2, CashFloor = 10, CeilingShare = 0.003 } },
+			Reward = { Kind = "Cash", Hp = 4, Seconds = 4.3, CashFloor = 10, CeilingShare = 0.006 } },
 		{ Id = "FrostYard", Name = "Frost Yard", Color = Color3.fromRGB(110, 212, 255),
-			Reward = { Kind = "Cash", Hp = 10, Seconds = 5, CashFloor = 30, CeilingShare = 0.01 }, Unlock = { Level = 5 } },
+			Reward = { Kind = "Cash", Hp = 10, Seconds = 11, CashFloor = 30, CeilingShare = 0.02 }, Unlock = { Level = 5 } },
 		{ Id = "VioletQuarry", Name = "Violet Quarry", Color = Color3.fromRGB(184, 116, 255),
-			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.16 }, Unlock = { Level = 12 } },
+			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.48 }, Unlock = { Level = 12 } },
 		{ Id = "SulfurRidge", Name = "Sulfur Ridge", Color = Color3.fromRGB(255, 204, 64),
-			Reward = { Kind = "Ore", Hp = 16, Ore = "crystal", OreMult = 0.065 }, Unlock = { Level = 20 } },
+			Reward = { Kind = "Ore", Hp = 16, Ore = "crystal", OreMult = 0.17 }, Unlock = { Level = 20 } },
 		{ Id = "EmberShelf", Name = "Ember Shelf", Color = Color3.fromRGB(255, 106, 78),
-			Reward = { Kind = "Cash", Hp = 20, Seconds = 9.5, CashFloor = 60, CeilingShare = 0.02 }, Unlock = { Level = 30 } },
+			Reward = { Kind = "Cash", Hp = 20, Seconds = 19, CashFloor = 60, CeilingShare = 0.04 }, Unlock = { Level = 30 } },
 		{ Id = "GlassScar", Name = "Glass Scar", Color = Color3.fromRGB(111, 240, 224),
-			Reward = { Kind = "Ore", Hp = 24, Ore = "alien", OreMult = 0.018 }, Unlock = { Level = 40 } },
+			Reward = { Kind = "Ore", Hp = 24, Ore = "alien", OreMult = 0.042 }, Unlock = { Level = 40 } },
 		{ Id = "Starfall", Name = "Starfall", Color = Color3.fromRGB(255, 143, 200),
-			Reward = { Kind = "Cash", Hp = 28, Seconds = 13, CashFloor = 200, CeilingShare = 0.03 }, Unlock = { Rebirths = 1 } },
+			Reward = { Kind = "Cash", Hp = 28, Seconds = 26, CashFloor = 200, CeilingShare = 0.06 }, Unlock = { Rebirths = 1 } },
 		{ Id = "HaloLedge", Name = "Halo Ledge", Color = Color3.fromRGB(255, 213, 74),
-			Reward = { Kind = "Ore", Hp = 32, Ore = "alien", OreMult = 0.02 }, Unlock = { Rebirths = 3 } },
+			Reward = { Kind = "Ore", Hp = 32, Ore = "alien", OreMult = 0.045 }, Unlock = { Rebirths = 3 } },
 	} :: { Field },
 	TravelCooldown = 3, -- seconds between teleports
 	Rock = {
