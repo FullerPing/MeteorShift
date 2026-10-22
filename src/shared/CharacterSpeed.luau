@@ -35,7 +35,9 @@ function Speed.onRoad(x: number, z: number): boolean
 end
 
 function Speed.update(current: number, previousApplied: number?, previousBase: number?, bonus: number, fast: boolean?, road: boolean?): (number, number)
-	local base = if previousApplied and previousBase and math.abs(current - previousApplied) < 1e-6 then previousBase else current
+	-- WalkSpeed is stored as a float32, so it reads back up to ~1e-5 off what was set; a tighter match took the boosted
+	-- speed as the new base and every road/sprint change multiplied it again
+	local base = if previousApplied and previousBase and math.abs(current - previousApplied) < 1e-3 then previousBase else current
 	local applied = (base + 16 * math.clamp(bonus, 0, .3)) * Speed.BaseMultiplier
 	if road then applied *= Speed.RoadMultiplier end
 	return if fast then applied * Speed.FastMultiplier else applied, base

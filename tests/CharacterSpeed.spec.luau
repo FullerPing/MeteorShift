@@ -31,6 +31,16 @@ return function(t)
 		t.near((Speed.update(roadApplied, roadApplied, base, 0, false, false)), 16 * B, 1e-9)
 	end)
 
+	t.test("stepping on and off a road never compounds, though WalkSpeed reads back as a float32", function()
+		local function float32(x: number): number return (string.unpack("f", string.pack("f", x))) end
+		local applied, base = Speed.update(16, nil, nil, 0.3, true, true)
+		for i = 1, 6 do
+			applied, base = Speed.update(float32(applied), applied, base, 0.3, true, i % 2 == 1) -- ends off the road
+		end
+		t.near(applied, 20.8 * B * Speed.FastMultiplier, 1e-6)
+		t.near(base, 16, 1e-9)
+	end)
+
 	t.test("the ring road, the Express and the avenues are fast lanes", function()
 		local G = require(t.shared.WorldGeometry).Settings
 		t.eq(Speed.onRoad(G.LoopRadius, 0), true)
