@@ -5,12 +5,13 @@
 
 return {
 	-- Cash for rebirth 1, 2, ... 16, fitted with Shared.Pacing (gear tiers kept through a rebirth) so the laps take
-	-- about 15, 16, 20 and 24 minutes and then 22-23 up to rank 16 on the 120 s countdown (tests/Pacing.spec holds
+	-- about 15, 11, 13 and 15 minutes and then 14-15 up to rank 16 on the 120 s countdown (tests/Pacing.spec holds
 	-- them there). Each cost was searched on its own lap with the earlier ones fixed. Past rank 4 they double like
-	-- the multiplier; the early ranks pay for the gear ramp. Edit them together with Config.Levels and Config.Home,
+	-- the multiplier; the first lap pays for the gear ramp (it can't go much under 14 minutes:
+	-- the model buys gear before it rebirths). Edit them together with Config.Levels and Config.Home,
 	-- then re-run the model (docs/design/economy-rework.md).
-	-- Re-fit 2026-10-22 (owner: a rebirth is a plain x2, not the old x5 sales with x3 prices).
-	Costs = { 34e3, 540e3, 2e6, 6.1e6, 14e6, 29e6, 58e6, 130e6, 360e6, 750e6, 1.4e9, 2.9e9, 6e9, 12e9, 24e9, 48e9 },
+	-- Re-fit 2026-10-22 (owner: a rebirth is a plain x2, not the old x5 sales with x3 prices; then faster laps).
+	Costs = { 34e3, 280e3, 1.2e6, 2.9e6, 6.7e6, 18e6, 35e6, 75e6, 160e6, 320e6, 630e6, 1.3e9, 3.6e9, 7.3e9, 15e9, 30e9 },
 	CashMult = 2, -- bar sales multiplier gained per rebirth, multiplicative (x2, x4, x8, ...)
 	-- Cash price inflation per rebirth (Shared.Rebirth.priceMult). 1 = gear and production prices never rise,
 	-- so each rebirth really is worth x2. Shard prices and Robux products never inflate.

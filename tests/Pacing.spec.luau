@@ -102,7 +102,8 @@ return function(t: any)
 		t.ok(first >= 10 * 60 and first <= 20 * 60, "first rebirth at " .. tostring(first and first / 60) .. " min")
 	end)
 
-	t.test("laps lengthen from the first rebirth to the fourth, then stay level", function()
+	-- Owner, 2026-10-22: faster laps. The first pays for the gear ramp; from the second they lengthen, then stay level
+	t.test("laps lengthen from the second rebirth to the fourth, then stay level", function()
 		local run = Pacing.simulate(6 * 3600, { rebirths = 8 })
 		t.ok(#run.rebirthTimes >= 8, "only " .. #run.rebirthTimes .. " rebirths in six hours")
 		local lap, previous = {}, 0
@@ -110,18 +111,18 @@ return function(t: any)
 			lap[index] = run.rebirthTimes[index] - previous
 			previous = run.rebirthTimes[index]
 		end
-		t.ok(lap[1] < lap[2] and lap[2] < lap[3] and lap[3] < lap[4], "the first four laps get longer")
+		t.ok(lap[2] < lap[3] and lap[3] < lap[4], "laps two to four get longer")
 		for index = 5, 8 do
-			t.ok(lap[index] >= 18 * 60 and lap[index] <= 32 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
+			t.ok(lap[index] >= 12 * 60 and lap[index] <= 18 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
 		end
 	end)
 
-	t.test("rebirths keep a steady pace: each comes within 30 minutes of the one before", function()
+	t.test("rebirths keep a steady pace: each comes within 20 minutes of the one before", function()
 		local run = Pacing.simulate(4 * 3600, { rebirths = 5 })
 		t.ok(#run.rebirthTimes >= 5, "only " .. #run.rebirthTimes .. " rebirths in four hours")
 		for index = 2, 5 do
 			local gap = run.rebirthTimes[index] - run.rebirthTimes[index - 1]
-			t.ok(gap <= 30 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
+			t.ok(gap <= 20 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
 		end
 	end)
 

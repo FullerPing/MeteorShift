@@ -188,7 +188,8 @@ The fitted lap targets (first ~13 min, then ~18/23/24 and about 25) are recorded
 - **Underleveled is a fraction, not a wall.** Clearance scales yield 40%→100% and every hit counts;
   the refinery and prices never change by level (cited above).
 - **A rebirth is a plain ×2.** Sales double and cash prices stay put (`CashMult = 2`, `PriceGrowth = 1`
-  in `src/shared/Config/Rebirth.luau`), so the rebirth costs alone set the pace.
+  in `src/shared/Config/Rebirth.luau`), so the rebirth costs alone set the pace: laps of about 15, 11,
+  13, 15 and then 14-15 minutes (`tests/Pacing.spec`).
 - **Variable-ratio rewards sit on a fixed baseline** with floors, pity and no paid randomness —
   the hooks house rules are law in this economy (`src/shared/Config/Hooks.luau:6-12`).
 - **A field pays about 1.5x the meteors, never many times more.** The line refines every ore into a
