@@ -66,8 +66,8 @@ export type Layout = {
 	eventVisible: boolean, -- a brief notification may reserve the objective slot on tight screens
 	tutorialY: number, -- inset-relative y retained for callers using toGui
 	mine: Rect?, -- touch only
-	fastWalk: Rect?, -- where SPRINT goes: phones in landscape (ORE sits above it) and desktop (ORE sits on its left); nil lets the button place itself
-	ore: Rect?, -- desktop: where ORE goes, in line with the backpack; nil puts it above SPRINT
+	fastWalk: Rect?, -- where SPRINT goes: phones in landscape (ORE sits above it) and desktop (beside the backpack); nil lets the button place itself
+	ore: Rect?, -- desktop: where ORE goes, a tile in the left column under STORE; nil puts it above SPRINT
 	levelAbove: boolean?, -- phones in landscape: the level medal sits above the wallet instead of on its corner
 	objective: Rect?, -- phones in landscape: the clock's larger slot below the top bar (countdown, cooldown and objective)
 	offers: { Rect }, -- touch and portrait: free cells in line with the menu buttons for the Offers buttons, best first
@@ -475,6 +475,8 @@ function HudLayout.compute(
 			return math.clamp(height * 0.48 - Hud.Column.Height * candidate / 2, lowest, highest)
 		end
 		local order = table.clone(Hud.DesktopButtonOrder)
+		-- ORE is a tile in the column, straight under STORE (it is taken back out of `buttons` below)
+		table.insert(order, (table.find(order, "STORE") or #order) + 1, "ORE")
 		local stackDaily, stackCodes = true, true
 		if not stackIndexY(fitted(#order), true, true) then stackCodes = false end
 		if not stackCodes and not stackIndexY(fitted(#order), true, false) then stackDaily = false end
@@ -496,6 +498,7 @@ function HudLayout.compute(
 			-- can round a touching pair into an apparent sub-pixel overlap.
 			buttonY = buttons[name].y + columnHeight + Hud.Column.Gap * buttonScale
 		end
+		ore, buttons.ORE = buttons.ORE, nil
 		local indexTop = if stackDaily then stackIndexY(buttonScale, stackDaily, stackCodes) else nil
 		-- the right stack mirrors the left column's margin (Column.Left × scale), not a margin shrunk with the tiles
 		buttons.INDEX = sized(width - Hud.Column.Left * scale - Hud.Column.Width * buttonScale,
@@ -515,13 +518,12 @@ function HudLayout.compute(
 			index.y = math.max(topInset + 6, settings.y + settings.h + 8)
 			eventPanel.y = math.max(eventPanel.y, index.y + indexHeight + 8)
 		end
-		-- SPRINT and ORE run in line with the backpack, on its left, leaving the right edge to the menu stack. A window
-		-- so narrow that the pair would reach the foundry leaves them to place themselves above the backpack instead.
+		-- SPRINT runs in line with the backpack, on its left, leaving the right edge to the menu stack. A window so
+		-- narrow that it would reach the foundry leaves it to place itself above the backpack instead.
 		local side = Hud.SideButtons
 		local sprintSpot = { x = backpack.x - 8 - side.Size, y = backpack.y + (backpack.h - side.Size) / 2, w = side.Size, h = side.Size }
-		local oreSpot = { x = sprintSpot.x - side.Gap - side.Size, y = sprintSpot.y, w = side.Size, h = side.Size }
-		if not HudLayout.overlaps(oreSpot, production) and not HudLayout.overlaps(oreSpot, tutorial) then
-			fastWalk, ore = sprintSpot, oreSpot
+		if not HudLayout.overlaps(sprintSpot, production) and not HudLayout.overlaps(sprintSpot, tutorial) then
+			fastWalk = sprintSpot
 		end
 	end
 	local offers = if touch or portrait then HudLayout.offerSlots(buttons, width, height, {

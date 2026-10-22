@@ -38,7 +38,7 @@ UI.hud(scope)  (Fusion Computed)  ·  NativeUI.hudLayout()/onLayoutChanged (non-
 | Offers (2x Ore, 2x Cash, Starter Pack) | `OfferController.luau:29-33,48-72`; desktop climbs from INDEX (`:83-90`), phones take the free grid cells (`:89`) | `layout.offers` from `HudLayout.offerSlots` (`HudLayout.luau:526-533,609-676`; count = `Hud.OfferSlots`, `Hud.luau:55`); they vanish once owned and never draw for off-sale rows (Id 0, `OfferController.luau:60`) | `Offers` |
 | Settings gear (+ Daily-ready dot) | `NativeHudMenus.luau:35,118-121,141-148` | `settings` | `Settings` |
 | SPRINT | `FastWalkController.luau:68-80` | `fastWalk`; nil → self-places beside jump/backpack (`:76-78`) | `FastWalk` |
-| ORE | `FieldTravelController.luau` `refresh` (an ExactNavButton tile; anchors to the SPRINT button); menu `NativeMenus/OreFields.luau` | `ore`; nil → above SPRINT | `Ore` |
+| ORE | `FieldTravelController.luau` `refresh` (an ExactNavButton tile; anchors to the SPRINT button); menu `NativeMenus/OreFields.luau` | `ore` (desktop: a column tile under STORE); nil → above SPRINT | `Ore` |
 | MINE (touch) | `MobileControlsController.luau:89-107` | `mine`, sized into the gap above jump (`HudLayout.luau:171-181,386-397`) | — (not in the HudEdit name list, `HudEdit.luau:8-20`) |
 | Toast + reward line | `HUDController.luau:389-435` | `notification` (heights 48, or 64 for two-line reward lines — `HudLayout.luau:124`) | `Toast` (Nudge only — messages are never hideable, `HudEdit.luau:15`) |
 | Custom additions | `CustomHudController.luau:41-78` (anchors, not layout rects) | none — anchored to screen edges | `HudEdit.Custom` |

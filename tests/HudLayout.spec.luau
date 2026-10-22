@@ -119,32 +119,40 @@ return function(t: any)
 		t.ok(under >= 1, "the under-Index placement is exercised")
 	end)
 
-	t.test("on desktop SPRINT and ORE sit in line with the backpack, to its left, unless the window is too narrow", function()
+	t.test("on desktop ORE is a column tile under STORE and SPRINT sits in line with the backpack", function()
 		local inLine = 0
 		for _, size in desktopSizes do
 			local l = HudLayout.compute(size, false, 58)
-			local sprint, ore, pack = l.fastWalk, l.ore, l.backpack
+			local sprint, ore, store, pack = l.fastWalk, l.ore, l.buttons.STORE, l.backpack
 			local context = tostring(size)
-			t.eq(sprint == nil, ore == nil, context .. " SPRINT and ORE are placed together or left to place themselves")
-			if sprint and ore then
+			t.ok(ore ~= nil, context .. " ORE is placed")
+			ore = ore :: any
+			t.eq(ore.x, store.x, context .. " ORE is in the left column")
+			t.near(ore.w, store.w, 1e-6, context .. " ORE is as wide as STORE")
+			t.near(ore.h, store.h, 1e-6, context .. " ORE is as tall as STORE")
+			t.ok(ore.y >= store.y + personalButtonBounds(store).h - 1e-6, context .. " ORE is below STORE")
+			for buttonName, button in l.buttons do
+				if button.x == store.x and button.y > store.y and buttonName ~= "STORE" then
+					t.ok(button.y > ore.y, context .. " " .. buttonName .. " comes after ORE")
+				end
+			end
+			t.ok(HudLayout.inside(ore, screen(size)), context .. " ORE on screen")
+			for buttonName, button in l.buttons do
+				t.ok(not HudLayout.overlaps(personalButtonBounds(ore), personalButtonBounds(button)), context .. " ORE clears " .. buttonName)
+			end
+			if sprint then
 				inLine += 1
 				t.near(sprint.y + sprint.h / 2, pack.y + pack.h / 2, 1e-6, context .. " SPRINT is level with the backpack")
-				t.near(ore.y + ore.h / 2, pack.y + pack.h / 2, 1e-6, context .. " ORE is level with the backpack")
-				t.ok(sprint.x + sprint.w <= pack.x and ore.x + ore.w <= sprint.x, context .. " ORE, SPRINT, backpack run left to right")
-				for name, rect in { SPRINT = sprint, ORE = ore } do
-					t.ok(HudLayout.inside(rect, screen(size)), context .. " " .. name .. " on screen")
-					local others = { foundry = l.leftCards.Production, wallet = l.leftCards.Resources, backpack = pack }
-					if l.tutorialVisible then others.training = l.tutorial end
-					for otherName, other in others do
-						t.ok(not HudLayout.overlaps(rect, other), context .. " " .. name .. " clears " .. otherName)
-					end
-					for buttonName, button in l.buttons do
-						t.ok(not HudLayout.overlaps(rect, personalButtonBounds(button)), context .. " " .. name .. " clears " .. buttonName)
-					end
+				t.ok(sprint.x + sprint.w <= pack.x, context .. " SPRINT is left of the backpack")
+				t.ok(HudLayout.inside(sprint, screen(size)), context .. " SPRINT on screen")
+				local others = { foundry = l.leftCards.Production, wallet = l.leftCards.Resources, backpack = pack }
+				if l.tutorialVisible then others.training = l.tutorial end
+				for otherName, other in others do
+					t.ok(not HudLayout.overlaps(sprint, other), context .. " SPRINT clears " .. otherName)
 				end
 			end
 		end
-		t.ok(inLine >= 4, "most desktop windows get the in-line placement (" .. inLine .. ")")
+		t.ok(inLine >= 4, "most desktop windows get the in-line SPRINT (" .. inLine .. ")")
 	end)
 
 	t.test("phones keep SPRINT and ORE where they were", function()

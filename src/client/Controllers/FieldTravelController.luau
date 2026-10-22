@@ -1,7 +1,7 @@
 --!strict
 -- The ORE button: a menu tile (ExactNavButton.tile, the owner's ore icon) that opens the Ore Fields menu
 -- (NativeMenus.OreFields, one card per Config.Debris.Fields) and asks DebrisService to teleport you to the field you
--- pick. Desktop places the tile in line with the backpack (HudLayout "ore"); elsewhere it sits just above SPRINT
+-- pick. Desktop places the tile in the left column under STORE (HudLayout "ore"); elsewhere it sits just above SPRINT
 -- (FastWalkController places that). It hides while a menu is open, and the menu closes after a pick.
 -- A field still locked to you (Shared.FieldGate) shows its rule ("LEVEL 12") on a grey pill instead of TRAVEL;
 -- the server refuses it anyway.
@@ -116,7 +116,7 @@ function FieldTravelController:KnitStart()
 	local function refresh()
 		-- Config.HudEdit: "Ore" nudges it from its spot above SPRINT, and hides it
 		local layout = Fusion.peek(hud)
-		-- desktop gives it a spot in line with the backpack (layout.ore); elsewhere it sits above SPRINT
+		-- desktop gives it a tile in the left column under STORE (layout.ore); elsewhere it sits above SPRINT
 		local rect = HudLayout.nudged(layout, "Ore", if layout.ore then table.clone(layout.ore) else {
 			x = anchor.Position.X.Offset, y = anchor.Position.Y.Offset - SIZE - GAP, w = SIZE, h = SIZE,
 		})
