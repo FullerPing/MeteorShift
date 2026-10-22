@@ -194,6 +194,12 @@ The fitted lap targets (first ~13 min, then ~18/23/24 and about 25) are recorded
   stay huge without the treadmill stalling (`src/shared/Config/Rebirth.luau:16-25`).
 - **Variable-ratio rewards sit on a fixed baseline** with floors, pity and no paid randomness —
   the hooks house rules are law in this economy (`src/shared/Config/Hooks.luau:6-12`).
+- **No ore field outearns the meteors.** `Shared.Pacing` earns its laps from the meteors, and the line
+  refines every ore into a bar at the same speed, so a field is worth its ore's *bar price* per second
+  (or its cash, which skips the line). Mined nonstop, every field pays about 0.4-0.85x the player's
+  expected income, the higher fields more; `tests/DebrisField.spec` measures each field against
+  `Pacing.expectedIncome` along the road and fails at 0.95x. Raise an `OreMult` or `Seconds` only with
+  that spec green (2026-10-22: Halo Ledge had been paying ~13x, Starfall ~1.8x).
 
 ## History
 
@@ -203,7 +209,7 @@ The fitted lap targets (first ~13 min, then ~18/23/24 and about 25) are recorded
   notes and the 2026-10-10 merge/inflation design specs sit in `docs/archive/` (specs under
   `docs/archive/superpowers/specs/`).
 - Debris dropped Frost in the pre-rework build; it now always drops Iron
-  (`src/shared/Config/Debris.luau:24`), with ore-field rocks as the only off-meteor Frost/Crystal
-  at 0.4×/0.3× of a hit (`src/shared/Config/Debris.luau:38-40`).
+  (`src/shared/Config/Debris.luau:24`), with ore-field rocks as the only off-meteor Frost/Crystal/Alien
+  (`Config.Debris.Fields`; their multipliers were cut 2026-10-22, see the field rule above).
 - Pets interact with this economy (Yield, Swift, Miner, Merchant, Scholar, Vault) — see the pet
   guide at [pets.md](pets.md); eggs cost earned shards only.
