@@ -85,16 +85,19 @@ Pets.Rarities = {
 } :: { [string]: Rarity }
 Pets.RarityOrder = { "common", "uncommon", "rare", "epic", "legendary", "premium" }
 
--- Eggs: Odds are percentages that add up to 100. Pity: after this many hatches without a
+-- Eggs: Costs are fitted to shard income (Balance.ShardsPerMeteor per meteor cycle, about 3 a minute): a Meteor Egg
+-- every ~5 minutes of play, a Crystal Egg every ~20 and an Aurora Egg every ~45 (tests/Pacing.spec). They used to
+-- cost 30 / 120 / 250, which with tighter odds made eggs feel worthless (owner feedback, 2026-10-23).
+-- Odds are percentages that add up to 100. Pity: after this many hatches without a
 -- PityFrom-or-better pet, the next hatch is guaranteed one (the count resets on any such pet).
 Pets.Eggs = {
-	{ Id = "meteorEgg", Name = "Meteor Egg", Cost = 30,
+	{ Id = "meteorEgg", Name = "Meteor Egg", Cost = 15,
 		Odds = { common = 60, uncommon = 28, rare = 9.5, epic = 2.25, legendary = 0.25 }, Pity = 40, PityFrom = "epic" },
-	{ Id = "crystalEgg", Name = "Crystal Egg", Cost = 120,
+	{ Id = "crystalEgg", Name = "Crystal Egg", Cost = 60,
 		Odds = { uncommon = 40, rare = 42, epic = 15.5, legendary = 2.5 }, Pity = 15, PityFrom = "epic" },
 	-- Rebirth 2 unlock: nothing below Epic, and a Legendary is guaranteed every 20 hatches (it was 10 with 12% odds,
 	-- which filled every slot with Meteor Drakes, the only Legendary, in a few thousand shards)
-	{ Id = "auroraEgg", Name = "Aurora Egg", Cost = 250, MinRebirths = 2,
+	{ Id = "auroraEgg", Name = "Aurora Egg", Cost = 135, MinRebirths = 2,
 		Odds = { epic = 94, legendary = 6 }, Pity = 20, PityFrom = "legendary" },
 } :: { Egg }
 

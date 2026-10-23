@@ -264,4 +264,16 @@ return function(t: any)
 		t.eq(again.samples[#again.samples].earned, paid.samples[#paid.samples].earned)
 		for _, role in Config.Pets.RoleOrder do t.eq(free.petBonuses[role], 0, "default run has no pets") end
 	end)
+
+	t.test("shard income buys a Meteor Egg about every 5 minutes, a Crystal every 20, an Aurora every 45", function()
+		local perMinute = Config.Balance.ShardsPerMeteor / Pacing.cycleSeconds() * 60
+		local targets = { meteorEgg = { 4, 6 }, crystalEgg = { 17, 23 }, auroraEgg = { 40, 50 } }
+		for _, egg in Config.Pets.Eggs do
+			local band = targets[egg.Id]
+			if band then
+				local minutes = egg.Cost / perMinute
+				t.ok(minutes >= band[1] and minutes <= band[2], string.format("%s every %.1f min", egg.Id, minutes))
+			end
+		end
+	end)
 end
