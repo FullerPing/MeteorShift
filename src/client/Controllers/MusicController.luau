@@ -17,11 +17,11 @@ local music = Config.Music
 
 local MusicController = Knit.CreateController({ Name = "MusicController" })
 
-local function loop(spec: { Id: string }, group: string, parent: Instance): Sound
+local function loop(spec: { Id: string }, group: string, parent: Instance, looped: boolean?): Sound
 	local sound = Instance.new("Sound")
 	sound.Name = group .. "Loop"
 	sound.SoundId = spec.Id
-	sound.Looped = true
+	sound.Looped = looped ~= false
 	sound.Volume = 0
 	sound.SoundGroup = Sfx.group(group)
 	sound.Parent = parent
@@ -36,11 +36,22 @@ end
 function MusicController:KnitStart()
 	local MeteorService = Knit.GetService("MeteorService")
 	local SoundService = game:GetService("SoundService")
-	local hub = loop(music.Hub, "Music", SoundService)
-	local event = loop(music.Event, "Music", SoundService)
+	local hub = loop(music.Hub, "Music", SoundService, false)
+	local event = loop(music.Event, "Music", SoundService, false)
 	local ambience = loop(music.Ambience, "Ambience", SoundService)
 	hub:Play()
 	ambience:Play()
+
+	-- a track that ends rests for a while (Music.Gap) instead of starting over straight away
+	local restUntil: { [Sound]: number } = {}
+	for _, track in { hub, event } do
+		track.Ended:Connect(function()
+			restUntil[track] = os.clock() + music.Gap[1] + math.random() * (music.Gap[2] - music.Gap[1])
+		end)
+	end
+	local function resting(track: Sound): boolean
+		return os.clock() < (restUntil[track] or 0)
+	end
 
 	local impactAt: number? = nil
 	local warnedFor: number? = nil
@@ -78,12 +89,11 @@ function MusicController:KnitStart()
 				warnedFor = state.endsAt
 				Sfx.play("MeteorSiren")
 				Sfx.play("MeteorBuild")
-				task.delay(0.9, function() Sfx.play("MeteorSiren") end)
 			end
 		end
 
 		-- the event track restarts from the top each time it fades in from silence
-		if mix <= 0.001 and target > 0 then
+		if mix <= 0.001 and target > 0 and not resting(event) then
 			event.TimePosition = 0
 			if not event.IsPlaying then event:Play() end
 		end
@@ -93,7 +103,7 @@ function MusicController:KnitStart()
 		hub.Volume = music.Hub.Volume * (1 - mix) * duck
 		event.Volume = music.Event.Volume * mix * duck
 		if mix <= 0.001 and event.IsPlaying then event:Stop() end
-		if mix >= 0.999 and hub.IsPlaying then hub:Pause() elseif mix < 0.999 and not hub.IsPlaying then hub:Resume() end
+		if mix >= 0.999 and hub.IsPlaying then hub:Pause() elseif mix < 0.999 and not hub.IsPlaying and not resting(hub) then hub:Resume() end
 		ambience.Volume = music.Ambience.Volume * (1 - 0.6 * mix)
 
 		-- the crater hum rides on the meteor while it is down

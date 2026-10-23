@@ -27,12 +27,12 @@ All audio is client-side. Two Config modules hold every id and all tuning, one m
 
 ## Music and ambience (`src/client/Controllers/MusicController.luau`)
 
-Three looping beds start on `KnitStart`: the hub track, the event track (from silence) and the ambience bed (`MusicController.luau:39-43`; track specs at `Config/Music.luau:8-9,15`).
+Three beds start on `KnitStart`: the hub track, the event track (from silence) and the looping ambience bed. The two music tracks don't loop: when one ends it rests for a random `Music.Gap` (45-90 s) before it may play again (`MusicController.luau:39-43`; track specs at `Config/Music.luau:8-9,15`).
 
 - Each `Heartbeat` the event mix moves toward `max(approach, event)` from `Shared.AtmosphereMood` — the same sky weights the atmosphere controller uses — over `Music.Fade` seconds (`MusicController.luau:66-75,90-96`; weights at `src/shared/AtmosphereMood.luau:76-77`). The event track restarts from the top each time it fades in from silence (`:86-89`), and ambience dips 60% while the event track is up (`:97`).
 - **Stingers**: any `Config.Sounds` entry with `Duck` (the fanfares and `CoreStinger`) pulls the music to `Music.DuckTo` for its seconds (`Config/Music.luau:11-12`, `Sfx.luau:92-98`, `MusicController.luau:91-94`).
 - **Crater hum** rides the active meteor's PrimaryPart during the `Impact`/`Active` phases, rolling off over `CraterHum.MinDistance`/`MaxDistance`, and is destroyed when the meteor leaves (`MusicController.luau:99-114`, `Config/Music.luau:16`).
-- **The warning**: once per countdown, when the `Countdown` phase is within `Music.WarnAt` seconds of landing (12 s; the sky starts turning earlier at `Config.Atmosphere.ApproachLead` = 25 s, `src/shared/Config/Atmosphere.luau:25`), the siren plays twice — `MeteorSiren` + `MeteorBuild` whoosh, a second siren 0.9 s later (`MusicController.luau:77-82`, `Config/Music.luau:19`).
+- **The warning**: once per countdown, when the `Countdown` phase is within `Music.WarnAt` seconds of landing (12 s; the sky starts turning earlier at `Config.Atmosphere.ApproachLead` = 25 s, `src/shared/Config/Atmosphere.luau:25`), the siren plays once with the `MeteorBuild` whoosh (`MusicController.luau:77-82`, `Config/Music.luau:19`).
 - `MeteorService.Impact` is remembered so the mood weights know how long the meteor has been down; `MeteorService.CoreCracked` fires the 2D `CoreStinger` (`MusicController.luau:52-57`; signals exposed on the service's `Client` table at `src/server/Services/MeteorService.luau:50-52`).
 
 ## Trigger map (event → signal → sound)
@@ -44,7 +44,7 @@ Three looping beds start on `KnitStart`: the hub track, the event track (from si
 | Ore deposited | `RefineryService.Deposited` | Deposit | `FeedbackController.luau:33-35` |
 | Bars collected | `RefineryService.Collected` | Collect + CollectCoins + burst | `:36-40` |
 | Line / gear level up | `UpgradeService.Upgraded`, `ShopService.Upgraded` | Upgrade + burst | `:41-48` |
-| Gear evolve (purchase) | `ShopService.Purchased` | EvolveRise + Evolve + pillar | `:49-53` |
+| Gear evolve (purchase) | `ShopService.Purchased` | Evolve (a short sting that fades after 1.6 s, `FadeAfter`) + pillar | `:49-53` |
 | Player level up | `LevelService.LevelUp` | LevelUp fanfare + pillar + "LEVEL UP!" | `:54-58` |
 | Pet levels | `PetService.Leveled` | PetChime | `:59-62` |
 | Pass pet arrives | `PetService.Bought` | RevealRare | `:63-66` |
@@ -58,7 +58,7 @@ Three looping beds start on `KnitStart`: the hub track, the event track (from si
 | Meteor lands | `MeteorService.Impact` visuals | MeteorImpact (spatial, in the shockwave) + looped MeteorRumble riding the sky streak, ramping with `StreakLeadTime` | `MeteorFXController.luau:150-161,277,425-427`; streak cleared at `:55-67` |
 | Core cracks | `MeteorService.CoreCracked` | CoreStinger (2D, above) + CoreCrack/CoreWhoosh/CoreChime spatial burst | `MusicController.luau:55-57`; `MeteorFXController.luau:370-372` |
 | Ice/Crystal clusters erupt | landing build callbacks, ranks in `Config.LandingFX.SoundRanks` (1/4/7) | FrostCrackle / CrystalChime, spatial | `LandingFXController.luau:604-618`; sounds at `src/shared/Config/LandingFX.luau:33,36,54`, passed at `:716,1053` (see [docs/guide/map-and-world.md](map-and-world.md)) |
-| Mining (client prediction) | — | Swing on each swing, HitA/HitB alternating per spark, NodeBreak when the node's `Hp` attribute hits 0, CritHit+CritSparkle on a server-confirmed crit, OrePickup whose pitch climbs with a 1.2 s pickup streak, Bonus (pitched) on Rich/Super Vein | `MiningController.luau:394,249-254,411-416,428-431,316-338,520-526` |
+| Mining (client prediction) | — | Swing only on a miss, HitA/HitB alternating per spark, NodeBreak when the node's `Hp` attribute hits 0, CritHit+CritSparkle on a server-confirmed crit, OrePickup whose pitch climbs with a 1.2 s pickup streak, Bonus (pitched) on Rich/Super Vein | `MiningController.luau:394,249-254,411-416,428-431,316-338,520-526` |
 | Hatching | — | HatchTick, faster and higher as the wobble builds, then HatchCrack + a reveal keyed by rarity (premium uses the legendary sting) | `HatchController.luau:328-330,230-231`; rarity map `:37-40` |
 | Rebirth succeeds | `RebirthService:Rebirth()` returns | RebirthWarp, then Rebirth fanfare 0.7 s later + pillar | `RebirthController.luau:152-155` |
 | Field travel succeeds | `DebrisService:TravelTo` returns | Teleport + poofs | `FieldTravelController.luau` (Travel handler) |
@@ -75,7 +75,7 @@ Three looping beds start on `KnitStart`: the hub track, the event track (from si
 | Mining — HitA, HitB, Swing, CritHit, CritSparkle, NodeBreak, OrePickup, BackpackFull | `:26-34` | variants alternate so rapid swings don't repeat (`:25,32`) |
 | Meteor — CoreCrack, CoreWhoosh, CoreChime, CoreStinger, MeteorImpact, MeteorRumble, MeteorSiren, MeteorBuild, FrostCrackle, CrystalChime | `:37-46` | stingers carry `Duck` (`:40`) |
 | Refinery and money — Deposit, Collect, CollectCoins, Sell, SellCoins, Purchase | `:49-54` | short cooldowns against coin spam |
-| Progress — Upgrade, EvolveRise, Evolve, LevelUp, PetChime, Bonus, RebirthWarp, Rebirth, Teleport | `:57-65` | fanfares duck the music |
+| Progress — Upgrade, Evolve, LevelUp, PetChime, Bonus, RebirthWarp, Rebirth, Teleport | `:57-65` | fanfares duck the music |
 | Hatching — HatchTick, HatchCrack, RevealCommon, RevealRare, RevealEpic, RevealLegendary | `:68-73` | reveal-by-rarity ladder |
 | Interface — Click, MenuOpen, MenuClose, Deny, TutorialStep | `:76-80` | `Group = "UI"` so the Settings switch mutes them (`:76-80`) |
 

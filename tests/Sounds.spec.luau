@@ -32,7 +32,7 @@ return function(t: any)
 	t.test("every sound the game plays by name is configured", function()
 		for _, name in {
 			"Swing", "CritHit", "CritSparkle", "OrePickup", "BackpackFull", "Deposit", "Collect", "CollectCoins",
-			"Sell", "SellCoins", "Upgrade", "EvolveRise", "Evolve", "LevelUp", "PetChime", "Bonus", "RebirthWarp",
+			"Sell", "SellCoins", "Upgrade", "Evolve", "LevelUp", "PetChime", "Bonus", "RebirthWarp",
 			"Rebirth", "Teleport", "HatchTick", "HatchCrack", "RevealCommon", "RevealRare", "RevealEpic",
 			"RevealLegendary", "Click", "MenuOpen", "MenuClose", "Deny", "TutorialStep", "MeteorSiren", "MeteorBuild",
 			"CoreStinger",

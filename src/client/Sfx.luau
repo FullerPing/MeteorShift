@@ -10,6 +10,7 @@ local ContentProvider = game:GetService("ContentProvider")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 
 local Config = require(ReplicatedStorage.Shared.Config)
 
@@ -159,9 +160,21 @@ function Sfx.play(name: string, parent: Instance?, reach: SpatialReach?, speed: 
 	nextIndex[name] = index % (entry.Max or DEFAULT_MAX_2D) + 1
 	local id = idFor(name, entry)
 	if sound.SoundId ~= id then sound.SoundId = id end
+	sound.Volume = entry.Volume -- a FadeAfter fade left the pooled sound silent
 	sound.PlaybackSpeed = Sfx.pitch(entry) * (speed or 1)
 	sound.TimePosition = 0
 	sound:Play()
+	local fadeAfter = entry.FadeAfter
+	if fadeAfter then
+		local played = sound :: Sound
+		local token = (played:GetAttribute("PlayToken") or 0) + 1
+		played:SetAttribute("PlayToken", token)
+		task.delay(fadeAfter, function()
+			if played:GetAttribute("PlayToken") == token and played.IsPlaying then
+				TweenService:Create(played, TweenInfo.new(0.5), { Volume = 0 }):Play()
+			end
+		end)
+	end
 	return sound
 end
 
