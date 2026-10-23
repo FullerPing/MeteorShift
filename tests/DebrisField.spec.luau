@@ -33,6 +33,21 @@ return function(t: any)
 		t.eq(DebrisField.sizedShare(4, 4, 0), 1, "no power: unchanged")
 	end)
 
+	t.test("the XP Mine pays player XP and no ore or cash; other rocks pay no XP", function()
+		local mine = DebrisField.reward("XpMine") :: any
+		t.ok(mine and mine.Kind == "Xp", "the XP Mine is an XP field")
+		t.near(DebrisField.xp(mine, 1), mine.Hp * mine.XpPerHit, 1e-9)
+		t.near(DebrisField.xp(mine, 0.5), mine.Hp * mine.XpPerHit / 2, 1e-9, "a rock sized for a weaker pickaxe")
+		t.ok(mine.Hp * mine.XpPerHit / mine.Hp < Config.Levels.CrustHitXp, "per hit, less XP than a meteor")
+		t.eq(mine.Unlock, nil, "open to everyone")
+		local ore, mult = DebrisField.ore(mine, 1)
+		t.eq(ore, nil)
+		t.eq(mult, 0)
+		t.eq(DebrisField.cash(mine, 100, 1e6, 0.5), 0)
+		t.eq(DebrisField.xp(DebrisField.reward("RustWorks"), 1), 0)
+		t.eq(DebrisField.xp(nil, 1), 0)
+	end)
+
 	t.test("every field has a reward and unknown or missing fields are filler", function()
 		for _, field in Config.Debris.Fields do
 			t.ok(DebrisField.reward(field.Id) ~= nil, field.Id)

@@ -10,7 +10,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 
 local OreFields = {}
-OreFields.LAYOUT = 1 -- bumped when the controls change; FieldTravelController rebuilds an older copy
+OreFields.LAYOUT = 2 -- bumped when the controls change; FieldTravelController rebuilds an older copy
 
 local CARD_W, CARD_H, GAP, SIDE, TOP = 290, 78, 12, 24, 92
 local ROWS = math.ceil(#Config.Debris.Fields / 2)
@@ -19,7 +19,9 @@ OreFields.SIZE = Vector2.new(SIDE * 2 + CARD_W * 2 + GAP, TOP + ROWS * (CARD_H +
 -- What a field's rocks pay, for its card
 function OreFields.pays(field: any): string
 	local reward = field.Reward
-	if reward.Kind == "Ore" then
+	if reward.Kind == "Xp" then
+		return "Pays XP to level up"
+	elseif reward.Kind == "Ore" then
 		return "Pays " .. (Config.Home.OreNames[reward.Ore] or reward.Ore) .. " ore"
 	end
 	return "Pays cash"

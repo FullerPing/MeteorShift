@@ -46,10 +46,19 @@ function DebrisField.sizedShare(maxHp: number, hits: number, breakerPower: numbe
 	return math.min(1, maxHp / full)
 end
 
+-- Player XP an XP rock pays its breaker: its hits x XpPerHit, times `share` (DebrisField.sizedShare). Zero for any
+-- other kind of rock.
+function DebrisField.xp(reward: Debris.Reward?, share: number): number
+	if not reward or reward.Kind ~= "Xp" then
+		return 0
+	end
+	return reward.Hp * (reward.XpPerHit or 0) * math.clamp(share, 0, 1)
+end
+
 -- The ore and per-hit multiplier a rock drops, with `yieldShare` the part of a full hit the player's level
--- lets an ore rock's ore yield (Levels.oreYield). A cash rock drops no ore; filler drops the default ore.
+-- lets an ore rock's ore yield (Levels.oreYield). Cash and XP rocks drop no ore; filler drops the default ore.
 function DebrisField.ore(reward: Debris.Reward?, yieldShare: number): (string?, number)
-	if reward and reward.Kind == "Cash" then
+	if reward and (reward.Kind == "Cash" or reward.Kind == "Xp") then
 		return nil, 0
 	elseif reward and reward.Ore then
 		return reward.Ore, (reward.OreMult or Debris.YieldFraction) * yieldShare

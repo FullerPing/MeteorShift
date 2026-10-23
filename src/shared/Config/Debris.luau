@@ -7,13 +7,14 @@
 -- between CashFloor and CeilingShare of the next rebirth's cost). "Ore" drops `Ore` into the hopper at
 -- `OreMult` of a full hit, scaled by the player's level like a meteor's ore. `Hp` is the hits to break.
 export type Reward = {
-	Kind: string, -- "Cash" or "Ore"
+	Kind: string, -- "Cash", "Ore" or "Xp"
 	Hp: number,
 	Seconds: number?,
 	CashFloor: number?,
 	CeilingShare: number?,
 	Ore: string?,
 	OreMult: number?,
+	XpPerHit: number?, -- an "Xp" rock pays Hp x XpPerHit player XP (a meteor crust hit is 0.25)
 }
 -- What opens a field (Shared.FieldGate): a player level, or a number of rebirths. No Unlock means always open.
 export type Unlock = { Level: number?, Rebirths: number? }
@@ -48,6 +49,10 @@ return {
 			Reward = { Kind = "Cash", Hp = 4, Seconds = 6.8, CashFloor = 10, CeilingShare = 0.006 } },
 		{ Id = "FrostYard", Name = "Frost Yard", Color = Color3.fromRGB(110, 212, 255),
 			Reward = { Kind = "Cash", Hp = 10, Seconds = 17.5, CashFloor = 30, CeilingShare = 0.02 }, Unlock = { Level = 5 } },
+		-- The XP Mine on the south of T2: its rocks pay player XP (Hp x XpPerHit, about 20 XP a minute of steady
+		-- mining against ~35 hitting a meteor), open to everyone, so the countdown always moves your level along
+		{ Id = "XpMine", Name = "XP Mine", Color = Color3.fromRGB(122, 140, 255),
+			Reward = { Kind = "Xp", Hp = 12, XpPerHit = 0.2 } },
 		{ Id = "VioletQuarry", Name = "Violet Quarry", Color = Color3.fromRGB(184, 116, 255),
 			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.48 }, Unlock = { Level = 12 } },
 		{ Id = "SulfurRidge", Name = "Sulfur Ridge", Color = Color3.fromRGB(255, 204, 64),

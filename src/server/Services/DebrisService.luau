@@ -164,6 +164,7 @@ function DebrisService:_track(part: BasePart)
 		OnBroken = function(player: Player)
 			if reward then
 				self:_payCash(player, reward, rock)
+				self:_payXp(player, reward, rock)
 			end
 			local field = part:GetAttribute("Field")
 			self.RockBroken:Fire(player, if reward and type(field) == "string" then field else "Filler")
@@ -197,6 +198,16 @@ function DebrisService:_payCash(player: Player, reward: DebrisField.Reward, rock
 		PlayerStateService:AddCash(player, cash)
 		TelemetryService:earned(player, "field_cash", cash, 0)
 		RewardService:Bonus(player, "fieldCash", "+" .. Format.cash(cash))
+	end
+end
+
+-- An XP rock (the XP Mine) pays player XP, cut like cash to the share of the breaker's pickaxe it was sized for
+function DebrisService:_payXp(player: Player, reward: DebrisField.Reward, rock: Rock)
+	local _, maxHp = NodeService:GetHp(rock.Id)
+	local share = DebrisField.sizedShare(maxHp, rock.Hits, PlayerStateService:GetPickaxe(player).Power)
+	local xp = Knit.GetService("LevelService"):AddXp(player, DebrisField.xp(reward, share))
+	if xp > 0 then
+		RewardService:Bonus(player, "fieldXp", "+" .. Format.number(math.floor(xp + 0.5)) .. " XP")
 	end
 end
 

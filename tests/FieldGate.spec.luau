@@ -40,7 +40,7 @@ return function(t)
 	t.test("the ladder runs in the design's order and only climbs", function()
 		local ids = {}
 		for _, f in Config.Debris.Fields do table.insert(ids, f.Id) end
-		t.eq(table.concat(ids, ","), "RustWorks,FrostYard,VioletQuarry,SulfurRidge,EmberShelf,GlassScar,Starfall,HaloLedge")
+		t.eq(table.concat(ids, ","), "RustWorks,FrostYard,XpMine,VioletQuarry,SulfurRidge,EmberShelf,GlassScar,Starfall,HaloLedge")
 		local lastLevel = 0
 		for _, f in Config.Debris.Fields do
 			local unlock = f.Unlock
