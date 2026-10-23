@@ -52,4 +52,11 @@ function DebrisField.ore(reward: Debris.Reward?, yieldShare: number): (string?, 
 	return Debris.Ore, Debris.YieldFraction
 end
 
+-- Seconds until a broken rock comes back: a roll in RespawnMin..RespawnMax (`roll` in 0..1), shortened when
+-- more than RespawnCrowd players share the server
+function DebrisField.respawnSeconds(players: number, roll: number): number
+	local base = Debris.RespawnMin + (Debris.RespawnMax - Debris.RespawnMin) * roll
+	return math.max(Debris.RespawnFloor, base / math.max(1, players / Debris.RespawnCrowd))
+end
+
 return DebrisField

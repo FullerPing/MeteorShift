@@ -32,6 +32,13 @@ function MiningPower.floorPower(): number
 	return Meteor.FloorPlayers * MiningPower.perSecond(1)
 end
 
+-- One player's real Mining Power per second for sizing: the pickaxe (Power / Swing, after Swift pets), plus the
+-- average crit, plus a miner pet's hits (`miner` of the pickaxe's Power on the owner's swing rate, PetService).
+function MiningPower.playerRate(pickaxe: { Power: number, Swing: number, CritChance: number, CritMult: number }, miner: number): number
+	local crit = 1 + pickaxe.CritChance * (pickaxe.CritMult - 1)
+	return pickaxe.Power / pickaxe.Swing * (crit + miner)
+end
+
 -- Total power per second of the given (active) players' pickaxe tiers, with the floor.
 function MiningPower.serverPower(tiers: { number }): number
 	local rates = {}
@@ -61,6 +68,16 @@ end
 -- True when the power the meteor was sized for is more than 15% off the current one.
 function MiningPower.shouldRescale(sizedPower: number, currentPower: number): boolean
 	return math.abs(currentPower / sizedPower - 1) > Meteor.RescaleThreshold
+end
+
+-- Whether a live meteor rescales now, `since` seconds after its last rescale: a drift past the threshold, and a
+-- smaller meteor waits out RescaleCooldown while a tougher one doesn't (strong pickaxes clear an undersized one in
+-- seconds, before a cooldown ends).
+function MiningPower.rescaleDue(sizedPower: number, currentPower: number, since: number): boolean
+	if not MiningPower.shouldRescale(sizedPower, currentPower) then
+		return false
+	end
+	return currentPower > sizedPower or since >= Meteor.RescaleCooldown
 end
 
 -- Rescales a node to a new server power, keeping the same fraction done.

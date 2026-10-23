@@ -219,9 +219,10 @@ local function pickType(): Config.MeteorType
 	return picked
 end
 
--- Mining Power per second of the active players, with the floor (spec §5.3).
-local function serverPower(): number
-	return MiningPower.serverPowerRates(ActivityService:GetActiveRates())
+-- Mining Power per second of the active players, with the floor (spec §5.3). `everyone` counts every player in the
+-- server, active or not: used at impact, when a strong player who hasn't swung lately would otherwise be missed.
+local function serverPower(everyone: boolean?): number
+	return MiningPower.serverPowerRates(ActivityService:GetActiveRates(everyone))
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -394,7 +395,8 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	core.Parent = model
 	model.PrimaryPart = core
 
-	local power = serverPower()
+	-- sized for everyone here (a landing is when people gather); an idle player is rescaled out after RescaleCooldown
+	local power = serverPower(true)
 	-- every slot is a mineable crust node; the upper ones are hit with the upward reach (Shared.MiningReach)
 	local slots = {}
 	for _, child in core:GetChildren() do
@@ -526,14 +528,11 @@ end
 
 -- Mid-event joins and leaves (spec §5.3): when the active server power drifts more
 -- than 15% from what the meteor was sized for, rescale the remaining HP of every
--- node and the core to the new power, keeping the same fraction done. At most once
--- every RescaleCooldown seconds.
+-- node and the core to the new power, keeping the same fraction done. Tougher at once, easier at most once every
+-- RescaleCooldown seconds (MiningPower.rescaleDue).
 function MeteorService:_checkRescale(meteor: Meteor)
-	if os.clock() - meteor.LastRescale < MeteorConfig.RescaleCooldown then
-		return
-	end
 	local power = serverPower()
-	if not MiningPower.shouldRescale(meteor.SizedPower, power) then
+	if not MiningPower.rescaleDue(meteor.SizedPower, power, os.clock() - meteor.LastRescale) then
 		return
 	end
 	local ratio = power / meteor.SizedPower
@@ -719,14 +718,14 @@ end
 -- seconds; otherwise the meteor that is down ends early (it cools) and the asked-for one
 -- comes in StreakLeadTime seconds into the next countdown. Returns what will happen.
 function MeteorService:DevSpawn(typeId: string): string
-	local meteorType: Config.MeteorType? = nil
+	local meteorType: Config.MeteorType? = if string.lower(tostring(typeId)) == "admin" then MeteorTypes.admin(MeteorConfig.Types.Iron) else nil
 	for id, candidate in MeteorConfig.Types do
 		if string.lower(id) == string.lower(tostring(typeId)) then
 			meteorType = candidate
 		end
 	end
 	if not meteorType then
-		return string.format("No meteor type %q (try %s)", tostring(typeId), table.concat(MeteorConfig.TypeOrder, ", "))
+		return string.format("No meteor type %q (try %s, Admin)", tostring(typeId), table.concat(MeteorConfig.TypeOrder, ", "))
 	end
 	devNext = meteorType
 	if state.phase == Phase.Countdown then

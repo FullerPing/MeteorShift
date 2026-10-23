@@ -12,6 +12,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 
 local ActivityService = Knit.CreateService({
 	Name = "ActivityService",
@@ -59,10 +60,19 @@ function ActivityService:GetActivePickaxes(): { any }
 end
 
 -- Mining Power per second of each active player (meteor sizing, Shared.MiningPower).
-function ActivityService:GetActiveRates(): { number }
+-- With `everyone`, every player in the server counts, active or not.
+function ActivityService:GetActiveRates(everyone: boolean?): { number }
+	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local rates = {}
-	for _, pickaxe in self:GetActivePickaxes() do
-		table.insert(rates, pickaxe.Power / pickaxe.Swing)
+	for _, player in if everyone then Players:GetPlayers() else self:GetActivePlayers() do
+		table.insert(rates, MiningPower.playerRate(PlayerStateService:GetPickaxe(player), PlayerStateService:GetPetBonuses(player).miner))
+	end
+	local fake = ServerStorage:GetAttribute("DevFakeTiers")
+	if RunService:IsStudio() and typeof(fake) == "string" then
+		for tier in string.gmatch(fake, "%d+") do
+			local clamped = math.clamp(tonumber(tier) :: number, 1, #Config.Pickaxes)
+			table.insert(rates, MiningPower.playerRate(Gear.pickaxe(clamped, Gear.levelsForTier(clamped)), 0))
+		end
 	end
 	return rates
 end

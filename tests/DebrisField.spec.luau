@@ -6,6 +6,14 @@ return function(t: any)
 	local Income = require(t.shared.Income)
 	local Config = require(t.shared.Config)
 
+	t.test("rocks respawn faster in a full server, never below the floor", function()
+		local debris = Config.Debris
+		t.eq(DebrisField.respawnSeconds(1, 0), debris.RespawnMin)
+		t.eq(DebrisField.respawnSeconds(debris.RespawnCrowd, 1), debris.RespawnMax)
+		t.near(DebrisField.respawnSeconds(debris.RespawnCrowd * 2, 1), debris.RespawnMax / 2, 1e-9)
+		t.eq(DebrisField.respawnSeconds(1000, 1), debris.RespawnFloor)
+	end)
+
 	local function reward(id: string): any
 		return DebrisField.reward(id)
 	end

@@ -23,6 +23,10 @@ return {
 	RerollInterval = 60, -- untouched rocks re-pick who they are sized for this often
 	RespawnMin = 30,
 	RespawnMax = 60,
+	-- A full server shares the same rocks: past RespawnCrowd players the wait shrinks in proportion
+	-- (6 players = half, 12 = a quarter), never below RespawnFloor seconds (DebrisField.respawnSeconds).
+	RespawnCrowd = 3,
+	RespawnFloor = 6,
 	Ore = "iron",
 	YieldFraction = 0.25, -- ore per hit relative to a meteor node
 

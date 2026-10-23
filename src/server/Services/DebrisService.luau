@@ -168,7 +168,7 @@ function DebrisService:_track(part: BasePart)
 			local field = part:GetAttribute("Field")
 			self.RockBroken:Fire(player, if reward and type(field) == "string" then field else "Filler")
 			setVisible(part, false)
-			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()
+			task.delay(DebrisField.respawnSeconds(#Players:GetPlayers(), math.random()), function()
 				if part.Parent then
 					size(rock, pickPickaxe())
 					setVisible(part, true)
