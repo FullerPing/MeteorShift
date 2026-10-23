@@ -66,7 +66,7 @@ function LevelService:AddXp(player: Player, amount: number): number
 	if not data or amount <= 0 then
 		return 0
 	end
-	local awarded = Pets.playerXp(amount, PlayerStateService:GetPetBonuses(player).scholar)
+	local awarded = Pets.playerXp(amount * Knit.GetService("GlobalEventService"):Mult("xp"), PlayerStateService:GetPetBonuses(player).scholar)
 	if awarded <= 0 then return 0 end
 	local gained = Levels.addXp(data, awarded)
 	Knit.GetService("PetService"):Work(player, "scholar")

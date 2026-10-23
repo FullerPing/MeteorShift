@@ -184,7 +184,8 @@ local function countdownLength(first: boolean): number
 	if RunService:IsStudio() and MeteorConfig.StudioCountdown then
 		return MeteorConfig.StudioCountdown
 	end
-	return if first then MeteorConfig.FirstCountdown else interval
+	-- a Meteor Shower (GlobalEventService) shortens the wait on every server at once
+	return if first then MeteorConfig.FirstCountdown else math.floor(interval * Knit.GetService("GlobalEventService"):Mult("countdown"))
 end
 
 -- Whether anyone here has the rebirths to see an Alien boss

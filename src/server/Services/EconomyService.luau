@@ -48,7 +48,9 @@ function EconomyService:SaleMultiplier(player: Player, permanentOnly: boolean?):
 	local vip = MonetizationService:VIPMult(player)
 	local merchant = 1 + PlayerStateService:GetPetBonuses(player).merchant
 	local overclock = if permanentOnly then 1 else MonetizationService:OverclockSaleMult(data)
-	return rebirth * index * vip * merchant * MonetizationService:CashMult(player) * overclock
+	-- a running Golden Hour (GlobalEventService) is temporary, so it stays out of permanentOnly
+	local event = if permanentOnly then 1 else Knit.GetService("GlobalEventService"):Mult("sales")
+	return rebirth * index * vip * merchant * MonetizationService:CashMult(player) * overclock * event
 end
 
 -- What this player is expected to earn per second of ordinary play with the gear, pets, line and

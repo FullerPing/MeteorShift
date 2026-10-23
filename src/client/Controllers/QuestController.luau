@@ -38,6 +38,7 @@ function QuestController:KnitStart()
 	local summary: any = nil
 	local tutorialDone = false
 	local busy = false
+	local place: () -> () = function() end -- set below, once the HUD's backpack card is found
 
 	local function update()
 		local s = summary
@@ -63,6 +64,7 @@ function QuestController:KnitStart()
 		-- the tracker
 		local menus = MenuFlags.anyOpen()
 		trackerCard.Visible = s ~= nil and tutorialDone and not menus
+		place()
 		if s then
 			trackerCard.Title.Text = s.title
 			trackerCard.Bar.Fill.Size = UDim2.fromScale(math.clamp(s.value / math.max(s.target, 1), 0, 1), 1)
@@ -74,7 +76,7 @@ function QuestController:KnitStart()
 
 	-- the tracker rides on top of the HUD's backpack card, as wide as it is
 	local hudBackpack: GuiObject? = nil
-	local function place()
+	place = function()
 		if not hudBackpack or not hudBackpack.Parent then
 			local hud = player.PlayerGui:FindFirstChild("MeteorHUD")
 			hudBackpack = hud and hud:FindFirstChild("Backpack", true) :: any
@@ -90,6 +92,14 @@ function QuestController:KnitStart()
 		trackerCard.Fit.Scale = scale
 		trackerCard.AnchorPoint = Vector2.new(0, 1)
 		trackerCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8)
+		-- the game-wide event card sits on top of the quest card (or in its place when the quest card is hidden)
+		local eventCard = tracker:FindFirstChild("EventCard") :: any
+		if eventCard then
+			eventCard.Fit.Scale = scale
+			eventCard.AnchorPoint = Vector2.new(0, 1)
+			local above = if trackerCard.Visible then (70 + 8) * scale else 0
+			eventCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 - above)
+		end
 	end
 	task.spawn(function()
 		for _ = 1, 60 do

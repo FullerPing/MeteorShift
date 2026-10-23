@@ -49,6 +49,7 @@ return {
 	Daily = require(script.Daily),
 	Quests = require(script.Quests),
 	Relics = require(script.Relics),
+	Events = require(script.Events),
 	Feedback = require(script.Feedback),
 	Badges = require(script.Badges),
 	Codes = require(script.Codes),

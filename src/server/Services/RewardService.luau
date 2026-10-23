@@ -59,6 +59,7 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 		local player = ranked[index].Player
 		local data = PlayerStateService:Get(player)
 		reward.Total = Perks.coreShards(if data then data.perks else nil, Pets.coreShards(reward.Total, PlayerStateService:GetPetBonuses(player).shards))
+			* Knit.GetService("GlobalEventService"):Mult("shards")
 	end
 
 	local leaders = {}

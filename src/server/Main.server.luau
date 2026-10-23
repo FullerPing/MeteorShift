@@ -231,6 +231,7 @@ Knit.Start()
 		--   /giveall <item> ... [message]   the same as /give all ...: everyone, announced as "[DEV] Name: message"
 		--   /announce <message>   a "[DEV] Name: message" banner for everyone (AnnounceService)
 		--   /setlevel <player|all> <level>   sets the player level (XP cleared), up or down; the player is told
+		--   /event <id> [minutes]   starts a game-wide event on every server now (GlobalEventService, Config.Events)
 		--   /feedback [count]   prints the newest player feedback (FeedbackService) to the output (F9 on a live server)
 		local TextChatService = game:GetService("TextChatService")
 		local function chatCommand(alias: string, run: (Player, string?, string) -> string)
@@ -319,6 +320,13 @@ Knit.Start()
 		end)
 		chatCommand("/giveall", function(player, _first, text)
 			return give(player, (string.gsub(text, "^%S+", "/give all", 1)))
+		end)
+		chatCommand("/event", function(_player, first, text)
+			if not first then
+				return "Usage: /event <id> [minutes]"
+			end
+			local minutes = tonumber(string.match(text, "^%S+%s+%S+%s+(%d+)")) or 15
+			return Knit.GetService("GlobalEventService"):StartEverywhere(first, minutes)
 		end)
 		chatCommand("/setlevel", function(player, _first, text)
 			local targetName, wanted = string.match(text, "^%S+%s+(%S+)%s+(%d+)%s*$")

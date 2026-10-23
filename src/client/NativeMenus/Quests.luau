@@ -65,6 +65,22 @@ function Quests.buildTracker(): ScreenGui
 	local count = MenuTheme.label(button, "Count", "", 14, Palette.NAVY, MenuTheme.TITLE_FONT, Enum.TextXAlignment.Right)
 	count.AnchorPoint, count.Position, count.Size, count.ZIndex = Vector2.new(1, 0), UDim2.new(1, -8, 0, 44), UDim2.fromOffset(64, 22), 2
 	NativeUI.create("UIScale", { Name = "Fit" }, button)
+
+	-- the game-wide event card (EventController) stacks on top of the quest card
+	local event = NativeUI.create("Frame", { Name = "EventCard", Size = UDim2.fromOffset(292, 56), BackgroundColor3 = Palette.WHITE,
+		BorderSizePixel = 0, Visible = false }, gui)
+	MenuTheme.round(event, 12)
+	MenuTheme.stroke(event, Palette.NAVY, 3)
+	MenuTheme.gradient(event, Palette.EVO_TOP, Palette.EVO_BOTTOM)
+	local eventIcon = MenuTheme.icon(event, "Icon", "meteor", UDim2.fromOffset(8, 6), UDim2.fromOffset(44, 44))
+	eventIcon.ZIndex = 2
+	local eventTitle = MenuTheme.label(event, "Title", "", 16, Palette.NAVY, MenuTheme.TITLE_FONT)
+	eventTitle.Position, eventTitle.Size, eventTitle.TextScaled, eventTitle.ZIndex = UDim2.fromOffset(60, 4), UDim2.new(1, -68, 0, 22), true, 2
+	NativeUI.create("UITextSizeConstraint", { MinTextSize = 9, MaxTextSize = 16 }, eventTitle)
+	local eventText = MenuTheme.label(event, "Text", "", 13, Palette.NAVY)
+	eventText.Position, eventText.Size, eventText.TextScaled, eventText.ZIndex = UDim2.fromOffset(60, 28), UDim2.new(1, -68, 0, 20), true, 2
+	NativeUI.create("UITextSizeConstraint", { MinTextSize = 8, MaxTextSize = 13 }, eventText)
+	NativeUI.create("UIScale", { Name = "Fit" }, event)
 	return gui
 end
 

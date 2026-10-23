@@ -62,10 +62,11 @@ function RelicService:KnitStart()
 	RewardService.ShardsAwarded:Connect(function(player: Player)
 		local meteorType = MeteorService:GetActiveType()
 		local boss = meteorType ~= nil and meteorType.Id == Config.Meteor.Boss.Type
-		self:_roll(player, if boss then Config.Relics.BossChance else Config.Relics.CoreChance, if boss then Config.Relics.BossFragments else nil)
+		local events = Knit.GetService("GlobalEventService"):Mult("relics")
+		self:_roll(player, (if boss then Config.Relics.BossChance else Config.Relics.CoreChance) * events, if boss then Config.Relics.BossFragments else nil)
 	end)
 	Knit.GetService("DebrisService").RockBroken:Connect(function(player: Player, field: string)
-		if field ~= "Filler" then self:_roll(player, Config.Relics.RockChance) end
+		if field ~= "Filler" then self:_roll(player, Config.Relics.RockChance * Knit.GetService("GlobalEventService"):Mult("relics")) end
 	end)
 end
 
