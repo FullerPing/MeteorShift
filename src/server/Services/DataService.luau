@@ -31,6 +31,7 @@ local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
 local GearMigration = require(script.Parent.Parent.Lib.GearMigration)
+local RebirthMigration = require(script.Parent.Parent.Lib.RebirthMigration)
 
 local STORE_NAME = "PlayerData_v1"
 local AUTOSAVE_INTERVAL = 60
@@ -141,6 +142,11 @@ local function migrate(data: { [any]: any }): { [any]: any }
 		data.stations = nil
 	end
 	data.line = Line.clean(data.line)
+	-- v13 -> v14 (2026-10-22): a rebirth went from x5 sales (with x3 prices) to a plain x2. The count becomes the rank
+	-- that sells bars for at least as much as before; cash, gear and everything else stay (Lib.RebirthMigration)
+	if (data.version or 1) < 14 then
+		data.rebirths = RebirthMigration.rank(data.rebirths)
+	end
 	-- v12 was an unreleased trial (a `trialFlag` key nothing read). v13 tracks the Robux-bought share of the
 	-- shards (paidShards; shards bought before now count as earned), saved settings and the Pet Max credit
 	data.trialFlag = nil

@@ -2,7 +2,8 @@
 -- Debris rocks between meteors (spec §5.7). The rocks themselves are placed in
 -- Workspace.Map.Debris in Studio; this only tunes their behaviour.
 
--- What a field's rocks pay. "Cash" pays `Seconds` of the breaker's expected income (Shared.Income, kept
+-- What a field's rocks pay. "Cash" pays `Seconds` of the breaker's expected income, scaled by their swing against the
+-- Basic Pickaxe's (a faster pickaxe breaks rocks sooner, so each pays for the time it took; Shared.Income, kept
 -- between CashFloor and CeilingShare of the next rebirth's cost). "Ore" drops `Ore` into the hopper at
 -- `OreMult` of a full hit, scaled by the player's level like a meteor's ore. `Hp` is the hits to break.
 export type Reward = {
@@ -36,23 +37,29 @@ return {
 	-- the meteors' iron filler; Ember Shelf and Glass Scar (T2) pay big cash and alien ore; Starfall and Halo Ledge
 	-- on the Crown open by rebirth. Ore stays well under the same ore from a meteor node (a meteor hit is worth a
 	-- full OrePerHit), so the fields never replace the meteors. Gates open only through play.
+	-- The line refines any ore into a bar at the same speed, so what an ore field is worth is its ore's bar price, not
+	-- its ore per hit: at 0.4/0.3/0.4/0.6 Halo Ledge's Alien ore (1,800 a bar) filled the line at about 13x the meteors'
+	-- income. Owner, 2026-10-22: a field should be a little better than the meteors, about 1.5x. OreMult is set so each
+	-- ore field mined nonstop pays about 1.2 to 1.7x the player's expected income (Violet tops out where it fills the
+	-- line), and the cash fields' Seconds the same (Rust Works' quick rocks a little less; tests/DebrisField.spec keeps
+	-- every field under 2x). A Halo rock still drops a few Alien ore, not a backpack of it.
 	Fields = {
 		{ Id = "RustWorks", Name = "Rust Works", Color = Color3.fromRGB(255, 124, 56),
-			Reward = { Kind = "Cash", Hp = 4, Seconds = 3, CashFloor = 10, CeilingShare = 0.003 } },
+			Reward = { Kind = "Cash", Hp = 4, Seconds = 6.8, CashFloor = 10, CeilingShare = 0.006 } },
 		{ Id = "FrostYard", Name = "Frost Yard", Color = Color3.fromRGB(110, 212, 255),
-			Reward = { Kind = "Cash", Hp = 10, Seconds = 9, CashFloor = 30, CeilingShare = 0.01 }, Unlock = { Level = 5 } },
+			Reward = { Kind = "Cash", Hp = 10, Seconds = 17.5, CashFloor = 30, CeilingShare = 0.02 }, Unlock = { Level = 5 } },
 		{ Id = "VioletQuarry", Name = "Violet Quarry", Color = Color3.fromRGB(184, 116, 255),
-			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.4 }, Unlock = { Level = 12 } },
+			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.48 }, Unlock = { Level = 12 } },
 		{ Id = "SulfurRidge", Name = "Sulfur Ridge", Color = Color3.fromRGB(255, 204, 64),
-			Reward = { Kind = "Ore", Hp = 16, Ore = "crystal", OreMult = 0.3 }, Unlock = { Level = 20 } },
+			Reward = { Kind = "Ore", Hp = 16, Ore = "crystal", OreMult = 0.17 }, Unlock = { Level = 20 } },
 		{ Id = "EmberShelf", Name = "Ember Shelf", Color = Color3.fromRGB(255, 106, 78),
-			Reward = { Kind = "Cash", Hp = 20, Seconds = 16, CashFloor = 60, CeilingShare = 0.02 }, Unlock = { Level = 30 } },
+			Reward = { Kind = "Cash", Hp = 20, Seconds = 30, CashFloor = 60, CeilingShare = 0.04 }, Unlock = { Level = 30 } },
 		{ Id = "GlassScar", Name = "Glass Scar", Color = Color3.fromRGB(111, 240, 224),
-			Reward = { Kind = "Ore", Hp = 24, Ore = "alien", OreMult = 0.4 }, Unlock = { Level = 40 } },
+			Reward = { Kind = "Ore", Hp = 24, Ore = "alien", OreMult = 0.042 }, Unlock = { Level = 40 } },
 		{ Id = "Starfall", Name = "Starfall", Color = Color3.fromRGB(255, 143, 200),
-			Reward = { Kind = "Cash", Hp = 28, Seconds = 30, CashFloor = 200, CeilingShare = 0.03 }, Unlock = { Rebirths = 1 } },
+			Reward = { Kind = "Cash", Hp = 28, Seconds = 40, CashFloor = 200, CeilingShare = 0.06 }, Unlock = { Rebirths = 1 } },
 		{ Id = "HaloLedge", Name = "Halo Ledge", Color = Color3.fromRGB(255, 213, 74),
-			Reward = { Kind = "Ore", Hp = 32, Ore = "alien", OreMult = 0.6 }, Unlock = { Rebirths = 3 } },
+			Reward = { Kind = "Ore", Hp = 32, Ore = "alien", OreMult = 0.045 }, Unlock = { Rebirths = 3 } },
 	} :: { Field },
 	TravelCooldown = 3, -- seconds between teleports
 	Rock = {

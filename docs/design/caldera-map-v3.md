@@ -30,10 +30,12 @@ Nothing within 117 studs of the crater is raised, so the shockwave's landing ray
 | FrostYard | T0 | Level 5 | as today: Cash, Hp 10 |
 | VioletQuarry | T1 | Level 12 | as today: Ore frost 0.4, Hp 10 |
 | SulfurRidge | T1 | Level 20 | as today: Ore crystal 0.3, Hp 16 |
-| EmberShelf | T2 | Level 30 | Cash, Hp 20, Seconds 16, CashFloor 60, CeilingShare 0.02 |
-| GlassScar | T2 | Level 40 | Ore alien 0.4, Hp 24 |
-| Starfall | Crown | Rebirth 1 | Cash, Hp 28, Seconds 30, CashFloor 200, CeilingShare 0.03 |
-| HaloLedge | Crown | Rebirth 3 | Ore alien 0.6, Hp 32 |
+| EmberShelf | T2 | Level 30 | Cash, Hp 20, Seconds 9.5 (was 16), CashFloor 60, CeilingShare 0.02 |
+| GlassScar | T2 | Level 40 | Ore alien 0.018 (was 0.4), Hp 24 |
+| Starfall | Crown | Rebirth 1 | Cash, Hp 28, Seconds 13 (was 30), CashFloor 200, CeilingShare 0.03 |
+| HaloLedge | Crown | Rebirth 3 | Ore alien 0.02 (was 0.6), Hp 32 |
+
+Re-tuned 2026-10-22 so a field mined nonstop pays about 1.5x the player's expected income (between 0.9x and 2x) (`Config.Debris`, `tests/DebrisField.spec`).
 
 - Tiers are always walkable; only fields are gated.
 - A locked field:

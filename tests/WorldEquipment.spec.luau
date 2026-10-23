@@ -11,7 +11,7 @@ return function(t: any)
 			local rows = Equipment.wall(kind, 4)
 			local configured = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
 			t.eq(#rows, #configured)
-			t.eq(#rows, 8)
+			t.eq(#rows, 16)
 			for index, row in rows do
 				t.eq(row.tier, configured[index].Tier)
 				t.eq(row.name, configured[index].Name)
@@ -21,7 +21,7 @@ return function(t: any)
 	end)
 	t.test("first and final tiers mark only one item current", function()
 		for _, kind in { "pickaxe", "backpack" } do
-			for _, tier in { 1, 8 } do
+			for _, tier in { 1, #Config.Pickaxes } do
 				local current = 0
 				for _, row in Equipment.wall(kind, tier) do if row.status == "CURRENT" then current += 1; t.eq(row.tier, tier) end end
 				t.eq(current, 1)

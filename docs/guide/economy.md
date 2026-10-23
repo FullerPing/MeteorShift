@@ -74,14 +74,18 @@ Gear never asks for shards: every pickaxe and backpack row carries `Shards = 0`
 
 - One line upgrade, levels 1-8: `Costs[n]` buys level n (level 2 = $2,800) times the rebirth price
   inflation (`src/shared/Config/Home.luau:40-43`, `src/shared/Line.luau:40-46`). Each level sets
-  hopper (2,000→1.25M ore), conveyor (0.3→18 ore/s), refinery (0.25→16 ore/s) and collection post
-  (same table as the hopper) together (`src/shared/Config/Home.luau:46-67`).
-- One pickaxe, one backpack. A stat level costs `Base × 1.12^(depth-1)` — base 45 for the pickaxe,
-  37.5 for the backpack (`src/shared/Config/Gear.luau:23,32`; depth/shared-level model
-  `src/shared/Gear.luau:105-112`). Tier cap = 10 × tier levels (`src/shared/Config/Gear.luau:15`,
-  `src/shared/Gear.luau:31-33`). Evolving a tier costs the row's cash
-  (pickaxe $2,000→$170K, backpack $1,300→$100K — `src/shared/Config/Pickaxes.luau:22-29`,
-  `src/shared/Config/Backpacks.luau:16-23`).
+  hopper (2,000→1.9B ore), conveyor (0.3→260 ore/s), refinery (0.25→235 ore/s) and collection post
+  (same table as the hopper) together, over 16 levels (`src/shared/Config/Home.luau`).
+- One pickaxe, one backpack, 16 tiers each (tiers 9-16 added 2026-10-22, no models yet: they show tier 8's
+  model in their own colour, `EquipmentModels`; the Gear Hall walls show tiers 1-8). A tier's levels together
+  cost its row's `LevelCost`, each `LevelGrowth^(1/tier)` dearer than the last (`Shared.Gear.price`); evolving
+  costs its row's `Cost`. Tier cap = 10 × tier levels. Reach stops growing at `ReachMax` (+12 studs).
+- Gates (`Config.Levels`): tiers 5 and 6 need player level 10 and 14; tiers 7-16 (and the same-numbered
+  line levels) need rebirths 4, 6, ... 22. Prices don't rise with rebirths, so each tier is priced for the
+  income of the rank that opens it: its evolve about 2 minutes of that income, its levels 2-3 more, the line
+  level 1.5 (fitted with `Shared.Pacing` together with the rebirth costs; `tests/Pacing.spec` checks every
+  tier is bought within a lap of opening). The model then rebirths about every 14 minutes, a lap that buys a
+  new tier running ~18 and the one after ~11. The R$ tier-up products stop at tier 8 (no ids for 8→9 and up).
 - Every cash price goes through `src/shared/Price.luau:26-28`, which applies the rebirth
   multiplier below.
 
@@ -99,16 +103,13 @@ $95K and the spec pins it there (`tests/Pacing.spec.luau:175-178`; `src/shared/P
 
 ## Rebirth
 
-- Costs are an explicit 16-rank list fitted with the pacing model — first rebirth $30K
+- Costs are an explicit 16-rank list fitted with the pacing model — first rebirth $34K
   (`src/shared/Config/Rebirth.luau:14`, read via `src/shared/Rebirth.luau:24-31`); beyond rank 16
-  each cost ×2.3 ("Legacy", `src/shared/Config/Rebirth.luau:25`). Cash-only gate
+  each cost ×2.05 ("Legacy", `src/shared/Config/Rebirth.luau:25`). Cash-only gate
   (`src/server/Services/RebirthService.luau:49-55`).
-- Each listed rebirth pays **×5 on every bar sale** (`src/shared/Config/Rebirth.luau:15`,
-  multiplicative via `src/shared/Rebirth.luau:33-40`) and makes **every cash price ×3 dearer**
-  (`src/shared/Config/Rebirth.luau:19`, `src/shared/Rebirth.luau:42-49`). Income ×5 with prices ×3
-  means each rebirth is worth 5/3 in real terms while both sides stay big; shard prices and Robux
-  products never inflate (`src/shared/Config/Rebirth.luau:16-18`). Legacy keeps the ratio at
-  ×2/×1.2 (`src/shared/Config/Rebirth.luau:25`).
+- Each rebirth pays **×2 on every bar sale** (`CashMult`, multiplicative via `Rebirth.multiplier`),
+  and cash prices do **not** rise (`PriceGrowth = 1`, `Rebirth.priceMult`), so a rebirth is a plain ×2
+  (owner, 2026-10-22; it used to be ×5 sales with ×3 prices). Legacy ranks keep ×2 with costs ×2.05.
 - Unlocks per rank (Perks panel, Aurora Egg, Alien boss, extra pet slot) are listed in
   `src/shared/Config/Rebirth.luau:35-40`.
 - Overstay shards reward cash you earned *after* the rebirth was affordable:
@@ -190,10 +191,18 @@ The fitted lap targets (first ~13 min, then ~18/23/24 and about 25) are recorded
 
 - **Underleveled is a fraction, not a wall.** Clearance scales yield 40%→100% and every hit counts;
   the refinery and prices never change by level (cited above).
-- **Inflation is symmetric.** Cash sales and cash prices inflate together (5 vs 3) so the numbers
-  stay huge without the treadmill stalling (`src/shared/Config/Rebirth.luau:16-25`).
+- **A rebirth is a plain ×2.** Sales double and cash prices stay put (`CashMult = 2`, `PriceGrowth = 1`
+  in `src/shared/Config/Rebirth.luau`), so the rebirth costs alone set the pace: laps of about 15, 11,
+  13, 15 and then 14-15 minutes (`tests/Pacing.spec`).
 - **Variable-ratio rewards sit on a fixed baseline** with floors, pity and no paid randomness —
   the hooks house rules are law in this economy (`src/shared/Config/Hooks.luau:6-12`).
+- **A field pays about 1.5x the meteors, never many times more.** The line refines every ore into a
+  bar at the same speed, so a field is worth its ore's *bar price* per second (or its cash, which skips
+  the line). Mined nonstop, every field pays about 1.2-1.7x the player's expected income (Rust Works'
+  quick rocks about 0.9-1.2x); `tests/DebrisField.spec` measures each field against
+  `Pacing.expectedIncome` along the road and keeps it between 0.9x and 2x (owner, 2026-10-22: Halo
+  Ledge had been paying ~13x). `Shared.Pacing` models meteors only, so a field farmer rebirths
+  somewhat faster than its laps.
 
 ## History
 
@@ -203,7 +212,7 @@ The fitted lap targets (first ~13 min, then ~18/23/24 and about 25) are recorded
   notes and the 2026-10-10 merge/inflation design specs sit in `docs/archive/` (specs under
   `docs/archive/superpowers/specs/`).
 - Debris dropped Frost in the pre-rework build; it now always drops Iron
-  (`src/shared/Config/Debris.luau:24`), with ore-field rocks as the only off-meteor Frost/Crystal
-  at 0.4×/0.3× of a hit (`src/shared/Config/Debris.luau:38-40`).
+  (`src/shared/Config/Debris.luau:24`), with ore-field rocks as the only off-meteor Frost/Crystal/Alien
+  (`Config.Debris.Fields`; their multipliers were cut 2026-10-22, see the field rule above).
 - Pets interact with this economy (Yield, Swift, Miner, Merchant, Scholar, Vault) — see the pet
   guide at [pets.md](pets.md); eggs cost earned shards only.

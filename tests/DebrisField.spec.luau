@@ -68,11 +68,73 @@ return function(t: any)
 		t.ok(rich > poor * 50)
 	end)
 
+	t.test("mined nonstop, a cash field pays about 1.5x the player's expected income", function()
+		-- Owner, 2026-10-22: a field is a little better than the meteors, never many times better. Time per rock is its hits
+		-- at the swing (HitsPerMinuteShare of swings land) plus WALK seconds between rocks; checked for every pickaxe
+		-- tier at its fastest level, where the swing is shortest.
+		local Gear = require(t.shared.Gear)
+		local WALK = 1.5
+		for tier = 1, #Config.Pickaxes do
+			local swing = Gear.pickaxe(tier, Gear.cap(tier)).Swing
+			for _, field in Config.Debris.Fields do
+				local r = field.Reward
+				if r.Kind == "Cash" then
+					local seconds = (r.Seconds :: number) * swing / Config.Pickaxes[1].Swing -- DebrisField.cash scales by swing
+					local perSecond = seconds / (r.Hp * swing / Config.Balance.HitsPerMinuteShare + WALK)
+					t.ok(perSecond >= 0.8 and perSecond < 2, string.format("%s at tier %d pays %.2f x income", field.Id, tier, perSecond))
+				end
+			end
+		end
+	end)
+
+	t.test("mined nonstop, an ore field pays about 1.5x the player's expected income", function()
+		-- The line turns any ore into a bar at the same speed, so the ore's bar price is what a field is worth. At
+		-- stages along the road (gear tiers maxed, the line, player level, rebirths), from each field's opening on.
+		local Pacing = require(t.shared.Pacing)
+		local Gear = require(t.shared.Gear)
+		local Line = require(t.shared.Line)
+		local Levels = require(t.shared.Levels)
+		local Rebirth = require(t.shared.Rebirth)
+		local Pets = require(t.shared.Pets)
+		local balance = Config.Balance
+		local stages = { { 5, 5, 5, 12, 1 }, { 5, 5, 5, 16, 2 }, { 5, 5, 5, 20, 3 }, { 6, 6, 6, 24, 6 }, { 7, 7, 7, 30, 8 }, { 8, 8, 8, 40, 12 }, { 8, 8, 8, 50, 16 } }
+		for _, field in Config.Debris.Fields do
+			local r = field.Reward
+			if r.Kind == "Ore" then
+				for _, stage in stages do
+					local pickTier, packTier, line, level, rebirths = table.unpack(stage)
+					local unlock = field.Unlock or {}
+					if (unlock.Level or 0) <= level and (unlock.Rebirths or 0) <= rebirths then
+						local pick = Gear.pickaxe(pickTier, Gear.cap(pickTier))
+						local capacity = Gear.capacity(packTier, Gear.cap(packTier))
+						local lineRate = math.min(Line.station("conveyor", line).Rate :: number, Line.station("refinery", line).Rate :: number)
+						local mult = Rebirth.multiplier(rebirths)
+						local income = Pacing.expectedIncome({ orePerHit = pick.OrePerHit, swing = pick.Swing, capacity = capacity, level = level,
+							pets = Pets.bonuses(Pets.fresh()), lineRate = lineRate, saleMult = mult }).perSecond
+						local perHit = pick.OrePerHit * (r.OreMult :: number) * Levels.oreYield(level, r.Ore :: string)
+						local rate = capacity / (capacity / perHit * pick.Swing / balance.HitsPerMinuteShare + balance.TripSeconds)
+						local ratio = math.min(rate, lineRate) * Config.Home.BarPrices[r.Ore :: string] * mult / income
+						t.ok(ratio >= 0.8 and ratio < 2, string.format("%s at level %d, rebirth %d pays %.2f x income", field.Id, level, rebirths, ratio))
+					end
+				end
+			end
+		end
+	end)
+
 	t.test("a cash rock respects its floor and its share of the next rebirth", function()
 		local rust = reward("RustWorks")
 		t.eq(DebrisField.cash(rust, 0, 1e9), rust.CashFloor, "no income still pays the floor")
 		local cost = 50000
 		t.eq(DebrisField.cash(rust, 1e9, cost), math.floor(cost * rust.CeilingShare), "a huge income is capped by the rebirth cost")
+	end)
+
+	t.test("a faster swing breaks a cash rock sooner, so it pays proportionally less", function()
+		local frost = reward("FrostYard")
+		local base = Config.Pickaxes[1].Swing
+		local full = DebrisField.cash(frost, 1000, 1e12)
+		t.eq(DebrisField.cash(frost, 1000, 1e12, base), full, "the Basic Pickaxe's swing pays the full seconds")
+		t.near(DebrisField.cash(frost, 1000, 1e12, base / 2), full / 2, 1)
+		t.eq(DebrisField.cash(frost, 1000, 1e12, base * 3), full, "a slower swing never pays more")
 	end)
 
 	t.test("Violet Quarry and Sulfur Ridge drop better ore than iron, harder to get", function()

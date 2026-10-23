@@ -136,7 +136,7 @@ function Controller:KnitStart()
 	-- with the rebirth inflation (what the server charges, UpgradeService) and what stopped it (Shared.Line.plan)
 	local function linePlan(): (number, number, string?)
 		if not state then return 0, 0, nil end
-		local count, cash, stop = Line.plan(lineLevel(), LINE_AMOUNTS[lineAmount], state.cash, state.level or 1, Rebirth.priceMult(state.rebirths))
+		local count, cash, stop = Line.plan(lineLevel(), LINE_AMOUNTS[lineAmount], state.cash, state.level or 1, Rebirth.priceMult(state.rebirths), state.rebirths)
 		return count, cash, stop
 	end
 	local function buyLine()
@@ -269,7 +269,8 @@ function Controller:KnitStart()
 			level = if level < top then "Lv. " .. level .. " → " .. target else "Lv. " .. level,
 			cost = if level >= top then "MAXED" elseif count > 0 then Price.text(cash, 0) else Price.text(nextCost or 0, 0),
 			button = if not state then "Loading..." elseif upgrading == "line" then "Upgrading..." elseif level >= top then "Max level"
-				elseif count == 0 and stop == "level" then "Needs level " .. Line.levelNeeded(level + 1) else "Upgrade all",
+				elseif count == 0 and stop == "level" then "Needs level " .. Line.levelNeeded(level + 1)
+				elseif count == 0 and stop == "rebirth" then "Needs rebirth " .. Line.rebirthsNeeded(level + 1) else "Upgrade all",
 			enabled = state ~= nil and count >= 1 and upgrading == nil and transaction == nil,
 		}, lineAmount)
 

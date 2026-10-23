@@ -56,14 +56,14 @@ return function(t: any)
 		t.eq(Rebirth.priceMult(6) / Rebirth.priceMult(5), Config.PriceGrowth)
 	end)
 
-	t.test("Legacy ranks multiply prices by Legacy.PriceGrowth, stay finite and keep rising", function()
+	t.test("Legacy ranks multiply prices by Legacy.PriceGrowth, stay finite and never fall", function()
 		local last = #Config.Costs
 		t.near(Rebirth.priceMult(last + 1) / Rebirth.priceMult(last), Config.Legacy.PriceGrowth, 1e-9)
 		t.near(Rebirth.priceMult(last + 4) / Rebirth.priceMult(last + 3), Config.Legacy.PriceGrowth, 1e-9)
 		local before = 0
 		for rebirths = 0, 40 do
 			local mult = Rebirth.priceMult(rebirths)
-			t.ok(mult > before, "rank " .. rebirths)
+			t.ok(mult >= before, "rank " .. rebirths)
 			before = mult
 		end
 		t.ok(Rebirth.priceMult(200) < math.huge, "rank 200 is finite")

@@ -10,9 +10,10 @@
 --   station(id, level)          a station's Config.Home.Stations row at a line level
 --   cost(level, priceMult?)     cash to reach `level` from the one below, nil past the top
 --   levelNeeded(level)          player level that line level needs (Config.Levels.EvolveLevel)
---   plan(level, wanted, cash, playerLevel, priceMult?)
---                               how many of the next `wanted` levels the wallet and the player
---                               level allow, their total price, and why it stopped
+--   rebirthsNeeded(level)       rebirths that line level needs (Config.Levels.EvolveRebirths)
+--   plan(level, wanted, cash, playerLevel, priceMult?, rebirths?)
+--                               how many of the next `wanted` levels the wallet, the player
+--                               level and the rebirths allow, their total price, and why it stopped
 --   fromStations(stations)      a pre-v11 profile's four station levels as one line level
 
 local Config = require(script.Parent.Config)
@@ -49,12 +50,17 @@ function Line.levelNeeded(level: number): number
 	return Levels.evolveLevel(level)
 end
 
-export type Stop = "max" | "level" | "cash" | nil
+function Line.rebirthsNeeded(level: number): number
+	return Levels.evolveRebirths(level)
+end
+
+export type Stop = "max" | "level" | "rebirth" | "cash" | nil
 
 -- Buys up the line one level at a time from `level`, at most `wanted` levels. Returns the count
 -- the cash and the player level cover, their total price, and what stopped it ("max" at the top,
--- "level" at a player-level gate, "cash" when the next one is out of reach, nil when `wanted` ran out).
-function Line.plan(level: number, wanted: number, cash: number, playerLevel: number, priceMult: number?): (number, number, Stop)
+-- "level" at a player-level gate, "rebirth" at a rebirth gate, "cash" when the next one is out of reach,
+-- nil when `wanted` ran out).
+function Line.plan(level: number, wanted: number, cash: number, playerLevel: number, priceMult: number?, rebirths: number?): (number, number, Stop)
 	local count, total = 0, 0
 	while count < wanted do
 		local target = level + count + 1
@@ -64,6 +70,9 @@ function Line.plan(level: number, wanted: number, cash: number, playerLevel: num
 		end
 		if playerLevel < Line.levelNeeded(target) then
 			return count, total, "level"
+		end
+		if (rebirths or 0) < Line.rebirthsNeeded(target) then
+			return count, total, "rebirth"
 		end
 		if total + price > cash then
 			return count, total, "cash"

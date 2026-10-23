@@ -80,10 +80,19 @@ function Levels.oreYield(level: number, oreId: string): number
 	return Settings.UnderLevelFloor ^ (math.clamp(need - level, 0, span) / span)
 end
 
--- Player level needed to evolve to `tier`
+-- Player level needed to evolve to `tier` (1 when the tier is gated by rebirths instead)
 function Levels.evolveLevel(tier: number): number
-	local list = Settings.EvolveLevel
-	return list[math.clamp(tier, 1, #list)] or 1
+	return (Settings.EvolveLevel :: { number })[math.max(tier, 1)] or 1
+end
+
+-- Rebirths needed to evolve to `tier` (0 for the tiers a player level gates)
+function Levels.evolveRebirths(tier: number): number
+	return (Settings.EvolveRebirths :: { [number]: number })[tier] or 0
+end
+
+-- Whether a player of this level and rebirth count may evolve to `tier`
+function Levels.canEvolve(tier: number, level: number, rebirths: number?): boolean
+	return level >= Levels.evolveLevel(tier) and (rebirths or 0) >= Levels.evolveRebirths(tier)
 end
 
 -- A saved level/XP checked into range (bad or missing data becomes level 1)

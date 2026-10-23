@@ -4,7 +4,7 @@
 --   sale = base price × rebirth multiplier × index bonus × VIP bonus × Merchant pet bonus
 --
 -- The rebirth multiplier is Shared.Rebirth.multiplier of the profile's rebirths
--- (×5 per rebirth for the first sixteen, multiplicative, spec §8.3). The index bonus adds each completed
+-- (×2 per rebirth, multiplicative, spec §8.3). The index bonus adds each completed
 -- mineral index page's CashBonus, additive across pages (spec §8.2,
 -- Shared.MineralIndex.cashBonus). The VIP pass adds Config.Monetization.VIPBarBonus
 -- (+10%, spec §9.1) as its own factor (MonetizationService:VIPMult).

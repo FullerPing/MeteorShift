@@ -10,11 +10,13 @@ return function(t: any)
 	local pickaxeSettings = Config.Gear.Pickaxe
 	local last = LPT * #Config.Pickaxes
 
-	-- the price before inflation and rounding: it follows the game-wide depth of the item, shared among the tier's levels
+	-- the price before inflation and rounding: the tier's LevelCost shared among its levels, each
+	-- LevelGrowth^(1 / tier) dearer than the one before
 	local function unscaled(kind: string, tier: number, level: number): number
-		local cost = if kind == "pickaxe" then Config.Gear.Pickaxe.Cost else Config.Gear.Backpack.Cost
-		local depth = LPT * (tier - 1) + 1 + (level - 1) / tier
-		return cost.Base * cost.Growth ^ (depth - 1) * (LPT - 1) / (LPT * tier - 1)
+		local list: any = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
+		local step = Config.Gear.LevelGrowth ^ (1 / tier)
+		local total = (step ^ (Gear.cap(tier) - 1) - 1) / (step - 1)
+		return list[tier].LevelCost * step ^ (level - 1) / total
 	end
 
 	t.test("every tier starts over at level 1", function()
@@ -64,6 +66,10 @@ return function(t: any)
 		t.near(third.CritChance, 25 * pickaxeSettings.CritPerLevel, 1e-9)
 		t.near(Gear.pickaxe(2, 1).Reach, Config.Meteor.MineRange + LPT * pickaxeSettings.ReachPerLevel, 1e-9)
 		t.ok(Gear.pickaxe(2, 1).Reach > Gear.pickaxe(1, LPT).Reach, "a new tier reaches further than the last level of the one before")
+		-- reach stops growing at ReachMax; crit keeps growing
+		local top = Gear.pickaxe(#Config.Pickaxes, last)
+		t.near(top.Reach, Config.Meteor.MineRange + pickaxeSettings.ReachMax, 1e-9)
+		t.ok(top.CritChance > Gear.pickaxe(8, LPT * 8).CritChance)
 	end)
 
 	t.test("the tier caps the level and each tier has more levels than the one before", function()
@@ -86,22 +92,34 @@ return function(t: any)
 			end
 		end
 		t.eq(Gear.price("pickaxe", #Config.Pickaxes, last), nil)
-		t.eq(Gear.price("pickaxe", 1, 1), math.floor(pickaxeSettings.Cost.Base + 0.5))
-		t.eq(Gear.price("backpack", 1, 1), math.floor(Config.Gear.Backpack.Cost.Base + 0.5))
+		t.eq(Gear.price("pickaxe", 1, 1), 45, "tier 1's first level kept its old price")
+		t.eq(Gear.price("backpack", 1, 1), 37)
 	end)
 
-	t.test("a tier's levels together cost about what its ten levels did before the restart", function()
-		local cost = Config.Gear.Pickaxe.Cost
-		for tier = 1, 4 do
-			local sum, old = 0, 0
-			for level = 1, Gear.cap(tier) - 1 do sum += Gear.price("pickaxe", tier, level) :: number end
-			for level = LPT * (tier - 1) + 1, LPT * tier - 1 do old += cost.Base * cost.Growth ^ (level - 1) end
-			t.ok(sum > old * 0.85 and sum < old * 1.3, "tier " .. tier .. " costs " .. sum .. " against " .. old)
+	t.test("a tier's levels together cost its LevelCost, and every tier's levels cost more than the last", function()
+		for _, kind in { "pickaxe", "backpack" } do
+			local list: any = if kind == "pickaxe" then Config.Pickaxes else Config.Backpacks
+			local before = 0
+			for tier = 1, #list do
+				local sum = 0
+				for level = 1, Gear.cap(tier) - 1 do sum += Gear.price(kind, tier, level) :: number end
+				t.ok(math.abs(sum - list[tier].LevelCost) <= Gear.cap(tier), kind .. " tier " .. tier .. " levels cost " .. sum)
+				t.ok(sum > before, kind .. " tier " .. tier .. " levels cost more than the tier before")
+				before = sum
+			end
+		end
+	end)
+
+	t.test("every tier is dearer to evolve into than the one before", function()
+		for _, list in { Config.Pickaxes, Config.Backpacks } do
+			for tier = 3, #list do
+				t.ok(list[tier].Cost > list[tier - 1].Cost, list[tier].Name)
+			end
 		end
 	end)
 
 	t.test("price inflation multiplies the cash price and 1 or nil leave it alone", function()
-		for _, spot in { { 1, 1 }, { 1, 5 }, { 3, 17 }, { 8, 41 } } do
+		for _, spot in { { 1, 1 }, { 1, 5 }, { 3, 17 }, { 8, 41 }, { 16, 100 } } do
 			local tier, level = spot[1], spot[2]
 			t.eq(Gear.price("pickaxe", tier, level, 3), math.floor(unscaled("pickaxe", tier, level) * 3 + 0.5))
 			t.eq(Gear.price("pickaxe", tier, level, 1), Gear.price("pickaxe", tier, level))

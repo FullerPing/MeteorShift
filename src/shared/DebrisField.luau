@@ -3,6 +3,7 @@
 -- unknown one, is plain filler: Config.Debris.Hp hits and the default ore at Config.Debris.YieldFraction.
 
 local Debris = require(script.Parent.Config.Debris)
+local Pickaxes = require(script.Parent.Config.Pickaxes)
 local FieldTravel = require(script.Parent.FieldTravel)
 local Income = require(script.Parent.Income)
 
@@ -22,12 +23,16 @@ function DebrisField.hits(reward: Debris.Reward?): number
 end
 
 -- Cash a cash rock pays: its seconds of the breaker's expected income, between its floor and its ceiling
--- (a share of the next rebirth's cost). Zero for any other kind of rock.
-function DebrisField.cash(reward: Debris.Reward?, perSecond: number, rebirthCost: number): number
+-- (a share of the next rebirth's cost). The seconds are for the Basic Pickaxe's swing and shrink with the
+-- breaker's `swing`, since a faster pickaxe breaks the rock sooner (without that, the fast top tiers made a
+-- field pay 2.5x the meteors). Zero for any other kind of rock.
+function DebrisField.cash(reward: Debris.Reward?, perSecond: number, rebirthCost: number, swing: number?): number
 	if not reward or reward.Kind ~= "Cash" then
 		return 0
 	end
-	return Income.grant(reward.Seconds or 0, perSecond, reward.CashFloor or 0, rebirthCost * (reward.CeilingShare or 0))
+	local base = Pickaxes[1].Swing
+	local speed = math.clamp((swing or base) / base, 0, 1)
+	return Income.grant((reward.Seconds or 0) * speed, perSecond, reward.CashFloor or 0, rebirthCost * (reward.CeilingShare or 0))
 end
 
 -- How much of a full payout a rock is worth to its breaker: rocks are sized for one random active player's

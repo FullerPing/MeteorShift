@@ -15,7 +15,7 @@ return function(t: any)
 	t.test("a line level costs its table price times the player's price inflation", function()
 		local line2 = Config.Home.Line.Costs[2]
 		t.eq(Price.scaled(line2, Rebirth.priceMult(0)), line2)
-		t.eq(Price.scaled(line2, Rebirth.priceMult(2)), line2 * 9)
+		t.eq(Price.scaled(line2, Rebirth.priceMult(2)), line2 * require(t.shared.Config.Rebirth).PriceGrowth ^ 2)
 	end)
 
 	t.test("scaled prices stay whole and finite at Legacy ranks", function()

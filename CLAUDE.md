@@ -17,7 +17,7 @@ There is no build, lint or CLI test step. Everything runs through Rojo and Roblo
 - Logic worth testing is written as a pure module in `src/shared` (or `src/server/Lib`) with a `tests/<Name>.spec.luau` next to the others. A spec returns `function(t) ... end` and calls `t.test(name, fn)` with `t.eq`, `t.near`, `t.ok`. Require modules from `t.shared` / `t.lib` (fresh clones), never from the real `ReplicatedStorage.Shared`, or you test a stale require cache. See the header of `tests/Runner.luau`.
 - Layout is tested the same way: each menu's sizing maths is a pure `Shared.*Layout` module (`EquipmentShopLayout`, `PetsLayout`, `StoreLayout`, `RebirthLayout`, `RefineryLayout`, `IndexLayout`, `HudLayout`) plus `Shared.MenuFit`, which shrinks menus on small screens by laying them out on a larger virtual screen. Change layout numbers there and update the spec, not the controller.
 - `tests/Purchases.spec.luau` and `tests/StoreLayout.spec.luau` enforce that every pass/product in `Config.Monetization` appears in exactly one `Config.Store.Sections` entry or in `Config.Store.Elsewhere`. Adding a product means touching both.
-- `Shared.Pacing` simulates a fresh player from Config and `tests/Pacing.spec.luau` asserts progression targets (Drill Pick at 8-10 min, first rebirth ~15 min). Any change to prices, income or rebirth costs must be re-fitted until that spec passes.
+- `Shared.Pacing` simulates a fresh player from Config and `tests/Pacing.spec.luau` asserts progression targets (Drill Pick at 8-10 min, first rebirth ~15 min, later laps ~11-15 min). Any change to prices, income or rebirth costs must be re-fitted until that spec passes.
 
 ## Architecture
 
@@ -41,7 +41,7 @@ There is no build, lint or CLI test step. Everything runs through Rojo and Roblo
 
 ## Owner decisions that look like bugs but aren't
 
-- Huge numbers are intentional: rebirth multiplies sales ×5 and every cash price ×3 (`Rebirth.priceMult`). Don't shrink them; keep income and prices inflating together, re-fit `Config.Rebirth.Costs` with `Shared.Pacing`, and keep `Format.number` suffixes ahead of the largest values.
+- A rebirth is a plain ×2 on bar sales and cash prices don't inflate (`Config.Rebirth.CashMult = 2`, `PriceGrowth = 1`; owner, 2026-10-22, replacing the old ×5 sales / ×3 prices). Numbers still get big; re-fit `Config.Rebirth.Costs` with `Shared.Pacing` after any change (laps about 15, 11, 13, 15, then 14-15 min), and keep `Format.number` suffixes ahead of the largest values.
 - Core Shards, gear tier-ups (EVOLVE NOW R$), the forced Alien boss meteor, "Rebirth and Keep Everything", pet max-level and the Starter Value Pack are sold on purpose. Don't re-raise pay-to-skip concerns; wire and polish them. Product/pass ids in `Config.Monetization` that are `0` are intentionally off sale until the owner creates the dashboard item; never invent ids.
 - Eggs cost earned Core Shards only and never Robux; no product changes mineral odds or grants random pets.
 

@@ -103,26 +103,48 @@ return function(t: any)
 		t.ok(first >= 10 * 60 and first <= 20 * 60, "first rebirth at " .. tostring(first and first / 60) .. " min")
 	end)
 
-	t.test("laps lengthen from the first rebirth to the fourth, then stay level", function()
-		local run = Pacing.simulate(6 * 3600, { rebirths = 8 })
-		t.ok(#run.rebirthTimes >= 8, "only " .. #run.rebirthTimes .. " rebirths in six hours")
+	-- Owner, 2026-10-22: faster laps. The first pays for the gear ramp; from the second they lengthen to the fourth. After
+	-- that a lap that buys a newly opened gear tier runs long and the one after it short, about 14 minutes on average
+	t.test("laps lengthen from the second rebirth to the fourth, then average about 14 minutes", function()
+		local run = Pacing.simulate(8 * 3600, { rebirths = 24 })
+		t.ok(#run.rebirthTimes >= 24, "only " .. #run.rebirthTimes .. " rebirths in eight hours")
 		local lap, previous = {}, 0
-		for index = 1, 8 do
+		for index = 1, 24 do
 			lap[index] = run.rebirthTimes[index] - previous
 			previous = run.rebirthTimes[index]
 		end
-		t.ok(lap[1] < lap[2] and lap[2] < lap[3] and lap[3] < lap[4], "the first four laps get longer")
-		for index = 5, 8 do
-			t.ok(lap[index] >= 18 * 60 and lap[index] <= 32 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
+		t.ok(lap[2] < lap[3] and lap[3] < lap[4], "laps two to four get longer")
+		local sum = 0
+		for index = 5, 24 do
+			sum += lap[index]
+			t.ok(lap[index] >= 8 * 60 and lap[index] <= 22 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
+		end
+		local average = sum / 20 / 60
+		t.ok(average >= 12 and average <= 16, string.format("laps 5 to 24 average %.1f min", average))
+	end)
+
+	t.test("every gear tier is bought within a lap of the rank that opens it", function()
+		local Levels = require(t.shared.Levels)
+		local run = Pacing.simulate(8 * 3600, { rebirths = 24 })
+		for _, kind in { "pickaxe", "backpack" } do
+			for tier = 7, #Config.Pickaxes do
+				local opens = run.rebirthTimes[Levels.evolveRebirths(tier)]
+				local bought
+				for _, purchase in run.purchases do
+					if purchase.id == kind .. tier then bought = purchase.time; break end
+				end
+				t.ok(bought ~= nil, kind .. " " .. tier .. " never bought")
+				t.ok((bought :: number) - opens <= 22 * 60, kind .. " " .. tier .. " bought " .. math.floor(((bought :: number) - opens) / 60) .. " min after it opened")
+			end
 		end
 	end)
 
-	t.test("rebirths keep a steady pace: each comes within 30 minutes of the one before", function()
+	t.test("rebirths keep a steady pace: each comes within 22 minutes of the one before", function()
 		local run = Pacing.simulate(4 * 3600, { rebirths = 5 })
 		t.ok(#run.rebirthTimes >= 5, "only " .. #run.rebirthTimes .. " rebirths in four hours")
 		for index = 2, 5 do
 			local gap = run.rebirthTimes[index] - run.rebirthTimes[index - 1]
-			t.ok(gap <= 30 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
+			t.ok(gap <= 22 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
 		end
 	end)
 

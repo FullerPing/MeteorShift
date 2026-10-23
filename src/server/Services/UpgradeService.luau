@@ -26,8 +26,8 @@ local PlayerStateService
 local RefineryService
 local lastBuyRequest: { [Player]: number } = {}
 
--- Buys up to `count` line levels in a row, stopping at the top, at a player-level gate
--- (Config.Levels.EvolveLevel) or when the cash runs out. A notice only explains why nothing at
+-- Buys up to `count` line levels in a row, stopping at the top, at a player-level or rebirth gate
+-- (Config.Levels) or when the cash runs out. A notice only explains why nothing at
 -- all was bought. Returns true when at least one level went through.
 function UpgradeService:BuyLine(player: Player, count: number?): boolean
 	local data = PlayerStateService:Get(player)
@@ -37,13 +37,15 @@ function UpgradeService:BuyLine(player: Player, count: number?): boolean
 	local name = Config.Home.Line.Name
 	local level = Line.clean(data.line)
 	local priceMult = Rebirth.priceMult(data.rebirths)
-	local bought, _, stop = Line.plan(level, math.max(count or 1, 1), data.cash, data.level or 1, priceMult)
+	local bought, _, stop = Line.plan(level, math.max(count or 1, 1), data.cash, data.level or 1, priceMult, data.rebirths)
 	if bought == 0 then
 		local target = level + 1
 		if stop == "max" then
 			self.Client.Notice:Fire(player, name .. " is already at max level.")
 		elseif stop == "level" then
 			self.Client.Notice:Fire(player, string.format("Reach player level %d for %s Lv %d. Take part in meteors to earn XP.", Line.levelNeeded(target), name, target))
+		elseif stop == "rebirth" then
+			self.Client.Notice:Fire(player, string.format("%s Lv %d opens at rebirth %d.", name, target, Line.rebirthsNeeded(target)))
 		else
 			self.Client.Notice:Fire(player, Price.shortfall(data, Line.cost(target, priceMult) or 0, 0, name .. " Lv " .. target) or "Couldn't upgrade.")
 		end

@@ -4,9 +4,9 @@
 --   cost         cash needed for the next rebirth after `rebirths` of them: the listed
 --                Config.Rebirth.Costs for ranks 1 to 8, then ×Legacy.CostGrowth per rank
 --   multiplier   the permanent bar sale multiplier `rebirths` give: CashMult^rebirths
---                (x1, x5, x25, ...) up to the last listed rank, then ×Legacy.MultGrowth per rank
+--                (x1, x2, x4, ...) up to the last listed rank, then ×Legacy.MultGrowth per rank
 --   priceMult    the cash price inflation `rebirths` bring to gear and production upgrades:
---                PriceGrowth^rebirths (x1, x3, x9, ...) up to the last listed rank, then
+--                PriceGrowth^rebirths (x1 at every rank today) up to the last listed rank, then
 --                ×Legacy.PriceGrowth per rank
 --   overstayShards  shards for the cash earned after the rebirth was first affordable
 --

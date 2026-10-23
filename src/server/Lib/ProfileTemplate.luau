@@ -1,11 +1,12 @@
 --!strict
--- Profile schema v13 (spec §12.4, with the plot production line instead of
+-- Profile schema v14 (spec §12.4, with the plot production line instead of
 -- refinery slots, one pickaxe and backpack with a single level each: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 -- (v12 was skipped: an unreleased trial build saved v12 profiles with a `trialFlag` key; v13 removes it.)
+-- v14: rebirths re-counted for the x2 rebirth (Lib.RebirthMigration).
 
 return {
-	version = 13,
+	version = 14,
 	cash = 0,
 	shards = 0,
 	-- The part of `shards` that came from Robux (shard packs, refunds paid in shards). Eggs are random, so where

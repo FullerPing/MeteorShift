@@ -3,7 +3,7 @@
 -- rebirth, and gates evolving (Shared.Levels, Server.ShopService) and ore yield. Tune here.
 --
 -- Levels run 1 to 50 and everything unlocks somewhere on that road (docs/design/economy-rework.md):
--- tiers 5 to 8 at 10 / 16 / 24 / 34, Frost cleared at 12, Crystal at 24, Alien at 38. At a
+-- tiers 5 and 6 at 10 / 14 (later tiers open by rebirths), Frost cleared at 12, Crystal at 24, Alien at 38. At a
 -- full meteor of hitting (about 70 XP) level 10 is about 20 minutes in and level 50 about a
 -- day of play.
 
@@ -32,7 +32,11 @@ return {
 	OreLevel = { iron = 1, frost = 12, crystal = 24, alien = 38 },
 	UnderLevelFloor = 0.4,
 
-	-- Player level needed to evolve the pickaxe or backpack to each tier, and to buy the
-	-- same-numbered production line level (Shared.Line).
-	EvolveLevel = { 1, 1, 1, 1, 10, 16, 24, 34 },
+	-- What evolving the pickaxe or backpack to each tier needs, and buying the same-numbered production
+	-- line level (Shared.Line): a player level (EvolveLevel, tiers with no entry need none) or, from
+	-- tier 7, a rebirth count (EvolveRebirths). Prices don't rise with rebirths, so the late tiers are
+	-- gated by rank: each is priced for the income of the rank that opens it (2026-10-22, tiers 9-16
+	-- added; tiers 7 and 8 used to need levels 24 and 34, hours after the rebirths they were priced for).
+	EvolveLevel = { 1, 1, 1, 1, 10, 14 },
+	EvolveRebirths = { [7] = 4, [8] = 6, [9] = 8, [10] = 10, [11] = 12, [12] = 14, [13] = 16, [14] = 18, [15] = 20, [16] = 22 },
 }

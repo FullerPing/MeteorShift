@@ -46,7 +46,9 @@ that: only existing keys are assigned — `tests/ProfileTemplate.spec.luau:94-11
 | `settings` | {} | saved Settings toggles (`Shared.PlayerSettings`, `PlayerStateService:SetSetting`) | survives |
 | `credits.petMax` | 0 | a Pet Max bought with nothing to level, spent by `Purchases.applyPetMaxCredit` on the next pet put out | survives |
 
-(v13 removed `trialFlag`, written only by an unreleased v12 trial build.)
+(v13 removed `trialFlag`, written only by an unreleased v12 trial build. v14 re-counts `rebirths` for the ×2
+rebirth: an old ×5 count becomes the smallest new rank that sells bars for at least as much, rank 11 → 26, with
+cash and everything else untouched — `src/server/Lib/RebirthMigration.luau`, `tests/RebirthMigration.spec.luau`.)
 | `lastSeen` (offline checkpoint) | 0 (`:35`) | DataService on every autosave and release (`DataService.luau:365,305`); read for offline catch-up (`:44`) | re-stamped, never removed (`RebirthReset.luau:36`) |
 | `receipts` (all processed PurchaseIds) | empty (`:52`) | `src/shared/Purchases.luau:167`; never trim (template comment) | survives (`tests/RebirthReset.spec.luau:92,98`) |
 | `credits.callMeteor` / `bossMeteor` / `rebirthKeep` | 0 (`:48-50`) | bought via `src/server/Services/MonetizationService.luau`; spent at `:387`, `:409` and `RebirthService.luau:60` | survive |
