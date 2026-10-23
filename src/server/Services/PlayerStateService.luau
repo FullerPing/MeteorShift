@@ -17,6 +17,7 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Perks = require(ReplicatedStorage.Shared.Perks)
+local Relics = require(ReplicatedStorage.Shared.Relics)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local CharacterSpeed = require(ReplicatedStorage.Shared.CharacterSpeed)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
@@ -106,7 +107,8 @@ end
 
 function PlayerStateService:GetPetBonuses(player: Player): Pets.Bonuses
 	local data = self:Get(player)
-	return if data then Pets.bonuses({ owned = data.pets.owned, equipped = self:GetActivePets(player) }) else Pets.bonuses(Pets.fresh())
+	-- relics (Shared.Relics) go on top of the pets' capped totals
+	return if data then Relics.addTo(Pets.bonuses({ owned = data.pets.owned, equipped = self:GetActivePets(player) }), data.relics) :: any else Pets.bonuses(Pets.fresh())
 end
 
 -- The pickaxe as it plays right now (Shared.Gear): the tier's name and ore per hit with
@@ -276,6 +278,7 @@ function PlayerStateService:_sendState(player: Player)
 			bonuses = self:GetPetBonuses(player),
 			hatches = table.clone(data.pets.hatches), -- pity counts per egg
 		},
+		relics = { owned = table.clone(data.relics.owned), fragments = data.relics.fragments }, -- Shared.Relics
 		backpack = data.backpack,
 		carried = sum(data.backpack),
 		capacity = self:GetCapacity(player),

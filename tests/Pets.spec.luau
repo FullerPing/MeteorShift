@@ -464,4 +464,33 @@ return function(t: any)
 		local id = Pets.roll(magma, 0.99, 0, 0)
 		t.eq(id, "galaxyGriffin")
 	end)
+
+	t.test("fusing: three copies and the fragments make a pet Fused, its perks x Mult", function()
+		local def = Pets.def("pebblePup") :: any
+		local cost = Pets.fuseCost(def) :: number
+		t.ok(cost > 0)
+		t.eq(Pets.fuseCost(Pets.def("drillbot") :: any), nil, "pass pets never fuse")
+		t.eq(Pets.fuseCost(Pets.def("cometFox") :: any), nil, "the group pet never fuses")
+		local entry = { level = 10, xp = 0, copies = 2 }
+		t.ok(not Pets.canFuse(def, entry, 999), "two copies are not enough")
+		entry.copies = 4
+		t.ok(not Pets.canFuse(def, entry, cost - 1), "short of fragments")
+		t.ok(Pets.canFuse(def, entry, cost))
+		Pets.fuse(entry)
+		t.eq(entry.copies, 2)
+		t.eq(entry.fused, true)
+		t.ok(not Pets.canFuse(def, entry, 999), "only once")
+		local plain = Pets.perksOf(def, 10)[1].value
+		t.near(Pets.perksOf(def, 10, true)[1].value, plain * Config.Fuse.Mult, 1e-9)
+		local saved = { owned = { pebblePup = entry }, equipped = { "pebblePup" } }
+		t.near(Pets.bonuses(saved)[def.Perks[1].Role], plain * Config.Fuse.Mult, 1e-9)
+		local cleaned = Pets.clean({ owned = { pebblePup = { level = 3, xp = 0, fused = true }, packMule = { level = 1, xp = 0, fused = "yes" } }, equipped = {} }, 0)
+		t.eq(cleaned.owned.pebblePup.fused, true)
+		t.eq(cleaned.owned.packMule.fused, nil)
+		t.eq(Pets.cloneOwned(cleaned.owned).pebblePup.fused, true)
+		-- exactly three: the copies drop back to one
+		local three = { level = 1, xp = 0, copies = 3 }
+		Pets.fuse(three)
+		t.eq(three.copies, nil)
+	end)
 end

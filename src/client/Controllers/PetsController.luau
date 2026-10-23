@@ -238,7 +238,8 @@ function Controller:KnitStart()
 			-- the list takes the whole content area, the detail column included
 			box(boostsScreen, g.padding, g.contentY, g.panel.w - g.padding * 2, g.contentH)
 			local navyHex, dimHex = hex(Palette.NAVY), hex(Palette.MUTED)
-			for _, row in PetsLayout.boostRows(s) do
+			local relics = if state then state.relics else nil
+			for _, row in PetsLayout.boostRows(s, relics) do
 				local card = boostsScreen.List["boost_" .. row.role]
 				card.RoleName.Text = row.name
 				card.Total.Text = string.format('%s <font color="#%s">/ %s max</font>', if row.value > 0 then row.total else "+0%", dimHex, PetsLayout.percent(row.cap))
@@ -248,6 +249,18 @@ function Controller:KnitStart()
 				card.Text.Text = string.format('<font color="#%s">%s</font>  ·  %s', navyHex, row.text, who)
 				card.Text.TextSize = if g.wide then 14 else 12
 			end
+			local found = 0
+			for _, relic in Config.Relics.List do
+				local row = boostsScreen.List["relic_" .. relic.Id]
+				local have = relics ~= nil and relics.owned[relic.Id] == true
+				if have then found += 1 end
+				row.RelicName.Text = if have then relic.Name else "???"
+				row.Value.Text = PetsLayout.percent(relic.Value) .. " " .. Config.Pets.Roles[relic.Role].Name
+				row.Value.TextColor3 = if have then Palette.UP else Palette.MUTED
+				row.Blurb.Text = if have then relic.Blurb else "Not found yet. Relics turn up in cracked meteor cores (often in boss cores) and, rarely, in ore-field rocks."
+			end
+			boostsScreen.List.RelicsHeader.Text = string.format('RELICS  <font color="#%s">%d / %d found · %s Relic Fragments</font>', dimHex, found, #Config.Relics.List,
+				Format.number(if relics then relics.fragments else 0))
 		end
 
 		-- each screen spans the content area: the summary on top, the grid below it
@@ -339,7 +352,7 @@ function Controller:KnitStart()
 			local entry = if selected then owned(selected) else nil
 			local found = entry ~= nil
 			for n = 1, 3 do body["Perk" .. n].Visible = false end
-			for _, name in { "Rarity", "PreviewWell", "Level", "XpText", "XpBar", "HowButton", "PerkText" } do body[name].Visible = false end
+			for _, name in { "Rarity", "PreviewWell", "Level", "XpText", "XpBar", "HowButton", "PerkText", "FuseButton" } do body[name].Visible = false end
 			local action = p.Action
 			box(action, g.action.x, g.action.y, g.action.w, g.action.h)
 			action.Visible, putAway.Visible = def ~= nil and tab ~= "boosts", false
@@ -348,10 +361,10 @@ function Controller:KnitStart()
 				local rarity = Config.Pets.Rarities[def.Rarity]
 				local level = if entry then entry.level else 1
 				local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
-				local perkRows = if found then PetsLayout.perkRows(def, level) else {}
+				local perkRows = if found then PetsLayout.perkRows(def, level, entry.fused) else {}
 				local scrollbar = 6
 				local innerW = bodyW - scrollbar
-				detail.PetName.Text = string.upper(if found then def.Name else "???")
+				detail.PetName.Text = (if found and entry.fused then "★ " else "") .. string.upper(if found then def.Name else "???")
 				-- the rarity pill: lilac for a premium pet, otherwise a wash of the rarity's colour
 				local pill = body.Rarity
 				pill.Visible = true
@@ -390,6 +403,17 @@ function Controller:KnitStart()
 						box(perk, 0, y, innerW, 22); y += 22
 					end
 					y += 6
+					-- fusing: copies of this pet and Relic Fragments (Config.Pets.Fuse)
+					local cost = Pets.fuseCost(def)
+					if cost and not entry.fused then
+						local fragments = if state and state.relics then state.relics.fragments else 0
+						local fuse = body.FuseButton
+						fuse.Visible = true
+						Theme.state(fuse, busyId == nil and Pets.canFuse(def, entry, fragments), "gold")
+						fuse.Text = string.format("FUSE x%g: %d/%d copies · %d/%d fragments", Config.Pets.Fuse.Mult, Pets.copies(entry), Config.Pets.Fuse.Copies, fragments, cost)
+						fuse.TextSize = if g.wide then 13 else 11
+						box(fuse, 0, y, innerW, 34); y += 40
+					end
 					body.HowButton.Visible = true
 					body.HowButton.Text = if howOpen then "How bonuses work ▲" else "How bonuses work ▼"
 					box(body.HowButton, 0, y, innerW, 34); y += 40
@@ -482,6 +506,13 @@ function Controller:KnitStart()
 		else
 			purchase("pet_" .. selected, def.Name .. " is out.", function() return petService:Equip(def.Id) end)
 		end
+	end)
+	p.Detail.Body.FuseButton.Activated:Connect(function()
+		if busyId or not state or not selected then return end
+		local def = Pets.def(selected)
+		local entry = owned(selected)
+		if not def or not entry or not Pets.canFuse(def, entry, if state.relics then state.relics.fragments else 0) then return end
+		purchase("pet_" .. selected, def.Name .. " is Fused!", function() return petService:Fuse(def.Id) end)
 	end)
 	putAway.Activated:Connect(function()
 		if busyId or not state or not selected or not equipped(selected) then return end

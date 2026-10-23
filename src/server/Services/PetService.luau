@@ -23,6 +23,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Relics = require(ReplicatedStorage.Shared.Relics)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
 local Purchases = require(ReplicatedStorage.Shared.Purchases)
@@ -121,6 +122,26 @@ function PetService:Unequip(player: Player, petId: string): boolean
 		return false
 	end
 	table.remove(data.pets.equipped, index)
+	PlayerStateService:ReplicateNow(player)
+	return true
+end
+
+-- Fuses a pet (Config.Pets.Fuse): Copies of it and Relic Fragments make it Fused, its perks x Mult. Extra copies that
+-- were out and are now used up go back in the bag.
+function PetService:Fuse(player: Player, petId: string): boolean
+	local data = PlayerStateService:Get(player)
+	local def = Pets.def(petId)
+	if not data or not def then return false end
+	local entry = data.pets.owned[petId]
+	local relics = Relics.clean(data.relics)
+	if not Pets.canFuse(def, entry, relics.fragments) then return false end
+	relics.fragments -= Pets.fuseCost(def) :: number
+	data.relics = relics
+	Pets.fuse(entry)
+	while Pets.outCount(data.pets.equipped, petId) > Pets.copies(entry) do
+		table.remove(data.pets.equipped, table.find(data.pets.equipped, petId) :: number)
+	end
+	self.Client.Notice:Fire(player, def.Name .. " is now Fused: its perks are x" .. Config.Pets.Fuse.Mult .. "!")
 	PlayerStateService:ReplicateNow(player)
 	return true
 end
@@ -344,6 +365,13 @@ function PetService.Client:Unequip(player: Player, petId: string): boolean
 		return false
 	end
 	return self.Server:Unequip(player, petId)
+end
+
+function PetService.Client:Fuse(player: Player, petId: string): boolean
+	if typeof(petId) ~= "string" or throttled(player) then
+		return false
+	end
+	return self.Server:Fuse(player, petId)
 end
 
 function PetService.Client:Hatch(player: Player, eggId: string): string?

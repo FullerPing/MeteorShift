@@ -13,7 +13,7 @@ local PetsLayout = require(RS.Shared.PetsLayout)
 local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 local Pets = {}
-Pets.LAYOUT = 6 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
+Pets.LAYOUT = 7 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
 
 -- One pet tile: a white card with a preview well tinted by rarity, the name and level under it, a lime "EQUIPPED" tab on its
 -- top edge while it is out, a blue ring while it is selected and a "?" cover for pets you have not found.
@@ -129,6 +129,20 @@ function Pets.build(): ScreenGui
 		local text = Theme.label(row, "Text", "", 14, Palette.SECOND)
 		text.Position, text.Size, text.RichText, text.TextTruncate = UDim2.fromOffset(12, 44), UDim2.new(1, -24, 0, 24), true, Enum.TextTruncate.AtEnd
 	end
+	-- under the roles: the relics (Config.Relics), found or not, and your Relic Fragments
+	local relicHead = Theme.label(boostList, "RelicsHeader", "RELICS", 20, Palette.NAVY, Theme.TITLE_FONT)
+	relicHead.LayoutOrder, relicHead.Size, relicHead.RichText = 100, UDim2.new(1, 0, 0, 34), true
+	for order, relic in Config.Relics.List do
+		local row = Theme.card(boostList, "relic_" .. relic.Id, Palette.WHITE, nil, 12)
+		row.LayoutOrder, row.Size, row.ZIndex = 100 + order, UDim2.new(1, 0, 0, 52), 3
+		Theme.stroke(row, Palette.WELL_EDGE, 2)
+		local name = Theme.label(row, "RelicName", relic.Name, 17, Palette.NAVY, Theme.TITLE_FONT)
+		name.Position, name.Size = UDim2.fromOffset(12, 4), UDim2.new(0.6, -12, 0, 22)
+		local value = Theme.label(row, "Value", "", 15, Palette.UP, nil, Enum.TextXAlignment.Right)
+		value.Position, value.Size = UDim2.new(0.6, 0, 0, 4), UDim2.new(0.4, -12, 0, 22)
+		local blurb = Theme.label(row, "Blurb", "", 13, Palette.SECOND)
+		blurb.Position, blurb.Size, blurb.TextTruncate = UDim2.fromOffset(12, 26), UDim2.new(1, -24, 0, 20), Enum.TextTruncate.AtEnd
+	end
 
 	-- under the grid: where more slots come from, and the hint strip that also carries notices
 	Theme.label(p, "MoreSlots", "More slots: Rebirths · Pet Bond · Extra Pet Slot", 13, Palette.MUTED)
@@ -162,6 +176,7 @@ function Pets.build(): ScreenGui
 	Theme.label(body, "XpText", "", 13, Palette.SECOND, nil, Enum.TextXAlignment.Right)
 	Theme.bar(body, "XpBar", Palette.XP_FILL)
 	for n = 1, 3 do perkRow(body, n) end
+	Theme.button(body, "FuseButton", "FUSE", "gold", 14) -- Config.Pets.Fuse: copies and Relic Fragments make it Fused
 	Theme.button(body, "HowButton", "How bonuses work ▼", "tabOff", 14)
 	local perkText = Theme.label(body, "PerkText", "", 14, Palette.NAVY)
 	perkText.RichText, perkText.TextWrapped, perkText.AutomaticSize, perkText.TextYAlignment = true, true, Enum.AutomaticSize.Y, Enum.TextYAlignment.Top

@@ -20,7 +20,7 @@ local Config = require(script.Parent.Config.Pets)
 
 local Pets = {}
 
-export type Entry = { level: number, xp: number, copies: number? } -- copies: nil means 1
+export type Entry = { level: number, xp: number, copies: number?, fused: boolean? } -- copies: nil means 1; fused: Config.Fuse
 export type Saved = { owned: { [string]: Entry }, equipped: { string }, hatches: { [string]: number }? }
 export type PerkValue = { role: string, value: number }
 export type Bonuses = {
@@ -37,14 +37,35 @@ function Pets.def(petId: string): Config.Pet?
 	return byId[petId]
 end
 
--- Each pet carries its own range. Preserve order so the first perk stays the main role.
-function Pets.perksOf(def: Config.Pet, level: number): { PerkValue }
+-- Each pet carries its own range. Preserve order so the first perk stays the main role. A fused pet's perks are
+-- multiplied by Config.Fuse.Mult.
+function Pets.perksOf(def: Config.Pet, level: number, fused: boolean?): { PerkValue }
 	local fraction = (math.clamp(level, 1, Config.MaxLevel) - 1) / math.max(Config.MaxLevel - 1, 1)
+	local mult = if fused then Config.Fuse.Mult else 1
 	local perks: { PerkValue } = {}
 	for _, perk in def.Perks do
-		table.insert(perks, { role = perk.Role, value = perk.Min + (perk.Max - perk.Min) * fraction })
+		table.insert(perks, { role = perk.Role, value = (perk.Min + (perk.Max - perk.Min) * fraction) * mult })
 	end
 	return perks
+end
+
+-- Relic Fragments to fuse this pet, nil when it can never be fused (pass and group pets, or no price for its rarity)
+function Pets.fuseCost(def: Config.Pet): number?
+	if def.Pass or def.Group then return nil end
+	return Config.Fuse.Fragments[def.Rarity]
+end
+
+-- Whether this entry can be fused with `fragments` in hand: not yet fused, enough copies and fragments
+function Pets.canFuse(def: Config.Pet, entry: Entry?, fragments: number): boolean
+	local cost = Pets.fuseCost(def)
+	return cost ~= nil and entry ~= nil and entry.fused ~= true and Pets.copies(entry) >= Config.Fuse.Copies and fragments >= cost
+end
+
+-- Fuses the entry in place (call canFuse first): uses up all but one of the Copies
+function Pets.fuse(entry: Entry)
+	local left = Pets.copies(entry) - (Config.Fuse.Copies - 1)
+	entry.copies = if left > 1 then left else nil
+	entry.fused = true
 end
 
 local function finite(value: number): boolean
@@ -208,7 +229,7 @@ function Pets.bonuses(pets: Saved): Bonuses
 		local entry = pets.owned[petId]
 		if def and entry and (out[petId] or 0) < Pets.copies(entry) then
 			out[petId] = (out[petId] or 0) + 1
-			for _, perk in Pets.perksOf(def, entry.level) do
+			for _, perk in Pets.perksOf(def, entry.level, entry.fused) do
 				totals[perk.role] += perk.value
 			end
 		end
@@ -223,7 +244,7 @@ end
 function Pets.cloneOwned(owned: { [string]: Entry }): { [string]: Entry }
 	local copy = {}
 	for petId, entry in owned do
-		copy[petId] = { level = entry.level, xp = entry.xp, copies = entry.copies }
+		copy[petId] = { level = entry.level, xp = entry.xp, copies = entry.copies, fused = entry.fused }
 	end
 	return copy
 end
@@ -250,7 +271,7 @@ function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?, bonusSlo
 				local level = if type(entry.level) == "number" then math.clamp(math.floor(entry.level), 1, Config.MaxLevel) else 1
 				local xp = if type(entry.xp) == "number" and level < Config.MaxLevel then math.max(entry.xp, 0) else 0
 				local copies = Pets.copies(entry)
-				owned[petId] = { level = level, xp = xp, copies = if copies > 1 then copies else nil }
+				owned[petId] = { level = level, xp = xp, copies = if copies > 1 then copies else nil, fused = if entry.fused == true then true else nil }
 			end
 		end
 	end

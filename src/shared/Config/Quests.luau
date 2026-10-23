@@ -43,7 +43,7 @@ Quests.Line = {
 	{ Id = "pick8", Kind = "pickaxeTier", Target = 8, Title = "Get a tier %d pickaxe", Hint = "Higher tiers open with rebirths.", Shards = 20, Minutes = 12 },
 	{ Id = "rebirth5", Kind = "rebirths", Target = 5, Title = "Reach rebirth %d", Hint = "Colony Perks add up: spend shards on them too.", Shards = 25, Minutes = 12 },
 	{ Id = "level40", Kind = "level", Target = 40, Title = "Reach level %d", Hint = "Level 40 opens the Glass Scar.", Shards = 25, Minutes = 12 },
-	{ Id = "rebirth10", Kind = "rebirths", Target = 10, Title = "Reach rebirth %d", Hint = "Rebirth 10 opens the Deep Crater.", Shards = 50, Minutes = 15 },
+	{ Id = "rebirth10", Kind = "rebirths", Target = 10, Title = "Reach rebirth %d", Hint = "Rebirth 10 opens the road to World 2.", Shards = 50, Minutes = 15 },
 } :: { Step }
 
 for _, step in Quests.Line do

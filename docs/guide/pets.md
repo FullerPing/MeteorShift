@@ -31,6 +31,10 @@ Hatchery in the world, never in a menu.
 | Magma Egg | 225 | Rare 50 · Epic 40 · Legendary 10 (only Magma Crab, Frost Yeti, Galaxy Griffin) | Legendary every 15 | 3 rebirths |
 | Void Egg | 360 | Epic 70 · Legendary 30 (only Quartz Kitsune, Void Leviathan) | Legendary every 6 | 5 rebirths |
 
+Fusing (`Config.Pets.Fuse`, `Pets.canFuse` / `Pets.fuse`, `PetService:Fuse`): three copies of a pet plus Relic
+Fragments by rarity (5 / 10 / 20 / 35 / 60) make it Fused (★): two copies are used up and all its perks are x1.5,
+still stopped at each role's cap. Pass and group pets never fuse. The FUSE button sits in the pet's detail column.
+
 Egg exclusives: a pet with `Eggs = { ... }` hatches only from those eggs, and an egg with `Own = true` hatches only
 its exclusives (`Pets.eggPets(rarity, egg)`); every other egg draws from the shared pool of its rarities.
 

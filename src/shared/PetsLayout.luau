@@ -3,6 +3,8 @@
 -- Panel bounds are screen pixels; everything else is local to the panel.
 local Config = require(script.Parent.Config.Pets)
 local Pets = require(script.Parent.Pets)
+local Relics = require(script.Parent.Relics)
+local RelicConfig = require(script.Parent.Config.Relics)
 local EquipmentShopLayout = require(script.Parent.EquipmentShopLayout)
 
 export type Rect = { x: number, y: number, w: number, h: number }
@@ -157,10 +159,10 @@ end
 export type PerkRow = { role: string, name: string, now: string, max: string, text: string }
 
 -- A pet's perks as the menu shows them: the value now, the value at max level and the plain-English line.
-function PetsLayout.perkRows(def: Config.Pet, level: number): { PerkRow }
+function PetsLayout.perkRows(def: Config.Pet, level: number, fused: boolean?): { PerkRow }
 	local rows: { PerkRow } = {}
-	local atMax = Pets.perksOf(def, Config.MaxLevel)
-	for index, perk in Pets.perksOf(def, level) do
+	local atMax = Pets.perksOf(def, Config.MaxLevel, fused)
+	for index, perk in Pets.perksOf(def, level, fused) do
 		local role = Config.Roles[perk.role]
 		table.insert(rows, {
 			role = perk.role, name = role.Name, now = PetsLayout.percent(perk.value), max = PetsLayout.percent(atMax[index].value),
@@ -172,11 +174,11 @@ end
 
 export type BoostRow = { role: string, name: string, value: number, cap: number, fill: number, total: string, text: string, from: { string }, sources: { string } }
 
--- The BOOSTS tab: every role in RoleOrder with your equipped total (capped), the cap, the plain-English line at that
--- total (at the cap when you have none yet, so the line still explains the role), the equipped pets giving it and,
--- when none do, the pets that can.
-function PetsLayout.boostRows(saved: Pets.Saved?): { BoostRow }
-	local totals: any = if saved then Pets.bonuses(saved) else {}
+-- The BOOSTS tab: every role in RoleOrder with your equipped total (pets capped, relics on top), the pets' cap, the
+-- plain-English line at that total (at the cap when you have none yet, so the line still explains the role), the
+-- equipped pets and relics giving it and, when none do, the pets that can.
+function PetsLayout.boostRows(saved: Pets.Saved?, relics: Relics.Saved?): { BoostRow }
+	local totals: any = Relics.addTo(if saved then Pets.bonuses(saved) else {}, relics)
 	local rows: { BoostRow } = {}
 	for _, roleId in Config.RoleOrder do
 		local role = Config.Roles[roleId]
@@ -190,6 +192,11 @@ function PetsLayout.boostRows(saved: Pets.Saved?): { BoostRow }
 						if perk.Role == roleId then seen[petId] = true; table.insert(from, def.Name) break end
 					end
 				end
+			end
+		end
+		if relics then
+			for _, relic in RelicConfig.List do
+				if relic.Role == roleId and relics.owned[relic.Id] then table.insert(from, relic.Name) end
 			end
 		end
 		for _, def in Config.List do

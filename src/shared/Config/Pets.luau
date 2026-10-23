@@ -44,6 +44,14 @@ export type Pet = {
 }
 
 Pets.MaxLevel = 10
+-- Fusing (owner feedback, 2026-10-23: "3 of each to combine; requires some hard to get thing"): Copies of one pet and
+-- Relic Fragments (Config.Relics, only from duplicate relics and boss cores) make it Fused: two copies are used up and
+-- every perk of that pet is multiplied by Mult (roles still stop at their caps). Pass and group pets never have copies.
+Pets.Fuse = {
+	Copies = 3,
+	Mult = 1.5,
+	Fragments = { common = 5, uncommon = 10, rare = 20, epic = 35, legendary = 60 } :: { [string]: number },
+}
 -- XP to go from level L to L + 1 is XpBase x XpGrowth^(L - 1); about 14K XP to max a pet
 Pets.XpBase = 150
 Pets.XpGrowth = 1.55

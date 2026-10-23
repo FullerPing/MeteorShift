@@ -168,6 +168,15 @@ Rules: `src/shared/Quests.luau` (tests/Quests.spec); service: `QuestService` (pr
 UI: the Quests menu (`NativeMenus/Quests`, opened by the Foreman's prompt beside the spawn or by the HUD tracker above
 the backpack card, `QuestController`). Studio: `ServerStorage.DevQuest:Invoke(player, step, count?)`.
 
+## Relics and Relic Fragments (permanent boosts)
+
+`Config.Relics`: nine relics, each a small permanent boost to one pet role (crit, yield, merchant, sprint, scholar,
+shards, pack, swift, vault), added on top of the pets' capped totals in `PlayerStateService:GetPetBonuses`, so
+every system that reads pet bonuses sees them. `RelicService` rolls a find for each player who shares a cracked core
+(`CoreChance` 3%; a boss core `BossChance` 25% plus `BossFragments` 3) and for each ore-field rock (`RockChance`
+0.08%). A duplicate becomes `DuplicateFragments` Relic Fragments, the rare material pet fusing costs. Kept through
+rebirth (profile `relics`). Shown in the Pets menu's BOOSTS tab. Studio: `ServerStorage.DevRelic`.
+
 ## Shared.Pacing — the model, and the spec that keeps it honest
 
 `src/shared/Pacing.luau` simulates a fresh **free** player from Config alone (header `:1-49`): it

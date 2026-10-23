@@ -164,4 +164,18 @@ return function(t: any)
 			end
 		end
 	end)
+
+	t.test("boostRows adds owned relics on top and names them as a source", function()
+		local Config = require(t.shared.Config)
+		local relic = Config.Relics.List[1]
+		local relics = { owned = { [relic.Id] = true }, fragments = 0 }
+		for _, row in PetsLayout.boostRows(nil, relics) do
+			if row.role == relic.Role then
+				t.near(row.value, relic.Value, 1e-9)
+				t.eq(row.from[1], relic.Name)
+			else
+				t.eq(row.value, 0)
+			end
+		end
+	end)
 end

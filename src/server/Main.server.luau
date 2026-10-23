@@ -156,13 +156,13 @@ Knit.Start()
 			local Pets = require(ReplicatedStorage.Shared.Pets)
 			local petHook = Instance.new("BindableFunction")
 			petHook.Name = "DevPet"
-			petHook.OnInvoke = function(player: Player, petId: string, level: number?)
+			petHook.OnInvoke = function(player: Player, petId: string, level: number?, copies: number?)
 				local data = PlayerStateService:Get(player)
 				if not data or not Pets.def(petId) then
 					return nil
 				end
 				local old = data.pets.owned[petId]
-				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0, copies = old and old.copies }
+				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0, copies = if copies and copies > 1 then math.floor(copies) else old and old.copies, fused = old and old.fused }
 				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < PlayerStateService:PetSlots(player) then
 					table.insert(data.pets.equipped, petId)
 				end
@@ -200,6 +200,23 @@ Knit.Start()
 				return data.quest.step
 			end
 			questHook.Parent = ServerStorage
+
+			-- game.ServerStorage.DevRelic:Invoke(game.Players:GetPlayers()[1], "sageLens", 60): add a relic (nil for none) and Relic Fragments
+			local Relics = require(ReplicatedStorage.Shared.Relics)
+			local relicHook = Instance.new("BindableFunction")
+			relicHook.Name = "DevRelic"
+			relicHook.OnInvoke = function(player: Player, relicId: string?, fragments: number?)
+				local data = PlayerStateService:Get(player)
+				if not data then
+					return nil
+				end
+				data.relics = Relics.clean(data.relics)
+				if relicId then Relics.add(data.relics, relicId) end
+				data.relics.fragments += math.max(0, math.floor(fragments or 0))
+				PlayerStateService:ReplicateNow(player)
+				return Relics.count(data.relics), data.relics.fragments
+			end
+			relicHook.Parent = ServerStorage
 
 			local gearHook = Instance.new("BindableFunction")
 			gearHook.Name = "DevGear"

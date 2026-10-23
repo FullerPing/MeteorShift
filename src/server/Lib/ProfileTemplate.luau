@@ -78,6 +78,8 @@ return {
 	},
 	-- The Foreman's quest line (Shared.Quests): the step you are on and its event count; kept through rebirth
 	quest = { step = 1, progress = 0 },
+	-- Relics (Shared.Relics): found ones (id -> true) and Relic Fragments for fusing pets; kept through rebirth
+	relics = { owned = {}, fragments = 0 },
 	-- Codes already redeemed (Shared.Codes, CodesService): code name -> true
 	codes = {},
 	-- Settings menu toggles the player changed (PlayerStateService.SETTINGS): name -> boolean; missing = default

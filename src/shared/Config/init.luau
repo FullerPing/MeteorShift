@@ -48,6 +48,7 @@ return {
 	Leaderboards = LeaderboardsConfig,
 	Daily = require(script.Daily),
 	Quests = require(script.Quests),
+	Relics = require(script.Relics),
 	Feedback = require(script.Feedback),
 	Badges = require(script.Badges),
 	Codes = require(script.Codes),
