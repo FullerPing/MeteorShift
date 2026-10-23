@@ -17,7 +17,7 @@ local PetVisualController = Knit.CreateController({ Name = "PetVisualController"
 type Follower = {
 	visual: PetModel.Visual, entry: Visuals.Entry, owner: Player,
 	cframe: CFrame, workingUntil: number, arrivedAt: number, floorY: number, arrivalBurst: boolean,
-	workStartedAt: number, target: Vector3?, hopper: Vector3?, lastStepAt: number, sounds: { [string]: Sound }, capacityFraction: number,
+	workStartedAt: number, target: Vector3?, mining: boolean, hopper: Vector3?, lastStepAt: number, sounds: { [string]: Sound }, capacityFraction: number,
 }
 type Owner = { player: Player, entries: { Visuals.Entry }, connections: { RBXScriptConnection } }
 local owners: { [number]: Owner } = {}
@@ -161,7 +161,7 @@ local function selectFollowers()
 				visual.model.Parent = folder
 				followers[id] = {
 					visual = visual, owner = owner.player, entry = entry, cframe = cf, workingUntil = 0, arrivedAt = os.clock(), floorY = root.Position.Y - 3, arrivalBurst = false,
-					workStartedAt = 0, target = nil, hopper = nil, lastStepAt = 0, sounds = {}, capacityFraction = 0,
+					workStartedAt = 0, target = nil, mining = false, hopper = nil, lastStepAt = 0, sounds = {}, capacityFraction = 0,
 				}
 			end
 		end
@@ -212,7 +212,13 @@ local function animate(follower: Follower, root: BasePart, dt: number, now: numb
 	if (not flying and slot <= 2) or groundMagpie then position = Vector3.new(position.X, follower.floorY + visual.groundOffset, position.Z) end
 	local bob = if reduced then 0 elseif flying then math.sin(phase) * 0.16 elseif groundMagpie then math.max(0, math.sin(now * 3)) * 0.18 elseif moving then math.abs(math.sin(phase)) * (if follower.entry.id == "sparkHare" then 0.22 else 0.12) else 0
 	position += Vector3.new(0, bob, 0)
-	if visual.style == "dive" then
+	local strikeAt = nil
+	if follower.mining and follower.target and visual.style ~= "dive" then
+		-- every miner swoops to its node and strikes it, whatever its style; it stops short of the surface
+		local offset = position - follower.target
+		strikeAt = follower.target + (if offset.Magnitude > 1e-3 then offset.Unit * 1.5 else Vector3.zero)
+		position = position:Lerp(strikeAt, work)
+	elseif visual.style == "dive" then
 		local target = follower.target or (position + root.CFrame.LookVector * 2 - Vector3.new(0, 0.8, 0))
 		position = position:Lerp(target, work)
 	elseif visual.style == "haul" then
@@ -226,7 +232,8 @@ local function animate(follower: Follower, root: BasePart, dt: number, now: numb
 		petSound(follower, "RotorHum", "rbxasset://sounds/Rocket whoosh 01.wav", 0.035, 0.45, true)
 		if now - follower.arrivedAt < 0.45 then petSound(follower, "AssemblyClick", Config.Sounds.Click.Id, 0.045, 1.4) end
 	end
-	local desired = CFrame.lookAt(position, position + root.CFrame.LookVector)
+	local facing = if strikeAt and work > 0.05 and (follower.target - position).Magnitude > 1e-3 then follower.target - position else root.CFrame.LookVector
+	local desired = CFrame.lookAt(position, position + facing)
 	follower.cframe = if (follower.cframe.Position - position).Magnitude > 25 then desired else follower.cframe:Lerp(desired, 1 - math.exp(-dt * 10))
 	local cf = follower.cframe
 	visual.model:PivotTo(cf)
@@ -353,6 +360,7 @@ function PetVisualController:KnitStart()
 							follower.workStartedAt = os.clock()
 							follower.workingUntil = follower.workStartedAt + 0.7
 							follower.target = if typeof(target) == "Vector3" then target else nil
+							follower.mining = role == "miner"
 							follower.hopper = if role == "hauler" then sharedRefineryPoint() else nil
 							if not reduced then PetModel.burst(follower.visual) end
 							break
