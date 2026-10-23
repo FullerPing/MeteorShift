@@ -191,9 +191,10 @@ function TutorialService:KnitStart()
 			end
 		end
 	end)
+	-- the early UPGRADE! step never holds anyone up: the first meteor landing completes it too
 	MeteorService.Landed:Connect(function()
 		for _, player in Players:GetPlayers() do
-			self:Did(player, "meteor_lands")
+			self:Did(player, "first_upgrade")
 		end
 	end)
 	RewardService.ShardsAwarded:Connect(function(player)
@@ -216,15 +217,13 @@ function TutorialService:KnitStart()
 	EconomyService.BarsSold:Connect(function(player)
 		self:Did(player, "sell")
 	end)
-	ShopService.ItemBought:Connect(function(player)
-		self:Did(player, "buy")
-	end)
-	ShopService.StatUpgraded:Connect(function(player)
-		self:Did(player, "buy")
-	end)
-	UpgradeService.LineUpgraded:Connect(function(player)
-		self:Did(player, "buy")
-	end)
+	-- An upgrade early on is the UPGRADE! step; later it is the last step (and, as before, skips what is left)
+	local function upgraded(player: Player)
+		self:Did(player, if self:IsBefore(player, "first_upgrade") then "first_upgrade" else "buy")
+	end
+	ShopService.ItemBought:Connect(upgraded)
+	ShopService.StatUpgraded:Connect(upgraded)
+	UpgradeService.LineUpgraded:Connect(upgraded)
 
 	task.spawn(self._watchCrater, self)
 end

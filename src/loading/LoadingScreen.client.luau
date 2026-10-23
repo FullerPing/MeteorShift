@@ -127,6 +127,54 @@ local function buildView(parent: Instance)
 	tip.TextColor3 = Color3.fromRGB(22, 50, 118);
 	(tip:FindFirstChild("TextInk") :: UIStroke).Enabled = false
 	tip.TextSize = 22
+	-- The little scene between the logo and the card, on a loop while the game loads: a meteor streaks into a crater,
+	-- a ring and rock chunks fly out, and two pickaxes keep mining it (animated in view:update from `elapsed`)
+	local scene = frame("Scene", UDim2.fromOffset(460, 120), UDim2.fromScale(.5, .7), white, root)
+	scene.AnchorPoint = Vector2.new(.5, .5)
+	scene.BackgroundTransparency = 1
+	local ground = frame("Ground", UDim2.new(1, 0, 0, 26), UDim2.new(0, 0, 1, -26), Color3.fromRGB(80, 190, 60), scene)
+	rounded(ground, 13)
+	outline(ground, 3)
+	gradient(ground, Color3.fromRGB(150, 230, 90), Color3.fromRGB(70, 170, 50))
+	local pit = frame("Crater", UDim2.fromOffset(120, 22), UDim2.new(.5, 0, 1, -24), Color3.fromRGB(96, 70, 56), scene)
+	pit.AnchorPoint = Vector2.new(.5, .5)
+	rounded(pit, 11)
+	outline(pit, 3)
+	gradient(pit, Color3.fromRGB(70, 50, 40), Color3.fromRGB(120, 90, 70))
+	local function circle(name: string, size: number, color: Color3): Frame
+		local item = frame(name, UDim2.fromOffset(size, size), UDim2.new(), color, scene)
+		item.AnchorPoint = Vector2.new(.5, .5)
+		make("UICorner", "Round", { CornerRadius = UDim.new(.5, 0) }, item)
+		return item
+	end
+	local trail = frame("Trail", UDim2.fromOffset(90, 16), UDim2.new(), white, scene)
+	trail.AnchorPoint = Vector2.new(1, .5)
+	rounded(trail, 8)
+	local trailShade = gradient(trail, Color3.fromRGB(255, 120, 30), Color3.fromRGB(255, 230, 120))
+	trailShade.Rotation = 0
+	trailShade.Transparency = NumberSequence.new(1, 0)
+	local rock = circle("Meteor", 30, Color3.fromRGB(255, 120, 40))
+	outline(rock, 3)
+	gradient(rock, Color3.fromRGB(255, 210, 90), Color3.fromRGB(230, 80, 30))
+	local ring = circle("Ring", 20, white)
+	ring.BackgroundTransparency = 1
+	local ringLine = make("UIStroke", "Line", { Color = Color3.fromRGB(255, 170, 50), Thickness = 4 }, ring)
+	local chunks: { Frame } = {}
+	for index = 1, 3 do
+		local chunk = frame("Chunk" .. index, UDim2.fromOffset(12, 12), UDim2.new(), Color3.fromRGB(140, 110, 90), scene)
+		chunk.AnchorPoint = Vector2.new(.5, .5)
+		rounded(chunk, 3)
+		outline(chunk, 2)
+		table.insert(chunks, chunk)
+	end
+	local miners: { ImageLabel } = {}
+	for index = 1, 2 do
+		local miner = picture("Miner" .. index, scene)
+		miner.Size = UDim2.fromOffset(46, 46)
+		miner.AnchorPoint = Vector2.new(.5, 1)
+		miner.Position = UDim2.new(.5, if index == 1 then -82 else 82, 1, -18)
+		table.insert(miners, miner)
+	end
 	local flash = frame("DismissFlash", UDim2.fromScale(1, 1), UDim2.new(), white, root)
 	flash.BackgroundTransparency = 1
 	flash.ZIndex = 20
@@ -147,6 +195,7 @@ local function buildView(parent: Instance)
 		settings = config
 		wordmark.Image = config.Wordmark or ""
 		pickaxe.Image = icons.equipment or ""
+		for _, miner in miners do miner.Image = icons.equipment or "" end
 	end
 	local function loaded(image: ImageLabel): boolean
 		-- Never hide the image itself: an invisible ImageLabel is not requested, so IsLoaded would stay false.
@@ -162,7 +211,14 @@ local function buildView(parent: Instance)
 		panel.Position = UDim2.fromOffset(size.X * .5, math.min(size.Y * .86, size.Y - panelHeight * .5 - 14))
 		-- the logo: as big as fits between the top and the progress card, centred in that space, with a gentle bob
 		local aspect = (settings and settings.WordmarkAspect) or .627
-		local room = panel.Position.Y.Offset - panelHeight * .5 - 48
+		-- the scene sits just above the card; the logo takes the room left above it
+		local sceneW = math.min(460, size.X * .8)
+		-- shorter on compact screens (phones), and only left out where there is no room at all
+		local sceneH = if not compact then 120 elseif size.Y >= 420 then 76 else 0
+		scene.Visible = sceneH > 0
+		scene.Size = UDim2.fromOffset(sceneW, sceneH)
+		scene.Position = UDim2.fromOffset(size.X * .5, panel.Position.Y.Offset - panelHeight * .5 - 16 - sceneH * .5)
+		local room = panel.Position.Y.Offset - panelHeight * .5 - 48 - (if sceneH > 0 then sceneH + 16 else 0)
 		local logoWidth = math.max(0, math.min(size.X * (if compact then .86 else .56), room / aspect, 1100))
 		logo.Size = UDim2.fromOffset(logoWidth, logoWidth * aspect)
 		logo.Position = UDim2.new(.5, 0, 0, 24 + room * .5 + (if reduced then 0 else math.sin(elapsed * math.pi / 1.2) * 6))
@@ -191,6 +247,36 @@ local function buildView(parent: Instance)
 		skip.Position = UDim2.fromOffset(size.X - skipMargin, if overlaps then panelTop - 8 else size.Y - skipMargin)
 		skip.Visible = elapsed >= SKIP_AFTER
 		glossGradient.Offset = Vector2.new(if reduced then 0 else (elapsed % 2) - 1, 0)
+		-- the scene: a 2.6 s loop, falling for the first 35%, then the crash (still for Reduce Motion: the meteor in the pit)
+		local t = if reduced then .99 else (elapsed % 2.6) / 2.6
+		local landX, landY = sceneW * .5, sceneH - 30
+		local falling = t < .35
+		local fall = math.min(t / .35, 1)
+		local eased = fall * fall
+		local mx, my = sceneW + 30 + (landX - sceneW - 30) * eased, -40 + (landY + 40) * eased
+		rock.Position = UDim2.fromOffset(mx, my)
+		rock.Visible = falling or t > .9
+		if t > .9 then rock.Position = UDim2.fromOffset(landX, landY + 4) end
+		trail.Visible = falling and not reduced
+		trail.Position = UDim2.fromOffset(mx, my)
+		trail.Rotation = math.deg(math.atan2(landY + 40, landX - sceneW - 30)) - 180
+		local after = if falling then -1 else (t - .35) / .4
+		ring.Visible = after >= 0 and after <= 1
+		ring.Position = UDim2.fromOffset(landX, landY + 6)
+		ring.Size = UDim2.fromOffset(20 + math.max(after, 0) * 150, 6 + math.max(after, 0) * 40)
+		ringLine.Transparency = math.clamp(after, 0, 1)
+		for index, chunk in chunks do
+			local k = math.clamp(after, 0, 1)
+			local dx = (index - 2) * 70 * k
+			chunk.Visible = after >= 0 and after <= 1
+			chunk.Position = UDim2.fromOffset(landX + dx, landY - math.sin(k * math.pi) * (40 + index * 8))
+			chunk.Rotation = k * 360 * (index - 2)
+		end
+		for index, miner in miners do
+			-- they swing faster once it has landed
+			local speed = if falling then 4 else 9
+			miner.Rotation = if reduced then 0 else (if index == 1 then 1 else -1) * (20 + math.sin(elapsed * speed + index) * 30)
+		end
 		pickaxe.Position = UDim2.new(math.clamp(progress, .03, .97), 0, .5, 0)
 		pickaxe.Rotation = if reduced then 0 else math.sin(elapsed * math.pi * 4) * 20
 	end

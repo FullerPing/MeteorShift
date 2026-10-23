@@ -15,9 +15,11 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
+local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local UI = require(script.Parent.Parent.UI)
-local Cartoon = require(script.Parent.Parent.Cartoon)
 local MenuFlags = require(script.Parent.Parent.MenuFlags)
+local Theme = require(script.Parent.Parent.MenuTheme)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -32,7 +34,7 @@ local TutorialController = Knit.CreateController({
 local GUIDE_COLOR = Color3.fromRGB(255, 223, 98)
 local HIDE_BEAM_WITHIN = 14 -- studs; close enough to see the marker
 local TRAIL_TEXTURE = "rbxasset://textures/particles/sparkles_main.dds"
-local METEOR_STEPS = { meteor_lands = true, reach_crater = true, mine_node = true, hit_core = true, core_shards = true }
+local METEOR_STEPS = { reach_crater = true, mine_node = true, hit_core = true, core_shards = true }
 
 local function isAlive(part: Instance): boolean
 	local hp = part:GetAttribute("Hp")
@@ -129,7 +131,7 @@ local function targetFor(stepId: string, from: Vector3): BasePart?
 		return nearest(meteorParts("Crust"), from) or crater()
 	elseif stepId == "hit_core" or stepId == "core_shards" then
 		return meteorParts("Core")[1] or crater()
-	elseif stepId == "meteor_lands" or stepId == "reach_crater" then
+	elseif stepId == "reach_crater" then
 		return crater()
 	elseif stepId == "deposit" or stepId == "collect_bar" then
 		return refineryPoint()
@@ -329,6 +331,7 @@ function TutorialController:KnitStart()
 		introOpen:set(player:GetAttribute("IntroOpen") == true)
 	end))
 
+	local popped = scope:Value(false)
 	local lastIndex = 0
 	TutorialService.Step:Observe(function(value)
 		if value == nil and lastIndex == #Steps then
@@ -339,6 +342,9 @@ function TutorialController:KnitStart()
 		end
 		lastIndex = if value then value.index else 0
 		step:set(value)
+		-- the new step's icon pops (a spring back from a bigger size)
+		popped:set(true)
+		task.delay(0.12, function() popped:set(false) end)
 		ShopController:SetHighlight(value ~= nil and Steps[value.index].Id == "buy")
 	end)
 	MeteorService.State:Observe(function(value)
@@ -364,116 +370,92 @@ function TutorialController:KnitStart()
 		return "⏱ " .. Format.time(meteor.endsAt - use(serverNow))
 	end)
 
-	scope:New("ScreenGui")({
-		Name = "Tutorial", ResetOnSpawn = false, IgnoreGuiInset = true,
-		ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 1,
-		Parent = player:WaitForChild("PlayerGui"),
+	-- No card: the step is a caption across the screen in the game's title look (the intro's gold FredokaOne with an ink
+	-- outline): the step's icon and a big verb, the hint under it, and a small SKIP TUTORIAL button. It sits where the HUD keeps the
+	-- tutorial (hud.tutorial), centred on that spot and free to run wider than it.
+	local function ink(thickness: number)
+		return scope:New("UIStroke")({ Color = Palette.INK, Thickness = thickness, LineJoinMode = Enum.LineJoinMode.Round })
+	end
+	local caption = scope:New("Frame")({
+		Name = "Card", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(Config.Hud.Training.Width, Config.Hud.Training.Height),
+		BackgroundTransparency = 1,
+		Position = scope:Computed(function(use)
+			local rect = use(hud).tutorial
+			return UDim2.fromOffset(rect.x + rect.w / 2, rect.y)
+		end),
+		Visible = scope:Computed(function(use)
+			return use(shown) and use(showGuide) and not use(introOpen) and use(hud).tutorialVisible
+		end),
 		[Children] = {
+			scope:New("UIScale")({ Scale = cardScale }),
 			scope:New("Frame")({
-				Name = "Card", Size = UDim2.fromOffset(332, 125), BorderSizePixel = 0,
-				Position = scope:Computed(function(use)
-					local rect = use(hud).tutorial
-					return UDim2.fromOffset(rect.x, rect.y)
-				end),
-				BackgroundTransparency = 1,
-				Visible = scope:Computed(function(use)
-					return use(shown) and use(showGuide) and not use(introOpen) and use(hud).tutorialVisible
-				end),
+				Name = "Line", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 0), Size = UDim2.fromOffset(0, 64),
+				AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
 				[Children] = {
-					-- White quest card with a tilted blue ribbon, as in the style references.
-					scope:New("UIScale")({ Scale = cardScale }),
-					UI.hudFill(scope, "white", { studs = false :: any, stripes = false, radius = 16 }),
-					scope:New("Frame")({
-						Name = "Ribbon", Position = UDim2.fromOffset(-10, -16), Size = UDim2.fromOffset(196, 34),
-						Rotation = -3, BackgroundTransparency = 1, ZIndex = 3,
-						[Children] = {
-							Cartoon.surface("blue", { radius = 10, edge = 3, lip = 4, zIndex = 3 }),
-							UI.hudText(scope, {
-								Position = UDim2.fromOffset(12, 0), Size = UDim2.new(1, -20, 1, 0), ZIndex = 4,
-								Text = scope:Computed(function(use) return if use(finished) then "TRAINING COMPLETE" else "MINER TRAINING" end),
-								TextSize = scope:Computed(function(use) return math.max(18, 12 / use(cardScale)) end),
-								TextXAlignment = Enum.TextXAlignment.Left,
-							}),
-						},
+					scope:New("UIListLayout")({
+						FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+						HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder,
 					}),
-					UI.hudText(scope, {
-						Position = UDim2.fromOffset(200, 12), Size = UDim2.fromOffset(56, 20),
-						Text = scope:Computed(function(use)
-							local value = use(step)
-							return if value then value.index .. " / " .. value.total else ""
-						end), TextSize = scope:Computed(function(use) return math.max(16, 11 / use(cardScale)) end),
-						TextColor3 = Cartoon.INK_BLUE, TextStrokeTransparency = 1,
-					}),
+					-- the owner's art (Config.HudIcons), popping on each new step
 					scope:New("Frame")({
-						Name = "StepSocket", Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(40, 40), BackgroundTransparency = 1,
+						Name = "IconSlot", LayoutOrder = 1, Size = UDim2.fromOffset(60, 60), BackgroundTransparency = 1,
 						[Children] = {
-							-- no box behind the step icon: the glyph stands on the card
-							scope:New("TextLabel")({
-								AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromOffset(40, 40), ZIndex = 2,
-								BackgroundTransparency = 1, Font = UI.FONT, TextSize = 34,
-								Text = scope:Computed(function(use)
+							UI.hudIcon(scope, "ore", {
+								Name = "StepIcon", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+								Size = scope:Spring(scope:Computed(function(use)
+									return if use(popped) then UDim2.fromOffset(72, 72) else UDim2.fromOffset(56, 56)
+								end), 30, 0.45),
+								Image = scope:Computed(function(use)
 									local info = use(current)
-									return if info then info.Icon else "🏆"
+									return HudIcons[if info then info.Icon else "premium"] or ""
 								end),
 							}),
 						},
 					}),
-					UI.hudText(scope, {
-						Position = UDim2.fromOffset(64, 36), Size = UDim2.fromOffset(254, 44),
+					scope:New("TextLabel")({
+						Name = "Verb", LayoutOrder = 2, Size = UDim2.fromOffset(0, 60), AutomaticSize = Enum.AutomaticSize.X,
+						BackgroundTransparency = 1, Font = Theme.TITLE_FONT, TextColor3 = Palette.WHITE, Rotation = -2,
+						TextSize = scope:Computed(function(use) return math.max(46, 30 / use(cardScale)) end),
 						Text = scope:Computed(function(use)
 							local info = use(current)
 							return if info then info.Text else "ALL SET!"
-						end), TextSize = scope:Computed(function(use) return math.max(30, 20 / use(cardScale)) end),
-						TextColor3 = Cartoon.INK_BLUE, TextStrokeTransparency = 1,
-						TextTruncate = Enum.TextTruncate.AtEnd, TextXAlignment = Enum.TextXAlignment.Left,
-					}),
-					UI.hudText(scope, {
-						Position = UDim2.fromOffset(64, 78), Size = UDim2.fromOffset(254, 26),
-						Text = hint, TextScaled = true,
-						TextColor3 = Color3.fromRGB(240, 130, 30), TextStrokeTransparency = 1,
-						TextXAlignment = Enum.TextXAlignment.Left,
-						-- shrinks to fit the card's width, so a longer Sub line never spills past the edge
+						end),
 						[Children] = {
-							scope:New("UITextSizeConstraint")({
-								MinTextSize = 8,
-								MaxTextSize = scope:Computed(function(use) return math.max(20, 14 / use(cardScale)) end),
-							}),
-						},
-					}),
-					scope:New("ImageButton")({
-						Name = "SkipTraining", AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 6),
-						Size = scope:Computed(function(use)
-							local size = HudLayout.closeSize(30, use(cardScale))
-							return UDim2.fromOffset(size, size)
-						end), Image = "", BackgroundTransparency = 1,
-						Visible = scope:Computed(function(use) return use(step) ~= nil end),
-						[OnEvent("Activated")] = function() task.spawn(function() TutorialService:Skip() end) end,
-						[Children] = {
-							Cartoon.surface("blue", { radius = 9, edge = 2.5, lip = 3 }),
-							UI.hudIcon(scope, "skip", {
-								AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.fromScale(0.55, 0.55), ZIndex = 2,
-							}),
-						},
-					}),
-					scope:New("Frame")({
-						Position = UDim2.fromOffset(16, 108), Size = UDim2.fromOffset(300, 10), BorderSizePixel = 0,
-						BackgroundColor3 = Color3.fromRGB(196, 214, 240),
-						[Children] = {
-							scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }),
-							scope:New("UIStroke")({ Color = Cartoon.INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-							scope:New("Frame")({
-								Size = scope:Computed(function(use)
-									local value = use(step)
-									return UDim2.fromScale(if value then (value.index - 1) / math.max(value.total, 1) else 1, 1)
-								end), BorderSizePixel = 0, BackgroundColor3 = Color3.fromRGB(80, 210, 40),
-								[Children] = { scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }) },
-							}),
+							scope:New("UIGradient")({ Rotation = 90, Color = ColorSequence.new(Palette.GOLD_TOP, Palette.GOLD_BOTTOM) }),
+							ink(4),
 						},
 					}),
 				},
 			}),
+			scope:New("TextLabel")({
+				Name = "Hint", AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 64), Size = UDim2.fromOffset(520, 28),
+				BackgroundTransparency = 1, Font = Theme.TITLE_FONT, TextColor3 = Palette.WHITE, Text = hint, TextScaled = true,
+				[Children] = {
+					scope:New("UITextSizeConstraint")({ MinTextSize = 8, MaxTextSize = scope:Computed(function(use) return math.max(24, 16 / use(cardScale)) end) }),
+					ink(2.5),
+				},
+			}),
 		},
 	})
+	scope:New("ScreenGui")({
+		Name = "Tutorial", ResetOnSpawn = false, IgnoreGuiInset = true,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 1,
+		Parent = player:WaitForChild("PlayerGui"),
+		[Children] = { caption },
+	})
+
+	-- SKIP TUTORIAL: a small button of its own under the hint, out of the instruction's way
+	local skip = Theme.button(caption, "SkipTraining", "SKIP TUTORIAL", "blue", 14)
+	skip.AnchorPoint, skip.Position = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 96)
+	skip.Activated:Connect(function() task.spawn(function() TutorialService:Skip() end) end)
+	scope:Observer(step):onBind(function()
+		skip.Visible = Fusion.peek(step) ~= nil
+	end)
+	scope:Observer(cardScale):onBind(function()
+		-- never smaller than a comfortable tap once the caption is scaled down
+		local height = HudLayout.closeSize(30, Fusion.peek(cardScale))
+		skip.Size = UDim2.fromOffset(height * 4.6, height)
+	end)
 
 	-- World guide: follow the current step's target a few times a second. While a
 	-- meteor step waits for the meteor, the guide shows debris to mine instead; the
@@ -495,7 +477,7 @@ function TutorialController:KnitStart()
 			local target: BasePart? = nil
 			local waiting = visible and waitingFor(info, Fusion.peek(meteorState))
 			if visible and root and info then
-				if waiting and info.Id ~= "meteor_lands" then
+				if waiting then
 					target, action = starterRock(root.Position), "tap"
 				else
 					target = targetFor(info.Id, root.Position)
@@ -504,8 +486,10 @@ function TutorialController:KnitStart()
 			-- HUD steps: a hand points at the button
 			local button = if visible and info and info.Action == "ui" and info.Button then findButton(info.Button) else nil
 			if button then
-				pointerHand.Position = UDim2.fromOffset(button.AbsolutePosition.X + button.AbsoluteSize.X / 2, button.AbsolutePosition.Y + 8)
-				pointerRing.Position = UDim2.fromOffset(button.AbsolutePosition.X + button.AbsoluteSize.X / 2, button.AbsolutePosition.Y + button.AbsoluteSize.Y / 2)
+				-- AbsolutePosition is measured from below the top bar; the pointer's own gui starts above it, so take its origin off
+				local at = button.AbsolutePosition - pointerGui.AbsolutePosition
+				pointerHand.Position = UDim2.fromOffset(at.X + button.AbsoluteSize.X / 2, at.Y + 8)
+				pointerRing.Position = UDim2.fromOffset(at.X + button.AbsoluteSize.X / 2, at.Y + button.AbsoluteSize.Y / 2)
 				pointerRing.Size = UDim2.fromOffset(button.AbsoluteSize.X + 10, button.AbsoluteSize.Y + 10)
 			end
 			pointerGui.Enabled = button ~= nil
@@ -527,7 +511,7 @@ function TutorialController:KnitStart()
 			guide.arrow.Visible = not tapping
 			guide.hand.Visible = tapping
 			guide.ripple.Visible = tapping
-			guide.timer.Text = if waiting and info and info.Id == "meteor_lands" then Fusion.peek(hint) else ""
+			guide.timer.Text = ""
 			guide.marker.Enabled = true
 			guide.outline.Adornee = outlineFor(target)
 			guide.outline.Enabled = true

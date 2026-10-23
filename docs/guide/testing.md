@@ -158,7 +158,7 @@ add dates). Cite = the header or first-test line the one-liner came from.
 | HudMessages | ordinary notices can't inject rich-text markup | `tests/HudMessages.spec.luau:4` |
 | HudResources | carried-bar rows from Config fixtures | `tests/HudResources.spec.luau:2-3` |
 | ProductionPresentation | workshop presentation never changes gameplay quantities | `tests/ProductionPresentation.spec.luau:2` |
-| Intro | the first-join intro's five pages and who sees it | `tests/Intro.spec.luau:2` |
+| Intro | the first-join intro cinematic's words and timing, and who sees it | `tests/Intro.spec.luau:2` |
 
 ### Monetization and policy
 

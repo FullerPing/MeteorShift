@@ -1,18 +1,17 @@
 --!strict
--- Spec for the first-join intro: its pages and who gets to see it.
+-- Spec for the first-join intro: its words and timing, and who gets to see it.
 
 return function(t: any)
 	local Config = require(t.shared.Config)
 	local Intro = require(t.shared.Intro)
 
-	t.test("the intro has five pages, each with an icon, a headline and a short text", function()
-		local pages = Config.Intro.Pages
-		t.eq(#pages, 5)
-		for index, page in pages do
-			t.ok(page.Icon ~= "", "icon " .. index)
-			t.ok(#page.Title > 0 and #page.Title <= 20, "headline " .. index)
-			t.ok(#page.Body > 0 and #page.Body <= 110, "text " .. index)
-		end
+	t.test("the intro cinematic is short and its words fit on one screen", function()
+		local settings = Config.Intro
+		t.ok(#settings.Title > 0 and #settings.Title <= 30, "title")
+		t.ok(#settings.Tagline > 0 and #settings.Tagline <= 60, "tagline")
+		t.ok(settings.Fall > 0 and settings.Hold > 0 and settings.Glide > 0)
+		t.ok(settings.Fall + settings.Hold + settings.Glide <= 8, "over in under 8 seconds")
+		t.ok(settings.Push > 0 and settings.Push <= 1, "pushes in, never past the crater")
 	end)
 
 	t.test("a brand-new profile sees the intro", function()

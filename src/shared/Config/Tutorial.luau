@@ -12,7 +12,7 @@ export type Step = {
 	Id: string,
 	Text: string,
 	Sub: string?, -- small line under the verb (the card's orange line); a waiting meteor step shows the countdown instead
-	Icon: string,
+	Icon: string, -- a Config.HudIcons key, drawn on the card
 	Action: "tap" | "go" | "watch" | "ui",
 	Button: string?, -- the HUD button a "ui" step points at (a descendant name under PlayerGui)
 }
@@ -20,17 +20,19 @@ export type Step = {
 local Tutorial = {}
 
 Tutorial.Steps = {
-	{ Id = "mine_debris", Text = "MINE!", Icon = "⛏️", Action = "tap" },
-	{ Id = "meteor_lands", Text = "WATCH!", Icon = "☄️", Action = "watch" },
-	{ Id = "reach_crater", Text = "RUN!", Sub = "Follow the trail to the crater", Icon = "🏃", Action = "go" },
-	{ Id = "mine_node", Text = "MINE IT!", Sub = "Break nodes to open the core", Icon = "⛏️", Action = "tap" },
-	{ Id = "hit_core", Text = "HIT THE CORE!", Sub = "Keep hitting until it cracks", Icon = "💥", Action = "tap" },
-	{ Id = "core_shards", Text = "CRACK IT!", Icon = "💎", Action = "tap" },
-	{ Id = "deposit", Text = "SMELT!", Icon = "🔥", Action = "go" },
-	{ Id = "collect_bar", Text = "GET BARS!", Icon = "🧱", Action = "go" },
-	{ Id = "sell", Text = "SELL!", Icon = "💰", Action = "ui", Button = "SellBars" },
+	{ Id = "mine_debris", Text = "MINE!", Icon = "ore", Action = "tap" },
+	-- A quick win while the first meteor is on its way: the rocks' cash buys a pickaxe level. Never a wait: the meteor
+	-- landing completes it too (TutorialService), so nobody sits on an empty step.
+	{ Id = "first_upgrade", Text = "UPGRADE!", Sub = "Tap GEAR to power up your pickaxe", Icon = "equipment", Action = "ui", Button = "ShopButton" },
+	{ Id = "reach_crater", Text = "RUN!", Sub = "Follow the trail to the crater", Icon = "meteor", Action = "go" },
+	{ Id = "mine_node", Text = "MINE IT!", Sub = "Break nodes to open the core", Icon = "ore", Action = "tap" },
+	{ Id = "hit_core", Text = "HIT THE CORE!", Sub = "Keep hitting until it cracks", Icon = "meteorCrystal", Action = "tap" },
+	{ Id = "core_shards", Text = "CRACK IT!", Icon = "crystal", Action = "tap" },
+	{ Id = "deposit", Text = "SMELT!", Icon = "foundry", Action = "go" },
+	{ Id = "collect_bar", Text = "GET BARS!", Icon = "bars", Action = "go" },
+	{ Id = "sell", Text = "SELL!", Icon = "coin", Action = "ui", Button = "SellBars" },
 	-- Points at the HUD Gear button, not the Gear Hall's shop pad: the button works from anywhere
-	{ Id = "buy", Text = "UPGRADE!", Sub = "Tap GEAR - it works from anywhere", Icon = "⬆️", Action = "ui", Button = "ShopButton" },
+	{ Id = "buy", Text = "UPGRADE!", Sub = "Tap GEAR - it works from anywhere", Icon = "equipment", Action = "ui", Button = "ShopButton" },
 } :: { Step }
 
 -- The ore field a new player starts in and is pointed at for "MINE!": Rust Works has the softest rocks (Config.Debris).

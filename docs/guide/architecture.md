@@ -71,7 +71,7 @@ MeteorShift in one sentence: a meteor slams into the crater on a timer (`MeteorS
 | HUDController | the Fusion HUD: timers, wallet, buttons, notices (`HudView`, `Shared.HudLayout`) |
 | ImpactFXController | extra impact spectacle (pillars, rings, dust, rain) |
 | IndexController | the MineralIndex menu bindings |
-| IntroController | the first-join "How to play" card before the tutorial |
+| IntroController | the first-join intro cinematic (a meteor crashes into the crater under the title) before the tutorial |
 | LandingFXController | Ice/Crystal ground scenes driven by `MeteorService.State` |
 | MeteorFXController | sky streak, shake, explosion, shockwave, knockback |
 | MiningController | pickaxe input and local feedback; server validates every swing |

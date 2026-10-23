@@ -480,7 +480,7 @@ function MeteorFXController:KnitStart()
 		"HatchOpen", "BackpackOpen", "PerksOpen", "IntroOpen" }
 	local watchStep = 1
 	for index, step in Config.Tutorial.Steps do
-		if step.Id == "meteor_lands" then watchStep = index break end
+		if step.Id == "first_upgrade" then watchStep = index break end
 	end
 	local tutorialStep: number? = nil -- nil once the tutorial is done or skipped
 	Knit.GetService("TutorialService").Step:Observe(function(value)

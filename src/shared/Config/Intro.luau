@@ -1,22 +1,20 @@
 --!strict
--- The "How to play" intro shown once to a brand-new player before the hands-on
--- tutorial: a few swipeable pages, one idea each. Copy only; Shared/Intro decides
--- who sees it and IntroController draws it.
+-- The first-join intro: a short cinematic instead of pages to read. The camera opens wide over the crater, a meteor
+-- streaks in and crashes into it under the game's title, then the camera glides back to the player. Words and timing
+-- only; Shared/Intro decides who sees it and IntroController plays it.
 
-export type Page = {
-	Icon: string, -- emoji glyph, drawn big
-	Title: string,
-	Body: string,
+local Intro = {
+	Title = "METEOR MINING SIMULATOR",
+	Tagline = "Meteors crash here. Mine them and get rich!",
+
+	Fall = 1.8, -- seconds the meteor streaks down
+	Hold = 2.6, -- seconds on the crash and the title
+	Glide = 1.4, -- seconds for the camera to fly back to the player
+
+	-- the wide shot, in studs from the crater floor: back toward the player and up; it pushes in to Push of it
+	Distance = 150,
+	Height = 95,
+	Push = 0.72,
 }
-
-local Intro = {}
-
-Intro.Pages = {
-	{ Icon = "☄️", Title = "WELCOME, MINER!", Body = "Meteors crash into the crater. Break them open, smelt the ore and get rich." },
-	{ Icon = "⛏️", Title = "MINE THE METEOR", Body = "Break the nodes to uncover the core, then crack it for shards. Bigger meteors drop rarer ore." },
-	{ Icon = "🔥", Title = "SMELT AND SELL", Body = "Drop ore in the foundry, collect the bars and sell them for cash." },
-	{ Icon = "⬆️", Title = "UPGRADE", Body = "Buy a better pickaxe and backpack, hatch pets, then rebirth for permanent bonuses." },
-	{ Icon = "🚀", Title = "READY?", Body = "Your first meteor is on its way. We'll show you the rest as you go!" },
-} :: { Page }
 
 return Intro
