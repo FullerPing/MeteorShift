@@ -170,6 +170,43 @@ function PetsLayout.perkRows(def: Config.Pet, level: number): { PerkRow }
 	return rows
 end
 
+export type BoostRow = { role: string, name: string, value: number, cap: number, fill: number, total: string, text: string, from: { string }, sources: { string } }
+
+-- The BOOSTS tab: every role in RoleOrder with your equipped total (capped), the cap, the plain-English line at that
+-- total (at the cap when you have none yet, so the line still explains the role), the equipped pets giving it and,
+-- when none do, the pets that can.
+function PetsLayout.boostRows(saved: Pets.Saved?): { BoostRow }
+	local totals: any = if saved then Pets.bonuses(saved) else {}
+	local rows: { BoostRow } = {}
+	for _, roleId in Config.RoleOrder do
+		local role = Config.Roles[roleId]
+		local value = totals[roleId] or 0
+		local from, sources, seen = {}, {}, {}
+		if saved then
+			for _, petId in saved.equipped do
+				local def, entry = Pets.def(petId), saved.owned[petId]
+				if def and entry and not seen[petId] then
+					for _, perk in def.Perks do
+						if perk.Role == roleId then seen[petId] = true; table.insert(from, def.Name) break end
+					end
+				end
+			end
+		end
+		for _, def in Config.List do
+			for _, perk in def.Perks do
+				if perk.Role == roleId then table.insert(sources, def.Name) break end
+			end
+		end
+		local shown = if value > 0 then value else role.Cap
+		table.insert(rows, {
+			role = roleId, name = role.Name, value = value, cap = role.Cap, fill = math.clamp(value / role.Cap, 0, 1),
+			total = PetsLayout.percent(value), text = string.format(role.Text, string.format("%g%%", math.floor(shown * 10000 + 0.5) / 100)),
+			from = from, sources = sources,
+		})
+	end
+	return rows
+end
+
 -- The eggs that can drop a pet (empty for pass and group pets)
 function PetsLayout.eggsFor(def: Config.Pet): { Config.Egg }
 	local eggs: { Config.Egg } = {}

@@ -1,7 +1,7 @@
 --!strict
 -- The Pets menu, from the owner's "cartoon light" mockup (2026-10-13; MenuTheme / Shared.MenuPalette), the Gear Shop's twin:
--- a blue "Pets" ribbon, Close on the corner, the Core Shards chip, two tabs, then MY PETS (the equipped count, the TEAM BOOST
--- strip and a grid of pet cards) or PET INDEX (every pet, found or not), the selected pet's column on the right (a blue name
+-- a blue "Pets" ribbon, Close on the corner, the Core Shards chip, three tabs, then MY PETS (the equipped count, the TEAM BOOST
+-- strip and a grid of pet cards) or PET INDEX (every pet, found or not) or BOOSTS (every pet role: your total, its cap, what it does), the selected pet's column on the right (a blue name
 -- banner, a rarity pill, the preview, level and XP, the perks) with its action under it, and a hint strip at the bottom.
 -- Eggs hatch at the Hatchery's prompts (PetService). PetsController binds the named controls and places everything from
 -- Shared.PetsLayout.
@@ -13,7 +13,7 @@ local PetsLayout = require(RS.Shared.PetsLayout)
 local N = require(script.Parent.Parent.NativeUI)
 local Theme = require(script.Parent.Parent.MenuTheme)
 local Pets = {}
-Pets.LAYOUT = 5 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
+Pets.LAYOUT = 6 -- bumped when the panel's controls change; an older authored copy is replaced by PetsController
 
 -- One pet tile: a white card with a preview well tinted by rarity, the name and level under it, a lime "EQUIPPED" tab on its
 -- top edge while it is out, a blue ring while it is selected and a "?" cover for pets you have not found.
@@ -82,8 +82,8 @@ function Pets.build(): ScreenGui
 	Theme.closeCorner(p, Icons.close)
 	Theme.chip(p, "Wallet", Icons.crystal, Palette.SHARD_CHIP).Text = "0"
 	local tabs = N.create("Frame", { Name = "Tabs", BackgroundTransparency = 1, Size = UDim2.fromOffset(440, 42), ZIndex = 3 }, p)
-	for _, id in { "pets", "index" } do
-		Theme.button(tabs, id .. "Tab", if id == "pets" then "MY PETS" else "PET INDEX", if id == "pets" then "tabOn" else "tabOff", 18)
+	for _, id in { "pets", "index", "boosts" } do
+		Theme.button(tabs, id .. "Tab", if id == "pets" then "MY PETS" elseif id == "index" then "PET INDEX" else "BOOSTS", if id == "pets" then "tabOn" else "tabOff", 18)
 	end
 
 	-- MY PETS: the heading and equipped count, the TEAM BOOST strip, then everything you own
@@ -108,6 +108,27 @@ function Pets.build(): ScreenGui
 	Theme.label(index, "Progress", "DISCOVERED 0/0", 14, Palette.SECOND, nil, Enum.TextXAlignment.Right)
 	Theme.bar(index, "ProgressBar", Palette.LIME_BOTTOM)
 	petGrid(index, "List", PetsLayout.indexOrder())
+
+	-- BOOSTS: one row per pet role (PetsLayout.boostRows), filled by PetsController
+	local boosts = N.create("Frame", { Name = "BoostsScreen", BackgroundTransparency = 1, Size = UDim2.fromOffset(400, 300), ZIndex = 3 }, p)
+	local boostList = N.create("ScrollingFrame", { Name = "List", BackgroundTransparency = 1, BorderSizePixel = 0, Size = UDim2.fromScale(1, 1),
+		CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4,
+		ScrollBarImageColor3 = Palette.BLUE_BOTTOM, ZIndex = 3 }, boosts)
+	N.create("UIListLayout", { Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder }, boostList)
+	N.create("UIPadding", { PaddingLeft = UDim.new(0, 4), PaddingTop = UDim.new(0, 4), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 8) }, boostList)
+	for order, role in Config.Pets.RoleOrder do
+		local row = Theme.card(boostList, "boost_" .. role, Palette.WHITE, nil, 12)
+		row.LayoutOrder, row.Size, row.ZIndex = order, UDim2.new(1, 0, 0, 74), 3
+		Theme.stroke(row, Palette.WELL_EDGE, 2)
+		local name = Theme.label(row, "RoleName", "", 18, Palette.NAVY, Theme.TITLE_FONT)
+		name.Position, name.Size = UDim2.fromOffset(12, 6), UDim2.new(0.5, -12, 0, 24)
+		local total = Theme.label(row, "Total", "", 16, Palette.UP, nil, Enum.TextXAlignment.Right)
+		total.Position, total.Size, total.RichText = UDim2.new(0.5, 0, 0, 6), UDim2.new(0.5, -12, 0, 24), true
+		local bar = Theme.bar(row, "Bar", Palette.LIME_BOTTOM)
+		bar.Position, bar.Size = UDim2.fromOffset(12, 32), UDim2.new(1, -24, 0, 8)
+		local text = Theme.label(row, "Text", "", 14, Palette.SECOND)
+		text.Position, text.Size, text.RichText, text.TextTruncate = UDim2.fromOffset(12, 44), UDim2.new(1, -24, 0, 24), true, Enum.TextTruncate.AtEnd
+	end
 
 	-- under the grid: where more slots come from, and the hint strip that also carries notices
 	Theme.label(p, "MoreSlots", "More slots: Rebirths · Pet Bond · Extra Pet Slot", 13, Palette.MUTED)

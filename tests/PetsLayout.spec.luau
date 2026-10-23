@@ -139,4 +139,29 @@ return function(t: any)
 			t.ok(def.Pass ~= nil or def.Group == true or #PetsLayout.eggsFor(def) >= 1, def.Id .. " is in an egg, a pass or the group reward")
 		end
 	end)
+
+	t.test("boostRows lists every role, capped, with the pets that give it", function()
+		local Config = require(t.shared.Config)
+		local rows = PetsLayout.boostRows(nil)
+		t.eq(#rows, #Config.Pets.RoleOrder)
+		for _, row in rows do
+			t.eq(row.value, 0)
+			t.eq(row.fill, 0)
+			t.eq(#row.from, 0)
+			t.ok(#row.sources > 0, row.role .. " has a pet that gives it")
+		end
+		-- one maxed miner pet: its roles show up, filled against the cap
+		local miner
+		for _, def in Config.Pets.List do
+			if def.Perks[1].Role == "miner" then miner = def break end
+		end
+		local saved = { owned = { [miner.Id] = { level = Config.Pets.MaxLevel, xp = 0 } }, equipped = { miner.Id } }
+		for _, row in PetsLayout.boostRows(saved) do
+			if row.role == "miner" then
+				t.near(row.value, math.min(miner.Perks[1].Max, row.cap), 1e-9)
+				t.eq(row.from[1], miner.Name)
+				t.ok(row.fill > 0 and row.fill <= 1)
+			end
+		end
+	end)
 end

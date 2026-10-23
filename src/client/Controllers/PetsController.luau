@@ -27,7 +27,7 @@ local Controller = Knit.CreateController({ Name = "PetsController" })
 local wantOpen, wantTab = false, nil :: string?
 local refresh: (() -> ())? = nil
 
--- Open the menu, optionally on a tab ("pets" or "index")
+-- Open the menu, optionally on a tab ("pets", "index" or "boosts")
 function Controller:Open(tab: string?)
 	wantOpen, wantTab = true, tab
 	player:SetAttribute("PetsOpen", true)
@@ -212,10 +212,10 @@ function Controller:KnitStart()
 		end
 		local tabsW = math.min(g.panel.w - g.padding * 2, 440)
 		box(p.Tabs, if g.wide then g.padding else (g.panel.w - tabsW) / 2, g.tabsY, tabsW, g.tabsH)
-		for index, id in { "pets", "index" } do
+		for index, id in { "pets", "index", "boosts" } do
 			local button = p.Tabs[id .. "Tab"]
-			button.Position = UDim2.new((index - 1) / 2, if index == 1 then 0 else 4, 0, 0)
-			button.Size = UDim2.new(1 / 2, -4, 1, 0)
+			button.Position = UDim2.new((index - 1) / 3, if index == 1 then 0 else 4, 0, 0)
+			button.Size = UDim2.new(1 / 3, -4, 1, 0)
 			button.TextSize = if g.wide then 18 else 16
 			Theme.tab(button, tab == id)
 		end
@@ -226,11 +226,29 @@ function Controller:KnitStart()
 		if not selected or (tab == "pets" and not owned(selected)) then selected = ids[1] end
 
 		-- previews: only the visible tab keeps model viewports alive
-		local wantReserved = if open then math.min(14, #ids + 1) else 0
+		local wantReserved = if open and tab ~= "boosts" then math.min(14, #ids + 1) else 0
 		if wantReserved ~= reserved then petVisuals:ReserveShopPreviews(wantReserved); reserved = wantReserved end
 
 		local petsScreen, indexScreen, detail = p.PetsScreen, p.IndexScreen, p.Detail
 		petsScreen.Visible, indexScreen.Visible = tab == "pets", tab == "index"
+		local boostsScreen = p.BoostsScreen
+		boostsScreen.Visible = tab == "boosts"
+		detail.Visible = tab ~= "boosts"
+		if tab == "boosts" then
+			-- the list takes the whole content area, the detail column included
+			box(boostsScreen, g.padding, g.contentY, g.panel.w - g.padding * 2, g.contentH)
+			local navyHex, dimHex = hex(Palette.NAVY), hex(Palette.MUTED)
+			for _, row in PetsLayout.boostRows(s) do
+				local card = boostsScreen.List["boost_" .. row.role]
+				card.RoleName.Text = row.name
+				card.Total.Text = string.format('%s <font color="#%s">/ %s max</font>', if row.value > 0 then row.total else "+0%", dimHex, PetsLayout.percent(row.cap))
+				card.Bar.Fill.Size = UDim2.fromScale(row.fill, 1)
+				local who = if #row.from > 0 then "From " .. table.concat(row.from, ", ")
+					else "No equipped pet gives this. Try " .. table.concat(row.sources, ", ", 1, math.min(#row.sources, 3))
+				card.Text.Text = string.format('<font color="#%s">%s</font>  ·  %s', navyHex, row.text, who)
+				card.Text.TextSize = if g.wide then 14 else 12
+			end
+		end
 
 		-- each screen spans the content area: the summary on top, the grid below it
 		local list = g.list
@@ -296,7 +314,7 @@ function Controller:KnitStart()
 				card.Visible = show
 				card.LayoutOrder = order[def.Id] or 0
 				if show then
-					paintCard(card, def.Id, if entry then entry.level else nil, equipped(def.Id), entry ~= nil, live and selected == def.Id, live and open, wide)
+					paintCard(card, def.Id, if entry then entry.level else nil, equipped(def.Id), entry ~= nil, live and selected == def.Id, live and open and tab ~= "boosts", wide)
 				else
 					showPreview(card.Well.Preview, nil, 1)
 				end
@@ -324,7 +342,7 @@ function Controller:KnitStart()
 			for _, name in { "Rarity", "PreviewWell", "Level", "XpText", "XpBar", "HowButton", "PerkText" } do body[name].Visible = false end
 			local action = p.Action
 			box(action, g.action.x, g.action.y, g.action.w, g.action.h)
-			action.Visible, putAway.Visible = def ~= nil, false
+			action.Visible, putAway.Visible = def ~= nil and tab ~= "boosts", false
 			detail.Banner.Visible, detail.PetName.Visible = def ~= nil, def ~= nil
 			if def then
 				local rarity = Config.Pets.Rarities[def.Rarity]
@@ -393,7 +411,7 @@ function Controller:KnitStart()
 						local half = math.floor((g.action.w - 8) / 2)
 						box(action, g.action.x, g.action.y, half, g.action.h)
 						box(putAway, g.action.x + g.action.w - half, g.action.y, half, g.action.h)
-						putAway.Visible = true
+						putAway.Visible = tab ~= "boosts"
 						Theme.state(putAway, busyId == nil, "red")
 						putAway.Text = if wait then "WAIT" else "PUT AWAY"
 						putAway.TextSize = if g.wide then 20 else 17
@@ -430,7 +448,7 @@ function Controller:KnitStart()
 	refresh = update
 
 	-- clicks
-	for _, id in { "pets", "index" } do
+	for _, id in { "pets", "index", "boosts" } do
 		p.Tabs[id .. "Tab"].Activated:Connect(function() tab, notice = id, ""; update() end)
 	end
 	for _, grid in { p.PetsScreen.List, p.IndexScreen.List } do

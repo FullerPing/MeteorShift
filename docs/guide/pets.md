@@ -176,7 +176,7 @@ PetsController shows it").
 
 ## Menus and hatch UI (pointers)
 
-- The Pets menu has MY PETS / PET INDEX tabs, drawn on the Gear Shop's cartoon-light frame on roomy
+- The Pets menu has MY PETS / PET INDEX / BOOSTS tabs (BOOSTS: every role with your capped total, the cap, what it does and the pets giving it, from `PetsLayout.boostRows`), drawn on the Gear Shop's cartoon-light frame on roomy
   windows and via `Shared.PetsLayout` + MenuFit on small ones
   (`src/client/Controllers/PetsController.luau:1-5,64-65`); a missing pet's card says which eggs can
   drop it and lists that egg's odds for the rarity (`:143-145`). Menu rebuild/layout workflow is in
