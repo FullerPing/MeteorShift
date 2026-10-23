@@ -88,12 +88,12 @@ local function buildScreen(screen: BasePart, board: Config.LeaderboardBoard): { 
 	return rows
 end
 
-local function render(rows: { { TextLabel } }, ranked: { Leaderboards.Entry })
+local function render(rows: { { TextLabel } }, ranked: { Leaderboards.Entry }, board: Config.LeaderboardBoard)
 	for index, row in rows do
 		local entry = ranked[index]
 		row[1].Text = "#" .. index
 		row[2].Text = if entry then entry.name else "-"
-		row[3].Text = if entry then Format.number(entry.value) else ""
+		row[3].Text = if entry then Leaderboards.display(board, entry.value, Format.number) else ""
 	end
 end
 
@@ -163,8 +163,27 @@ function LeaderboardService:KnitStart()
 			return
 		end
 		local screens = {}
+		local placed: { Model } = {}
 		for _, board in Config.Leaderboards.Boards do
 			local model = folder:FindFirstChild(board.Id)
+			-- a board the map has no stand for: a copy of the last stand, set beside it on the side away from the others
+			-- shortcut: the spot is worked out, not designed; place a real stand in Studio (tools/map-v2/Leaderboards) to choose it
+			if not model and #placed >= 2 then
+				local last, before = placed[#placed], placed[#placed - 1]
+				local copy = last:Clone()
+				copy.Name = board.Id
+				local pivot = last:GetPivot()
+				local side = Vector3.new(pivot.RightVector.X, 0, pivot.RightVector.Z).Unit
+				if side:Dot(pivot.Position - before:GetPivot().Position) < 0 then side = -side end
+				copy:PivotTo(pivot + side * (copy:GetExtentsSize().X + 3))
+				for _, item in copy:GetDescendants() do
+					local previous = Config.Leaderboards.Boards[#placed].Title
+					if (item:IsA("TextLabel") or item:IsA("TextButton")) and item.Text == previous then item.Text = board.Title end
+				end
+				copy.Parent = folder
+				model = copy
+			end
+			if model and model:IsA("Model") then table.insert(placed, model) end
 			local screen = model and model:FindFirstChild("Screen")
 			if screen and screen:IsA("BasePart") then
 				screens[board.Id] = buildScreen(screen, board)
@@ -179,7 +198,7 @@ function LeaderboardService:KnitStart()
 					local rows = screens[board.Id]
 					if rows then
 						local top = globalTop(board)
-						render(rows, top or localTop(board))
+						render(rows, top or localTop(board), board)
 					end
 				end
 			end)

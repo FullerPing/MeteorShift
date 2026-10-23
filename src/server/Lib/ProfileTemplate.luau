@@ -61,6 +61,7 @@ return {
 		meteorsJoined = 0,
 		coresCracked = 0,
 		barsSold = 0,
+		playSeconds = 0, -- time online, the Playtime leaderboard (PlayerStateService adds it; DataService fills it into old profiles)
 	},
 	-- Daily streak, quests and shields (Shared.Daily). `day` is the UTC day the quests were picked for.
 	daily = {

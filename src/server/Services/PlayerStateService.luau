@@ -542,6 +542,10 @@ function PlayerStateService:KnitStart()
 	RunService.Heartbeat:Connect(function(dt)
 		sinceFlush += dt
 		if sinceFlush >= Config.Net.StateFlushInterval then
+			for _, player in Players:GetPlayers() do
+				local data = self:Get(player)
+				if data then data.stats.playSeconds = (data.stats.playSeconds or 0) + sinceFlush end
+			end
 			sinceFlush = 0
 			self:_flush()
 		end

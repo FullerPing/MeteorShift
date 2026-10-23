@@ -30,4 +30,19 @@ function Leaderboards.rank(entries: { Entry }, rows: number): { Entry }
 	return ranked
 end
 
+-- A score as its board shows it: seconds as "2d 4h", "12h 30m" or "45m" on a Time board, else Format.number
+function Leaderboards.display(board: { Time: boolean? }, value: number, formatNumber: (number) -> string): string
+	if not board.Time then
+		return formatNumber(value)
+	end
+	local minutes = math.floor(value / 60)
+	local hours, days = math.floor(minutes / 60), math.floor(minutes / 1440)
+	if days >= 1 then
+		return string.format("%dd %dh", days, hours % 24)
+	elseif hours >= 1 then
+		return string.format("%dh %dm", hours, minutes % 60)
+	end
+	return minutes .. "m"
+end
+
 return Leaderboards

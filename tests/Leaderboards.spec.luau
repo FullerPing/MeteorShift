@@ -19,6 +19,15 @@ return function(t: any)
 		t.eq(Leaderboards.valueOf({ "rebirths" }, profile), 3)
 	end)
 
+	t.test("a Time board shows seconds as days, hours and minutes", function()
+		local time = { Time = true }
+		t.eq(Leaderboards.display(time, 59, tostring), "0m")
+		t.eq(Leaderboards.display(time, 45 * 60, tostring), "45m")
+		t.eq(Leaderboards.display(time, 12 * 3600 + 30 * 60 + 59, tostring), "12h 30m")
+		t.eq(Leaderboards.display(time, 2 * 86400 + 4 * 3600, tostring), "2d 4h")
+		t.eq(Leaderboards.display({}, 1234, function(n) return "#" .. n end), "#1234")
+	end)
+
 	t.test("malformed scores read as zero", function()
 		t.eq(Leaderboards.valueOf({ "stats", "barsSold" }, {}), 0)
 		t.eq(Leaderboards.valueOf({ "stats", "barsSold" }, { stats = 5 }), 0)
