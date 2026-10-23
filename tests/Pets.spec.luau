@@ -194,11 +194,15 @@ return function(t: any)
 			table.insert(saved.equipped, def.Id)
 		end
 		local bonuses = Pets.bonuses(saved)
-		local capped = { miner = 1.5, hauler = 0.03, pack = 0.60, swift = 0.30, merchant = 0.45,
-			yield = 0.40, sprint = 0.27, vault = 1, crit = 0.10, scholar = 0.51, shards = 0.30 }
-		for role, value in capped do
-			t.near(bonuses[role], value, 1e-9, role)
+		-- every pet at level 10: each role is its pets' sum, stopped at the role's cap
+		local sums = {}
+		for _, def in Config.List do
+			for _, perk in def.Perks do sums[perk.Role] = (sums[perk.Role] or 0) + perk.Max end
 		end
+		for _, role in Config.RoleOrder do
+			t.near(bonuses[role], math.min(sums[role] or 0, Config.Roles[role].Cap), 1e-9, role)
+		end
+		t.near(bonuses.miner, 1.5, 1e-9, "miner reaches its cap")
 		local empty = Pets.bonuses(Pets.fresh())
 		for _, role in Config.RoleOrder do
 			t.eq(empty[role], 0, "empty " .. role)
@@ -283,8 +287,8 @@ return function(t: any)
 		t.eq(reward.GroupId, 526085770, "the owner's group")
 	end)
 
-	t.test("the 15 pets have the perk counts required by their rarity", function()
-		t.eq(#Config.List, 15)
+	t.test("the 24 pets have the perk counts required by their rarity", function()
+		t.eq(#Config.List, 24)
 		for _, pet in Config.List do
 			t.ok(Config.Rarities[pet.Rarity] ~= nil, pet.Id .. " rarity")
 			local count = #pet.Perks
@@ -305,7 +309,7 @@ return function(t: any)
 			local total = 0
 			for rarity, odds in egg.Odds do
 				total += odds
-				t.ok(#Pets.eggPets(rarity) > 0, egg.Id .. " has no " .. rarity .. " pets")
+				t.ok(#Pets.eggPets(rarity, egg) > 0, egg.Id .. " has no " .. rarity .. " pets")
 			end
 			t.near(total, 100, 1e-9, egg.Id)
 			t.ok(egg.Cost > 0 and egg.Pity > 0)
@@ -388,7 +392,7 @@ return function(t: any)
 		for _, case in { { 0, "pebblePup" }, { 0.61, "packMule" }, { 0.89, "jetWisp" }, { 0.98, "crystalStag" }, { 0.999, "meteorDrake" } } do
 			t.eq(Pets.roll(meteor, case[1], 0, 0), case[2])
 		end
-		t.eq(Pets.roll(meteor, 0.89, 0, 0.999), "graniteGolem")
+		t.eq(Pets.roll(meteor, 0.89, 0, 0.999), "nebulaJelly")
 		t.eq(Pets.roll(meteor, 0.98, 0, 0.999), "auroraOwl")
 		for _, case in { { 0, "packMule" }, { 0.41, "jetWisp" }, { 0.83, "crystalStag" }, { 0.99, "meteorDrake" } } do
 			t.eq(Pets.roll(crystal, case[1], 0, 0), case[2])
@@ -433,5 +437,31 @@ return function(t: any)
 		t.near(Pets.bonuses(saved).miner, 0.5, 1e-9)
 		saved.owned.solarPhoenix.level = Config.MaxLevel
 		t.near(Pets.bonuses(saved).miner, 1.0, 1e-9)
+	end)
+
+	t.test("egg exclusives hatch only from their own eggs, and own eggs hatch only exclusives", function()
+		for _, egg in Config.Eggs do
+			for rarity in egg.Odds do
+				for _, pet in Pets.eggPets(rarity, egg) do
+					if egg.Own then
+						t.ok(pet.Eggs ~= nil and table.find(pet.Eggs, egg.Id) ~= nil, pet.Id .. " in " .. egg.Id)
+					else
+						t.eq(pet.Eggs, nil, pet.Id .. " is exclusive but hatches from " .. egg.Id)
+					end
+				end
+			end
+		end
+		-- every exclusive pet can hatch from an egg that lists it, at its rarity
+		for _, pet in Config.List do
+			if pet.Eggs then
+				for _, eggId in pet.Eggs do
+					local egg = Pets.egg(eggId)
+					t.ok(egg ~= nil and (egg.Odds[pet.Rarity] or 0) > 0, pet.Id .. " has no way to hatch from " .. eggId)
+				end
+			end
+		end
+		local magma = Pets.egg("magmaEgg") :: any
+		local id = Pets.roll(magma, 0.99, 0, 0)
+		t.eq(id, "galaxyGriffin")
 	end)
 end

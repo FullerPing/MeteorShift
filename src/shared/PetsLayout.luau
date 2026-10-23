@@ -212,7 +212,7 @@ function PetsLayout.eggsFor(def: Config.Pet): { Config.Egg }
 	local eggs: { Config.Egg } = {}
 	if def.Pass or def.Group then return eggs end
 	for _, egg in Config.Eggs do
-		if (egg.Odds[def.Rarity] or 0) > 0 then table.insert(eggs, egg) end
+		if (egg.Odds[def.Rarity] or 0) > 0 and table.find(Pets.eggPets(def.Rarity, egg), def) then table.insert(eggs, egg) end
 	end
 	return eggs
 end

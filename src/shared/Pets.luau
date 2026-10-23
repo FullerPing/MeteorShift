@@ -102,12 +102,16 @@ for index, id in Config.RarityOrder do
 	rarityIndex[id] = index
 end
 
--- The pets an egg can hatch of one rarity (pass and group pets are never in an egg)
-function Pets.eggPets(rarity: string): { Config.Pet }
+-- The pets an egg can hatch of one rarity (pass and group pets are never in an egg). A pet with Eggs hatches only
+-- from those; an Own egg hatches only its exclusives. Without an egg: the shared pool.
+function Pets.eggPets(rarity: string, egg: Config.Egg?): { Config.Pet }
 	local out = {}
 	for _, pet in Config.List do
 		if pet.Rarity == rarity and not pet.Pass and not pet.Group then
-			table.insert(out, pet)
+			local listed = pet.Eggs ~= nil and egg ~= nil and table.find(pet.Eggs, egg.Id) ~= nil
+			if (egg and egg.Own and listed) or (not (egg and egg.Own) and pet.Eggs == nil) then
+				table.insert(out, pet)
+			end
 		end
 	end
 	return out
@@ -147,7 +151,7 @@ function Pets.roll(egg: Config.Egg, roll: number, pity: number, pick: number): (
 			end
 		end
 	end
-	local pool = Pets.eggPets(chosen :: string)
+	local pool = Pets.eggPets(chosen :: string, egg)
 	local pet = pool[math.min(math.floor(math.clamp(pick, 0, 1 - 1e-9) * #pool) + 1, #pool)]
 	local newPity = if rarityIndex[pet.Rarity] >= floor then 0 else pity + 1
 	return pet.Id, newPity

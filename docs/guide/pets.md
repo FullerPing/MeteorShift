@@ -28,6 +28,11 @@ Hatchery in the world, never in a menu.
 | Meteor Egg | 15 | Common 60 · Uncommon 28 · Rare 9.5 · Epic 2.25 · Legendary 0.25 | Epic+ every 40 | — |
 | Crystal Egg | 60 | Uncommon 40 · Rare 42 · Epic 15.5 · Legendary 2.5 | Epic+ every 15 | — |
 | Aurora Egg | 135 | Epic 94 · Legendary 6 | Legendary every 20 | 2 rebirths (`src/shared/Config/Pets.luau:92`) |
+| Magma Egg | 225 | Rare 50 · Epic 40 · Legendary 10 (only Magma Crab, Frost Yeti, Galaxy Griffin) | Legendary every 15 | 3 rebirths |
+| Void Egg | 360 | Epic 70 · Legendary 30 (only Quartz Kitsune, Void Leviathan) | Legendary every 6 | 5 rebirths |
+
+Egg exclusives: a pet with `Eggs = { ... }` hatches only from those eggs, and an egg with `Own = true` hatches only
+its exclusives (`Pets.eggPets(rarity, egg)`); every other egg draws from the shared pool of its rarities.
 
 Pass pets are never egg prizes: `Pets.eggPets` skips any pet with a `Pass` key
 (`src/shared/Pets.luau:89-98`) and no egg names the premium rarity in its odds.
