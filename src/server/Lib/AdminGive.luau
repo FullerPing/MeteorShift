@@ -65,10 +65,14 @@ local function findPet(token: string): string?
 end
 
 -- Reads a command into (recipient name, gift), or (nil, nil, reason) when it makes no sense.
-function AdminGive.parse(text: string): (string?, Gift?, string?)
+-- Any words after the gift are a message for the announcement ("/giveall shards 500 take these!"), returned fourth
+function AdminGive.parse(text: string): (string?, Gift?, string?, string?)
 	local words = {}
 	for word in string.gmatch(text, "%S+") do
 		table.insert(words, word)
+	end
+	local function note(used: number): string?
+		return if #words > used then table.concat(words, " ", used + 1) else nil
 	end
 	local target, item = words[2], words[3]
 	if not target or not item then
@@ -83,24 +87,26 @@ function AdminGive.parse(text: string): (string?, Gift?, string?)
 		if amount > AdminGive.MaxAmount then
 			return nil, nil, "Give at most " .. Format.number(AdminGive.MaxAmount) .. ". " .. AdminGive.Usage
 		end
-		return target, { kind = kind, amount = amount }, nil
+		return target, { kind = kind, amount = amount }, nil, note(4)
 	elseif kind == "pickaxe" or kind == "backpack" then
 		local count = if kind == "pickaxe" then #Config.Pickaxes else #Config.Backpacks
 		local tier = whole(words[4])
 		if not tier or tier < 1 or tier > count or tostring(tier) ~= words[4] then
 			return nil, nil, string.format("The %s tier is 1-%d. %s", kind, count, AdminGive.Usage)
 		end
-		return target, { kind = kind, tier = tier }, nil
+		return target, { kind = kind, tier = tier }, nil, note(4)
 	elseif kind == "pet" then
 		local petId = if words[4] then findPet(words[4]) else nil
 		if not petId then
 			return nil, nil, "No such pet. " .. AdminGive.Usage
 		end
-		local level = if words[5] then whole(words[5]) else 1
+		-- a level only when the next word is a number; anything else is the message
+		local hasLevel = words[5] ~= nil and string.match(words[5], "^[%d%.]") ~= nil
+		local level = if hasLevel then whole(words[5]) else 1
 		if not level or level < 1 or level > Config.Pets.MaxLevel then
 			return nil, nil, string.format("The pet level is 1-%d. %s", Config.Pets.MaxLevel, AdminGive.Usage)
 		end
-		return target, { kind = "pet", petId = petId, level = level }, nil
+		return target, { kind = "pet", petId = petId, level = level }, nil, note(if hasLevel then 5 else 4)
 	end
 	return nil, nil, AdminGive.Usage
 end

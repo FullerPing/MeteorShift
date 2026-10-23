@@ -14,6 +14,17 @@ return function(t: any)
 	local crystalFrom = (Types.Iron.Weight + Types.Ice.Weight) / total
 	local EPS = 1e-9
 
+	t.test("the admin meteor is an Iron any beginner can mine, paying more for less work", function()
+		local Hooks = require(t.shared.Config.Hooks)
+		local admin = MeteorTypes.admin(Types.Iron)
+		t.eq(admin.Id, "Iron", "keeps its Id, so every effect keyed by type works")
+		t.eq(admin.RequiredTier, 1)
+		t.eq(admin.YieldMult, Types.Iron.YieldMult * Hooks.AdminMeteor.PayMult)
+		t.ok(admin.HpMult < Types.Iron.HpMult, "cracks faster")
+		t.ok(admin.ShardMult > Types.Iron.ShardMult, "bigger shard pool")
+		t.eq(Types.Iron.DisplayName, "Iron Meteor", "the real Iron is untouched")
+	end)
+
 	t.test("config: every type in TypeOrder is complete and sellable", function()
 		t.eq(#Meteor.TypeOrder, 3, "the roll bands in this spec assume Iron, Ice and Crystal only")
 		for index, id in Meteor.TypeOrder do

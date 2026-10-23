@@ -196,9 +196,12 @@ Knit.Start()
 
 		-- Dev chat commands, for Studio and for the user ids in Lib.Admins on a live server (anyone
 		-- else typing them is ignored without a reply). The reply shows as a notice on the HUD.
-		--   /meteor <Iron|Ice|Crystal|Alien>   /pickaxe <1-8>   /backpack <1-8>
+		--   /meteor <Iron|Ice|Crystal|Alien|Admin>   /pickaxe <1-8>   /backpack <1-8>   (Admin: the beginners' gift meteor)
 		--   /give <player|all> cash|shards <amount> | pickaxe|backpack <tier> | pet <pet> [level]   (Lib.AdminGive)
-		--   /giveall <item> ...   the same as /give all <item> ...: everyone in the server
+		--   /giveall <item> ... [message]   the same as /give all ...: everyone, announced as "[DEV] Name: message"
+		--   /announce <message>   a "[DEV] Name: message" banner for everyone (AnnounceService)
+		--   /setlevel <player|all> <level>   sets the player level (XP cleared), up or down; the player is told
+		--   /feedback [count]   prints the newest player feedback (FeedbackService) to the output (F9 on a live server)
 		local TextChatService = game:GetService("TextChatService")
 		local function chatCommand(alias: string, run: (Player, string?, string) -> string)
 			local command = Instance.new("TextChatCommand")
@@ -217,8 +220,13 @@ Knit.Start()
 			end)
 			command.Parent = TextChatService
 		end
-		chatCommand("/meteor", function(_player, typeId)
-			return MeteorService:DevSpawn(typeId or "")
+		chatCommand("/meteor", function(player, typeId)
+			local reply = MeteorService:DevSpawn(typeId or "")
+			if string.lower(typeId or "") == "admin" then
+				Knit.GetService("AnnounceService"):Dev(player, string.format("ADMIN METEOR incoming! Everyone can mine it: %dx ore!",
+					Config.Hooks.AdminMeteor.PayMult))
+			end
+			return reply
 		end)
 		chatCommand("/pickaxe", function(player, tier)
 			local number = tonumber(tier)
@@ -230,7 +238,9 @@ Knit.Start()
 		end)
 		-- Gives a player in this server (or everyone: "all") cash, shards, a gear tier or a pet. The giver is told what
 		-- happened; each recipient gets a notice. Gifts only add (AdminGive.apply), so nothing is taken away.
-		local function giveTo(player: Player, recipient: Player, gift: any): (boolean, string)
+		local AnnounceService = Knit.GetService("AnnounceService")
+		-- `quiet`: a gift to everyone is announced with one banner instead of a notice each
+		local function giveTo(player: Player, recipient: Player, gift: any, quiet: boolean?): (boolean, string)
 			local data = PlayerStateService:Get(recipient)
 			if not data then
 				return false, recipient.Name .. " has no profile loaded yet"
@@ -243,23 +253,26 @@ Knit.Start()
 				ShopService:ApplyPickaxe(recipient)
 			end
 			PlayerStateService:ReplicateNow(recipient)
-			if recipient ~= player then
+			if recipient ~= player and not quiet then
 				ShopService.Client.Notice:Fire(recipient, player.DisplayName .. " gave you " .. result.text)
 			end
 			print(string.format("[Give] %s (%d) gave %s (%d) %s", player.Name, player.UserId, recipient.Name, recipient.UserId, result.text))
 			return true, result.text
 		end
 		local function give(player: Player, text: string): string
-			local targetName, gift, problem = AdminGive.parse(text)
+			local targetName, gift, problem, message = AdminGive.parse(text)
 			if not targetName or not gift then
 				return problem or AdminGive.Usage
 			end
 			local list = Players:GetPlayers()
 			if AdminGive.isEveryone(targetName) then
-				local count, what = 0, ""
+				local count, what, received = 0, "", {}
 				for _, recipient in list do
-					local ok, said = giveTo(player, recipient, gift)
-					if ok then count += 1; what = said end
+					local ok, said = giveTo(player, recipient, gift, true)
+					if ok then count += 1; what = said; received[recipient] = true end
+				end
+				if count > 0 then
+					AnnounceService:Dev(player, message or "Gifts for everyone!", "Received " .. string.upper(what) .. "!", gift.kind, received)
 				end
 				return if count > 0 then string.format("Gave %d player%s %s", count, if count == 1 then "" else "s", what)
 					else "Nobody here could get that (they already have it, or no profile is loaded)"
@@ -276,6 +289,55 @@ Knit.Start()
 		end)
 		chatCommand("/giveall", function(player, _first, text)
 			return give(player, (string.gsub(text, "^%S+", "/give all", 1)))
+		end)
+		chatCommand("/setlevel", function(player, _first, text)
+			local targetName, wanted = string.match(text, "^%S+%s+(%S+)%s+(%d+)%s*$")
+			if not targetName then
+				return "Usage: /setlevel <player|all> <level>"
+			end
+			local Levels = require(ReplicatedStorage.Shared.Levels)
+			local list = Players:GetPlayers()
+			local targets = list
+			if not AdminGive.isEveryone(targetName) then
+				local index, reason = AdminGive.findPlayer(targetName, list, table.find(list, player))
+				if not index then
+					return reason or "No such player"
+				end
+				targets = { list[index] }
+			end
+			local count, level = 0, 0
+			for _, target in targets do
+				local data = PlayerStateService:Get(target)
+				if data then
+					local progress = Levels.clean(tonumber(wanted), 0)
+					data.level, data.xp, level = progress.level, progress.xp, progress.level
+					PlayerStateService:ReplicateNow(target)
+					count += 1
+					if target ~= player then
+						ShopService.Client.Notice:Fire(target, player.DisplayName .. " set your level to " .. level)
+					end
+					print(string.format("[SetLevel] %s (%d) set %s (%d) to level %d", player.Name, player.UserId, target.Name, target.UserId, level))
+				end
+			end
+			if count == 0 then
+				return "No profile loaded for that player yet"
+			end
+			return if #targets == 1 then targets[1].Name .. " is now level " .. level else string.format("Set %d players to level %d", count, level)
+		end)
+		chatCommand("/announce", function(player, _first, text)
+			local message = string.match(text, "^%S+%s+(.-)%s*$")
+			if not message or message == "" then
+				return "Usage: /announce <message>"
+			end
+			return if AnnounceService:Dev(player, message) then "Announced" else "Could not announce that (text filtering failed)"
+		end)
+		chatCommand("/feedback", function(_player, first)
+			local recent = Knit.GetService("FeedbackService"):Recent(math.clamp(tonumber(first) or 10, 1, 50))
+			for _, entry in recent do
+				print(string.format("[Feedback] %s %s (level %s, %d min): %s", os.date("!%Y-%m-%d %H:%M", entry.at), entry.name,
+					tostring(entry.level), entry.minutes or 0, entry.text))
+			end
+			return #recent .. " feedback messages printed to the output (F9)"
 		end)
 	end)
 	:catch(warn)

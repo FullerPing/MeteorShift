@@ -58,11 +58,14 @@ The five `TextChatCommand`s bind unconditionally (`Main.server.luau:196-278`) bu
 
 | Command | Args | Backing |
 |---|---|---|
-| `/meteor` | `<Iron\|Ice\|Crystal\|Alien>`, any case; no arg returns the "No meteor type …" usage string | `MeteorService:DevSpawn` (`Main.server.luau:219-221`; `MeteorService.luau:707-733`) |
+| `/meteor` | `<Iron\|Ice\|Crystal\|Alien\|Admin>`, any case; no arg returns the "No meteor type …" usage string. `Admin` is the beginners' gift meteor (`Shared.MeteorTypes.admin`: an Iron any tier mines, tuned by `Config.Hooks.AdminMeteor`) and is announced with the DEV banner | `MeteorService:DevSpawn` (`Main.server.luau:219-221`; `MeteorService.luau:707-733`) |
 | `/pickaxe` | tier `1-8`; no arg returns a usage string | `setGear(player, tier, nil)` (`Main.server.luau:222-225`) |
 | `/backpack` | tier `1-8`; no arg returns a usage string | `setGear(player, nil, tier)` (`:226-229`) |
 | `/give` | `<player\|me\|all\|everyone\|*> cash\|shards <whole ≥1> \| pickaxe\|backpack <1-8> \| pet <id-or-name> [level 1-10]` | full text to `AdminGive.parse` (`Main.server.luau:273-275`; `src/server/Lib/AdminGive.luau:33`, `:65-100`); recipient found by exact name/display name, else unique prefix, `me` = the giver (`:104-132`) |
-| `/giveall` | same items as `/give`, without the target | rewritten to `/give all …` (`Main.server.luau:276-278`) |
+| `/giveall` | same items as `/give`, without the target, plus an optional message (`/giveall shards 500 take these!`); everyone sees a "[DEV] Name: message" banner with "Received 500 SHARDS!" under it instead of a notice each | rewritten to `/give all …` (`Main.server.luau:276-278`) |
+| `/announce` | `<message>` | a "[DEV] Name: message" banner for everyone, text-filtered (`AnnounceService:Dev`, drawn by `AnnounceController`) |
+| `/setlevel` | `<player\|all> <level>` | sets the player level and clears XP, up or down, clamped to `Config.Levels` max; the target gets a notice (`Shared.Levels.clean`, logged as `[SetLevel]`) |
+| `/feedback` | `[count]` | prints the newest player feedback (default 10, max 50) to the output, F9 on a live server. Players are asked after `Config.Feedback.AskAfter` (30 min) by `FeedbackPromptController`; `FeedbackService` saves to the `Feedback` DataStore and posts to Discord when `ServerStorage` has a `FeedbackWebhook` attribute (needs HTTP requests on) |
 
 Coverage note for A4: `README.md:222` and `CLAUDE.md:13` name only `/meteor`, `/pickaxe`, `/backpack` — `/give` and `/giveall` exist in code and are documented nowhere else (`Main.server.luau:273-278`).
 

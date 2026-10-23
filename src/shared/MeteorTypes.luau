@@ -88,4 +88,19 @@ function MeteorTypes.golden(meteorType: MeteorType): MeteorType
 	return copy
 end
 
+-- The admin meteor, a gift from the team: a copy of `meteorType` (Iron, so tier 1 mines it) that keeps its Id,
+-- pays Config.Hooks.AdminMeteor.PayMult times the ore, has a fraction of the HP and a bigger shard pool
+function MeteorTypes.admin(meteorType: MeteorType): MeteorType
+	local tuning = Hooks.AdminMeteor
+	local copy = table.clone(meteorType)
+	copy.DisplayName = "Admin Meteor"
+	copy.YieldMult = meteorType.YieldMult * tuning.PayMult
+	copy.HpMult = meteorType.HpMult * tuning.HpMult
+	copy.ShardMult = meteorType.ShardMult * tuning.ShardMult
+	copy.CrustColors = { Color3.fromRGB(214, 58, 72), Color3.fromRGB(236, 84, 96), Color3.fromRGB(184, 40, 58) }
+	copy.OreColor = Color3.fromRGB(255, 220, 90)
+	copy.GlowColor = Color3.fromRGB(255, 120, 140)
+	return copy
+end
+
 return MeteorTypes

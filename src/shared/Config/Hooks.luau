@@ -16,12 +16,20 @@ return {
 	RichVein = { Chance = 0.04, Mult = 8 },
 	SuperVein = { Chance = 0.002, Mult = 40 },
 
+	-- Mining combo (Shared.Combo): hits no more than Window seconds apart build a count; every Step
+	-- hits add Bonus to a hit's ore, up to MaxSteps (x1.5 at 25 hits). A trip home resets it, and
+	-- Shared.Pacing counts the climb in every backpack fill.
+	Combo = { Window = 1.5, Step = 5, Bonus = 0.1, MaxSteps = 5 },
+
 	-- One random crust node per meteor glows gold. The player who lands the breaking hit gets
 	-- Breaker hits' worth of ore, everyone else who hit it gets Contributor hits' worth.
 	GoldenNode = { Breaker = 20, Contributor = 4 },
 
 	-- A meteor of the scheduled type turns golden with this chance: its ore pays PayMult times
 	GoldenMeteor = { Chance = 0.02, PayMult = 5 },
+	-- The admin meteor (/meteor admin, Shared.MeteorTypes.admin): an Iron meteor any beginner can mine, its ore paying
+	-- PayMult times per hit, HpMult of the HP so it cracks fast, and ShardMult times the shard pool
+	AdminMeteor = { PayMult = 10, HpMult = 0.5, ShardMult = 5 },
 
 	-- A crust node that breaks may drop a shard crumb for the player who broke it
 	ShardCrumb = { Chance = 0.06, Min = 1, Max = 3 },

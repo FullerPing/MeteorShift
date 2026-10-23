@@ -28,6 +28,19 @@ return function(t: any)
 		t.ok(err ~= nil and string.find(err, "Usage", 1, true) ~= nil, text .. " explains itself: " .. tostring(err))
 	end
 
+	t.test("words after the gift are the announcement's message", function()
+		t.eq(select(4, AdminGive.parse("/give all shards 500 take these shards!")), "take these shards!")
+		t.eq(select(4, AdminGive.parse("/give all shards 500")), nil, "no message")
+		t.eq(select(4, AdminGive.parse("/give all pickaxe 2 enjoy")), "enjoy")
+		local pet = "packMule"
+		local _, withLevel, _, said = AdminGive.parse("/give all pet " .. pet .. " 3 have fun")
+		t.eq(withLevel.level, 3)
+		t.eq(said, "have fun")
+		local _, noLevel, _, note = AdminGive.parse("/give all pet " .. pet .. " have fun")
+		t.eq(noLevel.level, 1, "a word after the pet is the message, not a bad level")
+		t.eq(note, "have fun")
+	end)
+
 	t.test("cash and shards parse with the recipient, plain numbers and exponents", function()
 		local a = gift("/give Bob cash 1500")
 		t.eq(a.target, "Bob")
