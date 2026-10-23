@@ -56,8 +56,8 @@ WorldGeometry.Settings = {
 		{ id = "Starfall", x = -91, z = 452, width = 88, depth = 74, entrance = Vector3.new(-85, 56, 425), pathWidth = 18, field = true },
 		{ id = "HaloLedge", x = 82, z = 450.5, width = 96, depth = 71, entrance = Vector3.new(70, 56, 425), pathWidth = 18, field = true },
 		-- the XP Mine on T2 straight behind the south avenue, reached by a ramp up the cliff where the Rebirth shrine stood:
-		-- 8 x 15 rocks (placed in Studio, not by tools/map-v3; the entrance is on its crater side)
-		{ id = "XpMine", x = 0, z = -459.5, width = 80, depth = 143, entrance = Vector3.new(0, 32, -382), pathWidth = 18, field = true },
+		-- 15 rocks across by 8 deep, 14 studs apart (placed in Studio, not by tools/map-v3; the entrance is on its crater side)
+		{ id = "XpMine", x = 0, z = -444, width = 208, depth = 110, entrance = Vector3.new(0, 32, -382), pathWidth = 18, field = true },
 	},
 }
 
