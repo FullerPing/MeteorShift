@@ -54,6 +54,7 @@ cash and everything else untouched — `src/server/Lib/RebirthMigration.luau`, `
 | `credits.callMeteor` / `bossMeteor` / `rebirthKeep` | 0 (`:48-50`) | bought via `src/server/Services/MonetizationService.luau`; spent at `:387`, `:409` and `RebirthService.luau:60` | survive |
 | `overclockLeft`, `oreBoostLeft` (seconds, online-only) | 0 (`:53-54`) | granted in `src/shared/Purchases.luau:103-110`; ticked by `RefineryService.luau:340-346`; load-sanitized (`DataService.luau:152-153`) | survive |
 | `daily` (day/lastClaim/streak/shields/quests/questBonusClaimed/week/weekly/joined) | record at `:61-71` (shields start at `Config.Daily.StartShields`, `:65`) | `src/server/Services/DailyService.luau` (rollover + claims) | survives |
+| `quest` (step/progress) | `{ step = 1, progress = 0 }`, filled into old saves by reconcile | `src/server/Services/QuestService.luau` (counts and claims, Shared.Quests) | survives |
 | `codes` (redeemed code names) | empty (`:73`) | marked redeemed before paying (`src/server/Services/CodesService.luau:38,44`) | survives |
 | `stats.meteorsJoined` / `coresCracked` / `barsSold` | 0 (`:56-58`) | `RewardService.luau:76,78` and `EconomyService.luau:83` | survive (`tests/RebirthReset.spec.luau:92,100`) |
 

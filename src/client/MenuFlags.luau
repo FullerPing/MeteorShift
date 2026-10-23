@@ -7,7 +7,7 @@ local MenuFlags = {}
 MenuFlags.ALL = {
 	"ShopOpen", "PetsOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "DailyOpen", "CodesOpen", "PerksOpen",
 	"OreFieldsOpen", "OfferPreviewOpen", "RefineryOpen", "SettingsOpen", "HatchOpen", "IntroOpen",
-	"WelcomeBackOpen", "BackpackOpen",
+	"WelcomeBackOpen", "BackpackOpen", "QuestsOpen",
 }
 
 function MenuFlags.except(...: string): { string }

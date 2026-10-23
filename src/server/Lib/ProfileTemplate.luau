@@ -76,6 +76,8 @@ return {
 		weekly = { id = "", progress = 0, claimed = false },
 		joined = 0, -- UTC day of the first rollover: the day the player started (the join popup waits a day)
 	},
+	-- The Foreman's quest line (Shared.Quests): the step you are on and its event count; kept through rebirth
+	quest = { step = 1, progress = 0 },
 	-- Codes already redeemed (Shared.Codes, CodesService): code name -> true
 	codes = {},
 	-- Settings menu toggles the player changed (PlayerStateService.SETTINGS): name -> boolean; missing = default

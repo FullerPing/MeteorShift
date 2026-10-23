@@ -157,6 +157,17 @@ by exactly what they add (`src/shared/Config/Hooks.luau:8-10`, `src/shared/Hooks
 | Supply Crate per level: 80% cash of 15-50 line-seconds, up to a 30-shard band; floor $100, ceiling 5% of next rebirth cost | `src/shared/Config/Hooks.luau:37-45` | yes |
 | Mineral soft pity after 400 dry hits, step 100, ×3 max | `src/shared/Config/Hooks.luau:52` | odds relief only |
 
+## The Foreman's quest line (the long-term goal)
+
+`Config.Quests.Line`: 22 steps, one at a time, never reset (not even by rebirth), from "Join 3 meteors" to
+"Reach rebirth 10". Event steps count from the moment they start (meteorJoin, coreCrack, crustHit, barsSold,
+oreDeposited, hatch, fieldRock with an optional Field); state steps (level, rebirths, pickaxeTier, backpackTier,
+petsOwned, line) read the profile, so a step already passed is claimable at once. Each pays its Shards plus Minutes
+of expected income (`Income.grant`, floor `CashFloor`, capped at `CashCeilingShare` of the next rebirth cost).
+Rules: `src/shared/Quests.luau` (tests/Quests.spec); service: `QuestService` (profile `quest = { step, progress }`);
+UI: the Quests menu (`NativeMenus/Quests`, opened by the Foreman's prompt beside the spawn or by the HUD tracker above
+the backpack card, `QuestController`). Studio: `ServerStorage.DevQuest:Invoke(player, step, count?)`.
+
 ## Shared.Pacing — the model, and the spec that keeps it honest
 
 `src/shared/Pacing.luau` simulates a fresh **free** player from Config alone (header `:1-49`): it

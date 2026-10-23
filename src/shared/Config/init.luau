@@ -47,6 +47,7 @@ return {
 	RewardFX = require(script.RewardFX),
 	Leaderboards = LeaderboardsConfig,
 	Daily = require(script.Daily),
+	Quests = require(script.Quests),
 	Feedback = require(script.Feedback),
 	Badges = require(script.Badges),
 	Codes = require(script.Codes),

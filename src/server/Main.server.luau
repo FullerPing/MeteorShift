@@ -188,6 +188,19 @@ Knit.Start()
 			end
 			levelHook.Parent = ServerStorage
 
+			-- game.ServerStorage.DevQuest:Invoke(game.Players:GetPlayers()[1], 3, 2): jump to a quest-line step (and its event count)
+			local questHook = Instance.new("BindableFunction")
+			questHook.Name = "DevQuest"
+			questHook.OnInvoke = function(player: Player, step: number, count: number?)
+				local data = PlayerStateService:Get(player)
+				if not data then
+					return nil
+				end
+				data.quest = { step = math.max(1, math.floor(step)), progress = math.max(0, count or 0) }
+				return data.quest.step
+			end
+			questHook.Parent = ServerStorage
+
 			local gearHook = Instance.new("BindableFunction")
 			gearHook.Name = "DevGear"
 			gearHook.OnInvoke = setGear

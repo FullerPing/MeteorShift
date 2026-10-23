@@ -477,7 +477,7 @@ function MeteorFXController:KnitStart()
 	local lookWeight, impactAt = 0, -math.huge
 	-- Not while a menu is open, nor before the tutorial reaches its "watch the meteor" step
 	local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen",
-		"HatchOpen", "BackpackOpen", "PerksOpen", "IntroOpen" }
+		"HatchOpen", "BackpackOpen", "PerksOpen", "IntroOpen", "QuestsOpen" }
 	local watchStep = 1
 	for index, step in Config.Tutorial.Steps do
 		if step.Id == "first_upgrade" then watchStep = index break end
