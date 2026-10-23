@@ -12,6 +12,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Rewards = require(script.Parent.Parent.Lib.Rewards)
 
@@ -55,7 +56,9 @@ function RewardService:Finish(cracked: boolean, meteorType: Config.MeteorType, p
 	local rewards = if cracked then Rewards.compute(ranked, poolMult) else Rewards.consolation(ranked, coreRemaining or 1)
 	local consolation = not cracked and next(rewards) ~= nil
 	for index, reward in rewards do
-		reward.Total = Pets.coreShards(reward.Total, PlayerStateService:GetPetBonuses(ranked[index].Player).shards)
+		local player = ranked[index].Player
+		local data = PlayerStateService:Get(player)
+		reward.Total = Perks.coreShards(if data then data.perks else nil, Pets.coreShards(reward.Total, PlayerStateService:GetPetBonuses(player).shards))
 	end
 
 	local leaders = {}

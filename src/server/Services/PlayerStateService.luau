@@ -122,7 +122,8 @@ function PlayerStateService:GetPickaxe(player: Player): any
 	if bonuses.swift > 0 then
 		pickaxe.Swing *= 1 - bonuses.swift
 	end
-	pickaxe.CritChance = math.clamp(pickaxe.CritChance + bonuses.crit, 0, 1)
+	pickaxe.CritChance = math.clamp(pickaxe.CritChance + bonuses.crit + Perks.critChance(data.perks), 0, 1)
+	pickaxe.CritMult += Perks.critBonus(data.perks)
 	return pickaxe
 end
 

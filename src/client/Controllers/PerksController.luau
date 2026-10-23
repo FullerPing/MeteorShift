@@ -21,7 +21,7 @@ local PerksController = Knit.CreateController({ Name = "PerksController" })
 
 -- What a perk does at `value`, for its card text
 local function effectText(id: string, value: number): string
-	if id == "stationMemory" or id == "efficientLine" then
+	if id == "stationMemory" or id == "efficientLine" or id == "critChance" or id == "critPower" or id == "fieldExpert" or id == "shardSense" then
 		return string.format("%d%%", math.floor(value * 100 + 0.5))
 	end
 	return tostring(value)

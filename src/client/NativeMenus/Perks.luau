@@ -13,7 +13,7 @@ local MenuTheme = require(script.Parent.Parent.MenuTheme)
 local NativeUI = require(script.Parent.Parent.NativeUI)
 local Perks = {}
 
-Perks.LAYOUT = 3 -- bumped when the controls change; PerksController rebuilds an older copy
+Perks.LAYOUT = 4 -- bumped when the controls change; PerksController rebuilds an older copy
 Perks.SIZE = Vector2.new(860, 572)
 Perks.ROW_HEIGHT = 80
 -- the owner's icon for each perk (Config.HudIcons)

@@ -74,4 +74,22 @@ return function(t: any)
 		t.eq(Perks.startCash(owned, 1e6), 150000)
 		t.eq(Perks.startCash(owned, -5), 0, "never negative")
 	end)
+
+	t.test("the mining perks: crit chance and power, field pay and core shards", function()
+		local none = Perks.fresh()
+		t.eq(Perks.critChance(none), 0)
+		t.eq(Perks.critBonus(none), 0)
+		t.eq(Perks.fieldMult(none), 1)
+		t.eq(Perks.coreShards(none, 13), 13, "no perk, no change")
+		local maxed = Perks.fresh()
+		for _, id in { "critChance", "critPower", "fieldExpert", "shardSense" } do maxed[id] = Perks.maxLevel(id) end
+		t.near(Perks.critChance(maxed), 0.05, 1e-9)
+		t.near(Perks.critBonus(maxed), 1, 1e-9)
+		t.near(Perks.fieldMult(maxed), 1.4, 1e-9)
+		t.eq(Perks.coreShards(maxed, 13), 15, "13 x 1.2 rounds down")
+		t.eq(Perks.coreShards(maxed, 0), 0)
+		local cleaned = Perks.clean({ headStart = 2 }) -- a save from before these perks
+		t.eq(cleaned.critChance, 0)
+		t.eq(cleaned.headStart, 2)
+	end)
 end

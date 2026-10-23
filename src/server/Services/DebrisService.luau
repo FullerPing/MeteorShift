@@ -31,6 +31,7 @@ local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
 local FieldTravel = require(ReplicatedStorage.Shared.FieldTravel)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
@@ -193,7 +194,8 @@ function DebrisService:_payCash(player: Player, reward: DebrisField.Reward, rock
 	local _, maxHp = NodeService:GetHp(rock.Id)
 	local pickaxe = PlayerStateService:GetPickaxe(player)
 	local share = DebrisField.sizedShare(maxHp, rock.Hits, pickaxe.Power)
-	local cash = DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond * share, Rebirth.cost(data.rebirths), pickaxe.Swing)
+	local cash = math.floor(DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond * share, Rebirth.cost(data.rebirths), pickaxe.Swing)
+		* Perks.fieldMult(data.perks))
 	if cash > 0 then
 		PlayerStateService:AddCash(player, cash)
 		TelemetryService:earned(player, "field_cash", cash, 0)
@@ -205,7 +207,8 @@ end
 function DebrisService:_payXp(player: Player, reward: DebrisField.Reward, rock: Rock)
 	local _, maxHp = NodeService:GetHp(rock.Id)
 	local share = DebrisField.sizedShare(maxHp, rock.Hits, PlayerStateService:GetPickaxe(player).Power)
-	local xp = Knit.GetService("LevelService"):AddXp(player, DebrisField.xp(reward, share))
+	local data = PlayerStateService:Get(player)
+	local xp = Knit.GetService("LevelService"):AddXp(player, DebrisField.xp(reward, share) * Perks.fieldMult(if data then data.perks else nil))
 	if xp > 0 then
 		RewardService:Bonus(player, "fieldXp", "+" .. Format.number(math.floor(xp + 0.5)) .. " XP")
 	end

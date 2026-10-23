@@ -138,7 +138,10 @@ Bought with Core Shards, unlocked at rebirth 1, kept through every rebirth
 (`src/shared/Config/Perks.luau:4-16`). Their economic roles: Head Start and Station Memory act at
 rebirth (cited above); Efficient Line multiplies line rate (`src/shared/Perks.luau:61-63`,
 applied `src/server/Lib/Refining.luau:40-42`); Offline Training extends the offline cap (cited
-above); Pet Bond adds pet slots. Levels and shard costs: `src/shared/Config/Perks.luau:20-56`.
+above); Pet Bond adds pet slots; Lucky Strike (+1-5% crit chance) and Heavy Hitter (+25-100% crit damage)
+add to the pickaxe in `PlayerStateService:GetPickaxe`, so meteor sizing counts them; Field Expert (+10-40%)
+multiplies ore-field cash and XP (`DebrisService`); Shard Sense (+5-20%) multiplies a player's core shards
+(`RewardService:Finish`). Levels and shard costs: `src/shared/Config/Perks.luau`.
 
 ## Engagement hooks (income flavour)
 

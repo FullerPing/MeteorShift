@@ -78,6 +78,26 @@ function Perks.keptStation(owned: Owned?, level: number): number
 	return math.max(1, 1 + math.floor((math.max(level, 1) - 1) * keep + 1e-9))
 end
 
+-- Lucky Strike: crit chance added to the pickaxe's
+function Perks.critChance(owned: Owned?): number
+	return Perks.effect(owned, "critChance")
+end
+
+-- Heavy Hitter: added to the pickaxe's crit multiplier
+function Perks.critBonus(owned: Owned?): number
+	return Perks.effect(owned, "critPower")
+end
+
+-- Field Expert: multiplier on what ore-field rocks pay in cash and XP
+function Perks.fieldMult(owned: Owned?): number
+	return 1 + Perks.effect(owned, "fieldExpert")
+end
+
+-- Shard Sense: a core's shards for this player, rounded down (never fewer than without it)
+function Perks.coreShards(owned: Owned?, shards: number): number
+	return math.floor(shards * (1 + Perks.effect(owned, "shardSense")) + 1e-9)
+end
+
 -- Head Start: the cash a rebirth starts with, a percent of the next rebirth's cost
 function Perks.startCash(owned: Owned?, nextRebirthCost: number): number
 	return math.floor(Perks.effect(owned, "headStart") / 100 * math.max(nextRebirthCost, 0))

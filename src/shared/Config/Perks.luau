@@ -15,7 +15,7 @@ export type Perk = {
 
 Perks.UnlockRebirths = 1
 
-Perks.Order = { "headStart", "stationMemory", "efficientLine", "offlineTraining", "petBond" }
+Perks.Order = { "headStart", "stationMemory", "efficientLine", "offlineTraining", "petBond", "critChance", "critPower", "fieldExpert", "shardSense" }
 
 Perks.List = {
 	headStart = {
@@ -54,6 +54,36 @@ Perks.List = {
 		Text = "%s more pet slot(s).",
 		Costs = { 100, 250 },
 		Effect = { 1, 2 },
+	},
+	-- Mining perks (owner feedback, 2026-10-23: more perks, e.g. crit chance and damage). Crits land extra Mining
+	-- Power on meteors, and meteor sizing counts them (MiningPower.playerRate), so they speed you up, not the lobby.
+	critChance = {
+		Id = "critChance",
+		Name = "Lucky Strike",
+		Text = "Adds %s to your pickaxe's critical-hit chance.",
+		Costs = { 40, 80, 140, 220, 320 },
+		Effect = { 0.01, 0.02, 0.03, 0.04, 0.05 },
+	},
+	critPower = {
+		Id = "critPower",
+		Name = "Heavy Hitter",
+		Text = "Critical hits deal %s more damage.",
+		Costs = { 60, 120, 200, 300 },
+		Effect = { 0.25, 0.5, 0.75, 1 },
+	},
+	fieldExpert = {
+		Id = "fieldExpert",
+		Name = "Field Expert",
+		Text = "Ore-field rocks pay %s more cash and XP.",
+		Costs = { 50, 100, 180, 280 },
+		Effect = { 0.1, 0.2, 0.3, 0.4 },
+	},
+	shardSense = {
+		Id = "shardSense",
+		Name = "Shard Sense",
+		Text = "Meteor cores give you %s more Core Shards.",
+		Costs = { 80, 160, 280, 420 },
+		Effect = { 0.05, 0.1, 0.15, 0.2 },
 	},
 } :: { [string]: Perk }
 
