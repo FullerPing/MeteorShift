@@ -52,6 +52,7 @@ local Config = require(script.Parent.Config)
 local Rebirth = require(script.Parent.Rebirth)
 local Gear = require(script.Parent.Gear)
 local Hooks = require(script.Parent.Hooks)
+local Combo = require(script.Parent.Combo)
 local Levels = require(script.Parent.Levels)
 local Line = require(script.Parent.Line)
 local Pets = require(script.Parent.Pets)
@@ -152,7 +153,8 @@ end
 local function oreRateOf(orePerHit: number, swing: number, capacity: number, bonuses: Pets.Bonuses): number
 	local perHit = Pets.oreYield(orePerHit, bonuses.yield)
 	if perHit <= 0 then return 0 end
-	local fillSeconds = capacity / perHit * swing / Balance.HitsPerMinuteShare
+	-- every fill starts a fresh mining combo (Shared.Combo) after the trip home
+	local fillSeconds = Combo.fillHits(capacity, perHit) * swing / Balance.HitsPerMinuteShare
 	-- Recent validated hits keep the miner active while filling; trips have no target.
 	-- NodeService:PetHit applies Yield to pet ore too, without a backpack detour.
 	local petOre = perHit * bonuses.miner / swing * fillSeconds

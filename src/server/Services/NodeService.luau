@@ -26,6 +26,7 @@ local RunService = game:GetService("RunService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Hooks = require(ReplicatedStorage.Shared.Hooks)
+local Combo = require(ReplicatedStorage.Shared.Combo)
 local MiningReach = require(ReplicatedStorage.Shared.MiningReach)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local Pets = require(ReplicatedStorage.Shared.Pets)
@@ -83,6 +84,7 @@ local nextId = 0
 local lastSwing: { [Player]: number } = {}
 local swingDue: { [Player]: number } = {} -- RequestGate.pace: when the next swing is due on average
 local lastSwingRequest: { [Player]: number } = {}
+local combo: { [Player]: number } = {} -- the mining combo count (Shared.Combo); lastSwing times it
 local SWING_REQUEST_INTERVAL = 0.10 -- below the fastest legal swing, including Swift and tolerance
 
 function NodeService:Register(part: BasePart, def: TargetDef): number
@@ -265,8 +267,9 @@ function NodeService:OrePerHit(player: Player, oreMult: number): number
 	return Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player), PlayerStateService:GetPetBonuses(player).yield)
 end
 
--- Server-side validation of one swing. Invalid swings are rejected silently.
-function NodeService:Swing(player: Player, id: number): (boolean, number?, boolean?)
+-- Server-side validation of one swing. Invalid swings are rejected silently. Returns whether it
+-- landed, the damage number to show, whether it was a crit and the mining combo count.
+function NodeService:Swing(player: Player, id: number): (boolean, number?, boolean?, number?)
 	if typeof(id) ~= "number" then
 		return false
 	end
@@ -313,6 +316,8 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 		return false
 	end
 
+	local count = Combo.next(combo[player] or 0, lastSwing[player], now)
+	combo[player] = count
 	lastSwing[player] = now
 	swingDue[player] = due
 	target.LastHit = now
@@ -342,7 +347,7 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 		-- A swing's ore is usually Hooks.oreBase of a hit and sometimes a Rich or Super Vein
 		-- (variable ratio, EV-neutral); a miner pet's hits pay the plain average
 		local veinMult, kind = Hooks.vein(math.random())
-		local quantity = Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player) * veinMult, PlayerStateService:GetPetBonuses(player).yield)
+		local quantity = Pets.oreYield(pickaxe.OrePerHit * oreMult * MonetizationService:OreMult(player) * veinMult * Combo.mult(count), PlayerStateService:GetPetBonuses(player).yield)
 		ore = PlayerStateService:AddOre(player, oreType, quantity)
 		if kind and ore < math.floor(quantity) then
 			-- a jackpot is never wasted on a full backpack: the rest goes straight to the hopper
@@ -368,10 +373,10 @@ function NodeService:Swing(player: Player, id: number): (boolean, number?, boole
 	end
 
 	-- The displayed number is the pickaxe's damage; HP went down by its Mining Power
-	return true, if crit then pickaxe.Damage * pickaxe.CritMult else pickaxe.Damage, crit
+	return true, if crit then pickaxe.Damage * pickaxe.CritMult else pickaxe.Damage, crit, count
 end
 
-function NodeService.Client:Swing(player: Player, id: number): (boolean, number?, boolean?)
+function NodeService.Client:Swing(player: Player, id: number): (boolean, number?, boolean?, number?)
 	local allowed, stamp = RequestGate.check(lastSwingRequest[player], os.clock(), SWING_REQUEST_INTERVAL)
 	lastSwingRequest[player] = stamp
 	if not allowed or typeof(id) ~= "number" or id < 1 or id % 1 ~= 0 then
@@ -404,6 +409,7 @@ function NodeService:KnitStart()
 
 	Players.PlayerRemoving:Connect(function(player)
 		lastSwing[player] = nil
+		combo[player] = nil
 		swingDue[player] = nil
 		lastSwingRequest[player] = nil
 	end)

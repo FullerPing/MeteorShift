@@ -15,10 +15,13 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Aim = require(ReplicatedStorage.Shared.Aim)
 local MiningReach = require(ReplicatedStorage.Shared.MiningReach)
+local Combo = require(ReplicatedStorage.Shared.Combo)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Sfx = require(script.Parent.Parent.Sfx)
 local RewardFX = require(script.Parent.Parent.RewardFX)
 local MenuFlags = require(script.Parent.Parent.MenuFlags)
+local Theme = require(script.Parent.Parent.MenuTheme)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 
 local player = Players.LocalPlayer
 
@@ -54,6 +57,10 @@ local hitVariant = false -- alternates the two hit sounds
 local pickupStreak = 0
 local lastPickup = 0
 local watchedNodes: { [BasePart]: boolean } = {} -- nodes already listening for their Hp to reach 0
+-- The mining combo the server counts (Shared.Combo): its count, and when the last hit landed
+local comboCount = 0
+local comboAt = 0
+local oreAt = 0 -- when a hit last gave ore (cash rocks don't, and the combo only adds ore)
 
 local floaters: { BasePart } = {} -- oldest first
 local oreChunks: { BasePart } = {} -- oldest first
@@ -238,6 +245,7 @@ local function sparkSlot(): SparkSlot
 end
 
 local function sparks(position: Vector3, color: Color3, count: number?)
+	local climb = 1 + math.min(comboCount, 25) * 0.01
 	local slot = sparkSlot()
 	slot.anchor.Position = position
 	slot.emitter.Color = ColorSequence.new(color, Color3.fromRGB(255, 220, 140))
@@ -246,7 +254,7 @@ local function sparks(position: Vector3, color: Color3, count: number?)
 	local entry = if hitVariant then Config.Sounds.HitA else Config.Sounds.HitB
 	slot.sound.SoundId = entry.Id
 	slot.sound.Volume = entry.Volume
-	slot.sound.PlaybackSpeed = Sfx.pitch(entry)
+	slot.sound.PlaybackSpeed = Sfx.pitch(entry) * climb
 	slot.sound:Play()
 end
 
@@ -286,6 +294,106 @@ local function floater(position: Vector3, text: string, color: Color3, size: num
 	}):Play()
 	task.delay(1, function()
 		untrack(floaters, anchor)
+	end)
+end
+
+-- The combo badge over your head, in the menus' cartoon style (MenuTheme): a big count with a gradient fill and the
+-- thick ink outline, over a chunky pill that reads COMBO, or the ore bonus while hits give ore. It pops on every hit,
+-- warms from white to red as the bonus steps up (with a wobble), and shrinks away once the combo lapses.
+local comboGui: BillboardGui? = nil
+type ComboParts = { gui: BillboardGui, badge: Frame, scale: UIScale, count: TextLabel, fill: UIGradient, pill: Frame, word: TextLabel }
+local comboParts: ComboParts? = nil
+local function comboBadge(): ComboParts
+	if comboParts and comboGui and comboGui.Parent then
+		return comboParts
+	end
+	local gui = Instance.new("BillboardGui")
+	gui.Name = "ComboBadge"
+	gui.ResetOnSpawn = false
+	gui.Size = UDim2.fromOffset(200, 92)
+	gui.StudsOffset = Vector3.new(0, 3.4, 0)
+	gui.AlwaysOnTop = true
+	gui.LightInfluence = 0
+	gui.MaxDistance = 250
+	gui.Enabled = false
+	gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+	local badge = Instance.new("Frame")
+	badge.Name = "Badge"
+	badge.AnchorPoint = Vector2.new(0.5, 0.5)
+	badge.Position = UDim2.fromScale(0.5, 0.5)
+	badge.Size = UDim2.fromScale(1, 1)
+	badge.BackgroundTransparency = 1
+	badge.Rotation = -4
+	badge.Parent = gui
+	local scale = Instance.new("UIScale")
+	scale.Parent = badge
+	-- the count: white with a coloured gradient, ink outline (TextScaled, so FixedTextSize leaves it to the pop)
+	local count = Theme.label(badge, "Count", "", 40, Palette.WHITE, Theme.TITLE_FONT, Enum.TextXAlignment.Center)
+	count.Size, count.TextScaled = UDim2.fromScale(1, 0.62), true
+	Theme.ink(count, true, 3)
+	local fill = Instance.new("UIGradient")
+	fill.Rotation = 90
+	fill.Parent = count
+	-- the pill under it: a lime face with the navy outline and a gloss band, like the menus' buttons
+	local pill = Instance.new("Frame")
+	pill.Name = "Pill"
+	pill.AnchorPoint = Vector2.new(0.5, 0)
+	pill.Position, pill.Size = UDim2.fromScale(0.5, 0.62), UDim2.fromScale(0.62, 0.34)
+	pill.BorderSizePixel = 0
+	pill.Parent = badge
+	Theme.round(pill, 12)
+	Theme.stroke(pill, Palette.NAVY, 2.5)
+	Theme.gradient(pill, Palette.LIME_TOP, Palette.LIME_BOTTOM)
+	Theme.gloss(pill, 0.55, 12)
+	local word = Theme.label(pill, "Word", "COMBO", 16, Palette.NAVY, Theme.TITLE_FONT, Enum.TextXAlignment.Center)
+	word.Position, word.Size, word.TextScaled, word.ZIndex = UDim2.fromScale(0.08, 0.12), UDim2.fromScale(0.84, 0.76), true, 8
+	gui.Parent = player:WaitForChild("PlayerGui")
+	comboGui = gui
+	comboParts = { gui = gui, badge = badge, scale = scale, count = count, fill = fill, pill = pill, word = word }
+	return comboParts :: ComboParts
+end
+
+-- the count's gradient bottom colour by ore-bonus step: white, then gold through orange to red
+local COMBO_COLORS = {
+	Color3.fromRGB(190, 225, 255), Color3.fromRGB(255, 232, 120), Color3.fromRGB(255, 200, 40),
+	Color3.fromRGB(255, 150, 40), Color3.fromRGB(255, 100, 50), Color3.fromRGB(255, 64, 90),
+}
+
+local function showCombo(count: number)
+	local stepped = Combo.mult(count) > Combo.mult(comboCount)
+	comboCount, comboAt = count, os.clock()
+	local parts = comboBadge()
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	if count < 3 or not head then
+		parts.gui.Enabled = false
+		return
+	end
+	parts.gui.Adornee = head :: BasePart
+	local appearing = not parts.gui.Enabled
+	parts.gui.Enabled = true
+	local bonus = math.floor((Combo.mult(count) - 1) * 100 + 0.5)
+	parts.count.Text = "x" .. count
+	parts.fill.Color = ColorSequence.new(Palette.WHITE, COMBO_COLORS[math.min(math.floor(bonus / 10) + 1, #COMBO_COLORS)])
+	parts.word.Text = if bonus > 0 and os.clock() - oreAt < Config.Hooks.Combo.Window then "+" .. bonus .. "% ORE" else "COMBO"
+	-- a pop on every hit, a bigger one and a wobble when the bonus steps up
+	parts.scale.Scale = if appearing then 0.3 elseif stepped then 1.4 else 1.12
+	TweenService:Create(parts.scale, TweenInfo.new(if stepped or appearing then 0.35 else 0.14, Enum.EasingStyle.Back), { Scale = 1 }):Play()
+	if stepped then
+		parts.badge.Rotation = 8
+		TweenService:Create(parts.badge, TweenInfo.new(0.45, Enum.EasingStyle.Elastic), { Rotation = -4 }):Play()
+		-- each step up of the bonus gets one bright ding, higher every time
+		Sfx.play("Bonus", nil, nil, 1 + bonus / 100)
+	end
+	local stamp = comboAt
+	task.delay(Config.Hooks.Combo.Window, function()
+		if comboAt ~= stamp then return end
+		comboCount = 0
+		local away = TweenService:Create(parts.scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.In), { Scale = 0 })
+		away.Completed:Once(function()
+			if comboAt == stamp then parts.gui.Enabled = false end
+		end)
+		away:Play()
 	end)
 end
 
@@ -388,10 +496,11 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 		return
 	end
 	playSlash(tool)
-	Sfx.play("Swing", root)
 
 	local target, hitPoint = findTarget(root, mode)
 	if not target then
+		-- the whoosh only on a miss: a landed hit already rings, and both on every swing piled up
+		Sfx.play("Swing", root)
 		return
 	end
 	local id = target:GetAttribute("TargetId") :: number
@@ -419,9 +528,10 @@ function MiningController:_swing(tool: Tool, mode: "pointer" | "nearest")
 	sparks(position, if isCore then Color3.fromRGB(255, 140, 50) else Color3.fromRGB(255, 230, 190))
 
 	task.spawn(function()
-		local ok, damage, crit = NodeService:Swing(id)
+		local ok, damage, crit, count = NodeService:Swing(id)
 		if ok and damage then
 			MiningController.Hit:Fire(target)
+			if typeof(count) == "number" then showCombo(count) end
 			if crit then
 				-- a crit rings like an anvil, throws a bigger shower of sparks and kicks the camera
 				Sfx.play("CritHit", target)
@@ -513,6 +623,7 @@ function MiningController:KnitStart()
 	RunService.PreSimulation:Connect(turnTowardTarget)
 
 	NodeService.OreGained:Connect(function(id: number, oreType: string, amount: number, jackpot: string?)
+		oreAt = os.clock()
 		local part = recentTargets[id]
 		recentTargets[id] = nil
 		if part then

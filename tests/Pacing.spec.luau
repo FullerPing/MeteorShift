@@ -6,6 +6,7 @@
 
 return function(t: any)
 	local Pacing = require(t.shared.Pacing)
+	local Combo = require(t.shared.Combo)
 	local Config = require(t.shared.Config)
 
 	local result = Pacing.simulate(4 * 3600)
@@ -214,10 +215,12 @@ return function(t: any)
 		local miner = 0.25 + 0.15 * 4 / 9
 		for _, quantity in { 1, Config.Debris.YieldFraction } do
 			local perHit = pickaxe.OrePerHit * quantity * Config.Meteor.Types.Iron.YieldMult * (1 + yield)
-			local fillSeconds = backpack.Capacity / perHit * pickaxe.Swing * (1 - swift) / Config.Balance.HitsPerMinuteShare
-			local playerRate = backpack.Capacity / (fillSeconds + Config.Balance.TripSeconds)
+			-- each fill climbs a fresh mining combo (Shared.Combo)
+			local hits = Combo.fillHits(backpack.Capacity, perHit)
+			local fillSeconds = hits * pickaxe.Swing * (1 - swift) / Config.Balance.HitsPerMinuteShare
 			-- During filling, each owner's landed hit corresponds to 1 / hit-share miner swings.
-			local expected = playerRate * (1 + miner / Config.Balance.HitsPerMinuteShare)
+			local petOre = perHit * miner * hits / Config.Balance.HitsPerMinuteShare
+			local expected = (backpack.Capacity + petOre) / (fillSeconds + Config.Balance.TripSeconds)
 			t.near(Pacing.oreRate(3, 2, quantity, 5), expected, 1e-10)
 			t.ok(Pacing.oreRate(3, 2, quantity, 5) > Pacing.oreRate(3, 2, quantity), "all three perks improve supply")
 		end
