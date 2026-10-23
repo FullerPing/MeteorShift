@@ -15,6 +15,7 @@
 -- only shards earned in game open eggs (Shared.ShardWallet). Pass pets are fixed
 -- entitlements; no purchase can roll a pet or change odds.
 
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -56,6 +57,7 @@ local nextSwing: { [Player]: number } = {}
 local haulCarry: { [Player]: number } = {}
 local lastRequest: { [Player]: number } = {}
 local lastWork: { [Player]: { [string]: number } } = {}
+local lastGroupCheck: { [Player]: number } = {}
 
 local function slotsFree(player: Player, data: any): boolean
 	return #data.pets.equipped < PlayerStateService:PetSlots(player)
@@ -199,6 +201,60 @@ function PetService:SyncPassPets(player: Player)
 		end
 	end
 	PlayerStateService:ReplicateNow(player)
+end
+
+-- Is the player in the game's group (Config.Pets.GroupReward)? `fresh` asks Roblox again (a web call), for someone
+-- who joined mid-session; otherwise the membership Roblox cached at join. A failed lookup counts as no.
+local function inGroup(player: Player, fresh: boolean): boolean
+	local groupId = Config.Pets.GroupReward.GroupId
+	if groupId == 0 then
+		return false
+	end
+	local ok, result = pcall(function()
+		if not fresh then
+			return player:IsInGroup(groupId)
+		end
+		for _, group in GroupService:GetGroupsAsync(player.UserId) do
+			if group.Id == groupId then
+				return true
+			end
+		end
+		return false
+	end)
+	return ok and result == true
+end
+
+-- The group reward: a member gets its pet once (equipped if a slot is free). True when they own it afterwards.
+function PetService:GiveGroupPet(player: Player, fresh: boolean): boolean
+	local data = PlayerStateService:Get(player)
+	local petId = Config.Pets.GroupReward.Pet
+	if not data then
+		return false
+	end
+	if data.pets.owned[petId] then
+		return true
+	end
+	if not inGroup(player, fresh) then
+		return false
+	end
+	data.pets.owned[petId] = { level = 1, xp = 0 }
+	if slotsFree(player, data) then
+		self:_putOut(player, data, petId)
+	end
+	PlayerStateService:ReplicateNow(player)
+	self.Client.Bought:Fire(player, petId)
+	self.PetBought:Fire(player, petId)
+	return true
+end
+
+function PetService.Client:ClaimGroupPet(player: Player): boolean
+	-- a fresh lookup is a web call: one every 5 s per player
+	local now = os.clock()
+	if now - (lastGroupCheck[player] or -math.huge) < 5 then
+		return false
+	end
+	lastGroupCheck[player] = now
+	return self.Server:GiveGroupPet(player, true)
 end
 
 -- Every equipped pet earns XP from one validated hit of the owner's (copies share one level, so once per pet).
@@ -345,6 +401,7 @@ function PetService:KnitStart()
 				task.wait(0.5)
 			end
 			self:SyncPassPets(player)
+			self:GiveGroupPet(player, false)
 		end)
 	end)
 	MonetizationService.PassBought:Connect(function(player: Player)
@@ -365,6 +422,7 @@ function PetService:KnitStart()
 		haulCarry[player] = nil
 		lastRequest[player] = nil
 		lastWork[player] = nil
+		lastGroupCheck[player] = nil
 	end)
 
 	task.spawn(function()

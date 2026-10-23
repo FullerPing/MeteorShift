@@ -170,10 +170,10 @@ function PetsLayout.perkRows(def: Config.Pet, level: number): { PerkRow }
 	return rows
 end
 
--- The eggs that can drop a pet (empty for pass pets)
+-- The eggs that can drop a pet (empty for pass and group pets)
 function PetsLayout.eggsFor(def: Config.Pet): { Config.Egg }
 	local eggs: { Config.Egg } = {}
-	if def.Pass then return eggs end
+	if def.Pass or def.Group then return eggs end
 	for _, egg in Config.Eggs do
 		if (egg.Odds[def.Rarity] or 0) > 0 then table.insert(eggs, egg) end
 	end

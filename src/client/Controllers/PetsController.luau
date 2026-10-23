@@ -3,6 +3,7 @@
 -- equip or put away; PET INDEX lists every pet in the game, found or not. On a roomy window it is the owner's cartoon light
 -- mockup on the Gear Shop's frame (EquipmentShopLayout.view); on small screens Shared.PetsLayout fits it with MenuFit.
 -- Eggs hatch at the Hatchery's prompts. Ownership, slots and hatching stay on the server (PetService).
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local RS = game:GetService("ReplicatedStorage")
 local MarketplaceService = game:GetService("MarketplaceService")
@@ -160,7 +161,9 @@ function Controller:KnitStart()
 		else
 			local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
 			table.insert(lines, '<font color="#' .. SOFT .. '">Perks: ???</font>')
-			table.insert(lines, '<font color="#' .. DIM .. '">' .. (if def.Pass then "A game pass pet: " .. Format.ROBUX .. " " .. Format.number(if pass then robuxOf(pass) else 0) .. ", a fixed price." else "Hatch it from an egg. Eggs that can drop it:") .. "</font>")
+			table.insert(lines, '<font color="#' .. DIM .. '">' .. (if def.Group then "Free for joining our Roblox group!"
+				elseif def.Pass then "A game pass pet: " .. Format.ROBUX .. " " .. Format.number(if pass then robuxOf(pass) else 0) .. ", a fixed price."
+				else "Hatch it from an egg. Eggs that can drop it:") .. "</font>")
 			for _, egg in PetsLayout.eggsFor(def) do
 				table.insert(lines, string.format('<font color="#%s">• %s</font> (%s%%)', strong, egg.Name, tostring(egg.Odds[def.Rarity])))
 			end
@@ -250,8 +253,7 @@ function Controller:KnitStart()
 					table.insert(parts, string.format('<font color="#%s">%s</font> %s', navyHex, Config.Pets.Roles[role].Name, PetsLayout.percent(value)))
 				end
 			end
-			petsScreen.Heading.Visible = not slim
-			box(petsScreen.Heading, 0, 2, summaryW - 140, 28)
+			petsScreen.Heading.Visible = false
 			local pill = petsScreen.EquipPill
 			pill.Label.Text = "Equipped " .. (if s then #s.equipped else 0) .. " / " .. slots
 			local bar = petsScreen.BonusBar
@@ -262,6 +264,7 @@ function Controller:KnitStart()
 				box(pill, summaryW - 126, 6, 126, 24)
 				box(bar, 0, headingH + 8, summaryW, g.summaryH - headingH - 10)
 			end
+			bar.Visible = #parts > 0
 			bar.Label.Visible = summaryW >= 360
 			local labelW = if bar.Label.Visible then 122 else 10
 			bar.Bonuses.Position, bar.Bonuses.Size = UDim2.fromOffset(labelW, 0), UDim2.new(1, -labelW - 8, 1, 0)
@@ -334,7 +337,7 @@ function Controller:KnitStart()
 				-- the rarity pill: lilac for a premium pet, otherwise a wash of the rarity's colour
 				local pill = body.Rarity
 				pill.Visible = true
-				pill.Label.Text = if def.Pass then "★ PREMIUM PET" else string.upper(rarity.Name)
+				pill.Label.Text = if def.Pass then "★ PREMIUM PET" elseif def.Group then "★ GROUP PET" else string.upper(rarity.Name)
 				if def.Pass then
 					pill.BackgroundColor3, pill.UIStroke.Color, pill.Label.TextColor3 = Palette.PREMIUM, Palette.PREMIUM_EDGE, Palette.PREMIUM_TEXT
 				else
@@ -397,6 +400,10 @@ function Controller:KnitStart()
 					end
 					Theme.state(action, busyId == nil and (isOut or free), if isOut and not addOne then "red" else "lime")
 					action.Text = if wait then "PLEASE WAIT" elseif isOut and addOne then "EQUIP +1" elseif isOut then "PUT AWAY" elseif free then "EQUIP" else "ALL " .. slotCount() .. " SLOTS IN USE"
+				elseif def.Group then
+					local groupOn = Config.Pets.GroupReward.GroupId ~= 0
+					Theme.state(action, busyId == nil and groupOn, "lime")
+					action.Text = if busyId == "pet_" .. def.Id then "PLEASE WAIT" elseif groupOn then "JOIN GROUP: FREE PET" else "COMING SOON"
 				elseif pass then
 					Theme.state(action, busyId == nil and onSale, "gold")
 					action.Text = if onSale then "GET FOR " .. Format.ROBUX .. " " .. Format.number(robuxOf(pass)) else "NOT ON SALE YET"
@@ -412,16 +419,12 @@ function Controller:KnitStart()
 			end
 		end
 
-		-- under the grid: the slots line (roomy layouts) and the hint strip, which also carries notices
-		p.MoreSlots.Visible = g.more.w > 0 and tab == "pets"
-		box(p.MoreSlots, g.more.x, g.more.y, g.more.w, g.more.h)
+		-- under the grid: the strip shows only a notice (or the loading line), no standing tips
+		p.MoreSlots.Visible = false
 		local hint = p.Hint
-		hint.Visible = g.footerH > 0
+		hint.Footer.Text = if notice ~= "" then notice elseif not s then "Loading your pets..." else ""
+		hint.Visible = g.footerH > 0 and hint.Footer.Text ~= ""
 		box(hint, g.padding, g.footerY, if g.wide then g.list.w else g.panel.w - g.padding * 2, g.footerH)
-		hint.Footer.Text = if notice ~= "" then notice elseif not s then "Loading your pets..."
-			elseif tab == "index" then "Hatch eggs at the Hatchery with Core Shards. Duplicates are extra copies to equip."
-			elseif g.wide then "Pets gain XP while you mine!"
-			else "Pets gain XP while you mine! More slots: Rebirths · Pet Bond · Extra Pet Slot"
 		updateBadge()
 	end
 	refresh = update
@@ -440,7 +443,17 @@ function Controller:KnitStart()
 		if busyId or not state or not selected then return end
 		local def = Pets.def(selected)
 		if not def then return end
-		if not owned(selected) then
+		if not owned(selected) and def.Group then
+			local groupId = Config.Pets.GroupReward.GroupId
+			if groupId == 0 then return end
+			purchase("pet_" .. selected, def.Name .. " is yours!", function()
+				-- Roblox's own join prompt, then the server checks the membership again
+				pcall(function() GroupService:PromptJoinAsync(groupId) end)
+				local got = petService:ClaimGroupPet()
+				if not got then notice = "Join the group, then tap again in a few seconds." end
+				return got
+			end)
+		elseif not owned(selected) then
 			local pass = if def.Pass then Config.Monetization.Passes[def.Pass] else nil
 			if pass and pass.Id ~= 0 then
 				local ok, err = pcall(function() MarketplaceService:PromptGamePassPurchase(player, pass.Id) end)

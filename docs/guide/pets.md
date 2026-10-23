@@ -25,9 +25,9 @@ Hatchery in the world, never in a menu.
 
 | Egg | Cost (shards) | Odds (%) | Pity | Gate |
 |---|---|---|---|---|
-| Meteor Egg | 30 | Common 55 · Uncommon 28 · Rare 12 · Epic 4.5 · Legendary 0.5 | Epic+ every 30 | — |
-| Crystal Egg | 120 | Uncommon 38 · Rare 40 · Epic 18 · Legendary 4 | Epic+ every 12 | — |
-| Aurora Egg | 250 | Epic 88 · Legendary 12 | Legendary every 10 | 2 rebirths (`src/shared/Config/Pets.luau:92`) |
+| Meteor Egg | 30 | Common 60 · Uncommon 28 · Rare 9.5 · Epic 2.25 · Legendary 0.25 | Epic+ every 40 | — |
+| Crystal Egg | 120 | Uncommon 40 · Rare 42 · Epic 15.5 · Legendary 2.5 | Epic+ every 15 | — |
+| Aurora Egg | 250 | Epic 94 · Legendary 6 | Legendary every 20 | 2 rebirths (`src/shared/Config/Pets.luau:92`) |
 
 Pass pets are never egg prizes: `Pets.eggPets` skips any pet with a `Pass` key
 (`src/shared/Pets.luau:89-98`) and no egg names the premium rarity in its odds.
@@ -58,7 +58,7 @@ Epic 2, Legendary 3, Premium 3 (`tests/Pets.spec.luau:258-273`).
 | Role | Cap | What it does | Applied at |
 |---|---|---|---|
 | Miner | 100% | while your own validated swing landed within 15 s (`src/shared/Config/Pets.luau:47-48`, `src/shared/Pets.luau:52-55`), one hit per swing on the nearest target in reach at this share of your pickaxe Power and ore, straight to the hopper; counts for nothing else — no podium, core rewards, mineral drops, `Hit`, tutorial or meteor size (`src/server/Services/NodeService.luau:219-224`) | tick `src/server/Services/PetService.luau:211-224`, hit `src/server/Services/NodeService.luau:224-239` |
-| Hauler | 6% | share of backpack capacity moved to the hopper each second (carries don't bank when there's nothing to carry) | `src/server/Services/PetService.luau:199-209` |
+| Hauler | 3% | share of backpack capacity moved to the hopper each second (carries don't bank when there's nothing to carry) | `src/server/Services/PetService.luau:199-209` |
 | Pack | 60% | backpack capacity | `src/server/Services/PlayerStateService.luau:127-132` |
 | Swift | 30% | swing time cut (raises Mining Power per second) | `src/server/Services/PlayerStateService.luau:118-121` |
 | Merchant | 45% | bar sale value | `src/server/Services/EconomyService.luau:48-49` |
@@ -90,12 +90,13 @@ Look text is the owner's art direction, not code-enforced; per-pet mesh briefs l
 | Spark Hare | Uncommon | Swift 5→12% | yellow hare with blue-white sparks; a spark jumps to your pickaxe on a swing |
 | Jet Wisp | Rare | Swift 8→18%, Sprint 6→15% | cyan teardrop spirit with flame tails; flares when you swing |
 | Coin Magpie | Rare | Merchant 8→20% | magpie with a coin in its beak; coin glint on sales |
-| Cargo Mole | Rare | Hauler 1.2→3%, Pack 8→18% | mole in a hard hat with a satchel; hops ore toward the hopper |
+| Cargo Mole | Rare | Hauler 0.6→1.5%, Pack 8→18% | mole in a hard hat with a satchel; hops ore toward the hopper |
 | Granite Golem | Rare | Pack 20→38%, Vault 25→60% | boulder golem; chest hatch glows when the backpack nears full |
 | Crystal Stag | Epic | Crit 4→10%, Miner 12→25% | violet crystal deer; antler flash and shard burst when it mines |
-| Lode Wyrm | Epic | Hauler 1.5→3.75%, Vault 35→80% | copper burrowing worm; drags glowing ore along a light tunnel |
+| Lode Wyrm | Epic | Hauler 0.8→2%, Vault 35→80% | copper burrowing worm; drags glowing ore along a light tunnel |
 | Aurora Owl | Epic | Merchant 12→28%, Shards 6→15% | teal-mint owl; aurora ripple across feathers on sales |
 | Meteor Drake | Legendary | Miner 22→36%, Yield 8→18%, Shards 8→20% | lava-cracked dragon with its own point light; meteor-streak arrival |
+| Comet Fox | Rare (group reward) | Swift 6→14%, Sprint 5→12% | free once for joining the Roblox group (`Config.Pets.GroupReward`, group 526085770); never in an egg |
 | Drillbot | Premium | Miner 25→40%, Swift 8→20%, Yield 10→20% | steel drone with a drill nose; assembles on arrival |
 | Solar Phoenix | Premium | Miner 50→100%, Merchant 15→35%, Scholar 15→35% | gold-and-fire phoenix, the only pet with a halo ring |
 

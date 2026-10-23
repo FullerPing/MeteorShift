@@ -37,6 +37,7 @@ export type Rarity = { Id: string, Name: string, Color: Color3 }
 export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string, MinRebirths: number? }
 export type Pet = {
 	Id: string, Name: string, Rarity: string, Perks: { Perk }, Color: Color3, Blurb: string,
+	Group: boolean?, -- the group reward (Pets.GroupReward): free for members of the game's Roblox group, never in an egg
 	Pass: string?, -- Config.Monetization pass key: owning the pass gives the pet (not in any egg); the price is Config.Monetization.Passes[Pass].Robux, as PetsController shows it
 }
 
@@ -59,7 +60,8 @@ Pets.Slots = { Base = 1, PerRebirth = 1, Max = 3, ExtraAtRebirth = 4 }
 Pets.Roles = {
 	-- 1.5 so a second miner adds to a maxed Solar Phoenix (its 1.0 alone used to fill the cap, leaving Drillbot's miner role idle)
 	miner = { Name = "Miner", Cap = 1.50, Text = "Mines for you at %s of your pickaxe. Its ore goes straight to the hopper." },
-	hauler = { Name = "Hauler", Cap = 0.06, Text = "Carries %s of your backpack to the hopper every second." },
+	-- 0.03: two maxed haulers used to empty a backpack every ~17 s, so nobody walked ore to the Foundry any more
+	hauler = { Name = "Hauler", Cap = 0.03, Text = "Carries %s of your backpack to the hopper every second." },
 	pack = { Name = "Pack", Cap = 0.60, Text = "Expands your backpack by %s." },
 	swift = { Name = "Swift", Cap = 0.30, Text = "Shortens your swing by %s." },
 	merchant = { Name = "Merchant", Cap = 0.45, Text = "Bars sell for %s more." },
@@ -87,12 +89,13 @@ Pets.RarityOrder = { "common", "uncommon", "rare", "epic", "legendary", "premium
 -- PityFrom-or-better pet, the next hatch is guaranteed one (the count resets on any such pet).
 Pets.Eggs = {
 	{ Id = "meteorEgg", Name = "Meteor Egg", Cost = 30,
-		Odds = { common = 55, uncommon = 28, rare = 12, epic = 4.5, legendary = 0.5 }, Pity = 30, PityFrom = "epic" },
+		Odds = { common = 60, uncommon = 28, rare = 9.5, epic = 2.25, legendary = 0.25 }, Pity = 40, PityFrom = "epic" },
 	{ Id = "crystalEgg", Name = "Crystal Egg", Cost = 120,
-		Odds = { uncommon = 38, rare = 40, epic = 18, legendary = 4 }, Pity = 12, PityFrom = "epic" },
-	-- Rebirth 2 unlock: nothing below Epic, and a Legendary is guaranteed every 10 hatches
+		Odds = { uncommon = 40, rare = 42, epic = 15.5, legendary = 2.5 }, Pity = 15, PityFrom = "epic" },
+	-- Rebirth 2 unlock: nothing below Epic, and a Legendary is guaranteed every 20 hatches (it was 10 with 12% odds,
+	-- which filled every slot with Meteor Drakes, the only Legendary, in a few thousand shards)
 	{ Id = "auroraEgg", Name = "Aurora Egg", Cost = 250, MinRebirths = 2,
-		Odds = { epic = 88, legendary = 12 }, Pity = 10, PityFrom = "legendary" },
+		Odds = { epic = 94, legendary = 6 }, Pity = 20, PityFrom = "legendary" },
 } :: { Egg }
 
 -- Each perk's Min is level 1 and Max is level 10. Keep catalog order stable: egg picks
@@ -114,25 +117,32 @@ Pets.List = {
 	{ Id = "coinMagpie", Name = "Coin Magpie", Rarity = "rare", Color = Color3.fromRGB(255, 220, 100), Blurb = "Haggles for a better price.",
 		Perks = { { Role = "merchant", Min = 0.08, Max = 0.20 } } },
 	{ Id = "cargoMole", Name = "Cargo Mole", Rarity = "rare", Color = Color3.fromRGB(150, 120, 96), Blurb = "Digs your ore home for you.",
-		Perks = { { Role = "hauler", Min = 0.012, Max = 0.03 }, { Role = "pack", Min = 0.08, Max = 0.18 } } },
+		Perks = { { Role = "hauler", Min = 0.006, Max = 0.015 }, { Role = "pack", Min = 0.08, Max = 0.18 } } },
 	{ Id = "graniteGolem", Name = "Granite Golem", Rarity = "rare", Color = Color3.fromRGB(120, 130, 140), Blurb = "A walking boulder with room inside.",
 		Perks = { { Role = "pack", Min = 0.20, Max = 0.38 }, { Role = "vault", Min = 0.25, Max = 0.60 } } },
 	-- Epic
 	{ Id = "crystalStag", Name = "Crystal Stag", Rarity = "epic", Color = Color3.fromRGB(190, 130, 255), Blurb = "Antlers of living crystal. It breaks rock with them.",
 		Perks = { { Role = "crit", Min = 0.04, Max = 0.10 }, { Role = "miner", Min = 0.12, Max = 0.25 } } },
 	{ Id = "lodeWyrm", Name = "Lode Wyrm", Rarity = "epic", Color = Color3.fromRGB(255, 170, 70), Blurb = "A burrowing worm that tunnels your ore home.",
-		Perks = { { Role = "hauler", Min = 0.015, Max = 0.0375 }, { Role = "vault", Min = 0.35, Max = 0.80 } } },
+		Perks = { { Role = "hauler", Min = 0.008, Max = 0.02 }, { Role = "vault", Min = 0.35, Max = 0.80 } } },
 	{ Id = "auroraOwl", Name = "Aurora Owl", Rarity = "epic", Color = Color3.fromRGB(120, 255, 210), Blurb = "Sees the best price in any light.",
 		Perks = { { Role = "merchant", Min = 0.12, Max = 0.28 }, { Role = "shards", Min = 0.06, Max = 0.15 } } },
 	-- Legendary
 	{ Id = "meteorDrake", Name = "Meteor Drake", Rarity = "legendary", Color = Color3.fromRGB(255, 130, 50), Blurb = "Born in a crater. It never stops digging.",
 		Perks = { { Role = "miner", Min = 0.22, Max = 0.36 }, { Role = "yield", Min = 0.08, Max = 0.18 }, { Role = "shards", Min = 0.08, Max = 0.20 } } },
+	-- Group reward (Pets.GroupReward): free for joining the game's Roblox group, a Rare's strength, never in an egg
+	{ Id = "cometFox", Name = "Comet Fox", Rarity = "rare", Group = true, Color = Color3.fromRGB(127, 182, 255), Blurb = "Our group's mascot. It leaves stardust behind your swing.",
+		Perks = { { Role = "swift", Min = 0.06, Max = 0.14 }, { Role = "sprint", Min = 0.05, Max = 0.12 } } },
 	-- Premium (game passes: fixed price, never random, the strongest miners)
 	{ Id = "drillbot", Name = "Drillbot", Rarity = "premium", Pass = "Drillbot", Color = Color3.fromRGB(255, 176, 48), Blurb = "A little drill on legs. It keeps swinging while you do.",
 		Perks = { { Role = "miner", Min = 0.25, Max = 0.40 }, { Role = "swift", Min = 0.08, Max = 0.20 }, { Role = "yield", Min = 0.10, Max = 0.20 } } },
 	{ Id = "solarPhoenix", Name = "Solar Phoenix", Rarity = "premium", Pass = "SolarPhoenix", Color = Color3.fromRGB(255, 120, 60), Blurb = "A sun in feathers. It mines at the speed of light.",
 		Perks = { { Role = "miner", Min = 0.50, Max = 1.00 }, { Role = "merchant", Min = 0.15, Max = 0.35 }, { Role = "scholar", Min = 0.15, Max = 0.35 } } },
 } :: { Pet }
+
+-- Join the game's Roblox group, get Pet once (PetService.GiveGroupPet). GroupId 0 would switch it off;
+-- the id is the owner's group (from its URL).
+Pets.GroupReward = { GroupId = 526085770, Pet = "cometFox" }
 
 Pets.Starter = {} :: { string } -- pets every new profile starts with (none: eggs and passes)
 

@@ -11,13 +11,14 @@ return function(t: any)
 		packMule = { { "pack", 0.15, 0.30 } },
 		sparkHare = { { "swift", 0.05, 0.12 } },
 		jetWisp = { { "swift", 0.08, 0.18 }, { "sprint", 0.06, 0.15 } },
-		cargoMole = { { "hauler", 0.012, 0.03 }, { "pack", 0.08, 0.18 } },
+		cargoMole = { { "hauler", 0.006, 0.015 }, { "pack", 0.08, 0.18 } },
 		coinMagpie = { { "merchant", 0.08, 0.20 } },
 		graniteGolem = { { "pack", 0.20, 0.38 }, { "vault", 0.25, 0.60 } },
 		crystalStag = { { "crit", 0.04, 0.10 }, { "miner", 0.12, 0.25 } },
 		auroraOwl = { { "merchant", 0.12, 0.28 }, { "shards", 0.06, 0.15 } },
-		lodeWyrm = { { "hauler", 0.015, 0.0375 }, { "vault", 0.35, 0.80 } },
+		lodeWyrm = { { "hauler", 0.008, 0.02 }, { "vault", 0.35, 0.80 } },
 		meteorDrake = { { "miner", 0.22, 0.36 }, { "yield", 0.08, 0.18 }, { "shards", 0.08, 0.20 } },
+		cometFox = { { "swift", 0.06, 0.14 }, { "sprint", 0.05, 0.12 } },
 		drillbot = { { "miner", 0.25, 0.40 }, { "swift", 0.08, 0.20 }, { "yield", 0.10, 0.20 } },
 		solarPhoenix = { { "miner", 0.50, 1.00 }, { "merchant", 0.15, 0.35 }, { "scholar", 0.15, 0.35 } },
 	} :: { [string]: { { any } } }
@@ -43,7 +44,7 @@ return function(t: any)
 	end
 
 	t.test("the 11 roles carry their display text and caps without shared ranges", function()
-		local caps = { miner = 1.5, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
+		local caps = { miner = 1.5, hauler = 0.03, pack = 0.60, swift = 0.30, merchant = 0.45,
 			yield = 0.40, sprint = 0.30, vault = 1, crit = 0.15, scholar = 0.60, shards = 0.30 }
 		t.eq(#Config.RoleOrder, 11)
 		local seen = {}
@@ -193,8 +194,8 @@ return function(t: any)
 			table.insert(saved.equipped, def.Id)
 		end
 		local bonuses = Pets.bonuses(saved)
-		local capped = { miner = 1.5, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
-			yield = 0.40, sprint = 0.15, vault = 1, crit = 0.10, scholar = 0.51, shards = 0.30 }
+		local capped = { miner = 1.5, hauler = 0.03, pack = 0.60, swift = 0.30, merchant = 0.45,
+			yield = 0.40, sprint = 0.27, vault = 1, crit = 0.10, scholar = 0.51, shards = 0.30 }
 		for role, value in capped do
 			t.near(bonuses[role], value, 1e-9, role)
 		end
@@ -273,8 +274,17 @@ return function(t: any)
 		end
 	end)
 
-	t.test("the 14 pets have the perk counts required by their rarity", function()
-		t.eq(#Config.List, 14)
+	t.test("the group reward is a Rare no egg drops, and points at the owner's group", function()
+		local reward = Config.GroupReward
+		local def = Pets.def(reward.Pet) :: any
+		t.ok(def ~= nil and def.Group == true, "the reward pet is marked Group")
+		t.eq(def.Rarity, "rare")
+		t.eq(table.find(Pets.eggPets("rare"), def), nil, "never hatches")
+		t.eq(reward.GroupId, 526085770, "the owner's group")
+	end)
+
+	t.test("the 15 pets have the perk counts required by their rarity", function()
+		t.eq(#Config.List, 15)
 		for _, pet in Config.List do
 			t.ok(Config.Rarities[pet.Rarity] ~= nil, pet.Id .. " rarity")
 			local count = #pet.Perks
@@ -361,26 +371,26 @@ return function(t: any)
 	t.test("both eggs retain their costs, odds, pity and deterministic catalog picks", function()
 		local meteor, crystal = Pets.egg("meteorEgg"), Pets.egg("crystalEgg")
 		t.eq(meteor.Cost, 30)
-		t.eq(meteor.Pity, 30)
+		t.eq(meteor.Pity, 40)
 		t.eq(crystal.Cost, 120)
-		t.eq(crystal.Pity, 12)
+		t.eq(crystal.Pity, 15)
 		t.eq(meteor.PityFrom, "epic")
 		t.eq(crystal.PityFrom, "epic")
-		for rarity, odds in { common = 55, uncommon = 28, rare = 12, epic = 4.5, legendary = 0.5 } do
+		for rarity, odds in { common = 60, uncommon = 28, rare = 9.5, epic = 2.25, legendary = 0.25 } do
 			t.eq(meteor.Odds[rarity], odds)
 		end
-		for rarity, odds in { uncommon = 38, rare = 40, epic = 18, legendary = 4 } do
+		for rarity, odds in { uncommon = 40, rare = 42, epic = 15.5, legendary = 2.5 } do
 			t.eq(crystal.Odds[rarity], odds)
 		end
 		t.eq(crystal.Odds.common, nil)
 		t.eq(meteor.Odds.premium, nil)
 		t.eq(crystal.Odds.premium, nil)
-		for _, case in { { 0, "pebblePup" }, { 0.56, "packMule" }, { 0.84, "jetWisp" }, { 0.96, "crystalStag" }, { 0.999, "meteorDrake" } } do
+		for _, case in { { 0, "pebblePup" }, { 0.61, "packMule" }, { 0.89, "jetWisp" }, { 0.98, "crystalStag" }, { 0.999, "meteorDrake" } } do
 			t.eq(Pets.roll(meteor, case[1], 0, 0), case[2])
 		end
-		t.eq(Pets.roll(meteor, 0.84, 0, 0.999), "graniteGolem")
-		t.eq(Pets.roll(meteor, 0.96, 0, 0.999), "auroraOwl")
-		for _, case in { { 0, "packMule" }, { 0.39, "jetWisp" }, { 0.80, "crystalStag" }, { 0.99, "meteorDrake" } } do
+		t.eq(Pets.roll(meteor, 0.89, 0, 0.999), "graniteGolem")
+		t.eq(Pets.roll(meteor, 0.98, 0, 0.999), "auroraOwl")
+		for _, case in { { 0, "packMule" }, { 0.41, "jetWisp" }, { 0.83, "crystalStag" }, { 0.99, "meteorDrake" } } do
 			t.eq(Pets.roll(crystal, case[1], 0, 0), case[2])
 		end
 	end)
@@ -393,7 +403,7 @@ return function(t: any)
 		local rarity = Pets.def(id).Rarity
 		t.ok(rarity == "epic" or rarity == "legendary", "pity gave " .. rarity)
 		t.eq(reset, 0)
-		local _, epicReset = Pets.roll(egg, 0.96, 3, 0) -- an Epic by luck resets too
+		local _, epicReset = Pets.roll(egg, 0.98, 3, 0) -- an Epic by luck resets too
 		t.eq(epicReset, 0)
 	end)
 
@@ -415,7 +425,7 @@ return function(t: any)
 			longest = math.max(longest, drought)
 		end
 		t.ok(longest < egg.Pity, "longest drought " .. longest)
-		t.ok(math.abs(counts.common / n - 0.55) < 0.03, "common share " .. counts.common / n)
+		t.ok(math.abs(counts.common / n - 0.60) < 0.03, "common share " .. counts.common / n)
 	end)
 
 	t.test("the Solar Phoenix keeps its exact 50% to 100% miner perk", function()

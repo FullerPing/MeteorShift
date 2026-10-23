@@ -136,7 +136,7 @@ return function(t: any)
 	t.test("every pet has perk rows and a way to get it", function()
 		for _, def in Config.Pets.List do
 			t.ok(#PetsLayout.perkRows(def, 1) >= 1, def.Id .. " has perks")
-			t.ok(def.Pass ~= nil or #PetsLayout.eggsFor(def) >= 1, def.Id .. " is in an egg or a pass")
+			t.ok(def.Pass ~= nil or def.Group == true or #PetsLayout.eggsFor(def) >= 1, def.Id .. " is in an egg, a pass or the group reward")
 		end
 	end)
 end

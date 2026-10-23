@@ -102,11 +102,11 @@ for index, id in Config.RarityOrder do
 	rarityIndex[id] = index
 end
 
--- The pets an egg can hatch of one rarity (pass pets are never in an egg)
+-- The pets an egg can hatch of one rarity (pass and group pets are never in an egg)
 function Pets.eggPets(rarity: string): { Config.Pet }
 	local out = {}
 	for _, pet in Config.List do
-		if pet.Rarity == rarity and not pet.Pass then
+		if pet.Rarity == rarity and not pet.Pass and not pet.Group then
 			table.insert(out, pet)
 		end
 	end
