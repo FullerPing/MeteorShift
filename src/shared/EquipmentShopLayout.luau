@@ -219,7 +219,7 @@ function EquipmentShopLayout.screen(width: number, height: number, narrow: boole
 	local mainH
 	out.cap, out.levelPill, out.dividers = rect(0, 0, 0, 0), rect(0, 0, 0, 0), {}
 	if wide then
-		-- the cartoon light mockup, straight on the body: the name over a "Tier" pill and the level cap, the preview with
+		-- the cartoon light mockup, straight on the body: the name over a "Tier" pill, the preview with
 		-- a "LEVEL" pill, the highlighted level row over the stat rows with dividers, three quantity buttons and Upgrade
 		mainH = 351
 		out.card = rect(0, 0, w, 258)
@@ -235,9 +235,10 @@ function EquipmentShopLayout.screen(width: number, height: number, narrow: boole
 			table.insert(out.stats, rect(207, 113 + (index - 1) * 36, w - 215, 36))
 			if index > 1 then table.insert(out.dividers, rect(207, 112 + (index - 1) * 36, w - 215, 2)) end
 		end
-		out.qtyLabel = rect(0, 263, 140, 36)
-		out.strip = rect(155, 263, w - 155, 36)
-		out.amounts = { rect(155, 263, 88, 36), rect(251, 263, 90, 36), rect(349, 263, w - 349, 36) }
+		-- three quantity buttons across the whole row (no "Quantity" label: the buttons say it)
+		out.qtyLabel, out.strip = rect(0, 0, 0, 0), rect(0, 263, w, 36)
+		local each = math.floor((w - 16) / 3)
+		out.amounts = { rect(0, 263, each, 36), rect(each + 8, 263, each, 36), rect(each * 2 + 16, 263, w - each * 2 - 16, 36) }
 		out.upgrade = rect(0, 309, w, 42)
 	elseif not narrow and h < 352 then
 		-- short (a phone in landscape): the quantity and Upgrade move into a column right of the card, so the
@@ -265,9 +266,8 @@ function EquipmentShopLayout.screen(width: number, height: number, narrow: boole
 		local well = math.clamp(cardH - 72 - INNER, 100, 200)
 		out.well = rect(INNER, 72, well, well)
 		infoBlock(INNER + well + 18, 72, w - INNER * 2 - well - 18, well)
-		out.qtyLabel = rect(0, qtyY, 110, STRIP_H)
-		local stripW = math.floor(w * 0.52)
-		amountRow(w - stripW, qtyY, stripW, STRIP_H, 4)
+		out.qtyLabel = rect(0, 0, 0, 0)
+		amountRow(0, qtyY, w, STRIP_H, 4)
 	else
 		out.well = rect(INNER, INNER, 84, 84)
 		out.name, out.tier = rect(INNER + 96, INNER + 4, w - INNER * 2 - 96, 36), rect(INNER + 96, INNER + 44, w - INNER * 2 - 96, 24)

@@ -187,6 +187,7 @@ function IndexController:KnitStart()
 			for _, mineral in Pages[pageId].Minerals do
 				controls.minerals[mineral.Id].card.Size = UDim2.fromOffset(geometry.cardWidth, geometry.cardHeight)
 			end
+			controls.footer.Visible = false -- no small print under the grid
 			controls.footer.Position = UDim2.fromOffset(4, 12 + IndexLayout.gridHeight(geometry, total))
 			controls.footer.Size = UDim2.fromOffset(cardsW, 48)
 		end

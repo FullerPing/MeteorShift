@@ -69,6 +69,8 @@ function RebirthController:KnitStart()
 	local confirm = panel:WaitForChild("Confirm") :: TextButton
 	local keepButton = panel:WaitForChild("Keep") :: TextButton
 	local keepCard = panel:WaitForChild("KeepCard") :: Frame
+	local keepBody = keepCard:FindFirstChild("Body") :: TextLabel?
+	if keepBody then keepBody.Text = "Nothing resets." end
 	local perksButton = panel:WaitForChild("PerksButton") :: TextButton
 	local wallet = panel:WaitForChild("Wallet") :: TextLabel
 	local footer = panel:WaitForChild("Footer") :: TextLabel
@@ -102,9 +104,8 @@ function RebirthController:KnitStart()
 		ready.BackgroundColor3 = if canAfford then MINT else GOLD
 		percent.TextColor3 = if canAfford then Palette.UP else Palette.NAVY
 		currentMultiplier.Text, nextMultiplier.Text = multiplierText(rebirths), multiplierText(rebirths + 1)
-		local gain = Rebirth.multiplier(rebirths + 1) / math.max(Rebirth.multiplier(rebirths), 1e-9)
-		priceNote.Text = "Every bar sells for ×" .. string.format("%.3g", gain) .. " more. Upgrade prices rise ×"
-			.. string.format("%.3g", Rebirth.priceMult(rebirths + 1) / Rebirth.priceMult(rebirths)) .. ", so you come out ahead."
+		-- the NOW -> AFTER cards already say it; no sentence repeating them
+		priceNote.Visible = false
 		local ratio = math.clamp(cash / math.max(cost, 1), 0, 1)
 		cashProgress.Text = Format.cash(cash) .. " of " .. Format.cash(cost)
 		wallet.Text = Format.cash(cash)
@@ -120,10 +121,8 @@ function RebirthController:KnitStart()
 		footer.Text = if notice ~= "" then notice elseif busy then "Rebirthing..."
 			elseif keepArmed then "Press KEEP again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s to use 1 Keep credit. Nothing resets."
 			elseif armed then "Press again within " .. Format.number(Config.Rebirth.ConfirmWindow) .. " s. This can't be undone."
-			elseif not canAfford then (if ratio >= 0.8 then "Almost there! Earn " else "Earn ") .. Format.cash(cost - cash) .. " more"
-			else (if keep then "REBIRTH spends cash; your Keep credit stays for the KEEP button. " else "")
-				.. (if unlock then "Unlocks: " .. unlock .. ". " else "Index bonuses stay and stack with this multiplier. ")
-				.. (if bonus > 0 then "+" .. bonus .. " bonus shards now." else "Rebirth now: waiting never beats the x" .. Format.number(Config.Rebirth.CashMult) .. ".")
+			elseif not canAfford then "" -- the requirement bar shows what is left
+			else (if unlock then "Unlocks: " .. unlock .. ". " else "") .. (if bonus > 0 then "+" .. bonus .. " bonus shards." else "")
 		footer.TextColor3 = if armed or keepArmed or notice ~= "" then Palette.UNMET else Palette.SECOND
 		-- "Rebirth without losing anything": usable at any time, even before you can afford the rebirth.
 		-- Uses a credit when you have one, otherwise sells the product
@@ -268,6 +267,9 @@ function RebirthController:KnitStart()
 		box(keepCard, g.keepCard)
 		box(wallet, g.wallet)
 		compare.Size = UDim2.new(1, -6, 0, g.compareH)
+		-- on the wide frame the two lists reach down to PERKS's bottom edge, so both columns end on one line
+		local lists = content:FindFirstChild("Lists") :: Frame?
+		if lists then lists.Size = UDim2.new(1, -6, 0, if g.wide then math.max(152, g.content.h - g.compareH - 18) else 152) end
 		confirm.TextSize = if g.wide then 26 else 22
 		perksButton.Text = if g.wide then "COLONY PERKS" else "PERKS"
 		perksIcon.Visible = g.wide

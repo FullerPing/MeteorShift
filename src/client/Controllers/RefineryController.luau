@@ -239,8 +239,7 @@ function Controller:KnitStart()
 		middle.Note.Text = if r and r.blocked == "collector" then "Claim bars to start it again."
 			elseif boosted then string.format("OVERCLOCK ×%s speed, +%d%% bar value · %s left",
 				Format.number(Config.Monetization.Overclock.SpeedMult), math.floor(Config.Monetization.Overclock.BarBonus * 100 + 0.5), Format.time(overclock))
-			elseif r and not r.activeOre then "Deposit ore to start the line."
-			else "Works while you mine. Faster with Upgrades."
+			else ""
 		middle.Note.TextColor3 = if boosted and not (r and r.blocked == "collector") then Palette.GOLD_TEXT else Palette.SECOND
 		setPulse("foundry", middle.Well.Icon, refining and l.wells and r ~= nil and r.activeOre ~= nil and r.blocked == nil, 1.1)
 
@@ -278,7 +277,7 @@ function Controller:KnitStart()
 		local order: any = p.Order
 		order.Visible = refining
 		order.Position, order.Size = UDim2.fromOffset(l.order.x, l.order.y), UDim2.fromOffset(l.order.w, l.order.h)
-		order.How.Visible = l.order.w >= 560
+		order.How.Visible = false -- the arrows explain themselves
 		order.Totals.Size = UDim2.fromOffset(if l.order.w >= 560 then 170 else l.order.w - 160, 26)
 		local rows = Queue.rows(state and state.hopperInventory, state and state.collectorInventory, state and state.refinePriority)
 		local visible, ids = {}, queuedIds()
@@ -311,13 +310,11 @@ function Controller:KnitStart()
 		Theme.state(order.ResetPriority, state ~= nil and not busy, "tabOff")
 
 		p.Feedback.Position, p.Feedback.Size = UDim2.fromOffset(l.feedback.x, l.feedback.y), UDim2.fromOffset(l.feedback.w, l.feedback.h)
-		p.Feedback.Text = if feedback ~= "" then feedback elseif not refining then "Upgrade your line. Balance feeding and smelting speeds."
-			elseif not near then "Walk to the Foundry in town or the Commissary up north to deposit ore and claim bars."
-			elseif r and r.blocked == "collector" then "Claim bars to resume refining."
-			elseif state and state.carried > 0 and (not r or not r.activeOre) then "Press Deposit to start refining your ore."
-			elseif #rows > 1 then "Use the arrows to choose which ore is refined first."
-			elseif state and state.carried <= 0 then "Mine ore in the fields, then come back and deposit it."
-			else "Mine ore, deposit it, claim the bars, then tap SELL on your HUD."
+		-- only what blocks you: a refusal, being too far away, or a full collector
+		p.Feedback.Text = if feedback ~= "" then feedback
+			elseif refining and not near then "Walk to the Foundry to deposit ore."
+			elseif refining and r and r.blocked == "collector" then "Claim bars to resume refining."
+			else ""
 	end
 	p.depositCard.Action.Activated:Connect(function() transact("deposit") end)
 	p.claimCard.Action.Activated:Connect(function() transact("claim") end)

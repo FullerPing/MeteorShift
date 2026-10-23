@@ -122,7 +122,9 @@ function StoreController:KnitStart()
 	local listPadding = list:WaitForChild("ListPadding") :: UIPadding
 	local open = false
 	-- purchase notices and refusals: a toast, and the header line while the Store is open
-	local subtitleText = subtitle.Text
+	-- the header line is blank between notices (no standing small print)
+	local subtitleText = ""
+	subtitle.Text = subtitleText
 	local noticeToken = 0
 	local function storeNotice(message: string)
 		HUDController:Toast(message)
@@ -371,6 +373,7 @@ function StoreController:KnitStart()
 		for _, label in { card.kindLabel, card.title, card.description, card.status } do label.TextXAlignment = align end
 		card.kindLabel.Position, card.kindLabel.Size = UDim2.fromOffset(c.textX, c.kindY), UDim2.fromOffset(c.textWidth, 14)
 		card.kindLabel.TextSize = 13
+		card.kindLabel.Visible = false -- the price button already says pass or product
 		if c.wide then
 			card.well.AnchorPoint, card.well.Position = Vector2.zero, UDim2.fromOffset(c.iconX, c.iconY)
 		else

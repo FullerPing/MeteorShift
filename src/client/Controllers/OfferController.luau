@@ -91,7 +91,7 @@ function OfferController:KnitStart()
 			row.Visible = said[index] ~= nil
 			;(row:WaitForChild("Text") :: TextLabel).Text = said[index] or ""
 		end
-		footer.Text = if offer.kind == "pass" then "One-time purchase. Yours forever." else "Delivered right away."
+		footer.Text = ""
 		buy.Text = "BUY"
 		RobuxPrice.get(offer.kind, definition, function(price)
 			if showing == offer and price then buy.Text = "BUY  " .. RobuxPrice.text(price) end

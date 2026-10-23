@@ -112,9 +112,10 @@ end
 -- Motion (off with Reduce Effects). Only positions move: a UIScale or size tween would re-pin every label's text size
 -- each frame (FixedTextSize) and make the text step.
 local PRESS = TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local SLIDE = TweenInfo.new(0.24, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+-- a short slide that settles with a slight overshoot, so a menu lands instead of stopping dead
+local SLIDE = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local FADE = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local SLIDE_FROM = 28 -- px below its place a menu starts its slide
+local SLIDE_FROM = 36 -- px below its place a menu starts its slide
 local function calm(): boolean return Players.LocalPlayer:GetAttribute("ReduceEffects") == true end
 
 -- A chunky button (MenuTheme.button: a Face over a navy lip) lifts a pixel under the pointer and sinks into its lip while

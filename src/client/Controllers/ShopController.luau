@@ -117,16 +117,11 @@ function Controller:KnitStart()
 		local to = level + steps
 		if kind == "backpack" then
 			local now, after = Gear.capacity(tier, level), Gear.capacity(tier, to)
-			return {
-				{ name = "Capacity", value = "+" .. Format.number(math.floor(after - now + 0.5)) .. " ore" },
-				{ name = "New capacity", value = Format.number(math.floor(now)) .. " → " .. Format.number(math.floor(after)) },
-			}
+			return { { name = "Capacity", value = Format.number(math.floor(now)) .. " → " .. Format.number(math.floor(after)) } }
 		end
 		local a, b = Gear.pickaxe(tier, level), Gear.pickaxe(tier, to)
 		local rows = { { name = "Mining power", value = string.format("+%.1f%%", (b.Power / a.Power - 1) * 100) } }
 		if b.Swing > 0 and b.Swing < a.Swing then table.insert(rows, { name = "Swing speed", value = string.format("+%.1f%%", (a.Swing / b.Swing - 1) * 100) }) end
-		table.insert(rows, { name = "Reach", value = string.format("+%.2f studs", b.Reach - a.Reach) })
-		table.insert(rows, { name = "Crit chance", value = string.format("+%.1f%%", (b.CritChance - a.CritChance) * 100) })
 		return rows
 	end
 	local function requirement(row: any, label: string, value: string, met: boolean)
@@ -225,8 +220,8 @@ function Controller:KnitStart()
 			screen.GearName.TextSize = if g.narrow then 24 elseif g.compact then 28 else S.name
 			-- the tier: a pill and the level cap beside it on the wide layout, one line on small screens
 			screen.TierText.Visible = not g.popout
-			screen.TierPill.Visible, screen.CapText.Visible, screen.LevelPill.Visible = g.popout, g.popout, g.popout
-			screen.TierText.Text = "Tier " .. tier .. " · Level cap " .. Gear.cap(tier)
+			screen.TierPill.Visible, screen.CapText.Visible, screen.LevelPill.Visible = g.popout, false, g.popout
+			screen.TierText.Text = "Tier " .. tier .. " / " .. #tiers
 			screen.TierText.TextSize = S.tier
 			screen.TierPill.Label.Text = "Tier " .. tier .. " / " .. #tiers
 			screen.CapText.Text = "Level cap " .. Gear.cap(tier)

@@ -97,16 +97,24 @@ return function(t: any)
 		min, max = MenuFit.textLimits(8, 18, 1)
 		t.eq(min, 8)
 		t.eq(max, 18)
-		-- a small screen shrinks the cap but keeps the authored floor, and the floor never passes the cap
+		-- a small screen shrinks the cap down to the readable size but keeps the authored floor, and the floor never
+		-- passes the cap
 		min, max = MenuFit.textLimits(8, 18, 0.6)
-		t.eq(max, 11)
+		t.eq(max, MenuFit.MinTextPx)
 		t.eq(min, 8)
-		min, max = MenuFit.textLimits(14, 16, 0.5)
-		t.eq(max, 8)
-		t.eq(min, 8)
+		min, max = MenuFit.textLimits(16, 20, 0.5)
+		t.eq(max, MenuFit.MinTextPx)
+		t.eq(min, MenuFit.MinTextPx)
 		-- Roblox's 1 to 100 range
 		t.eq(select(2, MenuFit.textLimits(10, 60, 2)), 100)
 		-- the same inputs give the same limits however often they are applied (the base is kept, not the result)
 		t.eq(select(2, MenuFit.textLimits(8, 18, 4 / 3)), 24)
+	end)
+
+	t.test("text drawn smaller keeps a readable size, and small authored text keeps its own", function()
+		t.eq(MenuFit.drawnTextSize(20, 1.5), 30)
+		t.eq(MenuFit.drawnTextSize(20, 0.5), MenuFit.MinTextPx)
+		t.eq(MenuFit.drawnTextSize(10, 0.6), 10)
+		t.eq(MenuFit.drawnTextSize(12, 1), 12)
 	end)
 end

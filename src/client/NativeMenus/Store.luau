@@ -89,7 +89,7 @@ function Menu.build(): ScreenGui
 	panel.AnchorPoint, panel.Position, panel.Visible = Vector2.new(0.5, 0.5), UDim2.fromScale(0.5, 0.5), false
 	Theme.ribbon(panel, "Store", Config.HudIcons.store)
 	Theme.closeCorner(panel, Config.HudIcons.close)
-	local subtitle = Theme.label(panel, "Subtitle", "Passes last forever. Nothing here changes meteor or mineral odds.", 14, Palette.SECOND, nil,
+	local subtitle = Theme.label(panel, "Subtitle", "", 14, Palette.SECOND, nil,
 		Enum.TextXAlignment.Right)
 	subtitle.TextWrapped, subtitle.TextScaled = true, true
 	N.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 14 }, subtitle)

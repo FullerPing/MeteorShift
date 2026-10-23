@@ -51,7 +51,7 @@ local function lineCard(parent: Instance, name: string, caption: string, icon: s
 	if action then
 		Theme.button(card, "Action", action, "lime", 17)
 	else
-		local note = text(card, "Note", "Works while you mine. Faster with Upgrades.", 13, Palette.SECOND, false, Enum.TextXAlignment.Center)
+		local note = text(card, "Note", "", 13, Palette.SECOND, false, Enum.TextXAlignment.Center)
 		note.TextWrapped = true
 	end
 	return card
@@ -93,7 +93,7 @@ function Refinery.build(): ScreenGui
 		ScrollingDirection = Enum.ScrollingDirection.Y, ScrollBarThickness = 4, ScrollBarImageColor3 = Palette.BLUE_BOTTOM,
 		VerticalScrollBarInset = Enum.ScrollBarInset.ScrollBar, ZIndex = 3 }, order)
 	N.create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder }, list)
-	local empty = Theme.label(order, "Empty", "Nothing queued yet. Mine ore in the fields, then deposit it here.", 15, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	local empty = Theme.label(order, "Empty", "Nothing queued yet.", 15, Palette.SECOND, nil, Enum.TextXAlignment.Center)
 	empty.Position, empty.Size, empty.TextWrapped = UDim2.fromOffset(10, 40), UDim2.new(1, -20, 1, -46), true
 	local feedback = text(p, "Feedback", "", 14, Palette.SECOND)
 

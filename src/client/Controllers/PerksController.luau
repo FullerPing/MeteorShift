@@ -48,8 +48,7 @@ function PerksController:KnitStart()
 		local owned = if state then state.perks else nil
 		local unlocked = state ~= nil and PerksRules.unlocked(state.rebirths)
 		wallet.Text = if state then Format.number(state.shards) else "..."
-		footer.Text = if unlocked then "Bought with Core Shards. Every perk is kept through every rebirth."
-			else string.format("Colony Perks open at rebirth %d. Every perk is kept through every rebirth.", Config.Perks.UnlockRebirths)
+		footer.Text = if unlocked then "" else string.format("Opens at rebirth %d.", Config.Perks.UnlockRebirths)
 		for _, id in Config.Perks.Order do
 			local def = Config.Perks.List[id]
 			local card = body:FindFirstChild(id .. "Row") :: Frame?

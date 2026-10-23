@@ -138,7 +138,7 @@ function DailyController:KnitStart()
 			end
 		end
 		local footer = body:WaitForChild("Footer") :: TextLabel
-		footer.Text = failNote or "Quests and the streak reset at midnight UTC."
+		footer.Text = failNote or ""
 		footer.TextColor3 = if failNote then Palette.UNMET else Palette.SECOND
 		local ready = s.anyReady == true and tutorialDone
 		player:SetAttribute("DailyReady", ready)

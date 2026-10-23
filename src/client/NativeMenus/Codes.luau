@@ -14,7 +14,7 @@ function Codes.build(): ScreenGui
 	local gui, panel = MenuTheme.menu("CodesMenu", "Codes", "codes", Codes.SIZE, Codes.LAYOUT)
 	gui.DisplayOrder = 28
 
-	local intro = MenuTheme.label(panel, "Hint", "Got a code from a video, the group or an update? Type it here.", 16, Palette.NAVY)
+	local intro = MenuTheme.label(panel, "Hint", "Enter a code", 16, Palette.NAVY)
 	intro.Position, intro.Size, intro.TextWrapped = UDim2.fromOffset(24, 56), UDim2.new(1, -48, 0, 26), true
 	local caption = MenuTheme.label(panel, "Caption", "ENTER CODE", 14, Palette.SECOND, MenuTheme.TITLE_FONT)
 	caption.Position, caption.Size = UDim2.fromOffset(24, 92), UDim2.new(1, -48, 0, 18)
@@ -39,7 +39,7 @@ function Codes.build(): ScreenGui
 	status.Position, status.Size, status.TextWrapped, status.TextScaled = UDim2.fromOffset(12, 4), UDim2.new(1, -24, 1, -8), true, true
 	NativeUI.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 16 }, status)
 
-	local footer = MenuTheme.label(panel, "Footer", "Every code works once per player.", 13, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	local footer = MenuTheme.label(panel, "Footer", "", 13, Palette.SECOND, nil, Enum.TextXAlignment.Center)
 	footer.Position, footer.Size = UDim2.new(0, 24, 1, -46), UDim2.new(1, -48, 0, 20)
 	return gui
 end

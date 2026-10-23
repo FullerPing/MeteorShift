@@ -126,7 +126,7 @@ function Menu.build(): ScreenGui
 	local keepTitle = Theme.label(keepCard, "Heading", "Rebirth and Keep Everything", 16, Palette.NAVY)
 	keepTitle.Position, keepTitle.Size, keepTitle.TextScaled = UDim2.fromOffset(44, 8), UDim2.new(1, -52, 0, 28), true
 	N.create("UITextSizeConstraint", { MinTextSize = 10, MaxTextSize = 16 }, keepTitle)
-	local keepBody = Theme.label(keepCard, "Body", "Keeps cash, gear, production, ore and bars. The multiplier still goes up.", 13, Palette.GOLD_TEXT)
+	local keepBody = Theme.label(keepCard, "Body", "Nothing resets.", 13, Palette.GOLD_TEXT)
 	keepBody.Position, keepBody.Size, keepBody.TextWrapped = UDim2.fromOffset(12, 36), UDim2.new(1, -24, 0, 34), true
 	keepBody.TextYAlignment = Enum.TextYAlignment.Top
 	Theme.button(p, "Keep", "KEEP EVERYTHING", "gold", 18).ZIndex = 6

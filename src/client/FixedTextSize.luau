@@ -2,7 +2,8 @@
 -- Roblox's Text Size accessibility setting (GuiService.PreferredTextSize) enlarges every label with a fixed
 -- TextSize, which overflows the HUD and menus built for exact sizes. Labels that are TextScaled or carry a
 -- UITextSizeConstraint are exempt, so every other label in the PlayerGui gets a constraint pinned to the size it
--- is drawn at: its TextSize times the UIScales above it (a constraint limits the on-screen size). It follows
+-- is drawn at: its TextSize times the UIScales above it, kept readable on a menu drawn smaller
+-- (Shared.MenuFit.drawnTextSize; a constraint limits the on-screen size). It follows
 -- TextSize and scale changes and steps aside while the label is TextScaled.
 -- A label's own constraint (authored for the menu's 1080p layout) is scaled the same way (Shared.MenuFit.textLimits),
 -- or its text would stop growing while the menu around it grows on a big screen. The authored limits are kept in
@@ -74,7 +75,7 @@ local function pin(label: TextLabel | TextButton | TextBox)
 			;(constraint :: UITextSizeConstraint).Name = NAME
 		end
 		local c = constraint :: UITextSizeConstraint
-		local size = math.clamp(math.floor(label.TextSize * drawnScale(label) + 0.5), 1, 100)
+		local size = MenuFit.drawnTextSize(label.TextSize, drawnScale(label))
 		if c.MinTextSize == size and c.MaxTextSize == size and c.Parent == label then return end
 		-- MaxTextSize first when growing so Min never passes Max
 		if size > c.MaxTextSize then c.MaxTextSize = size; c.MinTextSize = size else c.MinTextSize = size; c.MaxTextSize = size end

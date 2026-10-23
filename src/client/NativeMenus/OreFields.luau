@@ -29,7 +29,7 @@ function OreFields.build(): ScreenGui
 	local gui, panel = MenuTheme.menu("OreFieldsMenu", "Ore Fields", "ore", OreFields.SIZE, OreFields.LAYOUT)
 	gui.DisplayOrder = 28
 
-	local hint = MenuTheme.label(panel, "Hint", "Pick a field to travel there. Higher fields open as you level up.", 16, Palette.NAVY)
+	local hint = MenuTheme.label(panel, "Hint", "", 16, Palette.NAVY)
 	hint.Position, hint.Size, hint.TextWrapped = UDim2.fromOffset(SIDE, 56), UDim2.new(1, -SIDE * 2, 0, 26), true
 
 	local list = NativeUI.create("Frame", { Name = "Fields", BackgroundTransparency = 1, Position = UDim2.fromOffset(SIDE, TOP),
@@ -57,7 +57,7 @@ function OreFields.build(): ScreenGui
 		lock.Position, lock.Size, lock.Visible = UDim2.new(1, -106, 0.5, -15), UDim2.fromOffset(96, 30), false
 	end
 
-	local footer = MenuTheme.label(panel, "Footer", "Every rock you break pays. Meteors still pay the most.", 13, Palette.SECOND, nil, Enum.TextXAlignment.Center)
+	local footer = MenuTheme.label(panel, "Footer", "", 13, Palette.SECOND, nil, Enum.TextXAlignment.Center)
 	footer.Position, footer.Size = UDim2.new(0, SIDE, 1, -36), UDim2.new(1, -SIDE * 2, 0, 20)
 	return gui
 end

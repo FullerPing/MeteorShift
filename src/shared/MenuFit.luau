@@ -10,6 +10,9 @@ local MenuFit = {}
 MenuFit.LandscapeMin = Vector2.new(860, 460) -- a landscape screen smaller than this draws menus smaller
 MenuFit.PortraitMinWidth = 420 -- a portrait screen narrower than this does
 MenuFit.MinScale = 0.7 -- never smaller, so text stays readable
+-- Text drawn smaller than this many on-screen pixels turns to mush (FredokaOne under ~13 px), so a menu drawn smaller
+-- keeps its text at least this big, or at its authored size when that is smaller still (MenuFit.drawnTextSize)
+MenuFit.MinTextPx = 14
 MenuFit.ScaleUpRef = Vector2.new(1920, 1080) -- a screen bigger than this draws menus bigger, in proportion
 MenuFit.MaxScale = 3
 MenuFit.RibbonRoom = 28 -- between the top bar and a centred panel: the title ribbon pokes 24 px above it
@@ -54,9 +57,15 @@ end
 -- (baseMin, baseMax) under a drawn `scale`: the max follows the scale; the min grows with it but never shrinks below what
 -- was authored (small screens keep their legibility floor) and never passes the max. Roblox allows 1 to 100.
 function MenuFit.textLimits(baseMin: number, baseMax: number, scale: number): (number, number)
-	local max = math.clamp(math.floor(baseMax * scale + 0.5), 1, 100)
+	local max = MenuFit.drawnTextSize(baseMax, scale)
 	local min = math.clamp(math.floor(baseMin * math.max(scale, 1) + 0.5), 1, max)
 	return min, max
+end
+
+-- The on-screen size of text authored at `size` under a drawn `scale`: it follows the scale, but a menu drawn smaller
+-- never takes it below MenuFit.MinTextPx (or below its own size, when that is smaller). Roblox allows 1 to 100.
+function MenuFit.drawnTextSize(size: number, scale: number): number
+	return math.clamp(math.floor(math.max(size * scale, math.min(size, MenuFit.MinTextPx)) + 0.5), 1, 100)
 end
 
 return MenuFit
