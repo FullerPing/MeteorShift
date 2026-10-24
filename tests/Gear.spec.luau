@@ -92,8 +92,8 @@ return function(t: any)
 			end
 		end
 		t.eq(Gear.price("pickaxe", #Config.Pickaxes, last), nil)
-		t.eq(Gear.price("pickaxe", 1, 1), 90, "tier 1's first level kept its old price (x2 with income, 2026-10-24)")
-		t.eq(Gear.price("backpack", 1, 1), 75)
+		t.eq(Gear.price("pickaxe", 1, 1), 45, "tier 1's first level kept its old price")
+		t.eq(Gear.price("backpack", 1, 1), 37)
 	end)
 
 	t.test("a tier's levels together cost its LevelCost, and every tier's levels cost more than the last", function()

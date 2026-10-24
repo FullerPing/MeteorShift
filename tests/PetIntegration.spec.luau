@@ -6,17 +6,17 @@ return function(t: any)
 	end
 	t.test("vault multiplies both station capacities while defaults stay unchanged", function()
 		local data = line()
-		t.eq(Refining.hopperCapacity(data), 4000)
-		t.eq(Refining.collectorCapacity(data), 4000)
-		t.eq(Refining.hopperCapacity(data, 1.6), 6400)
-		t.eq(Refining.collectorCapacity(data, 2), 8000)
+		t.eq(Refining.hopperCapacity(data), 2000)
+		t.eq(Refining.collectorCapacity(data), 2000)
+		t.eq(Refining.hopperCapacity(data, 1.6), 3200)
+		t.eq(Refining.collectorCapacity(data, 2), 4000)
 	end)
 	t.test("offline and online runs use the same vault storage limit", function()
 		local offline, online = line(), line()
-		offline.hopper.iron, online.hopper.iron = 10000, 10000
+		offline.hopper.iron, online.hopper.iron = 5000, 5000
 		local _, made = Refining.run(offline, 20000, nil, 2)
 		for _ = 1, 200 do Refining.run(online, 100, nil, 2) end
-		t.eq(made, 8000)
+		t.eq(made, 4000)
 		t.eq(online.bin.iron, offline.bin.iron)
 		t.eq(online.hopper.iron, offline.hopper.iron)
 	end)

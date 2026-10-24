@@ -46,24 +46,24 @@ return {
 	-- every field under 2x). A Halo rock still drops a few Alien ore, not a backpack of it.
 	Fields = {
 		{ Id = "RustWorks", Name = "Rust Works", Color = Color3.fromRGB(255, 124, 56),
-			Reward = { Kind = "Cash", Hp = 4, Seconds = 6.8, CashFloor = 20, CeilingShare = 0.006 } },
+			Reward = { Kind = "Cash", Hp = 4, Seconds = 6.8, CashFloor = 10, CeilingShare = 0.006 } },
 		{ Id = "FrostYard", Name = "Frost Yard", Color = Color3.fromRGB(110, 212, 255),
-			Reward = { Kind = "Cash", Hp = 10, Seconds = 17.5, CashFloor = 60, CeilingShare = 0.02 }, Unlock = { Level = 5 } },
+			Reward = { Kind = "Cash", Hp = 10, Seconds = 17.5, CashFloor = 30, CeilingShare = 0.02 }, Unlock = { Level = 5 } },
 		-- The XP Mine on the south of T2: its rocks pay player XP (Hp x XpPerHit, about 20 XP a minute of steady
 		-- mining against ~35 hitting a meteor), open to everyone, so the countdown always moves your level along.
 		-- They also pay some cash (owner, 2026-10-24): 4 s of income per 12-hit rock, about a fifth of Rust Works' rate
 		{ Id = "XpMine", Name = "XP Mine", Color = Color3.fromRGB(122, 140, 255),
-			Reward = { Kind = "Xp", Hp = 12, XpPerHit = 0.2, Seconds = 4, CashFloor = 20, CeilingShare = 0.006 } },
+			Reward = { Kind = "Xp", Hp = 12, XpPerHit = 0.2, Seconds = 4, CashFloor = 10, CeilingShare = 0.006 } },
 		{ Id = "VioletQuarry", Name = "Violet Quarry", Color = Color3.fromRGB(184, 116, 255),
 			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.48 }, Unlock = { Level = 12 } },
 		{ Id = "SulfurRidge", Name = "Sulfur Ridge", Color = Color3.fromRGB(255, 204, 64),
 			Reward = { Kind = "Ore", Hp = 16, Ore = "crystal", OreMult = 0.17 }, Unlock = { Level = 20 } },
 		{ Id = "EmberShelf", Name = "Ember Shelf", Color = Color3.fromRGB(255, 106, 78),
-			Reward = { Kind = "Cash", Hp = 20, Seconds = 30, CashFloor = 120, CeilingShare = 0.04 }, Unlock = { Level = 30 } },
+			Reward = { Kind = "Cash", Hp = 20, Seconds = 30, CashFloor = 60, CeilingShare = 0.04 }, Unlock = { Level = 30 } },
 		{ Id = "GlassScar", Name = "Glass Scar", Color = Color3.fromRGB(111, 240, 224),
 			Reward = { Kind = "Ore", Hp = 24, Ore = "alien", OreMult = 0.042 }, Unlock = { Level = 40 } },
 		{ Id = "Starfall", Name = "Starfall", Color = Color3.fromRGB(255, 143, 200),
-			Reward = { Kind = "Cash", Hp = 28, Seconds = 40, CashFloor = 400, CeilingShare = 0.06 }, Unlock = { Rebirths = 1 } },
+			Reward = { Kind = "Cash", Hp = 28, Seconds = 40, CashFloor = 200, CeilingShare = 0.06 }, Unlock = { Rebirths = 1 } },
 		{ Id = "HaloLedge", Name = "Halo Ledge", Color = Color3.fromRGB(255, 213, 74),
 			Reward = { Kind = "Ore", Hp = 32, Ore = "alien", OreMult = 0.045 }, Unlock = { Rebirths = 3 } },
 	} :: { Field },

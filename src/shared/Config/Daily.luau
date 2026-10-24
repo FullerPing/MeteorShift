@@ -13,7 +13,7 @@ export type Quest = {
 local Daily = {}
 
 Daily.CycleLength = 7
-Daily.CashFloor = 1000 -- a claim never pays less cash than this (the ceiling still wins)
+Daily.CashFloor = 500 -- a claim never pays less cash than this (the ceiling still wins)
 Daily.CashCeilingShare = 0.02 -- of the next rebirth's cost (0.05 let one early quest buy a whole gear tier)
 Daily.StartShields = 1
 Daily.ShieldCap = 3 -- free shield gains stop here; shields you buy are kept above it
