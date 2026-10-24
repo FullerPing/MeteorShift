@@ -24,14 +24,14 @@ local Backpacks: { Backpack } = {
 	{ Tier = 6, Name = "Cargo Rig", Capacity = 900, Cost = 1.4e6, LevelCost = 12e6, Shards = 0 },
 	{ Tier = 7, Name = "Gravity Pack", Capacity = 1.3e3, Cost = 9.2e6, LevelCost = 160e6, Shards = 0 },
 	{ Tier = 8, Name = "Void Pack", Capacity = 1.8e3, Cost = 120e6, LevelCost = 940e6, Shards = 0 },
-	{ Tier = 9, Name = "Quantum Pack", Capacity = 2.35e3, Cost = 700e6, LevelCost = 5e9, Shards = 0 },
-	{ Tier = 10, Name = "Nebula Pack", Capacity = 3.05e3, Cost = 3.8e9, LevelCost = 27e9, Shards = 0 },
-	{ Tier = 11, Name = "Star Hauler", Capacity = 4e3, Cost = 20e9, LevelCost = 140e9, Shards = 0 },
-	{ Tier = 12, Name = "Warp Rig", Capacity = 5.2e3, Cost = 110e9, LevelCost = 770e9, Shards = 0 },
-	{ Tier = 13, Name = "Dark Matter Pack", Capacity = 6.7e3, Cost = 580e9, LevelCost = 4.1e12, Shards = 0 },
-	{ Tier = 14, Name = "Pocket Dimension", Capacity = 8.8e3, Cost = 3.1e12, LevelCost = 22e12, Shards = 0 },
-	{ Tier = 15, Name = "Galaxy Vault", Capacity = 11.4e3, Cost = 16e12, LevelCost = 120e12, Shards = 0 },
-	{ Tier = 16, Name = "Infinity Pack", Capacity = 14.8e3, Cost = 87e12, LevelCost = 650e12, Shards = 0 },
+	{ Tier = 9, Name = "Quantum Pack", Capacity = 2.64e3, Cost = 700e6, LevelCost = 5.62e9, Shards = 0 },
+	{ Tier = 10, Name = "Nebula Pack", Capacity = 3.81e3, Cost = 4.28e9, LevelCost = 33.8e9, Shards = 0 },
+	{ Tier = 11, Name = "Star Hauler", Capacity = 5.5e3, Cost = 25e9, LevelCost = 192e9, Shards = 0 },
+	{ Tier = 12, Name = "Warp Rig", Capacity = 7.8e3, Cost = 151e9, LevelCost = 1.16e12, Shards = 0 },
+	{ Tier = 13, Name = "Dark Matter Pack", Capacity = 10.9e3, Cost = 870e9, LevelCost = 6.66e12, Shards = 0 },
+	{ Tier = 14, Name = "Pocket Dimension", Capacity = 15.4e3, Cost = 5.03e12, LevelCost = 38.5e12, Shards = 0 },
+	{ Tier = 15, Name = "Galaxy Vault", Capacity = 21.4e3, Cost = 28e12, LevelCost = 225e12, Shards = 0 },
+	{ Tier = 16, Name = "Infinity Pack", Capacity = 29.6e3, Cost = 163e12, LevelCost = 1.3e15, Shards = 0 },
 }
 
 return Backpacks
