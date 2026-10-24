@@ -39,7 +39,7 @@ function Quests.build(): ScreenGui
 
 	local claim = MenuTheme.button(panel, "Claim", "CLAIM", "lime", 22)
 	claim.AnchorPoint, claim.Position, claim.Size = Vector2.new(0.5, 0), UDim2.new(0.5, 0, 0, 274), UDim2.fromOffset(260, 56)
-	local footer = MenuTheme.label(panel, "Footer", "Quests come from the Foreman by the spawn. They never reset, not even on rebirth.", 14, Palette.MUTED, nil, Enum.TextXAlignment.Center)
+	local footer = MenuTheme.label(panel, "Footer", "Quests come from the Foreman by the spawn.", 14, Palette.MUTED, nil, Enum.TextXAlignment.Center)
 	footer.Position, footer.Size, footer.TextWrapped = UDim2.fromOffset(22, 338), UDim2.new(1, -44, 0, 22), true
 	return gui
 end
