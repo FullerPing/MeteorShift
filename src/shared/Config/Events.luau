@@ -10,7 +10,7 @@ export type Event = { Id: string, Name: string, Text: string, Effects: { [string
 local Events = {}
 
 Events.Period = 3600 -- an event every UTC hour
-Events.Duration = 900 -- running for its first 15 minutes
+Events.Duration = 300 -- running for its first 5 minutes
 Events.Topic = "MeteorShiftGlobalEvent"
 Events.MaxAdminMinutes = 120
 
