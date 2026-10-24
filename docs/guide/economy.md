@@ -80,8 +80,8 @@ Gear never asks for shards: every pickaxe and backpack row carries `Shards = 0`
   model in their own colour, `EquipmentModels`). A tier's levels together
   cost its row's `LevelCost`, each `LevelGrowth^(1/tier)` dearer than the last (`Shared.Gear.price`); evolving
   costs its row's `Cost`. Tier cap = 10 × tier levels. Reach stops growing at `ReachMax` (+12 studs).
-- Gates (`Config.Levels`): tiers 5 and 6 need player level 10 and 14; tiers 7-16 (and the same-numbered
-  line levels) need rebirths 4, 6, ... 22. Prices don't rise with rebirths, so each tier is priced for the
+- Gates (`Config.Levels`, owner 2026-10-24): tiers 1-3 are open; tiers 4-16 (and the same-numbered line levels)
+  need rebirths 1, 3, 5, 7, then 10, 12, ... 26. Prices don't rise with rebirths, so each tier is priced for the
   income of the rank that opens it: its evolve about 2 minutes of that income, its levels 2-3 more, the line
   level 1.5 (fitted with `Shared.Pacing` together with the rebirth costs; `tests/Pacing.spec` checks every
   tier is bought within a lap of opening). The model then rebirths about every 14 minutes, a lap that buys a

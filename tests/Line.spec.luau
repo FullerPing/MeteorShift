@@ -35,7 +35,7 @@ return function(t: any)
 		local c2, c3 = Line.cost(2) :: number, Line.cost(3) :: number
 		local count, total, stop = Line.plan(1, 1, 1e18, 99)
 		t.eq(count, 1); t.eq(total, c2); t.eq(stop, nil)
-		count, total, stop = Line.plan(1, 5, c2 + c3, 99)
+		count, total, stop = Line.plan(1, 5, c2 + c3, 99, nil, 99)
 		t.eq(count, 2); t.eq(total, c2 + c3); t.eq(stop, "cash")
 		count, total, stop = Line.plan(1, 99, 1e18, 99, nil, 99)
 		t.eq(count, Line.max() - 1); t.eq(stop, "max")
@@ -44,10 +44,10 @@ return function(t: any)
 		-- line level 7 opens by rebirth, like gear tier 7
 		count, _, stop = Line.plan(1, 99, 1e18, 99, nil, Line.rebirthsNeeded(7) - 1)
 		t.eq(count, 5); t.eq(stop, "rebirth")
-		-- level 5 needs a player level; a level-1 player stops before it
-		t.ok(Levels.evolveLevel(5) > 1, "line level 5 is gated")
+		-- level 4 needs the first rebirth; a fresh player stops before it
+		t.eq(Line.rebirthsNeeded(4), 1)
 		count, _, stop = Line.plan(1, 99, 1e12, 1)
-		t.eq(count, 3); t.eq(stop, "level")
+		t.eq(count, 2); t.eq(stop, "rebirth")
 	end)
 
 	t.test("clean keeps saved levels legal", function()

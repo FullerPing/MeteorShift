@@ -70,7 +70,7 @@ return function(t: any)
 		t.ok(Levels.evolveRebirths(#Config.Pickaxes) > 0, "the top tier opens by rebirth")
 		t.ok(Levels.canEvolve(7, 1, Levels.evolveRebirths(7)))
 		t.ok(not Levels.canEvolve(7, 50, Levels.evolveRebirths(7) - 1))
-		t.ok(not Levels.canEvolve(5, Levels.evolveLevel(5) - 1, 99))
+		t.ok(not Levels.canEvolve(5, 99, Levels.evolveRebirths(5) - 1))
 	end)
 
 	t.test("an average player (70 XP a meteor) never waits on a level for the early tiers", function()

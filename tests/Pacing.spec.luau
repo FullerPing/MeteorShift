@@ -92,8 +92,10 @@ return function(t: any)
 		t.ok(at15.owned.pickaxe >= 3, "pickaxe tier " .. at15.owned.pickaxe)
 	end)
 
-	t.test("by 30 minutes the Meteorite Pick is owned, so Crystal meteors pay", function()
-		t.ok(at30.owned.pickaxe >= 5, "pickaxe tier " .. at30.owned.pickaxe)
+	-- Owner, 2026-10-24: tier 4 opens at the first rebirth, tier 5 (Crystal meteors) at the third
+	t.test("by 30 minutes the Plasma Pick is owned, the tier the first rebirth opens", function()
+		local run = Pacing.simulate(3600, { rebirths = 3 })
+		t.ok(Pacing.sampleAt(run, 30 * 60).owned.pickaxe >= 4, "pickaxe tier " .. Pacing.sampleAt(run, 30 * 60).owned.pickaxe)
 	end)
 
 	t.test("the first rebirth lands between 10 and 20 minutes in", function()
@@ -106,28 +108,28 @@ return function(t: any)
 	-- Owner, 2026-10-22: faster laps. The first pays for the gear ramp; from the second they lengthen to the fourth. After
 	-- that a lap that buys a newly opened gear tier runs long and the one after it short, about 14 minutes on average
 	t.test("laps lengthen from the second rebirth to the fourth, then average about 14 minutes", function()
-		local run = Pacing.simulate(8 * 3600, { rebirths = 24 })
-		t.ok(#run.rebirthTimes >= 24, "only " .. #run.rebirthTimes .. " rebirths in eight hours")
+		local run = Pacing.simulate(8 * 3600, { rebirths = 30 })
+		t.ok(#run.rebirthTimes >= 30, "only " .. #run.rebirthTimes .. " rebirths in eight hours")
 		local lap, previous = {}, 0
-		for index = 1, 24 do
+		for index = 1, 30 do
 			lap[index] = run.rebirthTimes[index] - previous
 			previous = run.rebirthTimes[index]
 		end
 		t.ok(lap[2] < lap[3] and lap[3] < lap[4], "laps two to four get longer")
 		local sum = 0
-		for index = 5, 24 do
+		for index = 5, 30 do
 			sum += lap[index]
 			t.ok(lap[index] >= 8 * 60 and lap[index] <= 22 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
 		end
-		local average = sum / 20 / 60
-		t.ok(average >= 12 and average <= 16, string.format("laps 5 to 24 average %.1f min", average))
+		local average = sum / 26 / 60
+		t.ok(average >= 12 and average <= 16, string.format("laps 5 to 30 average %.1f min", average))
 	end)
 
 	t.test("every gear tier is bought within a lap of the rank that opens it", function()
 		local Levels = require(t.shared.Levels)
-		local run = Pacing.simulate(8 * 3600, { rebirths = 24 })
+		local run = Pacing.simulate(8 * 3600, { rebirths = 30 })
 		for _, kind in { "pickaxe", "backpack" } do
-			for tier = 7, #Config.Pickaxes do
+			for tier = 4, #Config.Pickaxes do
 				local opens = run.rebirthTimes[Levels.evolveRebirths(tier)]
 				local bought
 				for _, purchase in run.purchases do
@@ -177,11 +179,10 @@ return function(t: any)
 		t.ok(after.owned.backpack >= before.owned.backpack, "backpack tier fell")
 	end)
 
-	t.test("once the Drill Pick unlocks Ice meteors, the Plasma Pick is affordable within 3 hours", function()
-		local plasma = result.earnedAt.pickaxe4
-		t.ok(plasma ~= nil and plasma <= 3 * 3600, "Plasma in reach at " .. tostring(plasma))
+	t.test("once the Drill Pick unlocks Ice meteors, the Plasma Pick is bought within 3 hours", function()
+		local run = Pacing.simulate(3 * 3600, { rebirths = 1 })
 		local bought
-		for _, purchase in result.purchases do
+		for _, purchase in run.purchases do
 			if purchase.id == "pickaxe4" then
 				bought = purchase.time
 			end
@@ -199,7 +200,7 @@ return function(t: any)
 
 	t.test("sales cover the gear owned (no free lunch), and millions come within the hour", function()
 		t.ok(at30.earned >= 100e3, "earned by 30 min: " .. at30.earned)
-		local at60 = Pacing.sampleAt(result, 60 * 60)
+		local at60 = Pacing.sampleAt(Pacing.simulate(3600, { rebirths = 3 }), 60 * 60)
 		t.ok(at60.earned >= 1e6, "earned by 60 min: " .. at60.earned)
 	end)
 
