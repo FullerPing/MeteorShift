@@ -138,8 +138,8 @@ local function targetFor(stepId: string, from: Vector3): BasePart?
 	elseif stepId == "sell" then
 		return townPart({ "TownSquare", "TradingPost", "SellPoint" })
 	end
-	-- "buy" has no world target on purpose: only the hand on the HUD Gear button, so the trail never
-	-- leads players to the Gear Hall's shop pad (and nothing shows while the shop menu is open)
+	-- "buy" has no world target on purpose: only the hand on the HUD Gear button (the gear shop has no place on the
+	-- map), and nothing shows while the shop menu is open
 	return nil
 end
 

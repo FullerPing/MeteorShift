@@ -31,7 +31,7 @@ Tutorial.Steps = {
 	{ Id = "deposit", Text = "SMELT!", Icon = "foundry", Action = "go" },
 	{ Id = "collect_bar", Text = "GET BARS!", Icon = "bars", Action = "go" },
 	{ Id = "sell", Text = "SELL!", Icon = "coin", Action = "ui", Button = "SellBars" },
-	-- Points at the HUD Gear button, not the Gear Hall's shop pad: the button works from anywhere
+	-- Points at the HUD Gear button: the gear shop only opens from there
 	{ Id = "buy", Text = "UPGRADE!", Sub = "Tap GEAR - it works from anywhere", Icon = "equipment", Action = "ui", Button = "ShopButton" },
 } :: { Step }
 

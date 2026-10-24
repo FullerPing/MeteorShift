@@ -38,6 +38,7 @@ local PetService = Knit.CreateService({
 		Bought = Knit.CreateSignal(), -- (petId) a pass pet arrived
 		Hatched = Knit.CreateSignal(), -- (eggId, petId, duplicate)
 		Working = Knit.CreateSignal(), -- (ownerUserId, role, targetPosition?), presentation only
+		GroupStand = Knit.CreateSignal(), -- the group stand by the spawn was used: prompt the join, then claim
 	},
 })
 
@@ -448,6 +449,23 @@ function PetService:_connectHatchery()
 	end
 end
 
+-- The group stand by the spawn: any model named GroupPetStand on the map with a part named Prompt gets a "Free Pet"
+-- prompt; the client shows Roblox's join dialog (only a client can) and then calls ClaimGroupPet
+function PetService:_wireGroupStand(stand: Instance)
+	local part = stand:FindFirstChild("Prompt", true)
+	if not part or not part:IsA("BasePart") or part:FindFirstChild("GroupPrompt") then return end
+	local def = Pets.def(Config.Pets.GroupReward.Pet)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GroupPrompt"
+	prompt.ActionText = "Join Group: Free Pet"
+	prompt.ObjectText = if def then def.Name else "Free Pet"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = part
+	prompt.Triggered:Connect(function(player) self.Client.GroupStand:Fire(player) end)
+end
+
 function PetService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	NodeService = Knit.GetService("NodeService")
@@ -474,6 +492,15 @@ function PetService:KnitStart()
 		self:SyncPassPets(player)
 	end)
 	task.spawn(function() self:_connectHatchery() end)
+	task.spawn(function()
+		local map = WorldMap.wait()
+		for _, d in map:GetDescendants() do
+			if d.Name == "GroupPetStand" and d:IsA("Model") then self:_wireGroupStand(d) end
+		end
+		map.DescendantAdded:Connect(function(d)
+			if d.Name == "GroupPetStand" and d:IsA("Model") then task.defer(function() self:_wireGroupStand(d) end) end
+		end)
+	end)
 	MonetizationService.PassesReady:Connect(function(player: Player) self:SyncPassPets(player) end)
 	NodeService.Hit:Connect(function(player: Player, kind: string, part: BasePart)
 		self:_award(player, kind)

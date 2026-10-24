@@ -17,7 +17,7 @@ assert(plan and O, "Pass the plan and the overlap helpers: L(\"../map-v3/PlanDat
 local G = A.geometry
 local R = T.ramp
 local BAND_Y = { T0 = G.Tiers[1].y, T1 = G.Tiers[2].y, T2 = G.Tiers[3].y, CROWN = G.Crown.y, ARENA = 0 }
-local SKIP = { spawn = true, Refinery = true, ["Gear Hall"] = true, Hatchery = true, Commissary = true }
+local SKIP = { spawn = true, Refinery = true, ["Gear Hall"] = true, Hatchery = true, Commissary = true } -- the Gear Hall plot stays empty (removed 2026-10-24)
 local art = game:GetService("ServerStorage").MapArt
 local rng = Random.new(2026)
 

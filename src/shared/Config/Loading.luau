@@ -33,7 +33,7 @@ return table.freeze({
 		"Tap ORE to teleport to an ore field.",
 		"Hatch eggs with Core Shards you earn by playing.",
 		"Pets level up while you mine.",
-		"Evolve your pickaxe at the Gear Hall.",
+		"Evolve your pickaxe from the Gear button.",
 		"Rebirth to multiply your cash and unlock more pet slots.",
 		"Ice meteors refreeze, so keep hitting them!",
 		"Crystal meteors get stronger when friends join in.",

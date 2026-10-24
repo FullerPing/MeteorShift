@@ -31,6 +31,8 @@ Hatchery in the world, never in a menu.
 | Magma Egg | 225 | Rare 50 · Epic 40 · Legendary 10 (only Magma Crab, Frost Yeti, Galaxy Griffin) | Legendary every 15 | 3 rebirths |
 | Void Egg | 360 | Epic 70 · Legendary 30 (only Quartz Kitsune, Void Leviathan) | Legendary every 6 | 5 rebirths |
 
+The group pet can also be claimed at the group stand by the spawn (`TownSquare.GroupPetStand`, `GroupStandController`), the same claim as the Pets menu's JOIN GROUP button.
+
 Fusing (`Config.Pets.Fuse`, `Pets.canFuse` / `Pets.fuse`, `PetService:Fuse`): three copies of a pet plus Relic
 Fragments by rarity (5 / 10 / 20 / 35 / 60) make it Fused (★): two copies are used up and all its perks are x1.5,
 still stopped at each role's cap. Pass and group pets never fuse. The FUSE button sits in the pet's detail column.
@@ -78,7 +80,7 @@ Epic 2, Legendary 3, Premium 3 (`tests/Pets.spec.luau:258-273`).
 | Yield | 40% | ore from each validated player hit, never mineral odds | `src/server/Services/NodeService.luau:246,263,339` |
 | Sprint | 30% | walk speed on top of the base, without overriding other speed changes | `src/server/Services/PlayerStateService.luau:166` |
 | Vault | 100% | hopper and collection-post capacity, online and offline catch-up | `src/server/Services/PlayerStateService.luau:134-141,231-252`, `src/server/Services/RefineryService.luau:111,168,174` |
-| Crit | +15 pts | points added to the pickaxe's crit chance (client predicts the same, `src/shared/WorldEquipment.luau:47-48`) | `src/server/Services/PlayerStateService.luau:122` |
+| Crit | +15 pts | points added to the pickaxe's crit chance | `src/server/Services/PlayerStateService.luau:122` |
 | Scholar | 60% | player XP from every source through `LevelService:AddXp`; **pet XP is unchanged** | `src/server/Services/LevelService.luau:62-67` |
 | Shards | 30% | a cracked core's shard payout, multiplied then rounded down once | `src/shared/Pets.luau:76-78`, `src/server/Services/RewardService.luau:58` |
 

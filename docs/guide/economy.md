@@ -77,7 +77,7 @@ Gear never asks for shards: every pickaxe and backpack row carries `Shards = 0`
   hopper (2,000→1.9B ore), conveyor (0.3→260 ore/s), refinery (0.25→235 ore/s) and collection post
   (same table as the hopper) together, over 16 levels (`src/shared/Config/Home.luau`).
 - One pickaxe, one backpack, 16 tiers each (tiers 9-16 added 2026-10-22, no models yet: they show tier 8's
-  model in their own colour, `EquipmentModels`; the Gear Hall walls show tiers 1-8). A tier's levels together
+  model in their own colour, `EquipmentModels`). A tier's levels together
   cost its row's `LevelCost`, each `LevelGrowth^(1/tier)` dearer than the last (`Shared.Gear.price`); evolving
   costs its row's `Cost`. Tier cap = 10 × tier levels. Reach stops growing at `ReachMax` (+12 studs).
 - Gates (`Config.Levels`): tiers 5 and 6 need player level 10 and 14; tiers 7-16 (and the same-numbered

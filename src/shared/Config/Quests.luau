@@ -26,7 +26,7 @@ Quests.Line = {
 	{ Id = "sell50", Kind = "event", Event = "barsSold", Target = 50, Title = "Sell %d bars", Hint = "Drop ore in your Refinery hopper, then sell the bars.", Shards = 2, Minutes = 3 },
 	{ Id = "level5", Kind = "level", Target = 5, Title = "Reach level %d", Hint = "Meteor hits and the XP Mine give player XP.", Shards = 3, Minutes = 3 },
 	{ Id = "rocks20", Kind = "event", Event = "fieldRock", Target = 20, Title = "Break %d ore-field rocks", Hint = "Open the Ore Fields menu and travel to a field.", Shards = 3, Minutes = 4 },
-	{ Id = "pick2", Kind = "pickaxeTier", Target = 2, Title = "Get a tier %d pickaxe", Hint = "Max your pickaxe at the Gear Hall, then evolve it.", Shards = 4, Minutes = 4 },
+	{ Id = "pick2", Kind = "pickaxeTier", Target = 2, Title = "Get a tier %d pickaxe", Hint = "Max your pickaxe in the Gear menu, then evolve it.", Shards = 4, Minutes = 4 },
 	{ Id = "cores2", Kind = "event", Event = "coreCrack", Target = 2, Title = "Help crack %d meteor cores", Hint = "Keep mining after the crust breaks: the core pays shards.", Shards = 5, Minutes = 5 },
 	{ Id = "hatch1", Kind = "event", Event = "hatch", Target = 1, Title = "Hatch an egg", Hint = "Spend Core Shards at the Hatchery.", Shards = 5, Minutes = 4 },
 	{ Id = "xprocks30", Kind = "event", Event = "fieldRock", Field = "XpMine", Target = 30, Title = "Break %d rocks in the XP Mine", Hint = "The XP Mine sits up the ramp behind the south avenue.", Shards = 5, Minutes = 5 },

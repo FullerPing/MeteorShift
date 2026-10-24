@@ -3,8 +3,9 @@
 -- model goes to lookAt(zone centre, zone centre + facing) at its old pivot height.
 -- Owns Map_Redesign.Crater, CraterApron and TownSquare:
 --   Crater (whole, untouched); CraterApron (pieces inside r 124 only)
---   TownSquare: Refinery (same place), the six spawn points (same grid), Commissary, GearHall, Hatchery and the two
---   Leaderboards boards on their zones. GearHall and Hatchery stay under TownSquare: their controllers look there.
+--   TownSquare: Refinery (same place), the six spawn points (same grid), Commissary, Hatchery and the three
+--   Leaderboards boards on their zones. The Hatchery stays under TownSquare: PetService looks there. The Gear Hall is
+--   left out since 2026-10-24 (owner: removed from the map; the gear shop opens from the HUD).
 --   TradingPost and PickaxeShop are left out (selling and the shop open from the HUD; their services expect none).
 local A = assert(_G.MapRedesignArt, "Run Common first")
 local G = A.geometry
@@ -44,10 +45,11 @@ for _, spawn in v2:GetChildren() do
 	if spawn:IsA("SpawnLocation") then clone(spawn, town) end
 end
 place(clone(v2.Commissary, town) :: Model, "Commissary")
-place(clone(v2.GearHall, town) :: Model, "GearHall")
 place(clone(v2.Hatchery, town) :: Model, "Hatchery")
 local boards = clone(v2.Leaderboards, town)
 place(boards:FindFirstChild("BarsSold") :: Model, "LeaderboardEast")
-place(boards:FindFirstChild("Rebirths") :: Model, "LeaderboardWest")
+place(boards:FindFirstChild("Rebirths") :: Model, "LeaderboardRebirths")
+local playtime = boards:FindFirstChild("Playtime") -- placed in Studio (a copy of Rebirths); older sources have none
+if playtime then place(playtime :: Model, "LeaderboardPlaytime") end
 
 return { stage = "Core", parts = A.count(A.map.Crater) + A.count(apron) + A.count(town), town = A.count(town), apron = A.count(apron) }

@@ -40,12 +40,16 @@ WorldGeometry.Settings = {
 	Zones = {
 		{ id = "Spawn", x = 0, z = -150.5, width = 48, depth = 13, entrance = Vector3.new(0, 0, -144), pathWidth = 24 },
 		{ id = "Refinery", x = 0, z = -177, width = 38, depth = 32, entrance = Vector3.new(0, 3, -158.5), pathWidth = 18 },
-		{ id = "GearHall", x = 76.5, z = -184.5, width = 61, depth = 53, lat = 50, dep = 36, facing = Vector3.new(-0.3827, 0, 0.9239), entrance = Vector3.new(68.5, 0, -165.4), pathWidth = 18 },
-		{ id = "Hatchery", x = -76.5, z = -184.5, width = 73, depth = 59, lat = 64, dep = 36, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-68.5, 0, -165.4), pathWidth = 18 },
+		-- the Hatchery's five egg stands stand in an arc facing the crater (rebuilt in Studio, owner 2026-10-24), slid 8 studs
+		-- west of the old spot to stay off the south plaza (it used to mirror the Gear Hall, removed the same day)
+		{ id = "Hatchery", x = -83.9, z = -181.4, width = 112, depth = 84, lat = 100, dep = 49, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-73.6, 0, -156.5), pathWidth = 18 },
 		{ id = "Commissary", x = 95.1, z = 151.1, width = 39, depth = 38, lat = 30, dep = 28, facing = Vector3.new(-0.3827, 0, -0.9239), entrance = Vector3.new(88.6, 0, 135.5), pathWidth = 18 },
-		-- the two leaderboards in front of the Gear Hall and the Hatchery, turned toward the crater
-		{ id = "LeaderboardEast", x = 33.5, z = -159.5, width = 19, depth = 13, lat = 18, dep = 5, facing = Vector3.new(-0.3827, 0, 0.9239), entrance = Vector3.new(31.4, 0, -154.2), pathWidth = 14 },
-		{ id = "LeaderboardWest", x = -33.5, z = -159.5, width = 19, depth = 13, lat = 18, dep = 5, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-31.4, 0, -154.2), pathWidth = 14 },
+		-- the three leaderboards in one row east of the spawn, 24 studs apart, each turned to face the crater and its ring
+		-- road (owner, 2026-10-24): Top Miners, Top Rebirths, Top Playtime, where the Gear Hall stood (removed the same
+		-- day: the gear shop opens from the HUD)
+		{ id = "LeaderboardEast", x = 33.5, z = -159.5, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.2055, 0, 0.9786), entrance = Vector3.new(32.3, 0, -153.9), pathWidth = 14 },
+		{ id = "LeaderboardRebirths", x = 55.7, z = -150.3, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.3473, 0, 0.9377), entrance = Vector3.new(53.7, 0, -145.0), pathWidth = 14 },
+		{ id = "LeaderboardPlaytime", x = 77.8, z = -141.1, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.4830, 0, 0.8756), entrance = Vector3.new(75.1, 0, -136.1), pathWidth = 14 },
 		{ id = "Rebirth", x = 0, z = -320, width = 40, depth = 36, entrance = Vector3.new(0, 16, -299), pathWidth = 18 },
 		{ id = "RustWorks", x = -189, z = 0, width = 54, depth = 218, entrance = Vector3.new(-189, 0, 0), pathWidth = 18, field = true },
 		{ id = "FrostYard", x = 189, z = 0, width = 54, depth = 218, entrance = Vector3.new(189, 0, 0), pathWidth = 18, field = true },
@@ -56,7 +60,8 @@ WorldGeometry.Settings = {
 		{ id = "Starfall", x = -91, z = 452, width = 88, depth = 74, entrance = Vector3.new(-85, 56, 425), pathWidth = 18, field = true },
 		{ id = "HaloLedge", x = 82, z = 450.5, width = 96, depth = 71, entrance = Vector3.new(70, 56, 425), pathWidth = 18, field = true },
 		-- the XP Mine on T2 straight behind the south avenue, reached by a ramp up the cliff where the Rebirth shrine stood:
-		-- 15 rocks across by 8 deep, 14 studs apart (placed in Studio, not by tools/map-v3; the entrance is on its crater side)
+		-- 12 rocks across by 6 deep with uneven gaps (11 to 27 studs, seeded 20261024; placed in Studio, not by tools/map-v3;
+		-- the entrance is on its crater side)
 		{ id = "XpMine", x = 0, z = -444, width = 208, depth = 110, entrance = Vector3.new(0, 32, -382), pathWidth = 18, field = true },
 	},
 }

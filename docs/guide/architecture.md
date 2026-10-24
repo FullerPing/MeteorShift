@@ -66,7 +66,6 @@ MeteorShift in one sentence: a meteor slams into the crater on a timer (`MeteorS
 | FieldFXController | glow/sparkle/break FX for debris rocks (purely local) |
 | FieldTravelController | the ORE tile → Ore Fields menu (NativeMenus.OreFields) → field teleport |
 | FoundrySignController | live hopper/storage meters on the foundry and commissary signs |
-| GearHallController | local equipment and world SurfaceGui presentation |
 | HatchController | the egg-hatch queue and rarity reveal (input block ≤ 2 s) |
 | HUDController | the Fusion HUD: timers, wallet, buttons, notices (`HudView`, `Shared.HudLayout`) |
 | ImpactFXController | extra impact spectacle (pillars, rings, dust, rain) |

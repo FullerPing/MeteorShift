@@ -128,7 +128,7 @@ return function(t: any)
 		t.ok(spawn.width / 2 <= s.SouthPlazaHalf, "spawn points stand on the south plaza")
 		t.ok(spawn.z + spawn.depth / 2 < -(s.LoopRadius + s.PathWidth / 2), "spawn points stay south of the ring road")
 		-- the angled shops: front looks toward the crater, rotated footprint is bounded by width/depth, door on T0
-		for _, id in { "GearHall", "Hatchery", "Commissary", "LeaderboardEast", "LeaderboardWest" } do
+		for _, id in { "Hatchery", "Commissary", "LeaderboardEast", "LeaderboardRebirths", "LeaderboardPlaytime" } do
 			local zone = Geometry.zone(id)
 			t.near(zone.facing.Magnitude, 1, 1e-3, id .. " facing is a unit vector")
 			local right = Vector3.new(zone.facing.Z, 0, -zone.facing.X)
@@ -139,7 +139,7 @@ return function(t: any)
 			t.ok((zone.entrance - Vector3.new(zone.x, 0, zone.z)):Dot(zone.facing) > zone.dep / 2, id .. " entrance is not in front")
 			t.eq(Geometry.tierAt(zone.entrance.X, zone.entrance.Z), "T0", id .. " entrance off the town tier")
 		end
-		t.eq(Geometry.zone("GearHall").x, -Geometry.zone("Hatchery").x, "shops mirror each other")
+		t.ok(Geometry.zone("Hatchery").x < 0 and Geometry.zone("LeaderboardEast").x > 0, "the Hatchery and the boards flank the spawn")
 	end)
 	t.test("the eight ore fields climb the tiers in unlock order", function()
 		local tiers = { RustWorks = "T0", FrostYard = "T0", VioletQuarry = "T1", SulfurRidge = "T1", EmberShelf = "T2", GlassScar = "T2", Starfall = "Crown", HaloLedge = "Crown" }

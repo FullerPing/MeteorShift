@@ -203,8 +203,6 @@ add dates). Cite = the header or first-test line the one-liner came from.
 | FieldTravel | the four ore fields are the only valid travel targets | `tests/FieldTravel.spec.luau:7` |
 | CharacterSpeed | walkspeed composes from the base multiplier | `tests/CharacterSpeed.spec.luau:6` |
 | WorldBoundary | the authoritative world boundary | `tests/WorldBoundary.spec.luau:4` |
-| WorldEquipment | world displays: identity from Config, numbers from State | `tests/WorldEquipment.spec.luau:2` |
-| WorldEquipmentDisplay | display over real authored models and mounts | `tests/WorldEquipmentDisplay.spec.luau:2` |
 | WorldGeometry | access and effect clearance as geometric contracts | `tests/WorldGeometry.spec.luau:2` |
 | WorldImpact | grounded-impact evacuation | `tests/WorldImpact.spec.luau:4` |
 | WorldMap | world-root selection; staged templates only in Studio | `tests/WorldMap.spec.luau:4, 7` |
