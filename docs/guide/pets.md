@@ -35,6 +35,10 @@ Fusing (`Config.Pets.Fuse`, `Pets.canFuse` / `Pets.fuse`, `PetService:Fuse`): th
 Fragments by rarity (5 / 10 / 20 / 35 / 60) make it Fused (★): two copies are used up and all its perks are x1.5,
 still stopped at each role's cap. Pass and group pets never fuse. The FUSE button sits in the pet's detail column.
 
+Hatchery signs: `PetService:_writeSign` rewrites each stand's odds card and price from Config (`Pets.eggSign`) when
+the server starts, so changing an egg in `Config/Pets.luau` updates its sign. The Magma and Void stands
+(`Map.TownSquare.Hatchery.magmaEgg` / `voidEgg`) are recoloured copies of the Aurora stand until their egg meshes land.
+
 Egg exclusives: a pet with `Eggs = { ... }` hatches only from those eggs, and an egg with `Own = true` hatches only
 its exclusives (`Pets.eggPets(rarity, egg)`); every other egg draws from the shared pool of its rarities.
 

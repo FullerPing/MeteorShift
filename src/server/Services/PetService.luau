@@ -382,6 +382,43 @@ function PetService.Client:Hatch(player: Player, eggId: string): string?
 end
 
 -- Eggs hatch at the Hatchery (Map.TownSquare.Hatchery.<eggId>): one prompt on each egg's plinth
+-- The stand's odds card (Top.OddsCard) and price (Price.Lettering) are authored labels found by position: the title on
+-- top, the footer at the bottom and a name/odds pair per row between; rows are rebuilt from Pets.eggSign.
+function PetService:_writeSign(stand: Instance, egg: Config.Egg)
+	local sign = Pets.eggSign(egg)
+	local price = stand:FindFirstChild("Price")
+	local lettering = price and price:FindFirstChild("Lettering")
+	local priceLabel = lettering and lettering:FindFirstChildWhichIsA("TextLabel", true)
+	if priceLabel then priceLabel.Text = tostring(egg.Cost) end
+	local top = stand:FindFirstChild("Top")
+	local card = top and top:FindFirstChild("OddsCard")
+	local frame = card and card:FindFirstChildWhichIsA("Frame")
+	if not frame then return end
+	local names, values = {}, {}
+	for _, label in frame:GetChildren() do
+		if not label:IsA("TextLabel") then continue end
+		local y = label.Position.Y.Scale
+		if y < 0.15 then label.Text = sign.title
+		elseif y > 0.85 then label.Text = sign.footer
+		elseif label.Position.X.Scale < 0.3 then table.insert(names, label)
+		else table.insert(values, label) end
+	end
+	if #names == 0 or #values == 0 then return end
+	local nameTemplate, valueTemplate = names[1]:Clone(), values[1]:Clone()
+	for _, label in names do label:Destroy() end
+	for _, label in values do label:Destroy() end
+	local step = math.min(0.124, 0.6 / #sign.rows) -- five rows fill the card between title and footer
+	for index, row in sign.rows do
+		local y = 0.25 + (index - 1) * step
+		for _, pair in { { nameTemplate, row.name }, { valueTemplate, row.odds } } do
+			local label = pair[1]:Clone()
+			label.Text = pair[2]
+			label.Position = UDim2.fromScale(label.Position.X.Scale, y)
+			label.Parent = frame
+		end
+	end
+end
+
 function PetService:_connectHatchery()
 	local townSquare = WorldMap.wait():FindFirstChild("TownSquare")
 	local hatchery = if townSquare then townSquare:FindFirstChild("Hatchery") else nil
@@ -396,6 +433,7 @@ function PetService:_connectHatchery()
 			warn("[PetService] the Hatchery has no stand for " .. egg.Id)
 			continue
 		end
+		self:_writeSign(stand, egg)
 		local prompt = anchor:FindFirstChildWhichIsA("ProximityPrompt") or Instance.new("ProximityPrompt")
 		prompt.Name = "HatchPrompt"
 		prompt.ActionText = "Hatch (" .. egg.Cost .. " shards)"

@@ -138,6 +138,19 @@ function Pets.eggPets(rarity: string, egg: Config.Egg?): { Config.Pet }
 	return out
 end
 
+-- What an egg's Hatchery sign says, from Config (PetService writes it onto the stand, so signs never go stale)
+function Pets.eggSign(egg: Config.Egg): { title: string, rows: { { name: string, odds: string } }, footer: string }
+	local rows = {}
+	for _, rarity in Config.RarityOrder do
+		local odds = egg.Odds[rarity]
+		if odds and odds > 0 then table.insert(rows, { name = Config.Rarities[rarity].Name, odds = string.format("%g%%", odds) }) end
+	end
+	local footer = if egg.MinRebirths then "Unlocks at Rebirth " .. egg.MinRebirths
+		elseif egg.Pity then (if egg.PityFrom == "legendary" then "Legendary" else "Epic+") .. " guaranteed in " .. egg.Pity
+		else ""
+	return { title = string.upper(egg.Name), rows = rows, footer = footer }
+end
+
 function Pets.egg(eggId: string): Config.Egg?
 	for _, egg in Config.Eggs do
 		if egg.Id == eggId then
