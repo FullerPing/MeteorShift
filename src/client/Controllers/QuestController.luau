@@ -102,7 +102,9 @@ function QuestController:KnitStart()
 		local scale = math.clamp(b.AbsoluteSize.X / 292, 0.55, 1.4)
 		trackerCard.Fit.Scale = scale
 		trackerCard.AnchorPoint = Vector2.new(0, 1)
-		trackerCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8)
+		-- AbsolutePosition starts under the top bar; this ScreenGui ignores the inset, so add it back
+		local inset = GuiService:GetGuiInset().Y
+		trackerCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 + inset)
 		-- the game-wide event card sits on top of the quest card (or in its place when the quest card is hidden)
 		local eventCard = tracker:FindFirstChild("EventCard") :: any
 		if eventCard and desktop and levelCard then
@@ -110,15 +112,14 @@ function QuestController:KnitStart()
 			eventCard.Fit.Scale = math.clamp(h.AbsoluteSize.X / 286, 0.6, 1.6) * 1.05 -- the level card is 286 px at HUD scale 1
 			eventCard.Size = UDim2.fromOffset(340, 56)
 			eventCard.AnchorPoint = Vector2.new(0, 0)
-			-- AbsolutePosition starts under the top bar; this ScreenGui ignores the inset, so add it back
-			local top = h.AbsolutePosition.Y + h.AbsoluteSize.Y + 10 + GuiService:GetGuiInset().Y
+			local top = h.AbsolutePosition.Y + h.AbsoluteSize.Y + 10 + inset
 			eventCard.Position = UDim2.fromOffset(h.AbsolutePosition.X, top)
 		elseif eventCard then
 			eventCard.Fit.Scale = scale
 			eventCard.Size = UDim2.fromOffset(292, 56)
 			eventCard.AnchorPoint = Vector2.new(0, 1)
 			local above = if trackerCard.Visible then (70 + 8) * scale else 0
-			eventCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 - above)
+			eventCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 - above + inset)
 		end
 	end
 	task.spawn(function()

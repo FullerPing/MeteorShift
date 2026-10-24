@@ -357,12 +357,17 @@ function HudLayout.compute(
 				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
 			elseif math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2)) + 2 * navigationHeight + 2 <= reservedThumb.y then
 				-- smaller phones: too short for the column above the joystick, so two lines instead: Gear, Index and
-				-- Rebirth, then Pets, Store and Daily under them
+				-- Rebirth, then Pets, Store and Daily under them. Codes starts a third line (the Offers finish it) when that
+				-- clears the joystick, or else ends the second line
 				local top = math.max(topInset, math.min(topInset + row.Top, reservedThumb.y - 2 * navigationHeight - 2))
 				for i, name in { "SHOP", "INDEX", "REBIRTH", "PETS", "STORE", "DAILY" } do
 					local column, line = (i - 1) % 3, (i - 1) // 3
 					buttons[name] = { x = 12 + column * (row.Width + row.Gap), y = top + line * (navigationHeight + 2), w = row.Width, h = row.Height }
 				end
+				local third = top + 2 * (navigationHeight + 2)
+				buttons.CODES = if third + navigationHeight <= reservedThumb.y
+					then { x = 12, y = third, w = row.Width, h = row.Height }
+					else { x = 12 + 3 * (row.Width + row.Gap), y = top + navigationHeight + 2, w = row.Width, h = row.Height }
 				rowRight = 12 + 3 * (row.Width + row.Gap) - row.Gap
 			else
 				-- too short even for two lines above the joystick: all six across the top instead (Codes waits for Settings)

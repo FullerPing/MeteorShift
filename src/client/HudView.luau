@@ -329,7 +329,8 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			text(scope, "Cash", scope:Computed(function(use) return Format.cash(use(data.cashShown)) end), 62, 54, 230, 62, 54, GOLD),
 			UI.hudText(scope, {
 				Name = "Multiplier", Size = UDim2.fromOffset(100, 24), Font = UI.FONT, TextSize = 17, TextColor3 = LIME,
-				Position = scope:Computed(function(use) return UDim2.fromOffset(if use(levelInline) then 134 else 180, 16) end),
+				-- left of the medal only when the medal sits on the wallet's corner (phones put it above the wallet)
+				Position = scope:Computed(function(use) return UDim2.fromOffset(if use(levelInline) and not use(hud).levelAbove then 134 else 180, 16) end),
 				TextXAlignment = Enum.TextXAlignment.Right, TextStrokeColor3 = INK, TextStrokeTransparency = 0,
 				Text = scope:Computed(function(use)
 					local s = state(use); local m = Rebirth.multiplier(if s then s.rebirths else 0)
