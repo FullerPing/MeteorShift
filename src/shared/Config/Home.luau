@@ -39,7 +39,7 @@ end
 -- post capacity come with it. Shards buy Colony Perks (Config.Perks), not production.
 Home.Line = {
 	Name = "Production Line",
-	Costs = { 0, 2.8e3, 8.5e3, 24e3, 233e3, 1.87e6, 13.8e6, 200e6, 1.28e9, 7.6e9, 40e9, 220e9, 1.16e12, 6.2e12, 32e12, 174e12 },
+	Costs = { 0, 2.8e3, 8.5e3, 24e3, 222e3, 1.71e6, 12.3e6, 173e6, 1.09e9, 6.33e9, 35.6e9, 208e9, 1.16e12, 6.2e12, 32e12, 174e12 },
 }
 
 -- What each station does at each line level (index = line level)
@@ -47,22 +47,22 @@ Home.Stations = {
 	hopper = {
 		Id = "hopper",
 		Name = "Hopper",
-		Levels = levels({ 2e3, 5e3, 10e3, 22.2e3, 42.7e3, 75e3, 132e3, 220e3, 320e3, 460e3, 640e3, 900e3, 1.24e6, 1.72e6, 2.4e6, 3.4e6 }, "Capacity"),
+		Levels = levels({ 2e3, 5e3, 10e3, 21.1e3, 39.1e3, 66.7e3, 114e3, 187e3, 267e3, 409e3, 604e3, 900e3, 1.24e6, 1.72e6, 2.4e6, 3.4e6 }, "Capacity"),
 	} :: Station,
 	conveyor = {
 		Id = "conveyor",
 		Name = "Conveyor",
-		Levels = levels({ 0.3, 0.8, 1.87, 4, 7.5, 13.33, 22, 36, 50, 70, 98, 136, 190, 266, 372, 520 }, "Rate"),
+		Levels = levels({ 0.3, 0.8, 1.78, 3.67, 6.67, 11.56, 18.67, 30, 44.44, 66.11, 98, 136, 190, 266, 372, 520 }, "Rate"),
 	} :: Station,
 	refinery = {
 		Id = "refinery",
 		Name = "Refinery",
-		Levels = levels({ 0.25, 0.7, 1.63, 3.47, 6.75, 11.67, 20.17, 32, 45, 63, 88, 124, 172, 240, 336, 470 }, "Rate"),
+		Levels = levels({ 0.25, 0.7, 1.56, 3.18, 6, 10.11, 17.11, 26.67, 40, 59.5, 88, 124, 172, 240, 336, 470 }, "Rate"),
 	} :: Station,
 	collector = {
 		Id = "collector",
 		Name = "Collection Post",
-		Levels = levels({ 2e3, 5e3, 10e3, 22.2e3, 42.7e3, 75e3, 132e3, 220e3, 320e3, 460e3, 640e3, 900e3, 1.24e6, 1.72e6, 2.4e6, 3.4e6 }, "Capacity"),
+		Levels = levels({ 2e3, 5e3, 10e3, 21.1e3, 39.1e3, 66.7e3, 114e3, 187e3, 267e3, 409e3, 604e3, 900e3, 1.24e6, 1.72e6, 2.4e6, 3.4e6 }, "Capacity"),
 	} :: Station,
 }
 
