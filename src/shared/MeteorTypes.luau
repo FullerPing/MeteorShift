@@ -11,6 +11,7 @@
 --                  default interval (private servers)
 --   golden         the golden variant of a type (Config.Hooks.GoldenMeteor): same Id and twist, its
 --                  ore pays PayMult times, gold crust and ore chunks
+--   hourly         the hourly Quartz meteor's landing time when the countdown starting now must be it
 --
 -- Pure functions only, so the rules are covered by tests/MeteorTypes.spec.
 
@@ -101,6 +102,24 @@ function MeteorTypes.admin(meteorType: MeteorType): MeteorType
 	copy.OreColor = Color3.fromRGB(255, 220, 90)
 	copy.GlowColor = Color3.fromRGB(255, 120, 140)
 	return copy
+end
+
+-- The hourly meteor (Config.Meteor.Hourly): the next landing time after `now` (server clock seconds), and whether the
+-- countdown starting now must be it, because a normal meteor (this countdown plus its longest event) would still be
+-- down then. Returns the landing time for the hourly countdown, else nil.
+function MeteorTypes.nextHourly(now: number): number
+	local slot = math.floor(now / 3600) * 3600 + Meteor.Hourly.Minute * 60
+	return if slot > now then slot else slot + 3600
+end
+
+function MeteorTypes.hourly(now: number, countdown: number): number?
+	local longest = 0
+	for _, meteorType in Types do
+		longest = math.max(longest, meteorType.ActiveDuration)
+	end
+	local event = Meteor.ImpactDuration + longest + math.max(Meteor.CrackedDuration, Meteor.CooledDuration) + Meteor.CleanupDuration
+	local at = MeteorTypes.nextHourly(now)
+	return if at - now <= countdown + event then at else nil
 end
 
 return MeteorTypes

@@ -99,6 +99,13 @@ ImpactFX.Types = {
 		Rain = { Rate = 18, Seconds = 9, Height = 2, Area = 100, Size = { 1.3, 0 }, Lifetime = { 3, 5 },
 			Accel = Vector3.new(0, 10, 0), Colors = { Color3.fromRGB(120, 255, 170), Color3.fromRGB(40, 190, 110) }, LightEmission = 1 },
 	} :: Flavor,
+	-- Rose and white glitter, the hourly meteor
+	Quartz = {
+		Burst = { Count = 80, Speed = { 25, 95 }, Size = { 1.6, 0 }, Lifetime = { 1.8, 3.2 }, Accel = Vector3.new(0, -24, 0),
+			Colors = { Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 170, 230) }, LightEmission = 1, Drag = 0.8 },
+		Rain = { Rate = 20, Seconds = 9, Height = 55, Area = 120, Size = { 1.2, 0 }, Lifetime = { 2.6, 4 },
+			Accel = Vector3.new(0, -6, 0), Colors = { Color3.fromRGB(255, 220, 245), Color3.fromRGB(255, 255, 255) }, LightEmission = 1 },
+	} :: Flavor,
 }
 
 return ImpactFX

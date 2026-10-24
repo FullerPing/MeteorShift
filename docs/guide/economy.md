@@ -33,6 +33,7 @@ Every ore refines at full speed at the same bar price for everyone — the level
 | Frost | 150 | `src/shared/Config/Home.luau:85` |
 | Crystal | 450 | `src/shared/Config/Home.luau:86` |
 | Alien | 1800 | `src/shared/Config/Home.luau:87` |
+| Quartz | 900 | `src/shared/Config/Home.luau` (the hourly meteor) |
 
 Each type is worth about 3× the one below, the Alien boss 4× Crystal, so no meteor is filler for a
 veteran (`src/shared/Config/Home.luau:81-82`). The multiplier on every sale is
@@ -62,7 +63,10 @@ veteran (`src/shared/Config/Home.luau:81-82`). The multiplier on every sale is
 
 Scheduled weights Iron 60 / Ice 25 / Crystal 15 (`src/shared/Config/Meteor.luau:123,145,167`);
 the Alien boss is never weighted in — it replaces every 10th meteor once someone on the server has
-3 rebirths (`src/shared/Config/Meteor.luau:80`). Shards come only from finished (or half-down,
+3 rebirths (`src/shared/Config/Meteor.luau:80`). The Quartz meteor is never weighted in either: it lands at
+:30 past every hour (UTC) on every server, open to everyone, with a double-HP core and triple shards
+(`Meteor.Hourly`, `MeteorTypes.hourly`: the countdown that would run past :30 becomes its countdown; Call a Meteor
+can't pull it in). The HUD's hourly card above the quest tracker counts down to it (`EventController`). Shards come only from finished (or half-down,
 cooled) cores: 5 floor per hitter, an 8-per-hitter bonus pool split by Mining Power share, 10/6/3
 podium bonuses (`src/shared/Config/Meteor.luau:49-51`), a 6% crust-node crumb of 1-3
 (`src/shared/Config/Hooks.luau:27`) and the consolation rule (`src/shared/Config/Hooks.luau:31`).

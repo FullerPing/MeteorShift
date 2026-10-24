@@ -1,10 +1,14 @@
 --!strict
 -- Game-wide events on the client (GlobalEventService, Config.Events): the event card over the quest tracker
 -- (NativeMenus.Quests builds it, QuestController stacks it). While an event runs it shows the name, what it does and the
--- time left; in the SoonSeconds before one starts it counts down to it; otherwise it hides. Hidden while a menu is open.
+-- time left; in the SoonSeconds before one starts it counts down to it; otherwise it hides. Above it, the hourly Quartz
+-- meteor card (Config.Meteor.Hourly) always counts down to the next one. Both hide while a menu is open.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Config = require(ReplicatedStorage.Shared.Config)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local Phase = require(ReplicatedStorage.Shared.Phase)
 local MenuFlags = require(script.Parent.Parent.MenuFlags)
 local Sfx = require(script.Parent.Parent.Sfx)
 local player = Players.LocalPlayer
@@ -21,7 +25,11 @@ function EventController:KnitStart()
 	local GlobalEventService = Knit.GetService("GlobalEventService")
 	local tracker = player:WaitForChild("PlayerGui"):WaitForChild("QuestTracker", 30)
 	local card = tracker and tracker:WaitForChild("EventCard", 10) :: any
-	if not card then return end
+	local hourly = tracker and tracker:WaitForChild("HourlyCard", 10) :: any
+	if not card or not hourly then return end
+	local meteor: any = nil
+	Knit.GetService("MeteorService").State:Observe(function(value) meteor = value end)
+	local hourlyName = Config.Meteor.Types[Config.Meteor.Hourly.Type].DisplayName
 	local current: any = nil
 	local lastActive: string? = nil
 	GlobalEventService.Current:Observe(function(value)
@@ -42,6 +50,15 @@ function EventController:KnitStart()
 			end
 			card.Visible = show and not MenuFlags.anyOpen()
 			card.Title.Text, card.Text.Text = title, text
+			-- the hourly meteor: always counting down, for everyone; "down now" while it is in the crater
+			local down = meteor and meteor.type == Config.Meteor.Hourly.Type and (meteor.phase == Phase.Impact or meteor.phase == Phase.Active)
+			if down then
+				hourly.Title.Text, hourly.Text.Text = string.upper(hourlyName) .. " IS DOWN!", "Mine it in the crater: triple shards."
+			else
+				hourly.Title.Text = string.upper(hourlyName) .. "  " .. clock(MeteorTypes.nextHourly(now) - now)
+				hourly.Text.Text = "Lands at :" .. string.format("%02d", Config.Meteor.Hourly.Minute) .. " on every server. Triple shards!"
+			end
+			hourly.Visible = not MenuFlags.anyOpen()
 			task.wait(1)
 		end
 	end)

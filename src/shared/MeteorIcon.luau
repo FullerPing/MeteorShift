@@ -6,6 +6,7 @@ local keys: { [string]: string } = table.freeze({
 	Ice = "meteorIce",
 	Frost = "meteorIce",
 	Alien = "meteorAlien",
+	Quartz = "meteorCrystal", -- no Quartz icon yet
 })
 
 function MeteorIcon.resolve(typeId: string?): string

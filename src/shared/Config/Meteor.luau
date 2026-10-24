@@ -81,6 +81,10 @@ Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest, the weight
 -- has at least MinRebirths rebirths (the rebirth 3 unlock). It pays a new, rarer ore.
 Meteor.Boss = { Type = "Alien", EveryMeteors = 10, MinRebirths = 3 }
 
+-- The hourly Quartz meteor (owner, 2026-10-24): lands at Minute past every hour (UTC, server clock) on every server,
+-- open to everyone. The countdown that would otherwise run past that minute becomes its countdown (MeteorTypes.hourly).
+Meteor.Hourly = { Type = "Quartz", Minute = 30 }
+
 Meteor.Twists = {
 	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second.
 	-- The server applies the regen every Tick seconds.
@@ -200,6 +204,28 @@ Meteor.Types = {
 		OreMaterial = Enum.Material.Neon,
 		CoreColor = Color3.fromRGB(70, 235, 120),
 		GlowColor = Color3.fromRGB(110, 255, 160),
+	} :: MeteorType,
+	Quartz = {
+		Id = "Quartz",
+		DisplayName = "Quartz Meteor",
+		Ore = "quartz",
+		RequiredTier = 1,
+		YieldMult = 1,
+		HpMult = 2, -- a big core: the whole server mines it together
+		ActiveDuration = 180,
+		ShardMult = 3,
+		Weight = 0, -- never in the weighted schedule: Meteor.Hourly
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(236, 232, 246),
+			Color3.fromRGB(214, 206, 236),
+			Color3.fromRGB(250, 246, 255),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(255, 196, 236),
+		OreMaterial = Enum.Material.Glass,
+		CoreColor = Color3.fromRGB(255, 150, 220),
+		GlowColor = Color3.fromRGB(255, 190, 240),
 	} :: MeteorType,
 } :: { [string]: MeteorType }
 

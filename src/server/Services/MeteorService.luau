@@ -139,6 +139,10 @@ end
 
 -- Whether Call a Meteor can be bought right now, and why not (Shared.CallMeteor).
 function MeteorService:CanCallMeteor(): (boolean, string?)
+	-- the hourly meteor lands at its minute on every server; a call can't pull it in
+	if state.phase == Phase.Countdown and state.type == MeteorConfig.Hourly.Type then
+		return false, "The hourly Quartz meteor is on its way"
+	end
 	local clock = os.clock()
 	local sinceLastEnd = if lastCalledEnd then clock - lastCalledEnd else nil
 	return CallMeteor.available(
@@ -670,15 +674,19 @@ function MeteorService:_loop()
 	while true do
 		local queued = devNext
 		devNext = nil
-		local meteorType = queued or pickType()
-		if meteorType.Golden then
+		local length = countdownLength(first)
+		local hourlyAt = if queued then nil else MeteorTypes.hourly(now(), length)
+		local meteorType = queued or (if hourlyAt then MeteorConfig.Types[MeteorConfig.Hourly.Type] else pickType())
+		if hourlyAt then
+			RewardService:Announce("Boss", "The hourly Quartz meteor lands at :" .. string.format("%02d", MeteorConfig.Hourly.Minute) .. " on every server!")
+		elseif meteorType.Golden then
 			RewardService:Announce("Golden", "A GOLDEN meteor is coming: its ore pays " .. Config.Hooks.GoldenMeteor.PayMult .. "x!")
 		elseif meteorType.Id == MeteorConfig.Boss.Type then
 			RewardService:Announce("Boss", "The Alien boss meteor is coming!")
 		end
 		self:_publish({
 			phase = Phase.Countdown,
-			endsAt = now() + (if queued then MeteorConfig.StreakLeadTime else countdownLength(first)),
+			endsAt = hourlyAt or (now() + (if queued then MeteorConfig.StreakLeadTime else length)),
 			type = meteorType.Id,
 			typeName = meteorType.DisplayName,
 			requiredTier = meteorType.RequiredTier,

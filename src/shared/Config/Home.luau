@@ -84,7 +84,7 @@ Home.OfflineMinAway = 15 * 60
 Home.TickInterval = 1 -- online production tick, seconds
 
 -- Order in which the conveyor pulls ore types from the hopper
-Home.OreOrder = { "iron", "frost", "crystal", "alien" }
+Home.OreOrder = { "iron", "frost", "crystal", "alien", "quartz" }
 
 -- Bar sell prices (spec §6.5, §8.1): 3x steps, the Alien boss ore 4x (economy rework). A
 -- meteor's ore is worth about 3x the one below it, so no meteor type is filler for a veteran.
@@ -93,6 +93,7 @@ Home.BarPrices = {
 	frost = 150,
 	crystal = 450,
 	alien = 1800,
+	quartz = 900, -- the hourly meteor's ore, open to everyone (Config.Meteor.Hourly)
 }
 
 Home.OreNames = {
@@ -100,6 +101,7 @@ Home.OreNames = {
 	frost = "Frost",
 	crystal = "Crystal",
 	alien = "Alien",
+	quartz = "Quartz",
 }
 
 return Home

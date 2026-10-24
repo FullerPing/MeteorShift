@@ -108,4 +108,21 @@ return function(t: any)
 		t.eq(first.Golden, nil, "the original is untouched")
 		t.eq(golden.YieldMult, first.YieldMult * Config.Hooks.GoldenMeteor.PayMult)
 	end)
+
+	t.test("the hourly Quartz meteor lands at its minute and takes the countdown that would run past it", function()
+		local hour = 1_800_000_000 - 1_800_000_000 % 3600 -- a whole UTC hour
+		local minute = Meteor.Hourly.Minute * 60
+		t.eq(MeteorTypes.nextHourly(hour), hour + minute)
+		t.eq(MeteorTypes.nextHourly(hour + minute - 0.5), hour + minute)
+		t.eq(MeteorTypes.nextHourly(hour + minute), hour + minute + 3600, "strictly after now")
+		-- an hour away: a normal meteor; 2 minutes away with a 2-minute countdown: this one is the Quartz
+		t.eq(MeteorTypes.hourly(hour + minute - 3000, 120), nil)
+		t.eq(MeteorTypes.hourly(hour + minute - 120, 120), hour + minute)
+		-- a normal meteor starting now would still be down at the minute, so this countdown waits for it
+		t.eq(MeteorTypes.hourly(hour + minute - 250, 120), hour + minute)
+		local quartz = Meteor.Types[Meteor.Hourly.Type]
+		t.eq(quartz.Weight, 0, "never in the weighted rotation")
+		t.eq(quartz.RequiredTier, 1, "open to everyone")
+		t.ok(table.find(Home.OreOrder, quartz.Ore) ~= nil, "its ore sells")
+	end)
 end

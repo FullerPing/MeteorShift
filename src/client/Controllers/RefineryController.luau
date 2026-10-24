@@ -25,6 +25,7 @@ local OTHER_MENUS = require(script.Parent.Parent.MenuFlags).except("RefineryOpen
 local ORE_TINTS: { [string]: Color3 } = {
 	iron = Color3.fromRGB(255, 196, 36), frost = Color3.fromRGB(120, 220, 255),
 	crystal = Color3.fromRGB(221, 161, 255), alien = Color3.fromRGB(130, 255, 150),
+	quartz = Color3.fromRGB(255, 190, 236),
 }
 -- colours that read on the cartoon light body (Shared.MenuPalette)
 local STATUS_RED, STATUS_ICE, STATUS_LIME = Palette.UNMET, Palette.BLUE_BOTTOM, Palette.UP
