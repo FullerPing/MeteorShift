@@ -4,6 +4,8 @@
 -- The tracker hides while any menu is open, before the tutorial is done and once the whole line is finished.
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local GuiService = game:GetService("GuiService")
+local UserInputService = game:GetService("UserInputService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Palette = require(ReplicatedStorage.Shared.MenuPalette)
@@ -76,6 +78,7 @@ function QuestController:KnitStart()
 
 	-- the tracker rides on top of the HUD's backpack card, as wide as it is
 	local hudBackpack: GuiObject? = nil
+	local levelCard: GuiObject? = nil
 	place = function()
 		if not hudBackpack or not hudBackpack.Parent then
 			local hud = player.PlayerGui:FindFirstChild("MeteorHUD")
@@ -86,6 +89,14 @@ function QuestController:KnitStart()
 				hudBackpack:GetPropertyChangedSignal("Visible"):Connect(place)
 			end
 		end
+		-- on a desktop the event card goes under the level card instead, wider so its text reads
+		local camera = workspace.CurrentCamera
+		local desktop = not UserInputService.TouchEnabled and camera.ViewportSize.X > camera.ViewportSize.Y
+		if desktop and not (levelCard and levelCard.Parent) then
+			local hud = player.PlayerGui:FindFirstChild("MeteorHUD")
+			levelCard = hud and hud:FindFirstChild("Level", true) :: any
+			if levelCard then levelCard:GetPropertyChangedSignal("AbsolutePosition"):Connect(place) end
+		end
 		local b = hudBackpack
 		if not b then return end
 		local scale = math.clamp(b.AbsoluteSize.X / 292, 0.55, 1.4)
@@ -94,8 +105,17 @@ function QuestController:KnitStart()
 		trackerCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8)
 		-- the game-wide event card sits on top of the quest card (or in its place when the quest card is hidden)
 		local eventCard = tracker:FindFirstChild("EventCard") :: any
-		if eventCard then
+		if eventCard and desktop and levelCard then
+			local h = levelCard :: GuiObject
+			eventCard.Fit.Scale = math.clamp(h.AbsoluteSize.X / 286, 0.6, 1.6) * 1.05 -- the level card is 286 px at HUD scale 1
+			eventCard.Size = UDim2.fromOffset(340, 56)
+			eventCard.AnchorPoint = Vector2.new(0, 0)
+			-- AbsolutePosition starts under the top bar; this ScreenGui ignores the inset, so add it back
+			local top = h.AbsolutePosition.Y + h.AbsoluteSize.Y + 10 + GuiService:GetGuiInset().Y
+			eventCard.Position = UDim2.fromOffset(h.AbsolutePosition.X, top)
+		elseif eventCard then
 			eventCard.Fit.Scale = scale
+			eventCard.Size = UDim2.fromOffset(292, 56)
 			eventCard.AnchorPoint = Vector2.new(0, 1)
 			local above = if trackerCard.Visible then (70 + 8) * scale else 0
 			eventCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 - above)
