@@ -43,3 +43,16 @@ Output: `meteor-alien.png`. Use the shared prompt with this mint palette:
 | Light facet | `#C7FFE8` |
 | Trail / seam | `#96F4CF` |
 | Streak | `#DDFFF0` |
+
+## Quartz — recolour of meteor-crystal.png (2026-10-24)
+
+Output: `meteor-quartz.png`, uploaded as `rbxassetid://86498164815664` (`Config.HudIcons.meteorQuartz`). Made without
+image generation: each pixel of `meteor-crystal.png` mapped by brightness from the Crystal palette onto rose quartz,
+charcoal outlines kept.
+
+| Fill | Colour |
+|---|---|
+| Shadow | `#B8467E` |
+| Rock | `#E579B2` |
+| Light facet | `#FFBEDF` |
+| Streak | `#FFF1F8` |

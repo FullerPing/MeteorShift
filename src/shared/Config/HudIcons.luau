@@ -7,6 +7,7 @@ return table.freeze({
 	meteorCrystal = "rbxassetid://76342437955124",
 	meteorIce = "rbxassetid://76941855475609",
 	meteorAlien = "rbxassetid://104674568881687",
+	meteorQuartz = "rbxassetid://86498164815664", -- assets/hud/meteor-variants/meteor-quartz.png, the Crystal icon in rose quartz
 	backpack = "rbxassetid://84219914513971",
 	crystal = "rbxassetid://1436430600", -- shard icon
 	coin = "rbxassetid://15589362394",

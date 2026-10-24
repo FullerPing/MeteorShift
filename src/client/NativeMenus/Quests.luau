@@ -67,7 +67,7 @@ function Quests.buildTracker(): ScreenGui
 	NativeUI.create("UIScale", { Name = "Fit" }, button)
 
 	-- the game-wide event card and the hourly meteor card (EventController) stack on top of the quest card
-	for _, card in { { "EventCard", "meteor" }, { "HourlyCard", "meteorCrystal" } } do
+	for _, card in { { "EventCard", "meteor" }, { "HourlyCard", "meteorQuartz" } } do
 		local event = NativeUI.create("Frame", { Name = card[1], Size = UDim2.fromOffset(292, 56), BackgroundColor3 = Palette.WHITE,
 			BorderSizePixel = 0, Visible = false }, gui)
 		MenuTheme.round(event, 12)

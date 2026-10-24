@@ -64,7 +64,7 @@ veteran (`src/shared/Config/Home.luau:81-82`). The multiplier on every sale is
 Scheduled weights Iron 60 / Ice 25 / Crystal 15 (`src/shared/Config/Meteor.luau:123,145,167`);
 the Alien boss is never weighted in — it replaces every 10th meteor once someone on the server has
 3 rebirths (`src/shared/Config/Meteor.luau:80`). The Quartz meteor is never weighted in either: it lands at
-:30 past every hour (UTC) on every server, open to everyone, with a double-HP core and triple shards
+:30 past every hour (UTC) on every server, open to everyone, with a double-HP core, triple shards and a 5-minute mining window
 (`Meteor.Hourly`, `MeteorTypes.hourly`: the countdown that would run past :30 becomes its countdown; Call a Meteor
 can't pull it in). The HUD's hourly card above the quest tracker counts down to it (`EventController`). Shards come only from finished (or half-down,
 cooled) cores: 5 floor per hitter, an 8-per-hitter bonus pool split by Mining Power share, 10/6/3
