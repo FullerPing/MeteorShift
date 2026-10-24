@@ -15,7 +15,12 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Feedback = require(script.Parent.Parent.Lib.Feedback)
 
-local FeedbackService = Knit.CreateService({ Name = "FeedbackService", Client = {} })
+local FeedbackService = Knit.CreateService({
+	Name = "FeedbackService",
+	Client = {
+		AskFavorite = Knit.CreateSignal(), -- () show Roblox's favorite prompt and the like note, once per player ever
+	},
+})
 
 local INBOX_KEY = "inbox"
 local lastSend: { [Player]: number } = {}
@@ -107,6 +112,16 @@ end
 function FeedbackService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastSend[player], sent[player] = nil, nil
+	end)
+	-- a rebirth is a happy moment: ask once (ever) to favorite and like the game. Never rewarded: Roblox's rules forbid it
+	local PlayerStateService = Knit.GetService("PlayerStateService")
+	Knit.GetService("RebirthService").Reborn:Connect(function(player: Player)
+		local data = PlayerStateService:Get(player)
+		if not data or data.flags.favoriteAsked == true then return end
+		data.flags.favoriteAsked = true
+		task.delay(Config.Feedback.FavoriteDelay, function()
+			if player.Parent then self.Client.AskFavorite:Fire(player) end
+		end)
 	end)
 end
 

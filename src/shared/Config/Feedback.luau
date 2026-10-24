@@ -9,5 +9,6 @@ return {
 	MinLength = 3,
 	Cooldown = 60, -- seconds between two sends from one player
 	PerSession = 3, -- sends one player can make in a session
+	FavoriteDelay = 4, -- seconds after the first rebirth (once ever) before Roblox's favorite prompt, after the celebration
 	Keep = 200, -- newest messages kept in the saved inbox (/feedback reads them)
 }

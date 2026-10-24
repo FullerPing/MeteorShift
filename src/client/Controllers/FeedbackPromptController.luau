@@ -24,6 +24,19 @@ local IGNORED_AFTER = 60 -- seconds the question waits before tucking itself awa
 
 function FeedbackPromptController:KnitStart()
 	local FeedbackService = Knit.GetService("FeedbackService")
+	-- once ever, after a rebirth: Roblox's favorite prompt, then a note asking for a like (no API can prompt a like)
+	FeedbackService.AskFavorite:Connect(function()
+		local AvatarEditorService = game:GetService("AvatarEditorService")
+		local StarterGui = game:GetService("StarterGui")
+		local function likeNote()
+			pcall(function()
+				StarterGui:SetCore("SendNotification", { Title = "Enjoying the game?", Text = "A thumbs up on the game page helps us a lot. Thanks!", Duration = 8 })
+			end)
+		end
+		AvatarEditorService.PromptSetFavoriteCompleted:Once(likeNote)
+		local ok = pcall(function() AvatarEditorService:PromptSetFavorite(game.PlaceId, Enum.AvatarItemType.Asset, true) end)
+		if not ok then likeNote() end
+	end)
 	local started = os.clock()
 	task.delay(Config.Feedback.AskAfter, function()
 		local ok, ask = pcall(function() return FeedbackService:ShouldAsk() end)
