@@ -47,8 +47,10 @@ that: only existing keys are assigned — `tests/ProfileTemplate.spec.luau:94-11
 | `credits.petMax` | 0 | a Pet Max bought with nothing to level, spent by `Purchases.applyPetMaxCredit` on the next pet put out | survives |
 
 (v13 removed `trialFlag`, written only by an unreleased v12 trial build. v14 is the ×2
-rebirth; saved `rebirths` carry over unchanged, since an old rank (×5 sales, ×3 prices, about ×1.67 net) is worth
-less than the same rank now (owner, 2026-10-24).)
+rebirth with flat prices; saved `rebirths` carry over unchanged, since an old rank (×5 sales, ×3 prices, about ×1.67
+net) is worth less than the same rank now, and `cash` and `overflow` are divided by the old price multiplier (×3 a
+rank for 16 ranks, then ×1.2) so they buy what they did — `src/server/Lib/CashMigration.luau`,
+`tests/CashMigration.spec.luau` (owner, 2026-10-24).)
 | `lastSeen` (offline checkpoint) | 0 (`:35`) | DataService on every autosave and release (`DataService.luau:365,305`); read for offline catch-up (`:44`) | re-stamped, never removed (`RebirthReset.luau:36`) |
 | `receipts` (all processed PurchaseIds) | empty (`:52`) | `src/shared/Purchases.luau:167`; never trim (template comment) | survives (`tests/RebirthReset.spec.luau:92,98`) |
 | `credits.callMeteor` / `bossMeteor` / `rebirthKeep` | 0 (`:48-50`) | bought via `src/server/Services/MonetizationService.luau`; spent at `:387`, `:409` and `RebirthService.luau:60` | survive |
