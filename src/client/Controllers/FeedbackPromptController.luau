@@ -1,6 +1,6 @@
 --!strict
--- The feedback prompt (Config.Feedback): after half an hour of play in a session, a small card at the right edge asks
--- "Got feedback?". NO (or ignoring it for a minute) puts it away for the session; YES turns it into a writing box
+-- The feedback prompt (Config.Feedback): the first time a session passes half an hour of play (once per player, ever:
+-- FeedbackService:ShouldAsk), a small card at the right edge asks "Got feedback?". NO (or ignoring it for a minute) puts it away for the session; YES turns it into a writing box
 -- in the middle of the screen whose SEND goes to FeedbackService, which keeps it for the team.
 
 local Players = game:GetService("Players")
@@ -26,6 +26,8 @@ function FeedbackPromptController:KnitStart()
 	local FeedbackService = Knit.GetService("FeedbackService")
 	local started = os.clock()
 	task.delay(Config.Feedback.AskAfter, function()
+		local ok, ask = pcall(function() return FeedbackService:ShouldAsk() end)
+		if not ok or ask ~= true then return end
 		local gui = N.create("ScreenGui", { Name = "FeedbackPrompt", ResetOnSpawn = false, IgnoreGuiInset = true, DisplayOrder = 30,
 			ZIndexBehavior = Enum.ZIndexBehavior.Sibling }, nil) :: ScreenGui
 		local panel = Theme.panel(gui, "Panel", UDim2.fromOffset(ASK.X, ASK.Y))

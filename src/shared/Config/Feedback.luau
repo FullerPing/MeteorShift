@@ -1,10 +1,10 @@
 --!strict
--- The feedback prompt (FeedbackPromptController, FeedbackService): after AskAfter seconds of play in one
--- session a small card asks "Got feedback?"; YES opens a box whose text is saved for the team and, when
+-- The feedback prompt (FeedbackPromptController, FeedbackService): the first time a session reaches AskAfter seconds
+-- of play (once per player, ever) a small card asks "Got feedback?"; YES opens a box whose text is saved for the team and, when
 -- ServerStorage has a FeedbackWebhook attribute (a Discord webhook URL, kept out of git), posted to Discord.
 
 return {
-	AskAfter = 30 * 60, -- seconds of play in this session before the card shows (once a session)
+	AskAfter = 30 * 60, -- seconds of play in one session before the card shows (only the first time ever)
 	MaxLength = 500, -- characters a player can send
 	MinLength = 3,
 	Cooldown = 60, -- seconds between two sends from one player

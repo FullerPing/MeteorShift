@@ -42,6 +42,7 @@ return {
 	flags = {
 		tutorialDone = false,
 		introSeen = false, -- the first-join "How to play" intro was closed (Shared/Intro)
+		feedbackAsked = false, -- the feedback card has been shown once (FeedbackService:ShouldAsk); it never comes back
 		-- Lifetime analytics milestones (spec §13), set by TelemetryService when logged
 		firstMeteor = false,
 		firstCoreReward = false,

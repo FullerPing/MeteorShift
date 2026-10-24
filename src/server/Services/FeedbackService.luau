@@ -68,6 +68,17 @@ function FeedbackService:Recent(count: number): { any }
 	return out
 end
 
+-- The feedback card shows once per player, ever (owner, 2026-10-24): the first session that reaches AskAfter.
+-- True the first time it is asked, and marks it asked.
+function FeedbackService.Client:ShouldAsk(player: Player): boolean
+	local data = Knit.GetService("PlayerStateService"):Get(player)
+	if not data or data.flags.feedbackAsked == true then
+		return false
+	end
+	data.flags.feedbackAsked = true
+	return true
+end
+
 function FeedbackService.Client:Send(player: Player, text: any, minutes: any): boolean
 	local clean = Feedback.clean(text)
 	local now = os.clock()
