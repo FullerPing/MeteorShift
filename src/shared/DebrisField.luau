@@ -25,9 +25,10 @@ end
 -- Cash a cash rock pays: its seconds of the breaker's expected income, between its floor and its ceiling
 -- (a share of the next rebirth's cost). The seconds are for the Basic Pickaxe's swing and shrink with the
 -- breaker's `swing`, since a faster pickaxe breaks the rock sooner (without that, the fast top tiers made a
--- field pay 2.5x the meteors). Zero for any other kind of rock.
+-- field pay 2.5x the meteors). Any rock with Seconds pays it (the XP Mine's pay a little cash beside their XP);
+-- zero for the rest.
 function DebrisField.cash(reward: Debris.Reward?, perSecond: number, rebirthCost: number, swing: number?): number
-	if not reward or reward.Kind ~= "Cash" then
+	if not reward or not reward.Seconds then
 		return 0
 	end
 	local base = Pickaxes[1].Swing

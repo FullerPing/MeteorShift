@@ -9,7 +9,7 @@
 export type Reward = {
 	Kind: string, -- "Cash", "Ore" or "Xp"
 	Hp: number,
-	Seconds: number?,
+	Seconds: number?, -- cash: seconds of income a rock pays (Cash rocks, and XP rocks that pay a little cash too)
 	CashFloor: number?,
 	CeilingShare: number?,
 	Ore: string?,
@@ -50,9 +50,10 @@ return {
 		{ Id = "FrostYard", Name = "Frost Yard", Color = Color3.fromRGB(110, 212, 255),
 			Reward = { Kind = "Cash", Hp = 10, Seconds = 17.5, CashFloor = 30, CeilingShare = 0.02 }, Unlock = { Level = 5 } },
 		-- The XP Mine on the south of T2: its rocks pay player XP (Hp x XpPerHit, about 20 XP a minute of steady
-		-- mining against ~35 hitting a meteor), open to everyone, so the countdown always moves your level along
+		-- mining against ~35 hitting a meteor), open to everyone, so the countdown always moves your level along.
+		-- They also pay some cash (owner, 2026-10-24): 4 s of income per 12-hit rock, about a fifth of Rust Works' rate
 		{ Id = "XpMine", Name = "XP Mine", Color = Color3.fromRGB(122, 140, 255),
-			Reward = { Kind = "Xp", Hp = 12, XpPerHit = 0.2 } },
+			Reward = { Kind = "Xp", Hp = 12, XpPerHit = 0.2, Seconds = 4, CashFloor = 10, CeilingShare = 0.006 } },
 		{ Id = "VioletQuarry", Name = "Violet Quarry", Color = Color3.fromRGB(184, 116, 255),
 			Reward = { Kind = "Ore", Hp = 10, Ore = "frost", OreMult = 0.48 }, Unlock = { Level = 12 } },
 		{ Id = "SulfurRidge", Name = "Sulfur Ridge", Color = Color3.fromRGB(255, 204, 64),
