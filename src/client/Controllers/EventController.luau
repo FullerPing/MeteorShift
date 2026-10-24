@@ -10,7 +10,7 @@ local Sfx = require(script.Parent.Parent.Sfx)
 local player = Players.LocalPlayer
 
 local EventController = Knit.CreateController({ Name = "EventController" })
-local SOON_SECONDS = 600
+local SOON_SECONDS = 180 -- the card counts down to the next hourly event for its last 3 minutes
 
 local function clock(seconds: number): string
 	seconds = math.max(0, math.floor(seconds))
