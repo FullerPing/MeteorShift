@@ -13,6 +13,10 @@ COLORS = {
     'coinMagpie': '#FFDC64', 'cargoMole': '#967860', 'graniteGolem': '#78828C',
     'crystalStag': '#BE82FF', 'lodeWyrm': '#FFAA46', 'auroraOwl': '#78FFD2',
     'meteorDrake': '#FF8232', 'drillbot': '#FFB030', 'solarPhoenix': '#FF783C',
+    'dustBunny': '#D6C8B2', 'emberNewt': '#FF7846', 'geodeTurtle': '#966EC8',
+    'cometFox': '#7FB6FF', 'nebulaJelly': '#C882FF', 'magmaCrab': '#E65028',
+    'frostYeti': '#BEE6FF', 'quartzKitsune': '#FFBEE6', 'galaxyGriffin': '#5A50C8',
+    'voidLeviathan': '#3C286E',
 }
 
 
@@ -544,12 +548,398 @@ def solar_phoenix(level10=False):
     return a.finish()
 
 
+# ---- 2026-10-24: ten new species (shop commons, magmaEgg / voidEgg pets and the group mascot) ----
+
+def dust_bunny(level10=False):
+    a=new('dustBunny',level10)
+    a.ico('Body',(0,.15,.95),(1.75,1.75,1.65),COLORS['dustBunny'],'tint',subdivisions=2)
+    # loose crater-dust puffs clumped round the round body
+    for i,(x,y,z,s) in enumerate([(-.80,.15,.70,.72),(.80,.15,.70,.72),(-.55,.80,1.20,.66),(.55,.80,1.20,.66),
+                                  (0,.60,1.70,.78),(-.62,-.30,.42,.56),(.62,-.30,.42,.56),(0,.95,.55,.6)]):
+        a.ico('Fluff',(x,y,z),(s,s,s*.9),'cream',seed=i)
+    orb(a,'Head',(0,-.62,1.58),(1.40,1.18,1.18),'cream')
+    orb(a,'Head',(0,-1.13,1.40),(.64,.30,.40),'white')
+    orb(a,'Head',(0,-1.28,1.50),(.18,.10,.13),'pink')
+    eyes(a,'Head',.31,-1.14,1.74,.22)
+    for s in (-1,1):
+        orb(a,'Head',(s*.50,-1.06,1.42),(.24,.08,.14),'#FFB0E2')
+        a.between('Ears',(s*.24,-.55,2.02),(s*.48,-.42,3.05),.23,'cream',vertices=8,radius2=.17)
+        a.between('Ears',(s*.25,-.73,2.10),(s*.46,-.62,2.92),.12,'#FFB0E2',vertices=6,radius2=.08)
+        orb(a,'Ears',(s*.48,-.42,3.05),(.34,.30,.30),'cream')
+    feet(a,-.55,.55,.42,.42,'cream',.44)
+    a.ico('Tail',(0,1.12,1.0),(.62,.55,.62),'white',seed=7)
+    for i in range(3):
+        a.ico('GreyChip',((i-1)*.25,-1.30,.18+i*.06),(.22,.24,.20),'cream',seed=i)
+    a.hidden('GreyChip')
+    joint(a,'GreyChip',(0,-1.30,.18))
+    joint(a,'Head',(0,-.40,1.32));joint(a,'Ears',(0,-.55,1.98));joint(a,'Tail',(0,.90,1.0))
+    if level10:
+        a.ring('AccentTrim',(0,-.42,1.05),.66,.07,'equipment_gold',axis='Y',segments=16,sides=4)
+        orb(a,'AccentTrim',(0,-1.10,.92),(.26,.12,.26),'gold')
+        for s in (-1,1):
+            shard(a,'EarsGlow',(s*.50,-.42,3.32),.34,'gold',.14)
+        joint(a,'EarsGlow',(0,-.55,1.98),'Ears')
+    return a.finish()
+
+
+def ember_newt(level10=False):
+    a=new('emberNewt',level10)
+    orb(a,'Body',(0,.20,.62),(1.15,2.0,.85),COLORS['emberNewt'],'tint')
+    orb(a,'Belly',(0,-.05,.40),(.86,1.55,.42),'cream')
+    for i,(x,y) in enumerate([(-.25,-.25),(.22,.15),(-.18,.62),(.20,.95)]):
+        orb(a,'Spots',(x,y,1.0-abs(y-.2)*.12),(.24,.24,.12),'gold')
+    orb(a,'Head',(0,-1.05,.82),(1.28,1.05,.80),'orange')
+    for s in (-1,1):
+        orb(a,'Head',(s*.33,-1.18,1.10),(.44,.40,.40),'orange')
+        orb(a,'Head',(s*.52,-1.36,.78),(.18,.06,.10),'#FFB0E2')
+    eyes(a,'Head',.33,-1.36,1.13,.21)
+    a.tube('Head',[(-.24,-1.53,.72),(0,-1.575,.66),(.24,-1.53,.72)],.03,'ink','palette')
+    for s in (-1,1):
+        for base,y,glow in [('FrontLeg',-.50,'FrontToeGlow'),('BackLeg',.80,'BackToeGlow')]:
+            g=base if s<0 else base+'.001'; tg=glow if s<0 else glow+'.001'
+            a.between(g,(s*.40,y,.55),(s*.70,y-.08,.30),.15,'orange',vertices=6,radius2=.12)
+            a.between(g,(s*.70,y-.08,.30),(s*.78,y-.12,.06),.12,'orange',vertices=6,radius2=.10)
+            for k in (-1,0,1):
+                orb(a,tg,(s*.82+k*.10,y-.30+abs(k)*.06,.06),(.17,.22,.13),'orange','neon')
+            joint(a,g,(s*.40,y,.55),base);joint(a,tg,(s*.40,y,.55),base)
+    tail=[(0,1.05,.60),(0,1.65,.48),(.30,2.15,.36),(.62,2.40,.30)]
+    for i in range(3):
+        a.between('Tail',tail[i],tail[i+1],.30-i*.09,'orange',vertices=8,radius2=.22-i*.08)
+    shard(a,'TailGlow',(.66,2.45,.40),.22,'orange',.07)
+    joint(a,'Tail',(0,1.0,.60));joint(a,'TailGlow',(0,1.0,.60),'Tail')
+    joint(a,'Head',(0,-.62,.70))
+    a.tube('HeatWave',[(-.30,-1.55,1.35),(-.10,-1.75,1.55),(.12,-1.62,1.75),(.28,-1.85,1.95)],.035,'warm_glow')
+    a.hidden('HeatWave');joint(a,'HeatWave',(0,-1.55,1.35))
+    if level10:
+        for i in range(4):
+            shard(a,'SpineGlow',(0,-.40+i*.42,1.0+(.04 if i in (1,2) else 0)),.30-i*.03,'orange',.11)
+        for s in (-1,1):
+            feather(a,'Head',(s*.15,-.92,1.18),(s*.42,-.70,1.62),.13,'gold')
+        a.ring('AccentTrim',(0,-.55,.66),.50,.05,'equipment_gold',axis='Y',segments=16,sides=4)
+    return a.finish()
+
+
+def geode_turtle(level10=False):
+    a=new('geodeTurtle',level10)
+    a.ellipsoid('Body',(0,.15,.92),(2.3,2.5,1.65),COLORS['geodeTurtle'],'tint',segments=14,rings=8)
+    a.ring('Rim',(0,.15,.62),1.12,.15,'stone',axis='Z',segments=18,sides=5)
+    for i in range(7):
+        t=pi*.15+i*pi*2/7
+        a.ico('Rim',(cos(t)*.95,.15+sin(t)*1.05,1.15),(.62,.62,.38),'stone',seed=10+i)
+    orb(a,'Geode',(0,.20,1.62),(1.35,1.45,.30),'#161E36')
+    a.ring('Geode',(0,.20,1.68),.70,.10,'#C8CEDC',axis='Z',segments=16,sides=4)
+    tall=.95 if level10 else .70
+    for i,(x,y,h,lean) in enumerate([(0,.2,tall,(0,0)),(-.30,.0,.50,(-.18,-.10)),(.30,.05,.55,(.20,-.08)),
+                                     (-.18,.48,.48,(-.12,.18)),(.22,.45,.44,(.15,.16))]):
+        a.between('ShellGlow',(x,y,1.45),(x+lean[0]*1.4,y+lean[1]*1.4,1.55+h*1.35),.22 if i==0 else .16,'violet','neon',vertices=5,radius2=0)
+    a.between('Head',(0,-.85,.70),(0,-1.18,.88),.28,'teal',vertices=8)
+    orb(a,'Head',(0,-1.38,.98),(.98,.92,.86),'teal')
+    for s in (-1,1):
+        orb(a,'Head',(s*.34,-1.72,.86),(.20,.06,.11),'#FFB0E2')
+    eyes(a,'Head',.23,-1.76,1.12,.19)
+    a.tube('Head',[(-.16,-1.81,.83),(0,-1.84,.79),(.16,-1.81,.83)],.028,'ink','palette')
+    feet(a,-.70,.95,.88,.55,'teal',.62)
+    a.between('Tail',(0,1.30,.50),(0,1.75,.34),.15,'teal',vertices=6,radius2=0)
+    a.ico('OreChunk',(0,.20,2.05),(.40,.40,.45),'violet',seed=4)
+    a.hidden('OreChunk');joint(a,'OreChunk',(0,.20,2.05))
+    joint(a,'Head',(0,-.80,.72));joint(a,'Tail',(0,1.25,.50))
+    if level10:
+        a.ring('AccentTrim',(0,.15,.80),1.14,.06,'equipment_gold',axis='Z',segments=18,sides=4)
+        a.ring('AccentTrim',(0,.20,1.76),.70,.05,'equipment_gold',axis='Z',segments=16,sides=4)
+        a.between('ShellGlow',(.05,.30,1.55),(.12,.36,2.2),.09,'white','neon',vertices=5,radius2=0)
+    return a.finish()
+
+
+def comet_fox(level10=False):
+    a=new('cometFox',level10)
+    orb(a,'Body',(0,.20,1.05),(1.15,1.75,1.15),COLORS['cometFox'],'tint')
+    orb(a,'Chest',(0,-.45,.98),(.74,.40,.80),'white')
+    orb(a,'Head',(0,-.72,1.78),(1.32,1.10,1.08),'#6CB8FF')
+    orb(a,'Head',(0,-1.22,1.56),(.60,.52,.40),'white')
+    orb(a,'Head',(0,-1.49,1.64),(.18,.10,.13),'ink')
+    for s in (-1,1):
+        orb(a,'Head',(s*.50,-.98,1.52),(.46,.36,.38),'white')
+        a.between('Ears',(s*.30,-.66,2.16),(s*.56,-.62,2.92),.27,'#6CB8FF',vertices=6,radius2=.02)
+        a.between('Ears',(s*.30,-.78,2.18),(s*.52,-.74,2.75),.15,'white',vertices=6,radius2=.01)
+    eyes(a,'Head',.30,-1.23,1.90,.20)
+    feet(a,-.45,.78,.36,.78,'#6CB8FF',.32)
+    for s in (-1,1):
+        for base,y in [('FrontLeg',-.45),('BackLeg',.78)]:
+            g=base if s<0 else base+'.001'
+            orb(a,g,(s*.36,y-.06,.10),(.34,.42,.20),'white')
+    # one big brush tail sweeping up and back, white comet tip
+    orb(a,'Tail',(0,1.05,1.22),(.55,.60,.55),'#6CB8FF')
+    for loc,size,c in [((0,1.72,1.72),(1.0,1.05,2.15),'#6CB8FF'),((0,2.42,2.42),(.80,.85,1.0),'white')]:
+        orb(a,'Tail',loc,size,c).rotation_euler=(-.79,0,0)
+    for i,(x,y,z,c) in enumerate([(.52,1.55,1.60,'white'),(-.50,1.85,1.95,'cyan'),(.48,2.15,2.15,'gold'),
+                                  (-.42,2.35,2.50,'white'),(0,1.80,2.50,'cyan'),(0,2.95,2.75,'white'),(.22,3.18,2.58,'gold')]):
+        a.ico('TailGlow',(x,y,z),(.16,.16,.16),c,'neon',seed=20+i)
+    joint(a,'Tail',(0,.88,1.18));joint(a,'TailGlow',(0,.88,1.18),'Tail')
+    joint(a,'Head',(0,-.45,1.50));joint(a,'Ears',(0,-.70,2.10))
+    a.tube('SparkLink',[(-.27,-1.2,.54),(.07,-1.5,.79),(-.06,-1.63,.93),(.30,-1.98,1.20)],.055,'cyan')
+    a.hidden('SparkLink');joint(a,'SparkLink',(0,-1.2,.54))
+    if level10:
+        a.ring('AccentTrim',(0,-.42,1.38),.50,.06,'equipment_gold',axis='Y',segments=16,sides=4)
+        a.between('HeadGlow',(0,-1.18,2.22),(0,-1.24,2.52),.10,'gold','neon',vertices=4,radius2=0)
+        a.between('HeadGlow',(-.14,-1.21,2.32),(.14,-1.21,2.32),.07,'gold','neon',vertices=4)
+        joint(a,'HeadGlow',(0,-.45,1.50),'Head')
+        for i,(x,y,z) in enumerate([(.50,2.00,2.30),(-.50,2.10,2.30),(-.15,3.35,2.95)]):
+            a.ico('TailGlow',(x,y,z),(.20,.20,.20),'white','neon',seed=40+i)
+    return a.finish()
+
+
+def nebula_jelly(level10=False):
+    a=new('nebulaJelly',level10,True)
+    a.ellipsoid('Body',(0,0,.35),(1.95,1.95,1.55),COLORS['nebulaJelly'],'tint',segments=14,rings=8)
+    a.ring('Rim',(0,0,-.30),.86,.14,'#FFB0E2',axis='Z',segments=18,sides=5)
+    orb(a,'Core',(0,0,-.30),(1.25,1.25,.55),'#FA78C8','neon')
+    for i in range(11):
+        t=i*2.39; f=.25+.6*((i*.37)%1)
+        r=.97*sin(f*pi/2+.35); z=.35+.77*cos(f*pi/2+.35)
+        orb(a,'Speckles',(r*cos(t),r*sin(t),z),(.13,.13,.13),['white','cyan','#FFE66E'][i%3],'neon')
+    for s in (-1,1):
+        orb(a,'Face',(s*.50,-.82,.05),(.24,.08,.13),'#FA78C8')
+    eyes(a,'Face',.27,-.90,.22,.20)
+    a.tube('Face',[(-.13,-.94,-.02),(0,-.96,-.07),(.13,-.94,-.02)],.026,'ink','palette')
+    for i in range(8):
+        t=2*pi*i/8+pi/8; x,y=cos(t)*.78,sin(t)*.78
+        pts=[(x*(1-.12*k)+.10*sin(k*1.7+i),y*(1-.12*k)+.10*cos(k*1.7+i),-.35-.36*k) for k in range(5)]
+        a.tube('Tail',pts,.07,'violet' if i%2 else '#FFB0E2','palette',sides=5)
+    for i in range(3):
+        t=2*pi*i/3
+        pts=[(.22*cos(t)+.12*sin(k*1.4+i),.22*sin(t)+.12*cos(k*1.4),-.45-.30*k) for k in range(5)]
+        a.tube('Tail',pts,.13-.01*i,'#CE9CFF','palette',sides=6)
+    joint(a,'Tail',(0,0,-.30))
+    if level10:
+        a.ring('AccentTrim',(0,0,-.18),.92,.06,'equipment_gold',axis='Z',segments=18,sides=4)
+        a.ring('Halo',(0,0,1.45),.55,.05,'equipment_gold',mode='neon',axis='Z',segments=20,sides=4)
+        joint(a,'Halo',(0,0,1.45))
+        shard(a,'CrownGlow',(0,-.05,1.20),.30,'#FFE66E',.12)
+    return a.finish()
+
+
+def magma_crab(level10=False):
+    a=new('magmaCrab',level10)
+    orb(a,'Body',(0,.10,.85),(2.1,1.7,1.05),COLORS['magmaCrab'],'tint')
+    orb(a,'Belly',(0,.05,.58),(1.75,1.40,.45),'#FFB24A')
+    plates=[(-.45,-.05),(.45,-.05),(0,.42),(-.52,.55),(.52,.55),(0,-.38)]
+    for i,(x,y) in enumerate(plates):
+        a.ico('Shell',(x,y,1.22),(.62,.55,.32),'equipment_dark',seed=30+i)
+    for pts in [[(-.75,-.3,1.30),(-.2,-.15,1.38),(.2,.15,1.40),(.78,.25,1.28)],
+                [(0,-.62,1.20),(0,.05,1.40),(-.25,.7,1.34)],[(.25,.75,1.30),(.05,.25,1.40)]]:
+        a.tube('ShellGlow',pts,.045,'orange')
+    for s in (-1,1):
+        a.between('Head',(s*.30,-.55,1.10),(s*.38,-.62,1.70),.07,'equipment_dark',vertices=6)
+        orb(a,'Head',(s*.38,-.64,1.82),(.38,.36,.38),'white')
+        orb(a,'Head',(s*.38,-.81,1.84),(.19,.06,.21),'ink')
+        orb(a,'Head',(s*.41,-.845,1.88),(.05,.03,.06),'white')
+        g='Claw' if s<0 else 'Claw.001'
+        a.between(g,(s*.85,-.40,.85),(s*1.25,-.92,.95),.14,'red',vertices=6)
+        orb(a,g,(s*1.32,-1.20,1.0),(.78,.82,.62),'red')
+        a.between(g,(s*1.30,-1.52,1.10),(s*1.20,-1.98,1.20),.18,'red',vertices=6,radius2=.03)
+        a.between(g,(s*1.42,-1.52,.90),(s*1.38,-1.86,.80),.13,'red',vertices=6,radius2=.03)
+        joint(a,g,(s*.85,-.40,.85),'FrontLeg')
+        bg='BackLeg' if s<0 else 'BackLeg.001'
+        for y in (-.15,.25,.65):
+            a.between(bg,(s*.85,y,.70),(s*1.35,y+.05,.62),.08,'#A02228',vertices=6)
+            a.between(bg,(s*1.35,y+.05,.62),(s*1.52,y+.08,.02),.08,'#A02228',vertices=6,radius2=.03)
+        joint(a,bg,(s*.85,.25,.70),'BackLeg')
+    a.tube('Head',[(-.20,-.80,.72),(0,-.86,.66),(.20,-.80,.72)],.03,'ink','palette')
+    joint(a,'Head',(0,-.45,1.05))
+    for i in range(3):
+        a.ico('GreyChip',((i-1)*.30,-1.50,.20+i*.06),(.22,.24,.20),'equipment_dark',seed=i)
+    a.hidden('GreyChip');joint(a,'GreyChip',(0,-1.50,.20))
+    if level10:
+        for i,x in enumerate((-.32,0,.32)):
+            a.between('AccentTrim',(x,-.30,1.38),(x*1.2,-.34,1.68+(.12 if i==1 else 0)),.09,'equipment_gold',vertices=5,radius2=0)
+        for s in (-1,1):
+            g='ClawGlow' if s<0 else 'ClawGlow.001'
+            a.tube(g,[(s*1.05,-1.10,1.28),(s*1.32,-1.25,1.32),(s*1.55,-1.10,1.20)],.04,'orange')
+            joint(a,g,(s*.85,-.40,.85),'FrontLeg')
+    return a.finish()
+
+
+def frost_yeti(level10=False):
+    a=new('frostYeti',level10)
+    orb(a,'Body',(0,.10,1.40),(1.95,1.60,2.05),COLORS['frostYeti'],'tint')
+    for i,(x,y,z,s) in enumerate([(0,-.15,2.42,.70),(-.42,-.05,2.30,.55),(.42,-.05,2.30,.55),(-.85,.05,1.95,.55),(.85,.05,1.95,.55)]):
+        a.ico('Fur',(x,y,z),(s,s,s*.85),'white',seed=50+i)
+    orb(a,'Head',(0,-.62,1.82),(1.20,.45,.98),'frost')
+    eyes(a,'Head',.26,-.86,1.98,.20)
+    orb(a,'Head',(0,-.87,1.60),(.48,.06,.20),'ink')
+    for s in (-1,1):
+        a.box('Head',(s*.10,-.89,1.66),(.10,.04,.09),'white',bevel=.02)
+        orb(a,'Head',(s*.44,-.82,1.72),(.20,.06,.11),'#FFB0E2')
+        a.between('Head',(s*.48,-.40,2.40),(s*.80,-.32,2.86),.13,'cream',vertices=6,radius2=.02)
+        g='FrontLeg' if s<0 else 'FrontLeg.001'
+        orb(a,g,(s*1.02,-.12,1.25),(.62,.66,1.30),'white')
+        orb(a,g,(s*1.08,-.22,.62),(.48,.52,.40),'frost')
+        joint(a,g,(s*.86,-.08,1.85),'FrontLeg')
+        bg='BackLeg' if s<0 else 'BackLeg.001'
+        orb(a,bg,(s*.50,.05,.36),(.66,.76,.62),'white')
+        orb(a,bg,(s*.50,-.18,.10),(.58,.66,.22),'frost')
+        joint(a,bg,(s*.50,.05,.62),'BackLeg')
+    joint(a,'Head',(0,-.40,1.65))
+    a.box('Pannier',(0,1.05,1.75),(1.25,.72,1.20),'glass',bevel=.16)
+    a.box('Pannier',(-.22,.70,2.02),(.36,.06,.30),'white',bevel=.03)
+    a.box('Pannier',(.30,.70,1.48),(.18,.06,.14),'#DCF8FF',bevel=.02)
+    for s in (-1,1):
+        a.tube('Pannier',[(s*.45,1.0,2.30),(s*.88,.25,2.32),(s*1.02,-.32,1.95),(s*.98,-.22,1.55)],.065,'wood','palette')
+    a.ico('OreChunk',(0,1.05,2.55),(.42,.42,.45),'orange',seed=6)
+    a.hidden('OreChunk');joint(a,'OreChunk',(0,1.05,2.55))
+    if level10:
+        a.between('IceGlow',(-.25,1.42,1.45),(-.30,1.62,2.10),.16,'cyan','neon',vertices=5,radius2=0)
+        a.between('IceGlow',(.20,1.42,1.40),(.30,1.60,1.92),.12,'cyan','neon',vertices=5,radius2=0)
+        for s in (-1,1):
+            a.box('AccentTrim',(s*.66,-.42,1.85),(.20,.08,.22),'equipment_gold',bevel=.03)
+            g='FrontLeg' if s<0 else 'FrontLeg.001'
+            a.ring(g,(s*1.05,-.15,.86),.30,.05,'equipment_gold',axis='Z',segments=14,sides=4)
+    return a.finish()
+
+
+def quartz_kitsune(level10=False):
+    a=new('quartzKitsune',level10)
+    orb(a,'Body',(0,.20,1.05),(1.10,1.65,1.15),COLORS['quartzKitsune'],'tint')
+    orb(a,'Chest',(0,-.45,.98),(.72,.40,.80),'white')
+    orb(a,'Head',(0,-.72,1.78),(1.28,1.08,1.05),'#FFB0E2')
+    orb(a,'Head',(0,-1.20,1.56),(.58,.50,.40),'white')
+    orb(a,'Head',(0,-1.46,1.64),(.17,.10,.12),'ink')
+    for s in (-1,1):
+        orb(a,'Head',(s*.48,-.98,1.52),(.42,.34,.36),'white')
+        a.between('Head',(s*.30,-1.23,1.70),(s*.52,-1.10,1.66),.035,'#C44696',vertices=4)
+        a.between('Ears',(s*.30,-.66,2.14),(s*.52,-.62,2.88),.26,'#FFB0E2',vertices=6,radius2=.05)
+        a.between('Ears',(s*.30,-.78,2.16),(s*.48,-.74,2.70),.14,'white',vertices=6,radius2=.02)
+        shard(a,'EarsGlow',(s*.53,-.62,2.96),.22,'#FA78C8',.07)
+    eyes(a,'Head',.29,-1.21,1.90,.19)
+    a.between('HeadGlow',(0,-1.10,2.10),(0,-1.16,2.36),.09,'#FA78C8','neon',vertices=4,radius2=0)
+    feet(a,-.45,.78,.36,.78,'#FFB0E2',.32)
+    for s in (-1,1):
+        for base,y in [('FrontLeg',-.45),('BackLeg',.78)]:
+            g=base if s<0 else base+'.001'
+            orb(a,g,(s*.36,y-.06,.10),(.34,.42,.20),'white')
+    for ang in (-.62,0,.62):
+        base=(0,1.0,1.18); mid=(sin(ang)*.55,1.45,1.70-abs(ang)*.12); tip=(sin(ang)*1.0,1.75,2.55-abs(ang)*.35)
+        a.between('Tail',base,mid,.20,'#FFB0E2',vertices=6,radius2=.26)
+        a.between('Tail',mid,tip,.26,'pink',vertices=6,radius2=.13)
+        end=(tip[0]*1.12,tip[1]+.10,tip[2]+.45)
+        a.between('TailGlow',tip,end,.13,'#FA78C8','neon',vertices=6,radius2=0)
+        if level10:
+            a.ring('Tail',mid,.25,.04,'equipment_gold',axis='Z',segments=12,sides=4)
+    joint(a,'Tail',(0,.95,1.18));joint(a,'TailGlow',(0,.95,1.18),'Tail')
+    joint(a,'Head',(0,-.45,1.50));joint(a,'HeadGlow',(0,-.45,1.50),'Head')
+    joint(a,'Ears',(0,-.70,2.10));joint(a,'EarsGlow',(0,-.70,2.10),'Ears')
+    for i in range(3):
+        shard(a,'TargetShard',((i-1)*.23,-1.62,.27+i*.08),.43,'#FA78C8',.11)
+    a.hidden('TargetShard');joint(a,'TargetShard',(0,-1.62,.27))
+    if level10:
+        a.ring('AccentTrim',(0,-.42,1.38),.50,.06,'equipment_gold',axis='Y',segments=16,sides=4)
+        orb(a,'CollarGlow',(0,-.92,1.12),(.20,.14,.24),'#FA78C8','neon')
+        for s in (-1,1):
+            a.ring('Ears',(s*.45,-.63,2.62),.15,.04,'equipment_gold',axis='Z',segments=12,sides=4)
+    return a.finish()
+
+
+def galaxy_griffin(level10=False):
+    a=new('galaxyGriffin',level10,True)
+    orb(a,'Body',(0,.15,-.05),(1.30,1.60,1.30),COLORS['galaxyGriffin'],'tint')
+    orb(a,'Chest',(0,-.42,.02),(.86,.40,.98),'#465882')
+    orb(a,'Head',(0,-.45,.72),(1.05,1.0,1.0),'navy')
+    for s in (-1,1):
+        orb(a,'Head',(s*.25,-.905,.82),(.26,.075,.28),'white')
+        feather(a,'Head',(s*.25,-.30,1.12),(s*.42,.10,1.55),.15,'#A462F6')
+    eyes(a,'Head',.25,-.955,.82,.15)
+    a.between('Head',(0,-.88,.62),(0,-1.36,.48),.18,'gold',vertices=5,radius2=0)
+    a.between('Head',(0,-1.30,.50),(0,-1.36,.34),.06,'#CE8C14',vertices=5,radius2=0)
+    feather(a,'Head',(0,-.40,1.18),(0,-.05,1.62),.17,'#A462F6')
+    for i,(x,y,z) in enumerate([(.30,-.25,1.18),(-.35,-.55,1.10),(.42,-.75,.95)]):
+        orb(a,'HeadGlow',(x,y,z),(.08,.08,.08),'white','neon')
+    joint(a,'HeadGlow',(0,-.30,.30),'Head')
+    for i,(x,y,z) in enumerate([(.45,.30,.40),(-.50,.10,.35),(.55,.60,-.20),(-.40,.75,.10),(.15,.85,.30),(-.55,.35,-.35),(.35,-.10,-.50)]):
+        orb(a,'Stars',(x,y,z),(.09,.09,.09),'white' if i%3 else 'gold','neon')
+    for s in (-1,1):
+        group='WingsLeft' if s<0 else 'WingsRight'
+        for i in range(5):
+            feather(a,group,(s*.55,.10,.35-i*.05),(s*((1.85 if level10 else 1.65)-i*.13),.30,.75-i*.30),.21,
+                    ['navy','#465882','#A462F6','navy','#2E80F0'][i])
+        for k,(dx,dz) in enumerate([(1.30,.65),(1.05,.25),(1.40,.05),(.95,-.15)]):
+            orb(a,group+'Glow',(s*dx,.14,dz),(.08,.08,.08),'white','neon')
+        joint(a,group,(s*.58,.08,.32));joint(a,group+'Glow',(s*.58,.08,.32),group)
+        a.between('Feet',(s*.28,-.30,-.55),(s*.28,-.42,-.86),.06,'gold',vertices=6)
+        for k in (-1,0,1):
+            a.between('Feet',(s*.28,-.42,-.86),(s*.28+k*.09,-.62,-.90),.04,'#CE8C14',vertices=4,radius2=.01)
+        bg='BackLeg' if s<0 else 'BackLeg.001'
+        orb(a,bg,(s*.42,.55,-.55),(.46,.55,.60),'navy')
+        joint(a,bg,(s*.42,.55,-.35),'BackLeg')
+    a.tube('Tail',[(0,.85,-.20),(0,1.30,-.35),(0,1.65,-.20),(0,1.85,.10)],.08,'navy','palette')
+    orb(a,'Tail',(0,1.92,.22),(.34,.30,.40),'#A462F6')
+    orb(a,'TailGlow',(0,1.95,.48),(.12,.12,.12),'white','neon')
+    joint(a,'Tail',(0,.80,-.20));joint(a,'TailGlow',(0,.80,-.20),'Tail')
+    joint(a,'Head',(0,-.30,.30))
+    if level10:
+        for x in (-.22,0,.22):
+            a.between('HeadTrim',(x,-.55,1.15),(x*1.3,-.58,1.45+(.12 if x==0 else 0)),.07,'equipment_gold',vertices=5,radius2=0)
+        a.tube('HeadTrim',[(-.30,-.60,1.12),(0,-.68,1.16),(.30,-.60,1.12)],.05,'equipment_gold','palette')
+        joint(a,'HeadTrim',(0,-.30,.30),'Head')
+        a.tube('AccentGlow',[(-.38,-.55,.35),(0,-.64,.10),(.38,-.55,.35)],.035,'white')
+    return a.finish()
+
+
+def void_leviathan(level10=False):
+    a=new('voidLeviathan',level10,True)
+    # an air-swimming serpent: head, the tinted first segment and a wavy run of tail segments
+    seg=[(0,-.35,0,1.0),(.20,.20,.15,.88),(.12,.70,.42,.78),(-.14,1.12,.66,.68),(-.26,1.50,.95,.58),(-.12,1.82,1.25,.48),(.14,2.05,1.55,.40)]
+    last='Tail.%03d'%(len(seg)-2)
+    for i,(x,y,z,s) in enumerate(seg):
+        g='Body' if i==0 else ('Tail' if i==1 else 'Tail.%03d'%(i-1))
+        orb(a,g,(x,y,z),(s,s*1.05,s*.95),COLORS['voidLeviathan'] if i==0 else 'navy','tint' if i==0 else 'palette')
+        orb(a,g if i else 'Belly',(x,y-.05,z-s*.30),(s*.66,s*.85,s*.36),'#A462F6')
+        ring_g='BodyGlow' if i==0 else g+'Glow'
+        nxt=seg[min(i+1,len(seg)-1)]; prv=seg[max(i-1,0)]
+        band=a.ring(ring_g,(0,0,0),s*.5,.03,'cyan',mode='neon',axis='Y',segments=14,sides=4)
+        band.location=(x,y,z); band.rotation_euler=Vector((nxt[0]-prv[0],nxt[1]-prv[1],nxt[2]-prv[2])).to_track_quat('Y','Z').to_euler()
+        if i:
+            joint(a,g,(x,y-.25,z),'Tail');joint(a,ring_g,(x,y-.25,z),'Tail')
+        if i<len(seg)-1:
+            feather(a,g if i else 'Fin',(x,y-.05,z+s*.40),(x,y+.25,z+s*.40+.32-i*.03),.12,'#A462F6')
+    tx,ty,tz,ts=seg[-1]
+    feather(a,last,(tx,ty+.1,tz),(tx-.45,ty+.75,tz+.25),.26,'#A462F6')
+    feather(a,last,(tx,ty+.1,tz),(tx+.45,ty+.75,tz-.25),.26,'#A462F6')
+    a.tube(last+'Glow',[(tx-.45,ty+.75,tz+.25),(tx,ty+.25,tz),(tx+.45,ty+.75,tz-.25)],.035,'cyan')
+    orb(a,'Head',(0,-1.05,.15),(1.05,1.15,.92),'navy')
+    orb(a,'Head',(0,-1.42,-.02),(.70,.55,.45),'#465882')
+    for s in (-1,1):
+        orb(a,'Head',(s*.29,-1.42,.36),(.34,.28,.32),'navy')
+        a.between('Head',(s*.25,-.80,.50),(s*.45,-.45,.90),.10,'#A462F6',vertices=5,radius2=0)
+        a.tube('HeadGlow',[(s*.32,-1.62,-.08),(s*.62,-1.70,-.18),(s*.85,-1.55,-.38)],.03,'cyan')
+    eyes(a,'HeadGlow',.29,-1.555,.38,.20,True,'cyan')
+    a.tube('Head',[(-.20,-1.66,-.12),(0,-1.70,-.16),(.20,-1.66,-.12)],.028,'ink','palette')
+    feather(a,'Fin',(0,-.95,.55),(0,-.55,1.05),.18,'#A462F6')
+    a.tube('FinGlow',[(0,-.95,.62),(0,-.70,.92),(0,-.50,1.0)],.03,'cyan')
+    for s in (-1,1):
+        w='WingsLeft' if s<0 else 'WingsRight'
+        feather(a,w,(s*.42,-.30,-.15),(s*1.05,.0,-.45),.22,'#A462F6')
+        feather(a,w,(s*.42,-.20,-.20),(s*.90,.20,-.60),.16,'navy')
+        joint(a,w,(s*.42,-.30,-.15))
+    joint(a,'Head',(0,-.65,.10));joint(a,'HeadGlow',(0,-.65,.10),'Head')
+    if level10:
+        for x in (-.20,0,.20):
+            a.between('HeadTrim',(x,-1.05,.55),(x*1.3,-1.05,.85+(.12 if x==0 else 0)),.07,'equipment_gold',vertices=5,radius2=0)
+        joint(a,'HeadTrim',(0,-.65,.10),'Head')
+        for i,(x,y,z,s) in enumerate(seg[:3]):
+            a.ring('AccentTrim',(x,y+.15,z),s*.50,.035,'equipment_gold',axis='Y',segments=14,sides=4)
+    return a.finish()
+
+
 _SPECIES = {
     'pebblePup': pebble_pup, 'scrapSparrow': scrap_sparrow,
     'packMule': pack_mule, 'sparkHare': spark_hare, 'jetWisp': jet_wisp,
     'coinMagpie': coin_magpie, 'cargoMole': cargo_mole, 'graniteGolem': granite_golem,
     'crystalStag': crystal_stag, 'lodeWyrm': lode_wyrm, 'auroraOwl': aurora_owl,
     'meteorDrake': meteor_drake, 'drillbot': drillbot, 'solarPhoenix': solar_phoenix,
+    'dustBunny': dust_bunny, 'emberNewt': ember_newt, 'geodeTurtle': geode_turtle,
+    'cometFox': comet_fox, 'nebulaJelly': nebula_jelly, 'magmaCrab': magma_crab,
+    'frostYeti': frost_yeti, 'quartzKitsune': quartz_kitsune, 'galaxyGriffin': galaxy_griffin,
+    'voidLeviathan': void_leviathan,
 }
 BUILDERS = {'pets/'+name+('_lv10' if level10 else ''): partial(builder, level10)
             for name,builder in _SPECIES.items() for level10 in (False,True)}

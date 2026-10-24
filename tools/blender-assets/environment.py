@@ -33,13 +33,13 @@ def _egg_shell(a, radius, height, z0, color, segments=20, levels=12):
     a.mesh('Shell', verts, faces, color=color)
 
 
-def _egg_spot(a, group, radius, height, z0, angle, fraction, width, tall, color):
+def _egg_spot(a, group, radius, height, z0, angle, fraction, width, tall, color, mode='palette'):
     verts = [_egg_point(radius, height, z0, angle, fraction, 0.025 * radius)]
     for i in range(12):
         t = 2 * pi * i / 12
         verts.append(_egg_point(radius, height, z0, angle + width * cos(t),
                                 fraction + tall * sin(t), 0.026 * radius))
-    a.mesh(group, verts, [(0, 1 + i, 1 + (i + 1) % 12) for i in range(12)], color=color)
+    a.mesh(group, verts, [(0, 1 + i, 1 + (i + 1) % 12) for i in range(12)], color=color, mode=mode)
 
 
 def _egg_band(a, group, radius, height, z0, fraction, width, color,
@@ -341,10 +341,39 @@ def trophy():
     return a.finish()
 
 
+def egg_magma():
+    a = Asset('eggs/egg_magma', budget=2000)
+    _egg_shell(a, 1.17, 3, 0, '#703626')
+    for angle, z, w, h in [(-1.9,.30,.30,.07),(-.7,.50,.24,.06),(-1.3,.74,.22,.06),(-2.6,.58,.28,.06),
+                           (.4,.32,.24,.05),(1.5,.55,.30,.07),(2.6,.24,.22,.05),(.9,.78,.2,.05)]:
+        _egg_spot(a,'Pattern',1.17,3,0,angle,z,w,h,'#1D2533')
+    # glowing magma cracks running up from a zigzag seam
+    _egg_band(a,'Glow',1.17,3,0,.47,.03,'#FFB030',mode='neon',wave=.05,zigzag=True,segments=18,offset=.045)
+    for base, steps in [(-1.5,[(0,.22),(.12,.31),(.02,.40),(.14,.47)]),(.9,[(0,.47),(-.12,.56),(.02,.66),(-.10,.76)]),
+                        (2.4,[(0,.12),(.1,.22),(-.04,.33),(.08,.47)]),(-.4,[(0,.47),(.1,.6),(-.04,.7),(.12,.84)])]:
+        pts = [_egg_point(1.17,3,0,base+d,f,.04) for d,f in steps]
+        a.tube('Glow',pts,.055,color='#FFB030',mode='neon',sides=5)
+    a.meta['preview_neon'] = '#FFB030'
+    return a.finish()
+
+
+def egg_void():
+    a = Asset('eggs/egg_void', budget=2000)
+    _egg_shell(a, 1.13, 2.9, 0, '#161E36', segments=18, levels=12)
+    _egg_band(a,'Pattern',1.13,2.9,0,.52,.09,'#283456',wave=.03,segments=24,offset=.03)
+    _egg_band(a,'Glow',1.13,2.9,0,.52,.04,'cyan',mode='neon',wave=.03,segments=24,offset=.05)
+    for angle, f in [(-1.6,.30),(-.6,.74),(.5,.36),(1.4,.82),(2.3,.60),(-2.5,.68),(3.0,.25),(-1.1,.88),(.9,.66),(-2.0,.18),(-1.2,.62),(-2.2,.40),(0,.22),(.2,.85)]:
+        _egg_spot(a,'Stars',1.13,2.9,0,angle,f,.085,.03,'white','neon')
+    a.meta['preview_neon'] = '#6DEFFF'
+    return a.finish()
+
+
 BUILDERS = {
     'eggs/egg_meteor': egg_meteor,
     'eggs/egg_crystal': egg_crystal,
     'eggs/egg_aurora': egg_aurora,
+    'eggs/egg_magma': egg_magma,
+    'eggs/egg_void': egg_void,
     **{'rocks/rock_'+biome+'_'+variant: (lambda b=biome,v=variant: _rock(b,v))
        for biome in ('rust','frost','violet','sulfur') for variant in 'abc'},
     'map/Anvil': anvil,
