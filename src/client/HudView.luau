@@ -399,13 +399,13 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			}), tipShown),
 			-- The hourly Quartz meteor (Config.Meteor.Hourly): a line of text under the clock, counting down for everyone
 			scope:New("Frame")({
-				Name = "Hourly", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X,
+				Name = "Hourly", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(0, 36), AutomaticSize = Enum.AutomaticSize.X,
 				Position = scope:Computed(function(use) return UDim2.fromOffset(280, if use(tipShown) then 127 else 103) end),
 				BackgroundTransparency = 1,
 				[Children] = {
 					scope:New("UIListLayout")({ FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
 						SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }),
-					scope:Hydrate(floatingIcon(scope, "meteorQuartz", 0, 0, 30))({ LayoutOrder = 1 }),
+					scope:Hydrate(floatingIcon(scope, "meteorQuartz", 0, 0, 36))({ LayoutOrder = 1 }),
 					scope:Hydrate(text(scope, "HourlyText", scope:Computed(function(use)
 						local s = use(data.meteorState)
 						local p = use(data.phase)
@@ -414,7 +414,7 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 						end
 						local now = use(data.serverNow)
 						return "QUARTZ in " .. Format.time(MeteorTypes.nextHourly(now) - now)
-					end), 0, 0, 0, 26, timerFont(20, 11), Color3.fromRGB(255, 176, 232)))({ AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2 }),
+					end), 0, 0, 0, 32, timerFont(26, 13), Color3.fromRGB(255, 176, 232)))({ AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2 }),
 				},
 			}),
 		}, true), -- no card behind the clock

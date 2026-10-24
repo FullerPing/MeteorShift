@@ -51,6 +51,8 @@ WorldGeometry.Settings = {
 		{ id = "LeaderboardRebirths", x = 55.7, z = -150.3, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.3473, 0, 0.9377), entrance = Vector3.new(53.7, 0, -145.0), pathWidth = 14 },
 		{ id = "LeaderboardPlaytime", x = 77.8, z = -141.1, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.4830, 0, 0.8756), entrance = Vector3.new(75.1, 0, -136.1), pathWidth = 14 },
 		{ id = "Rebirth", x = 0, z = -320, width = 40, depth = 36, entrance = Vector3.new(0, 16, -299), pathWidth = 18 },
+		-- Rust Works' 47 rocks fill both T0 wedges beside the west avenue (135-225 degrees, r 160-238; placed in Studio,
+		-- owner 2026-10-24); this box is its gate and old blocks, since a box around a wedge would cover the Hatchery
 		{ id = "RustWorks", x = -189, z = 0, width = 54, depth = 218, entrance = Vector3.new(-189, 0, 0), pathWidth = 18, field = true },
 		{ id = "FrostYard", x = 189, z = 0, width = 54, depth = 218, entrance = Vector3.new(189, 0, 0), pathWidth = 18, field = true },
 		{ id = "VioletQuarry", x = -311.25, z = 73.25, width = 37.5, depth = 115.5, entrance = Vector3.new(-306, 16, 10), pathWidth = 18, field = true },
