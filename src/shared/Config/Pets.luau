@@ -105,10 +105,11 @@ Pets.Eggs = {
 		Odds = { common = 60, uncommon = 28, rare = 9.5, epic = 2.25, legendary = 0.25 }, Pity = 40, PityFrom = "epic" },
 	{ Id = "crystalEgg", Name = "Crystal Egg", Cost = 60,
 		Odds = { uncommon = 40, rare = 42, epic = 15.5, legendary = 2.5 }, Pity = 15, PityFrom = "epic" },
-	-- Rebirth 2 unlock: nothing below Epic, and a Legendary is guaranteed every 20 hatches (it was 10 with 12% odds,
-	-- which filled every slot with Meteor Drakes, the only Legendary, in a few thousand shards)
+	-- Rebirth 2 unlock: Rare or better, a Legendary guaranteed every 25 hatches; below the Magma Egg, which costs more
+	-- (earlier 10-hatch pity with 12% odds filled every slot with Meteor Drakes, the only Legendary, in a few thousand shards)
 	{ Id = "auroraEgg", Name = "Aurora Egg", Cost = 135, MinRebirths = 2,
-		Odds = { epic = 94, legendary = 6 }, Pity = 20, PityFrom = "legendary" },
+		-- owner, 2026-10-24: was epic 94 / legendary 6 with a 20-hatch pity, too good for its price
+		Odds = { rare = 55, epic = 40, legendary = 5 }, Pity = 25, PityFrom = "legendary" },
 	-- Late eggs (owner's design canvas, 2026-10-23), each with its own exclusive pets (Own): about 75 minutes and two hours
 	-- of shard income
 	{ Id = "magmaEgg", Name = "Magma Egg", Cost = 225, MinRebirths = 3, Own = true,
