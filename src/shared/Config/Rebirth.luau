@@ -10,8 +10,8 @@ return {
 	-- average (tests/Pacing.spec holds them there). Edit them together with Config.Pickaxes, Config.Backpacks and
 	-- Config.Home, then re-run the model (docs/guide/economy.md).
 	-- Re-fit 2026-10-24 (owner: tier 4 opens at rebirth 1 and tier 8 at rebirth 10, then a tier every 2 rebirths).
-	Costs = { 34e3, 210e3, 700e3, 1.6e6, 3.8e6, 8.8e6, 21e6, 49e6, 110e6, 270e6, 630e6, 1.5e9, 3.94e9, 9.22e9, 23.8e9,
-		56.2e9, 151e9, 344e9, 885e9, 2.1e12, 5.36e12, 12.4e12, 31.5e12, 73.5e12, 186e12, 431e12, 1.1e15, 2.6e15, 6e15, 14.2e15 },
+	Costs = { 34e3, 245e3, 817e3, 2.13e6, 5.07e6, 13.2e6, 31.5e6, 81.7e6, 183e6, 450e6, 1.16e9, 2.75e9, 7e9, 16.4e9, 38e9,
+		90e9, 220e9, 500e9, 1.18e12, 2.8e12, 6.6e12, 15.2e12, 36e12, 84e12, 198e12, 460e12, 1.1e15, 2.6e15, 6e15, 14.2e15 },
 	CashMult = 2, -- bar sales multiplier gained per rebirth, multiplicative (x2, x4, x8, ...)
 	-- Cash price inflation per rebirth (Shared.Rebirth.priceMult). 1 = gear and production prices never rise,
 	-- so each rebirth really is worth x2. Shard prices and Robux products never inflate.
