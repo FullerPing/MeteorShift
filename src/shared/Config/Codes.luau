@@ -21,6 +21,30 @@ Codes.List = {
 	RELEASE = { Minutes = 10, Shards = 15 },
 	CRATERWORKS = { Minutes = 5, Shards = 10 },
 	METEOR = { Minutes = 5, Shards = 5 },
+
+	-- The owner's giveaway codes (2026-10-24), none expiring. Small: a few minutes of cash and a handful of shards.
+	STARDUST = { Minutes = 5, Shards = 3 },
+	ROCKSOLID = { Minutes = 5, Shards = 3 },
+	PICKPOCKET = { Minutes = 5, Shards = 4 },
+	DEEPDIG = { Minutes = 5, Shards = 4 },
+	SHOOTINGSTAR = { Minutes = 6, Shards = 5 },
+	ORERUSH = { Minutes = 8 },
+	HOTROCK = { Minutes = 8 },
+	CRATERCREW = { Shards = 8 },
+	-- Medium: a Meteor Egg's worth of shards (15), some with cash
+	SPACEROCK = { Shards = 15 },
+	COMETTAIL = { Shards = 15 },
+	METEORSHOWER = { Minutes = 10, Shards = 15 },
+	QUARTZHOUR = { Minutes = 10, Shards = 15 },
+	FOXFRIEND = { Minutes = 10, Shards = 20 },
+	ROCKETFUEL = { Minutes = 15, Shards = 20 },
+	IMPACT = { Minutes = 15, Shards = 25 },
+	-- Big: most of a Crystal Egg (60) or more; keep these for milestones and giveaways
+	SUPERNOVA = { Minutes = 20, Shards = 40 },
+	BIGBANG = { Minutes = 20, Shards = 50 },
+	GALAXYBRAIN = { Minutes = 25, Shards = 60 },
+	THANKYOU = { Minutes = 30, Shards = 75 },
+	MILLIONMINERS = { Minutes = 30, Shards = 100 },
 } :: { [string]: Code }
 
 return Codes
