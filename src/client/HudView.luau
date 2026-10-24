@@ -397,24 +397,24 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			show(scope:Hydrate(text(scope, "CountdownTip", Config.Hud.CountdownTip.Text, 14, 104, 532, 22, timerFont(17, 10), LIME))({
 				TextXAlignment = Enum.TextXAlignment.Center,
 			}), tipShown),
-			-- The hourly Quartz meteor (Config.Meteor.Hourly): a pill hanging under the clock, counting down for everyone
+			-- The hourly Quartz meteor (Config.Meteor.Hourly): a line of text under the clock, counting down for everyone
 			scope:New("Frame")({
-				Name = "HourlyPill", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(300, 34),
-				Position = scope:Computed(function(use) return UDim2.fromOffset(280, if use(tipShown) then 132 else 108) end),
-				BackgroundColor3 = Color3.fromRGB(92, 34, 78), BackgroundTransparency = 0.15, BorderSizePixel = 0,
+				Name = "Hourly", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X,
+				Position = scope:Computed(function(use) return UDim2.fromOffset(280, if use(tipShown) then 127 else 103) end),
+				BackgroundTransparency = 1,
 				[Children] = {
-					scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }),
-					scope:New("UIStroke")({ Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
-					floatingIcon(scope, "meteorQuartz", 8, 1, 32),
+					scope:New("UIListLayout")({ FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+						SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 6) }),
+					scope:Hydrate(floatingIcon(scope, "meteorQuartz", 0, 0, 30))({ LayoutOrder = 1 }),
 					scope:Hydrate(text(scope, "HourlyText", scope:Computed(function(use)
 						local s = use(data.meteorState)
 						local p = use(data.phase)
 						if s and s.type == Config.Meteor.Hourly.Type and (p == Phase.Impact or p == Phase.Active) then
-							return "QUARTZ METEOR IS DOWN!"
+							return "QUARTZ IS DOWN!"
 						end
 						local now = use(data.serverNow)
-						return "QUARTZ METEOR in " .. Format.time(MeteorTypes.nextHourly(now) - now)
-					end), 46, 4, 246, 26, 20, Color3.fromRGB(255, 196, 238)))({ TextXAlignment = Enum.TextXAlignment.Center }),
+						return "QUARTZ in " .. Format.time(MeteorTypes.nextHourly(now) - now)
+					end), 0, 0, 0, 26, timerFont(20, 11), Color3.fromRGB(255, 176, 232)))({ AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2 }),
 				},
 			}),
 		}, true), -- no card behind the clock
