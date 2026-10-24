@@ -391,7 +391,7 @@ function HUDController:KnitStart()
 			HudView.main(scope, hud, {
 				playerState = playerState, cashShown = cashShown, meteorState = meteorState,
 				phase = phase, secondsLeft = secondsLeft, timerText = timerText, timerColor = timerColor, timeProgress = timeProgress,
-				saleBusy = saleBusy, sellBars = sellBars,
+				serverNow = serverNow, saleBusy = saleBusy, sellBars = sellBars,
 				standing = standing, coreHp = coreHp, coreMaxHp = coreMaxHp, inEvent = inEvent,
 				openRefinery = function() Knit.GetController("RefineryController"):Open() end,
 			}),

@@ -93,20 +93,13 @@ function QuestController:KnitStart()
 		trackerCard.AnchorPoint = Vector2.new(0, 1)
 		trackerCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8)
 		-- the game-wide event card sits on top of the quest card (or in its place when the quest card is hidden)
-		-- and the hourly meteor card on top of that
-		local above = if trackerCard.Visible then (70 + 8) * scale else 0
-		for _, name in { "EventCard", "HourlyCard" } do
-			local card = tracker:FindFirstChild(name) :: any
-			if card then
-				card.Fit.Scale = scale
-				card.AnchorPoint = Vector2.new(0, 1)
-				card.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 - above)
-				if card.Visible then above += (56 + 8) * scale end
-			end
+		local eventCard = tracker:FindFirstChild("EventCard") :: any
+		if eventCard then
+			eventCard.Fit.Scale = scale
+			eventCard.AnchorPoint = Vector2.new(0, 1)
+			local above = if trackerCard.Visible then (70 + 8) * scale else 0
+			eventCard.Position = UDim2.fromOffset(b.AbsolutePosition.X, b.AbsolutePosition.Y - 8 - above)
 		end
-	end
-	for _, name in { "Card", "EventCard" } do
-		(tracker:WaitForChild(name) :: GuiObject):GetPropertyChangedSignal("Visible"):Connect(function() place() end)
 	end
 	task.spawn(function()
 		for _ = 1, 60 do

@@ -13,6 +13,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local MeteorIcon = require(ReplicatedStorage.Shared.MeteorIcon)
+local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
 local UI = require(script.Parent.UI)
 local Cartoon = require(script.Parent.Cartoon)
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
@@ -190,6 +191,11 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 	local notMerged = scope:Computed(function(use) return not use(merged) end)
 	local function show(instance: Instance, when: any): Instance return scope:Hydrate(instance)({ Visible = when }) end
 	local function hide(instance: Instance): Instance return show(instance, notMerged) end
+	-- the beginner tip under the clock while a meteor counts down; the hourly pill sits below it when it shows
+	local tipShown = scope:Computed(function(use)
+		local s = state(use)
+		return use(data.phase) == Phase.Countdown and (s == nil or (s.level or 1) <= Config.Hud.CountdownTip.MaxLevel)
+	end)
 	-- phones in landscape: the clock (countdown, cooldown and the meteor objective alike) sits below the top bar, larger
 	local timerHud = scope:Computed(function(use)
 		local layout = use(hud)
@@ -390,10 +396,27 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 			hide(meter(scope, "RemainingTime", 14, 90, 532, data.timeProgress, glow, 12)),
 			show(scope:Hydrate(text(scope, "CountdownTip", Config.Hud.CountdownTip.Text, 14, 104, 532, 22, timerFont(17, 10), LIME))({
 				TextXAlignment = Enum.TextXAlignment.Center,
-			}), scope:Computed(function(use)
-				local s = state(use)
-				return use(data.phase) == Phase.Countdown and (s == nil or (s.level or 1) <= Config.Hud.CountdownTip.MaxLevel)
-			end)),
+			}), tipShown),
+			-- The hourly Quartz meteor (Config.Meteor.Hourly): a pill hanging under the clock, counting down for everyone
+			scope:New("Frame")({
+				Name = "HourlyPill", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(300, 34),
+				Position = scope:Computed(function(use) return UDim2.fromOffset(280, if use(tipShown) then 132 else 108) end),
+				BackgroundColor3 = Color3.fromRGB(92, 34, 78), BackgroundTransparency = 0.15, BorderSizePixel = 0,
+				[Children] = {
+					scope:New("UICorner")({ CornerRadius = UDim.new(0.5, 0) }),
+					scope:New("UIStroke")({ Color = INK, Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
+					floatingIcon(scope, "meteorQuartz", 8, 1, 32),
+					scope:Hydrate(text(scope, "HourlyText", scope:Computed(function(use)
+						local s = use(data.meteorState)
+						local p = use(data.phase)
+						if s and s.type == Config.Meteor.Hourly.Type and (p == Phase.Impact or p == Phase.Active) then
+							return "QUARTZ METEOR IS DOWN!"
+						end
+						local now = use(data.serverNow)
+						return "QUARTZ METEOR in " .. Format.time(MeteorTypes.nextHourly(now) - now)
+					end), 46, 4, 246, 26, 20, Color3.fromRGB(255, 196, 238)))({ TextXAlignment = Enum.TextXAlignment.Center }),
+				},
+			}),
 		}, true), -- no card behind the clock
 	}
 end
