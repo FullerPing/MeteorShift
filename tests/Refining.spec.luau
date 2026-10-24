@@ -1,8 +1,8 @@
 --!strict
 -- Spec for Server.Lib.Refining, the pure production-line simulation shared by
 -- the online tick and offline catch-up. All cases use level-1 stations
--- (hopper/collector capacity 2000, conveyor rate 0.3 ore/s, refinery rate
--- 0.25 ore/s) from Config.Home.Stations as they stand today.
+-- (hopper/collector capacity 4000, conveyor rate 0.6 ore/s, refinery rate
+-- 0.5 ore/s) from Config.Home.Stations as they stand today.
 
 return function(t: any)
 	local Refining = require(t.lib.Refining)
@@ -18,8 +18,8 @@ return function(t: any)
 
 	t.test("rate-limited by the slower station (refinery, not conveyor)", function()
 		local data = freshData({ iron = 1000 }, {})
-		local made, n, blocked = Refining.run(data, 40)
-		-- lineRate = min(conveyor 0.3, refinery 0.25) = 0.25/s * 40s = 10
+		local made, n, blocked = Refining.run(data, 20)
+		-- lineRate = min(conveyor 0.6, refinery 0.5) = 0.5/s * 20s = 10
 		t.eq(n, 10)
 		t.eq(made.iron, 10)
 		t.eq(blocked, nil)
@@ -27,8 +27,8 @@ return function(t: any)
 
 	t.test("a speed multiplier (Refinery Overclock) doubles the whole line, conveyor included", function()
 		local data = freshData({ iron = 1000 }, {})
-		local _, n = Refining.run(data, 40, 2)
-		-- min(conveyor 0.3, refinery 0.25) * 2 = 0.5/s * 40 = 20 (was 12: only the refinery sped up)
+		local _, n = Refining.run(data, 20, 2)
+		-- min(conveyor 0.6, refinery 0.5) * 2 = 1/s * 20 = 20 (was 12: only the refinery sped up)
 		t.eq(n, 20)
 		t.eq(Refining.refineryRate(data, 2), Refining.refineryRate(data) * 2)
 		t.eq(Refining.lineRate(data, 2), Refining.lineRate(data) * 2)
@@ -43,19 +43,19 @@ return function(t: any)
 	end)
 
 	t.test("stops when the collection post is full", function()
-		local data = freshData({ iron = 1000 }, { iron = 1995 })
-		local made, n, blocked = Refining.run(data, 40)
-		-- room = 2000 - 1995 = 5, less than the 10 the line could otherwise make
+		local data = freshData({ iron = 1000 }, { iron = 3995 })
+		local made, n, blocked = Refining.run(data, 20)
+		-- room = 4000 - 3995 = 5, less than the 10 the line could otherwise make
 		t.eq(n, 5)
 		t.eq(made.iron, 5)
 		t.eq(blocked, "collector")
-		t.eq(data.bin.iron, 2000)
+		t.eq(data.bin.iron, 4000)
 	end)
 
 	t.test("saved refinery priority selects the preferred waiting ore", function()
 		local data: any = freshData({ iron = 6, frost = 4, crystal = 3 }, {})
 		data.refinePriority = { "crystal", "frost", "iron" }
-		local made, n, blocked = Refining.run(data, 12)
+		local made, n, blocked = Refining.run(data, 6)
 		t.eq(n, 3)
 		t.eq(made.crystal, 3)
 		t.eq(made.iron, nil)
@@ -70,7 +70,7 @@ return function(t: any)
 	t.test("depleted priorities fall through while conserving every ore and bar", function()
 		local data: any = freshData({ iron = 6, frost = 4, crystal = 3 }, { frost = 2 })
 		data.refinePriority = { "crystal", "frost", "iron" }
-		local made, n, blocked = Refining.run(data, 40)
+		local made, n, blocked = Refining.run(data, 20)
 		t.eq(n, 10)
 		t.eq(made.crystal, 3)
 		t.eq(made.frost, 4)
@@ -85,15 +85,15 @@ return function(t: any)
 	end)
 
 	t.test("collector room limits priority output without consuming other ores", function()
-		local data: any = freshData({ iron = 6, crystal = 3 }, { iron = 1998 })
+		local data: any = freshData({ iron = 6, crystal = 3 }, { iron = 3998 })
 		data.refinePriority = { "crystal" }
-		local made, n, blocked = Refining.run(data, 40)
+		local made, n, blocked = Refining.run(data, 20)
 		t.eq(n, 2)
 		t.eq(made.crystal, 2)
 		t.eq(made.iron, nil)
 		t.eq(data.hopper.crystal, 1)
 		t.eq(data.hopper.iron, 6)
-		t.eq(data.bin.iron, 1998)
+		t.eq(data.bin.iron, 3998)
 		t.eq(data.bin.crystal, 2)
 		t.eq(data.progress, 0)
 		t.eq(blocked, "collector")
@@ -104,8 +104,8 @@ return function(t: any)
 		local offline: any = freshData({ iron = 6, frost = 4, crystal = 3 }, {})
 		online.refinePriority = { "crystal", "frost", "iron" }
 		offline.refinePriority = { "crystal", "frost", "iron" }
-		for _ = 1, 4 do Refining.run(online, 10) end
-		Refining.run(offline, 40)
+		for _ = 1, 4 do Refining.run(online, 5) end
+		Refining.run(offline, 20)
 		for _, data in { online, offline } do
 			t.eq(data.bin.crystal, 3)
 			t.eq(data.bin.frost, 4)
@@ -120,7 +120,7 @@ return function(t: any)
 	t.test("malformed saved preferences safely normalize before production", function()
 		local data: any = freshData({ iron = 6, frost = 4, crystal = 3 }, {})
 		data.refinePriority = { "frost", "frost", 9, "unknown" }
-		local made, n = Refining.run(data, 12)
+		local made, n = Refining.run(data, 6)
 		t.eq(n, 3)
 		t.eq(made.frost, 3)
 		t.eq(made.iron, nil)
@@ -130,7 +130,7 @@ return function(t: any)
 
 	t.test("unconfigured future ore stock refines in deterministic fallback order", function()
 		local data = freshData({ zeta = 3, amber = 2 }, {})
-		local made, n = Refining.run(data, 12)
+		local made, n = Refining.run(data, 6)
 		t.eq(n, 3)
 		t.eq(made.amber, 2)
 		t.eq(made.zeta, 1)

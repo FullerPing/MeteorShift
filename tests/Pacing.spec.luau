@@ -210,9 +210,9 @@ return function(t: any)
 		end
 	end)
 
-	t.test("a level 1 line's 2-hour offline cap is worth about $90K at most", function()
+	t.test("a level 1 line's 2-hour offline cap is worth about $180K at most", function()
 		local cap = Pacing.offlineCap()
-		t.ok(cap > 80e3 and cap <= 95e3, "offline cap " .. cap)
+		t.ok(cap > 160e3 and cap <= 190e3, "offline cap " .. cap)
 	end)
 
 	t.test("a longer session never earns less than a shorter one", function()
