@@ -7,7 +7,8 @@ export type Board = { Id: string, Title: string, Unit: string, Store: string, Pa
 
 return {
 	RefreshInterval = 60, -- seconds between saving scores and reloading the top rows
-	Rows = 10,
+	Rows = 50, -- the top this many, in a list players scroll
+	Visible = 10, -- rows on screen at once
 	Boards = {
 		-- Path: where the score is in the player's profile (Lib.ProfileTemplate)
 		{ Id = "BarsSold", Title = "TOP MINERS", Unit = "bars sold", Store = "Leaderboard_BarsSold_v1", Path = { "stats", "barsSold" } },

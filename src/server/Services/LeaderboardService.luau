@@ -48,7 +48,7 @@ local function create(className: string, props: { [string]: any }, parent: Insta
 	return instance
 end
 
--- The board's screen: a title strip and `Rows` rows of rank, name and score
+-- The board's screen: a title strip and a scrolling list of `Rows` rows of rank, name and score, `Visible` at a time
 local function buildScreen(screen: BasePart, board: Config.LeaderboardBoard): { { TextLabel } }
 	local old = screen:FindFirstChild("Board")
 	if old then old:Destroy() end
@@ -62,14 +62,22 @@ local function buildScreen(screen: BasePart, board: Config.LeaderboardBoard): { 
 		Name = "Unit", Size = UDim2.fromScale(1, 0.08), BackgroundTransparency = 1, Font = Enum.Font.FredokaOne,
 		Text = string.upper(board.Unit), TextScaled = true, TextColor3 = Color3.fromRGB(150, 200, 255),
 	}, root)
+	-- each player scrolls their own copy (a client's CanvasPosition doesn't replicate); rows are sized in pixels so
+	-- `Visible` of them fill the list (PixelsPerStud x the screen's height, less the padding and the title)
+	local list = create("ScrollingFrame", {
+		Name = "List", Position = UDim2.fromScale(0, 0.1), Size = UDim2.fromScale(1, 0.9), BackgroundTransparency = 1,
+		BorderSizePixel = 0, ScrollBarThickness = 14, ScrollBarImageColor3 = Color3.fromRGB(150, 200, 255),
+		ScrollingDirection = Enum.ScrollingDirection.Y, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+	}, root)
+	local rowHeight = screen.Size.Y * gui.PixelsPerStud * 0.94 * 0.9 / Config.Leaderboards.Visible
+	create("UIListLayout", { SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, math.floor(rowHeight * 0.1)) }, list)
 	local rows = {}
 	local count = Config.Leaderboards.Rows
-	local h = 0.9 / count
 	for index = 1, count do
 		local row = create("Frame", {
-			Name = "Row" .. index, Position = UDim2.fromScale(0, 0.1 + (index - 1) * h), Size = UDim2.fromScale(1, h * 0.9),
+			Name = "Row" .. index, LayoutOrder = index, Size = UDim2.new(1, -18, 0, math.floor(rowHeight * 0.9)),
 			BackgroundColor3 = if index % 2 == 1 then ROW_A else ROW_B, BorderSizePixel = 0,
-		}, root)
+		}, list)
 		create("UICorner", { CornerRadius = UDim.new(0.3, 0) }, row)
 		local function cell(name: string, x: number, w: number, align: Enum.TextXAlignment, color: Color3): TextLabel
 			return create("TextLabel", {
