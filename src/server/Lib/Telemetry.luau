@@ -65,6 +65,37 @@ function Telemetry.drainActions<K>(counts: { [K]: number }): { [K]: number }
 	return drained
 end
 
+-- Economy events are summed per player over the ActionsInterval instead of logged one by one: field rocks, bar
+-- sales and level buys each fire many times a minute, and AnalyticsService throttles a server past its budget
+-- ("You have sent too many events"). A flow is one (flow, currency, transaction type, sku) line; it keeps the sum
+-- and the latest ending balance.
+export type Flow = { flow: any, currency: string, amount: number, balance: number, transaction: string, sku: string }
+
+function Telemetry.addFlow<P>(pending: { [P]: { [string]: Flow } }, player: P, flow: any, currency: string, amount: number,
+	balance: number, transaction: string, sku: string)
+	local flows = pending[player]
+	if not flows then
+		flows = {}
+		pending[player] = flows
+	end
+	local key = tostring(flow) .. "|" .. currency .. "|" .. transaction .. "|" .. sku
+	local line = flows[key]
+	if line then
+		line.amount += amount
+		line.balance = balance
+	else
+		flows[key] = { flow = flow, currency = currency, amount = amount, balance = balance, transaction = transaction, sku = sku }
+	end
+end
+
+-- One player's summed flows, which are then forgotten
+function Telemetry.drainFlows<P>(pending: { [P]: { [string]: Flow } }, player: P): { Flow }
+	local out = {}
+	for _, line in pending[player] or {} do table.insert(out, line) end
+	pending[player] = nil
+	return out
+end
+
 -- The custom events logged when a meteor event ends. meteor_event_ended (value 1)
 -- counts cracked vs cooled through its outcome field.
 function Telemetry.eventSummary(summary: EventSummary): { Row }

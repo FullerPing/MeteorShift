@@ -19,6 +19,8 @@
 -- * Economy: cash from selling bars and shards from core rewards are sources; pickaxe,
 --   backpack and station purchases are cash and shard sinks; a rebirth sinks the cash
 --   it resets. Rebirths also log a "rebirth" custom event, field = the new rebirth stage.
+--   Economy events are summed per player and line and sent once per ActionsInterval (and on leave), so busy
+--   players don't push the server past AnalyticsService's event budget.
 -- * active_actions_per_minute every Config.Telemetry.ActionsInterval seconds per player:
 --   swings, deposits, collects, sells and purchases. Players with none log nothing.
 --   On the same timer, field_rocks_mined per player and field (value = rocks broken, field = the ore field
@@ -77,6 +79,7 @@ local PlayerStateService
 local warned: { [string]: boolean } = {}
 local actions: { [Player]: number } = {}
 local rocksMined: { [Player]: { [string]: number } } = {}
+local flows: { [Player]: { [string]: Telemetry.Flow } } = {} -- economy events summed until the next ActionsInterval
 local joinedAt: { [Player]: number } = {}
 -- Who hit a crust node / the core during the current meteor event, by UserId so
 -- players who left still count. Reset when a meteor lands.
@@ -134,11 +137,18 @@ function TelemetryService:economy(
 	if IS_STUDIO then
 		print(Telemetry.line("economy", flowType.Name .. " " .. currency, player.Name, amount, { transactionType, sku }))
 	end
-	call("LogEconomyEvent", function()
-		-- Documented order: (player, flowType, currencyType, amount, endingBalance, transactionType, itemSku, customFields?)
-		-- https://create.roblox.com/docs/reference/engine/classes/AnalyticsService#LogEconomyEvent
-		AnalyticsService:LogEconomyEvent(player, flowType, currency, amount, endingBalance, transactionType, sku)
-	end)
+	-- summed and sent once per ActionsInterval (and when the player leaves): see Telemetry.addFlow
+	Telemetry.addFlow(flows, player, flowType, currency, amount, endingBalance, transactionType, sku)
+end
+
+function TelemetryService:_flushEconomy(player: Player)
+	for _, line in Telemetry.drainFlows(flows, player) do
+		call("LogEconomyEvent", function()
+			-- Documented order: (player, flowType, currencyType, amount, endingBalance, transactionType, itemSku, customFields?)
+			-- https://create.roblox.com/docs/reference/engine/classes/AnalyticsService#LogEconomyEvent
+			AnalyticsService:LogEconomyEvent(player, line.flow, line.currency, line.amount, line.balance, line.transaction, line.sku)
+		end)
+	end
 end
 
 -- An onboarding funnel step (the tutorial, spec §11).
@@ -241,6 +251,9 @@ function TelemetryService:_logActions()
 	end
 	table.clear(menuOpens)
 	table.clear(menuTotals)
+	for player in flows do
+		if player.Parent then self:_flushEconomy(player) else flows[player] = nil end
+	end
 end
 
 -- A purchase prompt closed: logs which offer it was and whether it sold
@@ -438,6 +451,7 @@ function TelemetryService:KnitStart()
 		menuOpens[player] = nil
 		menuTotals[player] = nil
 		participation[player] = nil
+		self:_flushEconomy(player)
 		local started = joinedAt[player]
 		joinedAt[player] = nil
 		if started then

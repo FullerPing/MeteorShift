@@ -69,6 +69,21 @@ return function(t: any)
 		t.eq(drained.b, 1)
 	end)
 
+	t.test("economy flows sum per line and keep the latest balance until drained", function()
+		local pending = {}
+		Telemetry.addFlow(pending, "p", "Source", "Cash", 10, 110, "Gameplay", "field_cash")
+		Telemetry.addFlow(pending, "p", "Source", "Cash", 5, 115, "Gameplay", "field_cash")
+		Telemetry.addFlow(pending, "p", "Source", "Cash", 50, 165, "Gameplay", "sell_bars")
+		Telemetry.addFlow(pending, "q", "Sink", "Cash", 7, 0, "Shop", "pickaxe")
+		local flows = Telemetry.drainFlows(pending, "p")
+		t.eq(#flows, 2)
+		local field = if flows[1].sku == "field_cash" then flows[1] else flows[2]
+		t.eq(field.amount, 15)
+		t.eq(field.balance, 115)
+		t.eq(#Telemetry.drainFlows(pending, "p"), 0)
+		t.eq(#Telemetry.drainFlows(pending, "q"), 1)
+	end)
+
 	local function byName(rows: { Telemetry.Row }): { [string]: Telemetry.Row }
 		local map = {}
 		for _, row in rows do
