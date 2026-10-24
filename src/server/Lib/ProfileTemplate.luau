@@ -3,7 +3,7 @@
 -- refinery slots, one pickaxe and backpack with a single level each: Shared.Gear, and pets: Shared.Pets). New keys added here are filled into old
 -- profiles on load; anything that changes meaning needs a migration in DataService.
 -- (v12 was skipped: an unreleased trial build saved v12 profiles with a `trialFlag` key; v13 removes it.)
--- v14: rebirths re-counted for the x2 rebirth (Lib.RebirthMigration).
+-- v14: the x2 rebirth; saved rebirth counts carry over unchanged (the same rank is worth more than under x5 / x3).
 
 return {
 	version = 14,
