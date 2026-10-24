@@ -12,8 +12,10 @@ local GlobalEvents = {}
 export type Active = { id: string, startsAt: number, endsAt: number }
 
 function GlobalEvents.def(id: string): Config.Event?
-	for _, event in Config.List do
-		if event.Id == id then return event end
+	for _, list in { Config.List, Config.AdminOnly } do
+		for _, event in list do
+			if event.Id == id then return event end
+		end
 	end
 	return nil
 end

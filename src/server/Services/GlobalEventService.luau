@@ -47,7 +47,9 @@ function GlobalEventService:StartEverywhere(id: string, minutes: number): string
 	local def = GlobalEvents.def(id)
 	if not def then
 		local ids = {}
-		for _, event in Config.Events.List do table.insert(ids, event.Id) end
+		for _, list in { Config.Events.List, Config.Events.AdminOnly } do
+			for _, event in list do table.insert(ids, event.Id) end
+		end
 		return "No such event. Events: " .. table.concat(ids, ", ")
 	end
 	local now = os.time()

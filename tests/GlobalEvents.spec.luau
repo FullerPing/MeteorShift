@@ -8,12 +8,25 @@ return function(t)
 	t.test("events are well formed", function()
 		t.ok(E.Duration > 0 and E.Duration < E.Period)
 		local kinds = { sales = true, shards = true, xp = true, relics = true, countdown = true }
-		for _, event in E.List do
-			for kind, value in event.Effects do
-				t.ok(kinds[kind], event.Id .. " " .. kind)
-				t.ok(value > 0, event.Id .. " value")
+		for _, list in { E.List, E.AdminOnly } do
+			for _, event in list do
+				for kind, value in event.Effects do
+					t.ok(kinds[kind], event.Id .. " " .. kind)
+					t.ok(value > 0, event.Id .. " value")
+				end
 			end
 		end
+	end)
+
+	t.test("admin-only events start by /event but never by the schedule", function()
+		local party = E.AdminOnly[1]
+		t.ok(GlobalEvents.def(party.Id) ~= nil)
+		for hour = 0, #E.List * 3 do
+			t.ok(GlobalEvents.nextStart(hour * E.Period - 1).id ~= party.Id)
+		end
+		local base = 1000 * E.Period + E.Duration + 100
+		local override = { id = party.Id, startsAt = base - 10, endsAt = base + 60 }
+		t.eq(GlobalEvents.mult(GlobalEvents.current(base, override), "sales"), party.Effects.sales)
 	end)
 
 	t.test("the schedule runs the first Duration of every Period and rotates the list", function()

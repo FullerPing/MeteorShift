@@ -45,6 +45,8 @@ Codes.List = {
 	GALAXYBRAIN = { Minutes = 25, Shards = 60 },
 	THANKYOU = { Minutes = 30, Shards = 75 },
 	MILLIONMINERS = { Minutes = 30, Shards = 100 },
+	-- Launch week only: stops working 2026-10-27 00:00 UTC
+	LAUNCHPARTY = { Minutes = 15, Shards = 30, Expires = 1793059200 },
 } :: { [string]: Code }
 
 return Codes

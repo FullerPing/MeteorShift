@@ -22,4 +22,10 @@ Events.List = {
 	{ Id = "relicHunt", Name = "Relic Hunt", Text = "x3 chance to find relics!", Effects = { relics = 3 } },
 } :: { Event }
 
+-- Started only by an admin (/event <id> [minutes]), never by the hourly schedule
+Events.AdminOnly = {
+	{ Id = "launchParty", Name = "Launch Party", Text = "x2 sales, shards and XP, meteors twice as often!",
+		Effects = { sales = 2, shards = 2, xp = 2, countdown = 0.5 } },
+} :: { Event }
+
 return Events
