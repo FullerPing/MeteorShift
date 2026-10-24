@@ -9,6 +9,22 @@ local REFERENCE = "MY index button"
 local MenuFlags = require(script.Parent.MenuFlags)
 local MENU_ATTRIBUTES = MenuFlags.except("BackpackOpen")
 
+-- The ready badge and the hover tooltip every menu button carries
+local function extras(button: TextButton, label: string)
+	local badge = Instance.new("Frame")
+	badge.Name, badge.Visible, badge.Size = "ReadyBadge", false, UDim2.fromOffset(9, 9)
+	badge.AnchorPoint, badge.Position = Vector2.new(1, 0), UDim2.new(1, -4, 0, 4)
+	badge.BackgroundColor3, badge.BorderSizePixel, badge.ZIndex = Color3.fromRGB(139, 240, 195), 0, 101
+	badge.Parent = button
+	local tooltip = Instance.new("TextLabel")
+	tooltip.Name, tooltip.Text, tooltip.Visible = "Tooltip", label, false
+	tooltip.Position, tooltip.Size = UDim2.new(1, 12, .5, -16), UDim2.fromOffset(102, 32)
+	tooltip.BackgroundColor3, tooltip.BorderSizePixel = Color3.fromRGB(29, 30, 35), 0
+	tooltip.Font, tooltip.TextSize, tooltip.TextColor3 = Enum.Font.FredokaOne, 14, Color3.new(1, 1, 1)
+	tooltip.TextStrokeColor3, tooltip.TextStrokeTransparency, tooltip.ZIndex = Color3.new(), .55, 101
+	tooltip.Parent = button
+end
+
 function ExactNavButton.author(parent: Instance, name: string, label: string, icon: string): TextButton
 	local reference = StarterGui:FindFirstChild(REFERENCE)
 	assert(reference and reference:IsA("ScreenGui"), "Missing StarterGui." .. REFERENCE)
@@ -47,18 +63,7 @@ function ExactNavButton.author(parent: Instance, name: string, label: string, ic
 	end
 	design.Parent = button
 	local scale = Instance.new("UIScale"); scale.Name, scale.Parent = "LayoutScale", button
-	local badge = Instance.new("Frame")
-	badge.Name, badge.Visible, badge.Size = "ReadyBadge", false, UDim2.fromOffset(9, 9)
-	badge.AnchorPoint, badge.Position = Vector2.new(1, 0), UDim2.new(1, -4, 0, 4)
-	badge.BackgroundColor3, badge.BorderSizePixel, badge.ZIndex = Color3.fromRGB(139, 240, 195), 0, 101
-	badge.Parent = button
-	local tooltip = Instance.new("TextLabel")
-	tooltip.Name, tooltip.Text, tooltip.Visible = "Tooltip", label, false
-	tooltip.Position, tooltip.Size = UDim2.new(1, 12, .5, -16), UDim2.fromOffset(102, 32)
-	tooltip.BackgroundColor3, tooltip.BorderSizePixel = Color3.fromRGB(29, 30, 35), 0
-	tooltip.Font, tooltip.TextSize, tooltip.TextColor3 = Enum.Font.FredokaOne, 14, Color3.new(1, 1, 1)
-	tooltip.TextStrokeColor3, tooltip.TextStrokeTransparency, tooltip.ZIndex = Color3.new(), .55, 101
-	tooltip.Parent = button
+	extras(button, label)
 	if previous then previous:Destroy() end
 	button.Parent = parent
 	return button
@@ -126,6 +131,10 @@ function ExactNavButton.bind(button: TextButton)
 	local design = button:FindFirstChild("Design") :: Frame?
 	if not button:FindFirstChild("CartoonTile") then cartoonTile(button, design) end
 	local tile = button:FindFirstChild("CartoonTile") :: Frame?
+	if not button:FindFirstChild("Tooltip") then
+		local caption = tile and tile:FindFirstChild("Caption") :: TextLabel?
+		extras(button, if caption then caption.Text else button.Name)
+	end
 	-- the badge rides inside the tile, so hiding the tile under an open menu hides the badge too
 	local badge = ((if tile then tile:FindFirstChild("ReadyBadge") else nil) or button:WaitForChild("ReadyBadge")) :: Frame
 	if tile then badge.Parent = tile end
@@ -165,6 +174,15 @@ function ExactNavButton.bind(button: TextButton)
 		button.InputEnded:Connect(function(input) if isPress(input) then held = false; go() end end)
 	end
 	local tooltip = button:WaitForChild("Tooltip") :: TextLabel
+	-- the name shows beside the tile under a mouse pointer (a tap on a touch screen opens the menu instead)
+	local UserInputService = game:GetService("UserInputService")
+	button.MouseEnter:Connect(function()
+		-- the right-hand stack (Daily, Index, Codes) shows it on the left, toward the screen
+		local right = button.AbsolutePosition.X > workspace.CurrentCamera.ViewportSize.X / 2
+		tooltip.Position = if right then UDim2.new(0, -114, 0.5, -16) else UDim2.new(1, 12, 0.5, -16)
+		tooltip.Visible = UserInputService.MouseEnabled
+	end)
+	button.MouseLeave:Connect(function() tooltip.Visible = false end)
 	if not tooltip:FindFirstChild("TextOutline") then
 		local Cartoon = require(script.Parent.Cartoon)
 		tooltip.BackgroundColor3, tooltip.TextSize = Color3.fromRGB(30, 104, 232), 16

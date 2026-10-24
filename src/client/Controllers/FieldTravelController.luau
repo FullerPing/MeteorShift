@@ -54,6 +54,7 @@ function FieldTravelController:KnitStart()
 	local scale = Instance.new("UIScale")
 	scale.Name, scale.Parent = "LayoutScale", button
 	button.Parent = gui
+	ExactNavButton.bind(button) -- the hover lift, press dip and name tooltip the menu tiles have
 
 	local menu = NativeUI.getFresh("OreFieldsMenu", OreFieldsMenu.build, OreFieldsMenu.LAYOUT)
 	local panel = menu:WaitForChild("Panel") :: Frame

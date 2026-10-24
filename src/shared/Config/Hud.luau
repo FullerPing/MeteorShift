@@ -35,7 +35,7 @@ Hud.Column = {
 	Width = 88,
 	Height = 88,
 	Gap = 0,
-	Top = 270,
+	Top = 300, -- under the level card and the desktop event card
 	Left = 24,
 }
 
