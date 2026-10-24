@@ -45,9 +45,9 @@ WorldGeometry.Settings = {
 		{ id = "Hatchery", x = -83.9, z = -181.4, width = 112, depth = 84, lat = 100, dep = 49, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-73.6, 0, -156.5), pathWidth = 18 },
 		{ id = "Commissary", x = 95.1, z = 151.1, width = 39, depth = 38, lat = 30, dep = 28, facing = Vector3.new(-0.3827, 0, -0.9239), entrance = Vector3.new(88.6, 0, 135.5), pathWidth = 18 },
 		-- the three leaderboards in one row east of the spawn, 24 studs apart, each turned to face the crater and its ring
-		-- road (owner, 2026-10-24): Top Miners, Top Rebirths, Top Playtime, where the Gear Hall stood (removed the same
-		-- day: the gear shop opens from the HUD)
-		{ id = "LeaderboardEast", x = 33.5, z = -159.5, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.2055, 0, 0.9786), entrance = Vector3.new(32.3, 0, -153.9), pathWidth = 14 },
+		-- road (owner, 2026-10-24): Top Rebirths, Top Playtime, Top Miners (LeaderboardEast), where the Gear Hall stood
+		-- (removed the same day: the gear shop opens from the HUD). The group pet stand has Top Miners' old spot.
+		{ id = "LeaderboardEast", x = 100.0, z = -131.9, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.6041, 0, 0.7969), entrance = Vector3.new(96.6, 0, -127.4), pathWidth = 14 },
 		{ id = "LeaderboardRebirths", x = 55.7, z = -150.3, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.3473, 0, 0.9377), entrance = Vector3.new(53.7, 0, -145.0), pathWidth = 14 },
 		{ id = "LeaderboardPlaytime", x = 77.8, z = -141.1, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.4830, 0, 0.8756), entrance = Vector3.new(75.1, 0, -136.1), pathWidth = 14 },
 		{ id = "Rebirth", x = 0, z = -320, width = 40, depth = 36, entrance = Vector3.new(0, 16, -299), pathWidth = 18 },
