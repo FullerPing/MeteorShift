@@ -87,8 +87,20 @@ end
 -- subtrees it styles itself (attribute CartoonCustom = true).
 function NativeUI.get(name: string, prepare: ((ScreenGui) -> ())?): ScreenGui
 	local playerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-	local gui = playerGui:WaitForChild(name, 15)
-	assert(gui and gui:IsA("ScreenGui"), "Missing StarterGui prefab: " .. name .. ". Run tools/build-native-ui.luau in Edit mode.")
+	-- StarterGui is copied in when the character first spawns, which a slow device can take well past 15 s (live errors,
+	-- 2026-10-24: Rebirth and Store were dead for that session), so keep waiting; warn once if it is really missing
+	local gui = playerGui:FindFirstChild(name)
+	local waited = os.clock()
+	local warned = false
+	while not gui do
+		playerGui.ChildAdded:Wait()
+		gui = playerGui:FindFirstChild(name)
+		if not gui and not warned and os.clock() - waited > 60 then
+			warned = true
+			warn("Missing StarterGui prefab: " .. name .. ". Run tools/build-native-ui.luau in Edit mode.")
+		end
+	end
+	assert(gui:IsA("ScreenGui"), name .. " in PlayerGui is not a ScreenGui")
 	if prepare then prepare(gui :: ScreenGui) end
 	MenuSkin.apply(gui :: ScreenGui)
 	local function wire(node: Instance)

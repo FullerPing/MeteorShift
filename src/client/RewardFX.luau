@@ -265,18 +265,19 @@ end
 -- A tiny camera kick for crits: a decaying tilt applied after the camera scripts each frame,
 -- so it never fights other camera effects or leaves the camera off
 local kickUntil = 0
+local kickBound = false -- not the clock: a kick that ran out unbinds on its next frame, and a crit in between rebound the name
 function RewardFX.critPunch()
 	if player:GetAttribute("ReduceCameraShake") == true or RewardFX.reduced() then return end
 	local spec = settings.CritPunch
-	local started = os.clock()
-	local wasRunning = os.clock() < kickUntil
-	kickUntil = started + spec.Seconds
-	if wasRunning then return end
+	kickUntil = os.clock() + spec.Seconds
+	if kickBound then return end
+	kickBound = true
 	RunService:BindToRenderStep("RewardCritKick", Enum.RenderPriority.Camera.Value + 1, function()
 		local camera = workspace.CurrentCamera
 		local left = kickUntil - os.clock()
 		if left <= 0 or not camera then
 			RunService:UnbindFromRenderStep("RewardCritKick")
+			kickBound = false
 			return
 		end
 		local amount = left / spec.Seconds
