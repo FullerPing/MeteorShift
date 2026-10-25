@@ -231,6 +231,7 @@ Knit.Start()
 		--   /giveall <item> ... [message]   the same as /give all ...: everyone, announced as "[DEV] Name: message"
 		--   /announce <message>   a "[DEV] Name: message" banner for everyone (AnnounceService)
 		--   /setlevel <player|all> <level>   sets the player level (XP cleared), up or down; the player is told
+		--   /setrebirth <player|all> <rebirths>   sets the rebirth count (0-1000), up or down, nothing reset; the player is told
 		--   /event <id> [minutes]   starts a game-wide event on every server now (GlobalEventService, Config.Events)
 		--   /feedback [count]   prints the newest player feedback (FeedbackService) to the output (F9 on a live server)
 		local TextChatService = game:GetService("TextChatService")
@@ -361,6 +362,40 @@ Knit.Start()
 				return "No profile loaded for that player yet"
 			end
 			return if #targets == 1 then targets[1].Name .. " is now level " .. level else string.format("Set %d players to level %d", count, level)
+		end)
+		-- Only the count changes: nothing is reset or paid, and RebirthService.Reborn doesn't fire (no badges or quests)
+		chatCommand("/setrebirth", function(player, _first, text)
+			local targetName, wanted = string.match(text, "^%S+%s+(%S+)%s+(%d+)%s*$")
+			if not targetName then
+				return "Usage: /setrebirth <player|all> <rebirths>"
+			end
+			local rebirths = math.clamp(tonumber(wanted) :: number, 0, 1000)
+			local list = Players:GetPlayers()
+			local targets = list
+			if not AdminGive.isEveryone(targetName) then
+				local index, reason = AdminGive.findPlayer(targetName, list, table.find(list, player))
+				if not index then
+					return reason or "No such player"
+				end
+				targets = { list[index] }
+			end
+			local count = 0
+			for _, target in targets do
+				local data = PlayerStateService:Get(target)
+				if data then
+					data.rebirths = rebirths
+					PlayerStateService:ReplicateNow(target)
+					count += 1
+					if target ~= player then
+						ShopService.Client.Notice:Fire(target, player.DisplayName .. " set your rebirths to " .. rebirths)
+					end
+					print(string.format("[SetRebirth] %s (%d) set %s (%d) to rebirth %d", player.Name, player.UserId, target.Name, target.UserId, rebirths))
+				end
+			end
+			if count == 0 then
+				return "No profile loaded for that player yet"
+			end
+			return if #targets == 1 then targets[1].Name .. " is now rebirth " .. rebirths else string.format("Set %d players to rebirth %d", count, rebirths)
 		end)
 		chatCommand("/announce", function(player, _first, text)
 			local message = string.match(text, "^%S+%s+(.-)%s*$")
