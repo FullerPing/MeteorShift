@@ -23,6 +23,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local Relics = require(ReplicatedStorage.Shared.Relics)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
@@ -154,6 +155,11 @@ function PetService:Hatch(player: Player, eggId: string): string?
 	local data = PlayerStateService:Get(player)
 	local egg = Pets.egg(eggId)
 	if not data or not egg then
+		return nil
+	end
+	if (egg.World or 1) ~= Worlds.here().Id then
+		local world = Worlds.find(egg.World or 1)
+		self.Client.Notice:Fire(player, string.format("The %s hatches in %s.", egg.Name, if world then world.Name else "another world"))
 		return nil
 	end
 	if (data.rebirths or 0) < (egg.MinRebirths or 0) then
@@ -428,6 +434,7 @@ function PetService:_connectHatchery()
 		return
 	end
 	for _, egg in Config.Pets.Eggs do
+		if (egg.World or 1) ~= Worlds.here().Id then continue end
 		local stand = hatchery:FindFirstChild(egg.Id)
 		local anchor = stand and (stand:FindFirstChild("Plinth") or stand:FindFirstChildWhichIsA("BasePart", true))
 		if not (anchor and anchor:IsA("BasePart")) then

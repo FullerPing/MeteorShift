@@ -35,7 +35,9 @@ export type Role = { Name: string, Cap: number, Text: string }
 export type Perk = { Role: string, Min: number, Max: number }
 export type Rarity = { Id: string, Name: string, Color: Color3 }
 -- Own: the egg hatches only the pets that list it in their Eggs (its exclusives), never the shared pool
-export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string, MinRebirths: number?, Own: boolean? }
+-- World: the world whose Hatchery has its stand (Config.Worlds; nil = World 1); it can only be hatched there
+export type Egg = { Id: string, Name: string, Cost: number, Odds: { [string]: number }, Pity: number, PityFrom: string, MinRebirths: number?, Own: boolean?,
+	World: number? }
 export type Pet = {
 	Id: string, Name: string, Rarity: string, Perks: { Perk }, Color: Color3, Blurb: string,
 	Group: boolean?, -- the group reward (Pets.GroupReward): free for members of the game's Roblox group, never in an egg
@@ -116,6 +118,10 @@ Pets.Eggs = {
 		Odds = { rare = 50, epic = 40, legendary = 10 }, Pity = 15, PityFrom = "legendary" },
 	{ Id = "voidEgg", Name = "Void Egg", Cost = 360, MinRebirths = 5, Own = true,
 		Odds = { epic = 70, legendary = 30 }, Pity = 6, PityFrom = "legendary" },
+	-- Nebula Rift's only egg (owner, 2026-10-25): every Epic and Legendary that hatches anywhere, the Magma and Void
+	-- exclusives included (they list it in their Eggs)
+	{ Id = "nebulaEgg", Name = "Nebula Egg", Cost = 500, MinRebirths = 25, World = 2,
+		Odds = { epic = 65, legendary = 35 }, Pity = 5, PityFrom = "legendary" },
 } :: { Egg }
 
 -- Each perk's Min is level 1 and Max is level 10. Keep catalog order stable: egg picks
@@ -157,16 +163,16 @@ Pets.List = {
 		Perks = { { Role = "hauler", Min = 0.008, Max = 0.02 }, { Role = "vault", Min = 0.35, Max = 0.80 } } },
 	{ Id = "auroraOwl", Name = "Aurora Owl", Rarity = "epic", Color = Color3.fromRGB(120, 255, 210), Blurb = "Sees the best price in any light.",
 		Perks = { { Role = "merchant", Min = 0.12, Max = 0.28 }, { Role = "shards", Min = 0.06, Max = 0.15 } } },
-	{ Id = "frostYeti", Name = "Frost Yeti", Rarity = "epic", Eggs = { "magmaEgg" }, Color = Color3.fromRGB(190, 230, 255), Blurb = "Hauls ice blocks for fun. Your ore is easy.",
+	{ Id = "frostYeti", Name = "Frost Yeti", Rarity = "epic", Eggs = { "magmaEgg", "nebulaEgg" }, Color = Color3.fromRGB(190, 230, 255), Blurb = "Hauls ice blocks for fun. Your ore is easy.",
 		Perks = { { Role = "hauler", Min = 0.01, Max = 0.02 }, { Role = "pack", Min = 0.20, Max = 0.40 } } },
-	{ Id = "quartzKitsune", Name = "Quartz Kitsune", Rarity = "epic", Eggs = { "voidEgg" }, Color = Color3.fromRGB(255, 190, 230), Blurb = "Three crystal tails. Every trader trusts it.",
+	{ Id = "quartzKitsune", Name = "Quartz Kitsune", Rarity = "epic", Eggs = { "voidEgg", "nebulaEgg" }, Color = Color3.fromRGB(255, 190, 230), Blurb = "Three crystal tails. Every trader trusts it.",
 		Perks = { { Role = "merchant", Min = 0.15, Max = 0.30 }, { Role = "crit", Min = 0.03, Max = 0.08 } } },
 	-- Legendary
 	{ Id = "meteorDrake", Name = "Meteor Drake", Rarity = "legendary", Color = Color3.fromRGB(255, 130, 50), Blurb = "Born in a crater. It never stops digging.",
 		Perks = { { Role = "miner", Min = 0.22, Max = 0.36 }, { Role = "yield", Min = 0.08, Max = 0.18 }, { Role = "shards", Min = 0.08, Max = 0.20 } } },
-	{ Id = "galaxyGriffin", Name = "Galaxy Griffin", Rarity = "legendary", Eggs = { "magmaEgg" }, Color = Color3.fromRGB(90, 80, 200), Blurb = "Half eagle, half night sky. Cores crack for it.",
+	{ Id = "galaxyGriffin", Name = "Galaxy Griffin", Rarity = "legendary", Eggs = { "magmaEgg", "nebulaEgg" }, Color = Color3.fromRGB(90, 80, 200), Blurb = "Half eagle, half night sky. Cores crack for it.",
 		Perks = { { Role = "shards", Min = 0.10, Max = 0.20 }, { Role = "miner", Min = 0.20, Max = 0.32 }, { Role = "scholar", Min = 0.15, Max = 0.30 } } },
-	{ Id = "voidLeviathan", Name = "Void Leviathan", Rarity = "legendary", Eggs = { "voidEgg" }, Color = Color3.fromRGB(60, 40, 110), Blurb = "Swims between meteors. Swallows whole veins.",
+	{ Id = "voidLeviathan", Name = "Void Leviathan", Rarity = "legendary", Eggs = { "voidEgg", "nebulaEgg" }, Color = Color3.fromRGB(60, 40, 110), Blurb = "Swims between meteors. Swallows whole veins.",
 		Perks = { { Role = "miner", Min = 0.25, Max = 0.38 }, { Role = "vault", Min = 0.40, Max = 0.90 }, { Role = "yield", Min = 0.06, Max = 0.12 } } }, -- miner under Drillbot's 0.40
 	-- Group reward (Pets.GroupReward): free for joining the game's Roblox group, a Rare's strength, never in an egg
 	{ Id = "cometFox", Name = "Comet Fox", Rarity = "rare", Group = true, Color = Color3.fromRGB(127, 182, 255), Blurb = "Our group's mascot. It leaves stardust behind your swing.",

@@ -446,7 +446,7 @@ return function(t: any)
 					if egg.Own then
 						t.ok(pet.Eggs ~= nil and table.find(pet.Eggs, egg.Id) ~= nil, pet.Id .. " in " .. egg.Id)
 					else
-						t.eq(pet.Eggs, nil, pet.Id .. " is exclusive but hatches from " .. egg.Id)
+						t.ok(pet.Eggs == nil or table.find(pet.Eggs, egg.Id) ~= nil, pet.Id .. " is exclusive but hatches from " .. egg.Id)
 					end
 				end
 			end
@@ -463,6 +463,20 @@ return function(t: any)
 		local magma = Pets.egg("magmaEgg") :: any
 		local id = Pets.roll(magma, 0.99, 0, 0)
 		t.eq(id, "galaxyGriffin")
+	end)
+
+	t.test("the Nebula Egg is World 2's: every free Epic and Legendary, the exclusives included", function()
+		local nebula = Pets.egg("nebulaEgg") :: any
+		t.eq(nebula.World, 2)
+		for _, rarity in { "epic", "legendary" } do
+			local pool = Pets.eggPets(rarity, nebula)
+			for _, pet in Config.List do
+				if pet.Rarity == rarity and not pet.Pass and not pet.Group then
+					t.ok(table.find(pool, pet) ~= nil, pet.Id .. " should hatch from the Nebula Egg")
+				end
+			end
+		end
+		t.ok(table.find(Pets.eggPets("epic", Pets.egg("crystalEgg")), Pets.def("frostYeti")) == nil, "exclusives stay out of other eggs")
 	end)
 
 	t.test("fusing: three copies and the fragments make a pet Fused, its perks x Mult", function()

@@ -124,13 +124,14 @@ for index, id in Config.RarityOrder do
 end
 
 -- The pets an egg can hatch of one rarity (pass and group pets are never in an egg). A pet with Eggs hatches only
--- from those; an Own egg hatches only its exclusives. Without an egg: the shared pool.
+-- from those; an Own egg hatches only its exclusives, any other egg the shared pool plus pets that list it.
+-- Without an egg: the shared pool.
 function Pets.eggPets(rarity: string, egg: Config.Egg?): { Config.Pet }
 	local out = {}
 	for _, pet in Config.List do
 		if pet.Rarity == rarity and not pet.Pass and not pet.Group then
 			local listed = pet.Eggs ~= nil and egg ~= nil and table.find(pet.Eggs, egg.Id) ~= nil
-			if (egg and egg.Own and listed) or (not (egg and egg.Own) and pet.Eggs == nil) then
+			if (egg and egg.Own and listed) or (not (egg and egg.Own) and (pet.Eggs == nil or listed)) then
 				table.insert(out, pet)
 			end
 		end
