@@ -15,6 +15,7 @@ local Daily = require(ReplicatedStorage.Shared.Daily)
 local Format = require(ReplicatedStorage.Shared.Format)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Badges = require(script.Parent.Parent.Lib.Badges)
 local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
@@ -57,7 +58,8 @@ function DailyService:Publish(player: Player)
 	local data, perSecond, ceiling = context(player)
 	if not data then return end
 	dirty[player] = nil
-	local tutorialDone = data.flags.tutorialDone == true
+	-- worlds past the first have no tutorial (TutorialService), so nothing there waits for it
+	local tutorialDone = data.flags.tutorialDone == true or Worlds.here().Id ~= 1
 	if tutorialSent[player] ~= tutorialDone then
 		tutorialSent[player] = tutorialDone
 		self.Client.TutorialDone:SetFor(player, tutorialDone)

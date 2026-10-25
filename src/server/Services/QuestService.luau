@@ -1,6 +1,6 @@
 --!strict
--- The Foreman's quest line (Config.Quests, Shared.Quests). Owns profile.quest = { step, progress }: counts the
--- current step's event from the other services' signals, publishes a Summary for the HUD tracker and the Quests
+-- The Foreman's quest lines (Config.Quests, Shared.Quests): this world's line only (World 1 profile.quest, Nebula Rift
+-- profile.riftQuest, each { step, progress }). Counts the current step's event from the other services' signals, publishes a Summary for the HUD tracker and the Quests
 -- menu, and pays a finished step when the player claims it. The Foreman NPC (Workspace.Map ... "Foreman", a model
 -- with a part named "Prompt") gets a "Quests" prompt that opens the menu.
 local Players = game:GetService("Players")
@@ -13,6 +13,10 @@ local Quests = require(ReplicatedStorage.Shared.Quests)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
+
+local WORLD = Worlds.here().Id
+local KEY = Quests.saveKey(WORLD)
 
 local QuestService = Knit.CreateService({
 	Name = "QuestService",
@@ -43,8 +47,8 @@ end
 function QuestService:Publish(player: Player, force: boolean?)
 	local data, perSecond, ceiling = context(player)
 	if not data then return end
-	data.quest = Quests.clean(data.quest)
-	local summary = Quests.summary(data, perSecond, ceiling)
+	data[KEY] = Quests.clean(data[KEY])
+	local summary = Quests.summary(data, perSecond, ceiling, WORLD)
 	local key = if summary then string.format("%d/%g/%s/%d", summary.step, summary.value, tostring(summary.done), summary.cash) else "done"
 	if force or lastKey[player] ~= key then
 		lastKey[player] = key
@@ -55,22 +59,23 @@ end
 local function progress(player: Player, event: string, amount: number, field: string?)
 	local data = PlayerStateService:Get(player)
 	if not data then return end
-	data.quest = Quests.clean(data.quest)
-	Quests.addProgress(data.quest, event, amount, field) -- the timer publishes it
+	data[KEY] = Quests.clean(data[KEY])
+	Quests.addProgress(data[KEY], event, amount, field, WORLD) -- the timer publishes it
 end
 
 function QuestService:Claim(player: Player): boolean
 	local data, perSecond, ceiling = context(player)
 	if not data then return false end
-	data.quest = Quests.clean(data.quest)
-	local def = Quests.step(data.quest)
-	if not def or not Quests.done(def, data, data.quest.progress) then return false end
+	local state = Quests.clean(data[KEY])
+	data[KEY] = state
+	local def = Quests.step(state, WORLD)
+	if not def or not Quests.done(def, data, state.progress) then return false end
 	local reward = Quests.reward(def, perSecond, ceiling)
-	Quests.advance(data.quest)
+	Quests.advance(state)
 	if reward.cash > 0 then PlayerStateService:AddCash(player, reward.cash) end
 	if reward.shards > 0 then PlayerStateService:AddShards(player, reward.shards) end
 	TelemetryService:earned(player, "foreman_quest", reward.cash, reward.shards)
-	TelemetryService:custom(player, "foreman_quest", data.quest.step - 1, { def.Id })
+	TelemetryService:custom(player, "foreman_quest", state.step - 1, { def.Id })
 	local parts = {}
 	if reward.cash > 0 then table.insert(parts, "+" .. Format.cash(reward.cash)) end
 	if reward.shards > 0 then table.insert(parts, "+" .. reward.shards .. " ◆") end

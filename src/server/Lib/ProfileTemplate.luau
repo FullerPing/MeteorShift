@@ -80,6 +80,8 @@ return {
 	},
 	-- The Foreman's quest line (Shared.Quests): the step you are on and its event count; kept through rebirth
 	quest = { step = 1, progress = 0 },
+	-- Nebula Rift's own line (Config.Quests.RiftLine), the same shape; filled in on load for older saves
+	riftQuest = { step = 1, progress = 0 },
 	-- Relics (Shared.Relics): found ones (id -> true) and Relic Fragments for fusing pets; kept through rebirth
 	relics = { owned = {}, fragments = 0 },
 	-- Codes already redeemed (Shared.Codes, CodesService): code name -> true
