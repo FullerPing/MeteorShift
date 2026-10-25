@@ -73,15 +73,17 @@ return function(t: any)
 	end)
 
 	t.test("size splits crust HP across nodes and scales the core separately", function()
+		local Meteor = require(t.shared.Config.Meteor)
 		local crustHp, coreHp = MiningPower.size(10, 36, 1)
-		t.near(crustHp, 10 * 70 / 36, 0.0001) -- CrustSeconds = 70
-		t.near(coreHp, 10 * 45, 0.0001) -- CoreSeconds = 45
+		t.near(crustHp, 10 * Meteor.CrustSeconds / 36, 0.0001)
+		t.near(coreHp, 10 * Meteor.CoreSeconds, 0.0001)
 	end)
 
 	t.test("size applies the meteor type's HP multiplier", function()
+		local Meteor = require(t.shared.Config.Meteor)
 		local crustHp, coreHp = MiningPower.size(10, 36, 1.2)
-		t.near(crustHp, 10 * 70 * 1.2 / 36, 0.0001)
-		t.near(coreHp, 10 * 45 * 1.2, 0.0001)
+		t.near(crustHp, 10 * Meteor.CrustSeconds * 1.2 / 36, 0.0001)
+		t.near(coreHp, 10 * Meteor.CoreSeconds * 1.2, 0.0001)
 	end)
 
 	t.test("shouldRescale trips once drift passes 15%", function()

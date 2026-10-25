@@ -38,8 +38,8 @@ Meteor.StudioCountdown = 25 :: number?
 
 -- HP sizing at impact, in Mining Power (spec §5.3, see Shared.MiningPower)
 Meteor.PowerGrowth = 1.25 -- Mining Power per pickaxe tier: tier 1 = 1.0, tier 4 ≈ 2.0, tier 8 ≈ 4.8
-Meteor.CrustSeconds = 70
-Meteor.CoreSeconds = 45
+Meteor.CrustSeconds = 60 -- was 70; a little easier (owner, 2026-10-25)
+Meteor.CoreSeconds = 38 -- was 45
 Meteor.CoreUnlockFraction = 0.6
 -- players with no validated swing for this long don't count toward HP; longer than a whole meteor cycle (283 s), so
 -- players who waited out the 120 s countdown still count at impact (at 120 the meteor was sized for nobody and melted)
