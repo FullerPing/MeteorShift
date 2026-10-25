@@ -2,9 +2,13 @@
 -- The like goal hologram (Config.LikeGoal, Shared.LikeGoal). Every RefreshSeconds it reads the game's like count
 -- through the mirror in Config.LikeGoal.Url and floats "likes / goal", a thin bar and the reward in a BillboardGui on
 -- Map.TownSquare.LikeGoal.Anchor (an invisible part above a glowing projector disc). A map without it (other worlds)
--- does nothing; a failed read shows just the goal, from the last count that worked.
+-- does nothing. When the mirror fails it shows the count an admin typed with /likes, else the last count that
+-- worked, else just the goal.
+local DataStoreService = game:GetService("DataStoreService")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local ServerStorage = game:GetService("ServerStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
@@ -75,17 +79,38 @@ local function fetch(): number?
 	return if decoded then LikeGoal.likes(reply) else nil
 end
 
+-- The count an admin set with /likes, shared by every server through a DataStore; used when the mirror fails
+local store: DataStore? = nil
+local function typed(): number?
+	if not store then return nil end
+	local ok, value = pcall(store.GetAsync, store, "likes")
+	return if ok and type(value) == "number" then value else nil
+end
+
+local screen = nil
+local likes: number? = nil
+
+-- /likes <count>: shows `count` here now and on the other servers at their next refresh, unless the live count loads
+function LikeGoalService:SetLikes(count: number): boolean
+	likes = count
+	if screen then render(screen, likes) end
+	return store ~= nil and (pcall(store.SetAsync, store, "likes", count))
+end
+
 function LikeGoalService:KnitStart()
+	if not (RunService:IsStudio() and ServerStorage:GetAttribute("DevMemoryStore") == true) then
+		local ok, result = pcall(DataStoreService.GetDataStore, DataStoreService, "LikeGoal")
+		store = if ok then result else nil
+	end
 	task.spawn(function()
 		local sign = WorldMap.wait():WaitForChild("TownSquare"):WaitForChild("LikeGoal", 30)
 		local part = sign and sign:FindFirstChild("Anchor")
 		if not (part and part:IsA("BasePart")) then return end
-		local screen = buildScreen(part)
-		local likes: number? = nil
+		screen = buildScreen(part)
 		render(screen, likes)
 		while true do
 			SafeLoop.step("LikeGoalRefresh", function()
-				likes = fetch() or likes
+				likes = fetch() or typed() or likes
 				render(screen, likes)
 			end)
 			task.wait(Config.LikeGoal.RefreshSeconds)

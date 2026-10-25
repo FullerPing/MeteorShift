@@ -234,6 +234,7 @@ Knit.Start()
 		--   /announce <message>   a "[DEV] Name: message" banner for everyone (AnnounceService)
 		--   /setlevel <player|all> <level>   sets the player level (XP cleared), up or down; the player is told
 		--   /setrebirth <player|all> <rebirths>   sets the rebirth count (0-1000), up or down, nothing reset; the player is told
+		--   /likes <count>   the like goal hologram's count, on every server, for when its live count can't load (LikeGoalService)
 		--   /event <id> [minutes]   starts a game-wide event on every server now (GlobalEventService, Config.Events)
 		--   /feedback [count]   prints the newest player feedback (FeedbackService) to the output (F9 on a live server)
 		local TextChatService = game:GetService("TextChatService")
@@ -398,6 +399,14 @@ Knit.Start()
 				return "No profile loaded for that player yet"
 			end
 			return if #targets == 1 then targets[1].Name .. " is now rebirth " .. rebirths else string.format("Set %d players to rebirth %d", count, rebirths)
+		end)
+		chatCommand("/likes", function(_player, wanted)
+			local count = tonumber(wanted)
+			if not count or count < 0 or count ~= math.floor(count) then
+				return "Usage: /likes <count>"
+			end
+			local shared = Knit.GetService("LikeGoalService"):SetLikes(count)
+			return "Like goal shows " .. count .. (if shared then " on every server (if the live count loads, that wins)" else " on this server only (no DataStore)")
 		end)
 		chatCommand("/announce", function(player, _first, text)
 			local message = string.match(text, "^%S+%s+(.-)%s*$")
