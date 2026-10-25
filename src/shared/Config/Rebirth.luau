@@ -35,10 +35,13 @@ return {
 	-- Config.Pets.Slots, Config.Meteor.Boss.MinRebirths, Config.Pets eggs, Config.Debris.Fields unlocks;
 	-- tests/Consistency.spec checks the pet slots and fields against them)
 	Unlocks = {
-		[1] = "Colony Perks panel, +1 pet slot, the Starfall field",
+		[1] = "Colony Perks panel, +1 pet slot",
 		[2] = "Aurora Egg (Epic or better only), +1 pet slot",
-		[3] = "Alien Boss meteor every hour, new Alien ore, the Halo Ledge field",
+		[3] = "Alien Boss meteor every hour, new Alien ore, the Ember Shelf field",
 		[4] = "+1 pet slot",
+		[5] = "the Glass Scar field",
+		[8] = "the Starfall field on the Crown",
+		[10] = "the Halo Ledge field on the Crown",
 		[25] = "Nebula Rift, World 2: ores sell for 3x",
 		[27] = "the Starlight Shelf field in Nebula Rift",
 		[30] = "the Event Horizon field in Nebula Rift",
