@@ -4,10 +4,10 @@
 return {
 	firstMeteor = 0, -- first hit on a meteor
 	firstCore = 0, -- first shared core crack
-	firstRebirth = 0,
+	firstRebirth = 3869834119555599,
 	rebirth10 = 0,
-	level25 = 0,
-	level50 = 0,
+	level25 = 3815963397515957,
+	level50 = 3253126447076074,
 	pageIron = 0, -- completed a mineral index page
 	pageIce = 0,
 	pageCrystal = 0,
