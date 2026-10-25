@@ -1,6 +1,6 @@
 --!strict
 -- Arriving in a world past the first (Config.Worlds): once the loading screen is gone, a banner in the menus' look
--- (MenuTheme) pops in under the meteor timer, "WELCOME TO / NEBULA RIFT" and the world's blurb, then shrinks away.
+-- (MenuTheme) pops in under the meteor timer, "WELCOME TO / NEBULA RIFT", then shrinks away.
 -- World 1 has the intro and tutorial instead, so it shows nothing there.
 
 local Players = game:GetService("Players")
@@ -18,7 +18,7 @@ local player = Players.LocalPlayer
 
 local WorldWelcomeController = Knit.CreateController({ Name = "WorldWelcomeController" })
 
-local WIDTH, HEIGHT = 520, 132
+local WIDTH, HEIGHT = 520, 106
 local SHOW_FOR = 6 -- seconds
 
 function WorldWelcomeController:KnitStart()
@@ -42,8 +42,6 @@ function WorldWelcomeController:KnitStart()
 		local name = Theme.label(panel, "World", string.upper(world.Name), 46, world.Color, Theme.TITLE_FONT, Enum.TextXAlignment.Center)
 		name.Position, name.Size, name.ZIndex = UDim2.fromOffset(0, 40), UDim2.new(1, 0, 0, 50), 3
 		Theme.ink(name, true, 3)
-		local blurb = Theme.label(panel, "Blurb", world.Blurb, 18, Palette.NAVY, nil, Enum.TextXAlignment.Center)
-		blurb.Position, blurb.Size, blurb.ZIndex = UDim2.fromOffset(0, 94), UDim2.new(1, 0, 0, 24), 3
 		gui.Parent = player:WaitForChild("PlayerGui")
 
 		-- narrower than the banner on a phone: shrink it to fit with a 16 px margin each side

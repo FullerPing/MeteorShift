@@ -1,7 +1,7 @@
 --!strict
--- The ORE button: a menu tile (ExactNavButton.tile, the owner's ore icon) that opens the Ore Fields menu
--- (NativeMenus.OreFields, one card per Config.Debris.Fields) and asks DebrisService to teleport you to the field you
--- pick. Desktop places the tile in the left column under STORE (HudLayout "ore"); elsewhere it sits just above SPRINT
+-- The TELEPORT button: a menu tile (ExactNavButton.tile, the owner's ore icon) that opens the Teleport menu
+-- (NativeMenus.OreFields): its ORE tab has a card per field in this world (DebrisService teleports you there), its
+-- WORLDS tab one per world (WorldService travels there). Desktop places the tile in the left column under STORE (HudLayout "ore"); elsewhere it sits just above SPRINT
 -- (FastWalkController places that). It hides while a menu is open, and the menu closes after a pick.
 -- A field still locked to you (Shared.FieldGate) shows its rule ("LEVEL 12") on a grey pill instead of TRAVEL;
 -- the server refuses it anyway.
@@ -12,6 +12,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
+local FieldTravel = require(ReplicatedStorage.Shared.FieldTravel)
 local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
@@ -52,7 +53,7 @@ function FieldTravelController:KnitStart()
 	local button = Instance.new("TextButton")
 	button.Name, button.Text, button.AutoButtonColor, button.BackgroundTransparency = "OreButton", "", false, 1
 	button.Size = UDim2.fromOffset(80, 80)
-	ExactNavButton.tile(button, "ore", "Ore")
+	ExactNavButton.tile(button, "ore", "Teleport")
 	local scale = Instance.new("UIScale")
 	scale.Name, scale.Parent = "LayoutScale", button
 	button.Parent = gui
@@ -61,7 +62,7 @@ function FieldTravelController:KnitStart()
 	local menu = NativeUI.getFresh("OreFieldsMenu", OreFieldsMenu.build, OreFieldsMenu.LAYOUT)
 	local panel = menu:WaitForChild("Panel") :: Frame
 	NativeUI.fitWhole(panel, OreFieldsMenu.SIZE)
-	local list = panel:WaitForChild("Fields")
+	local here = Worlds.here().Id
 
 	-- mirrors DebrisService:IsFieldOpen: a map without gates (the archived v2 map) has no locked fields
 	local function isOpen(field: any): boolean
@@ -71,11 +72,15 @@ function FieldTravelController:KnitStart()
 		return FieldGate.isOpen(field, if state then state.level or 1 else 1, if state then state.rebirths or 0 else 0)
 	end
 	local cards: { [any]: Frame } = {}
-	for _, field in OreFieldsMenu.entries(Worlds.here().Id) do
-		local card = list:WaitForChild(field.Id) :: Frame
+	local entries: { { list: string, field: any } } = {}
+	for _, field in FieldTravel.inWorld(here) do table.insert(entries, { list = "Fields", field = field }) end
+	for _, world in OreFieldsMenu.worlds() do table.insert(entries, { list = "Worlds", field = world }) end
+	for _, entry in entries do
+		local field = entry.field
+		local card = panel:WaitForChild(entry.list):WaitForChild(field.Id) :: Frame
 		cards[field] = card
 		;(card:WaitForChild("Travel") :: TextButton).Activated:Connect(function()
-			if not isOpen(field) then
+			if not isOpen(field) or (field.Destination and field.Destination.Id == here) then
 				Sfx.play("Click")
 				return
 			end
@@ -102,18 +107,36 @@ function FieldTravelController:KnitStart()
 
 	local function paintCards()
 		for field, card in cards do
-			local open = isOpen(field)
+			local current = field.Destination ~= nil and field.Destination.Id == here
+			local open = isOpen(field) and not current
 			local travel = card:FindFirstChild("Travel") :: TextButton
 			local lock = card:FindFirstChild("Lock") :: Frame
 			travel.Visible = open
 			MenuTheme.state(travel, open, "blue")
 			lock.Visible = not open
-			;(lock:FindFirstChild("Label") :: TextLabel).Text = if field.Destination
-				then "REBIRTH " .. ((field.Destination.Unlock or {}).Rebirths or 0)
+			;(lock:FindFirstChild("Label") :: TextLabel).Text = if current then "YOU ARE HERE"
+				elseif field.Destination then "REBIRTH " .. ((field.Destination.Unlock or {}).Rebirths or 0)
 				else string.upper(FieldGate.label(field))
-			card.BackgroundTransparency = if open then 0 else 0.25
+			card.BackgroundTransparency = if open or current then 0 else 0.25
 		end
 	end
+	-- the ORE / WORLDS tabs swap which card list shows
+	local tabs = panel:WaitForChild("Tabs")
+	local function showTab(id: string)
+		for _, tab in { "Ore", "Worlds" } do
+			MenuTheme.tab(tabs:WaitForChild(tab .. "Tab") :: TextButton, tab == id)
+		end
+		;(panel:WaitForChild("Fields") :: Frame).Visible = id == "Ore"
+		;(panel:WaitForChild("Worlds") :: Frame).Visible = id == "Worlds"
+	end
+	for _, tab in { "Ore", "Worlds" } do
+		(tabs:WaitForChild(tab .. "Tab") :: TextButton).Activated:Connect(function()
+			Sfx.play("Click")
+			showTab(tab)
+		end)
+	end
+	showTab("Ore")
+
 	PlayerStateService.State:Observe(function(value)
 		state = value
 		paintCards()
@@ -126,7 +149,7 @@ function FieldTravelController:KnitStart()
 		return false
 	end
 	local function refresh()
-		-- Config.HudEdit: "Ore" nudges it from its spot above SPRINT, and hides it
+		-- Config.HudEdit: "Ore" (the TELEPORT button) nudges it from its spot above SPRINT, and hides it
 		local layout = Fusion.peek(hud)
 		-- desktop gives it a tile in the left column under STORE (layout.ore); elsewhere it sits above SPRINT
 		local rect = HudLayout.nudged(layout, "Ore", if layout.ore then table.clone(layout.ore) else {

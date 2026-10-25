@@ -63,7 +63,7 @@ Hud.EventPanel = { Width = 284, Height = 170, Top = 153, Gap = 6 }
 Hud.Timer = { Width = 593, Height = 130, Top = 49 }
 -- A line under the clock during the countdown, for players up to MaxLevel (telemetry: most new players left while
 -- waiting for the meteor, not knowing the fields are open between meteors)
-Hud.CountdownTip = { Text = "TIP: Mine the ore fields while you wait - press ORE!", MaxLevel = 10 }
+Hud.CountdownTip = { Text = "TIP: Mine the ore fields while you wait - press TELEPORT!", MaxLevel = 10 }
 
 -- Transparent wallet and backpack occupy opposite bottom corners. The foundry
 -- summary is centred, with training above it. Equipment aliases the SHOP rect.
@@ -133,7 +133,7 @@ Hud.Mine = {
 	FaceHold = 0.35,
 }
 
--- The round SPRINT button and the ORE button stacked above it (real pixels)
+-- The round SPRINT button and the TELEPORT button stacked above it (real pixels)
 Hud.SideButtons = { Size = 54, Gap = 8 }
 
 -- Panels (shop, index, rebirth, store): margin kept above and below, and the smallest scale

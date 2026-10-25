@@ -15,8 +15,8 @@
 --   Toast       the notification line (Nudge only, so messages are never lost)
 --   SHOP PETS INDEX REBIRTH STORE DAILY   the menu buttons (SHOP is labelled GEAR; DAILY is Daily Rewards)
 --   Settings    the settings gear (touch screens)
---   FastWalk    the SPRINT button (the ORE button follows it)
---   Ore         the ORE button: under STORE in the left column on desktop, above SPRINT elsewhere
+--   FastWalk    the SPRINT button (the TELEPORT button follows it)
+--   Ore         the TELEPORT button: under STORE in the left column on desktop, above SPRINT elsewhere
 --   Offers      the 2x Ore, 2x Cash and Starter Pack buttons: above INDEX on desktop, in the menu grid on phones (they leave once bought)
 
 local HudEdit = {}
