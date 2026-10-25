@@ -12,6 +12,7 @@
 --   golden         the golden variant of a type (Config.Hooks.GoldenMeteor): same Id and twist, its
 --                  ore pays PayMult times, gold crust and ore chunks
 --   hourly         the hourly Quartz meteor's landing time when the countdown starting now must be it
+--   overtime       whether a meteor whose timer ran out gets Config.Meteor.Overtime's extra seconds
 --
 -- Pure functions only, so the rules are covered by tests/MeteorTypes.spec.
 
@@ -120,6 +121,11 @@ function MeteorTypes.hourly(now: number, countdown: number): number?
 	local event = Meteor.ImpactDuration + longest + math.max(Meteor.CrackedDuration, Meteor.CooledDuration) + Meteor.CleanupDuration
 	local at = MeteorTypes.nextHourly(now)
 	return if at - now <= countdown + event then at else nil
+end
+
+-- The core is nearly cracked (some HP left, under Overtime.Below of its max) when the timer runs out
+function MeteorTypes.overtime(coreHp: number, coreMax: number): boolean
+	return coreMax > 0 and coreHp > 0 and coreHp / coreMax < Meteor.Overtime.Below
 end
 
 return MeteorTypes

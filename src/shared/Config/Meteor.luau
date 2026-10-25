@@ -12,6 +12,9 @@ Meteor.ImpactDuration = 3
 Meteor.CrackedDuration = 5
 Meteor.CooledDuration = 5
 Meteor.CleanupDuration = 5
+-- Overtime (every type): when the cooling timer runs out with the core under Below of its HP left, the meteor stays
+-- Seconds longer, once (Shared.MeteorTypes.overtime)
+Meteor.Overtime = { Below = 0.05, Seconds = 10 }
 Meteor.StreakLeadTime = 14 -- streak is visible for the last N seconds of the countdown (10 felt sudden; owner, 2026-10-19)
 -- In the last LeadTime seconds the camera swings behind the player: it looks at the countdown board over the crater
 -- until CountdownUntil seconds are left, then turns to follow the falling meteor down, and hands control back

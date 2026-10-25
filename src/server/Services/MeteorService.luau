@@ -627,8 +627,16 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
 	local refreezing = meteorType.Twist == "Refreeze"
 	local lastRefreeze = os.clock()
+	local overtimeChecked = false
 	waitUntil(function()
 		local clock = os.clock()
+		if not overtimeChecked and not meteor.Cracked and devNext == nil and now() >= state.endsAt then
+			overtimeChecked = true
+			if MeteorTypes.overtime(NodeService:GetHp(meteor.CoreId)) then
+				self:_publish({ endsAt = state.endsAt + MeteorConfig.Overtime.Seconds })
+				RewardService:Announce("Overtime", string.format("OVERTIME! The core is almost cracked: +%d s", MeteorConfig.Overtime.Seconds))
+			end
+		end
 		if clock >= nextCheck then
 			nextCheck = clock + MeteorConfig.RescaleCheckInterval
 			self:_checkRescale(meteor)

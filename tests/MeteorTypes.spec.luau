@@ -125,4 +125,12 @@ return function(t: any)
 		t.eq(quartz.RequiredTier, 1, "open to everyone")
 		t.ok(table.find(Home.OreOrder, quartz.Ore) ~= nil, "its ore sells")
 	end)
+
+	t.test("overtime only for a core under 5% when the timer runs out", function()
+		t.ok(MeteorTypes.overtime(4, 100), "4% left")
+		t.ok(not MeteorTypes.overtime(5, 100), "5% is not under 5%")
+		t.ok(not MeteorTypes.overtime(60, 100), "far from cracked")
+		t.ok(not MeteorTypes.overtime(0, 100), "already cracked")
+		t.ok(not MeteorTypes.overtime(0, 0), "no core")
+	end)
 end
