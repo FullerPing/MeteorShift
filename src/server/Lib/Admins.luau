@@ -6,6 +6,7 @@ local Admins = {}
 
 Admins.List = {
 	[3245458673] = "FullPinger",
+	[11840820393] = "FullerPing",
 }
 
 -- `list` and `isStudio` are parameters so the rule can be tested without a running place
