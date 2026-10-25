@@ -126,7 +126,7 @@ function PerksController:KnitStart()
 	-- The PERKS button sits in the Rebirth panel header, next to its close button. NativeMenus.Rebirth builds it;
 	-- RebirthController swaps that panel into the saved menu and marks it, so wait for the mark.
 	task.spawn(function()
-		local rebirthGui = Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Rebirth")
+		local rebirthGui = Players.LocalPlayer:WaitForChild("PlayerGui"):WaitForChild("Rebirth", math.huge) -- slow devices: no 5 s warning
 		-- the saved menu can carry an older mark (and an older button) until the swap
 		while rebirthGui:GetAttribute("RebirthLayout") ~= RebirthMenu.LAYOUT do rebirthGui:GetAttributeChangedSignal("RebirthLayout"):Wait() end
 		local button = rebirthGui:WaitForChild("Panel"):WaitForChild("PerksButton") :: TextButton

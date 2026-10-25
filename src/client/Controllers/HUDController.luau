@@ -356,7 +356,9 @@ function HUDController:KnitStart()
 
 	-- Sky countdown over the crater (the board itself is saved in the map)
 	task.spawn(function()
-		local board = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("SkyTimer"):WaitForChild("Board")
+		-- no time limit (math.huge): the board streams in late, or not at all in a world without one; a plain
+		-- WaitForChild warns "Infinite yield possible" after 5 s
+		local board = workspace:WaitForChild("Map"):WaitForChild("Crater", math.huge):WaitForChild("SkyTimer", math.huge):WaitForChild("Board", math.huge)
 		scope:Hydrate(board:WaitForChild("Title"))({
 			Text = timerTitle,
 			Font = FONT,
