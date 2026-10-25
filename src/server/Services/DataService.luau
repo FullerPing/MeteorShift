@@ -264,6 +264,27 @@ function DataService:Save(player: Player): boolean
 	return write(profile, false)
 end
 
+-- Teleporting to another world (WorldService): save and give the lock back now, so the next place loads the profile
+-- at once instead of waiting for this server to notice the player left. Autosaves stop; the final save on leave still
+-- runs but aborts once the next server holds the lock. Hold takes the lock back when the teleport fails.
+function DataService:ReleaseForTeleport(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	profile.Data.lastSeen = os.time()
+	return write(profile, true)
+end
+
+function DataService:Hold(player: Player)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	released[profile] = nil
+	write(profile, false)
+end
+
 function DataService:_load(player: Player)
 	if unavailable then
 		player:Kick(ProfileLoadMessage.message("unavailable"))

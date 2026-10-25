@@ -76,7 +76,7 @@ function FeedbackController:KnitStart()
 		end
 	end)
 	-- Refusals ("Need $X", "Move closer", "already at max") get a soft deny
-	for _, name in { "RefineryService", "UpgradeService", "ShopService", "PetService", "EconomyService", "PerkService" } do
+	for _, name in { "RefineryService", "UpgradeService", "ShopService", "PetService", "EconomyService", "PerkService", "WorldService" } do
 		local ok, service = pcall(function() return Knit.GetService(name) end)
 		if ok and service and service.Notice then
 			service.Notice:Connect(function() Sfx.play("Deny") end)

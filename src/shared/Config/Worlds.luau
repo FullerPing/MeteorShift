@@ -6,7 +6,7 @@ export type World = { Id: number, Name: string, PlaceId: number, Unlock: { Rebir
 
 return {
 	List = {
-		{ Id = 1, Name = "Caldera Terraces", PlaceId = 0 },
-		{ Id = 2, Name = "Nebula Rift", PlaceId = 0, Unlock = { Rebirths = 25 } },
+		{ Id = 1, Name = "Caldera Terraces", PlaceId = 113476105600560 },
+		{ Id = 2, Name = "Nebula Rift", PlaceId = 117824341220394, Unlock = { Rebirths = 25 } },
 	} :: { World },
 }

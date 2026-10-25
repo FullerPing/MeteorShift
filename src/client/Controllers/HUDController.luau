@@ -235,6 +235,7 @@ function HUDController:KnitStart()
 		end
 	end)
 	PetService.Notice:Connect(showToast)
+	Knit.GetService("WorldService").Notice:Connect(showToast)
 	PetService.Bought:Connect(function(petId: string)
 		local pet = Pets.def(petId)
 		if pet then
