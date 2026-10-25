@@ -95,6 +95,15 @@ function TutorialService.Client:Skip(player: Player)
 	if data and not data.flags.tutorialDone then
 		data.flags.tutorialDone = true
 		self.Server:_publish(player)
+		-- still playing after Config.Tutorial.SkipCreditSeconds: the funnel steps left count as passed
+		task.delay(Config.Tutorial.SkipCreditSeconds, function()
+			local now = PlayerStateService:Get(player)
+			if player.Parent ~= Players or not now then return end
+			for index = now.tutorialStep, #Steps do
+				TelemetryService:funnel(player, index, Steps[index].Id)
+			end
+			now.tutorialStep = #Steps + 1
+		end)
 	end
 end
 

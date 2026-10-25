@@ -42,5 +42,8 @@ Tutorial.StarterField = "RustWorks"
 
 -- Standing this close (horizontally) to the crater centre during an event counts as "reached"
 Tutorial.CraterRadius = 83.2
+-- A player who skips the tutorial and is still playing this many seconds later counts as having passed every
+-- funnel step left (TutorialService logs them then); one who leaves sooner doesn't
+Tutorial.SkipCreditSeconds = 300
 
 return Tutorial
