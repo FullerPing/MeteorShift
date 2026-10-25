@@ -44,6 +44,10 @@ local function setUpChatTags()
 				return nil
 			end
 			local tags = {}
+			-- set by the server for the user ids in Lib.Admins
+			if speaker:GetAttribute("Developer") == true then
+				table.insert(tags, '<font color="#FF5A5A">[DEVELOPER]</font>')
+			end
 			if speaker:GetAttribute("VIP") == true then
 				table.insert(tags, string.format('<font color="%s">%s</font>', Monetization.VIPTagColor, Monetization.VIPTag))
 			end

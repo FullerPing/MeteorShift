@@ -15,6 +15,12 @@ Knit.AddServices(script.Parent.Services)
 Knit.Start()
 	:andThen(function()
 		print("[MeteorShift] server started")
+		-- the [DEVELOPER] chat tag (StoreController) for the user ids in Lib.Admins; the list itself stays on the server
+		local function tagDeveloper(player: Player)
+			if Admins.List[player.UserId] then player:SetAttribute("Developer", true) end
+		end
+		Players.PlayerAdded:Connect(tagDeveloper)
+		for _, player in Players:GetPlayers() do tagDeveloper(player) end
 		local PlayerStateService = Knit.GetService("PlayerStateService")
 		local MeteorService = Knit.GetService("MeteorService")
 		local ShopService = Knit.GetService("ShopService")
