@@ -30,6 +30,9 @@ function Badges.award(player: Player, key: string)
 	if not id then return end
 	done[key] = true
 	task.spawn(function()
+		-- AwardBadge warns "We already gave out badgeId" for one the player owns (the welcome badge, every join)
+		local checked, owned = pcall(BadgeService.UserHasBadgeAsync, BadgeService, player.UserId, id)
+		if checked and owned then return end
 		local ok, err = pcall(BadgeService.AwardBadge, BadgeService, player.UserId, id)
 		if not ok then
 			warn("[Badges] could not award " .. key .. ": " .. tostring(err))
