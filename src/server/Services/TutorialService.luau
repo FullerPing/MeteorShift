@@ -15,6 +15,7 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Intro = require(ReplicatedStorage.Shared.Intro)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local Steps = Config.Tutorial.Steps
@@ -44,8 +45,10 @@ function TutorialService:_publish(player: Player)
 	if not data then
 		return
 	end
-	self.Client.Intro:SetFor(player, Intro.shouldShow(data.flags, data.tutorialStep))
-	if data.flags.tutorialDone then
+	-- Nebula Rift and later worlds have no intro or tutorial: players arrive there at rebirth 25 (Config.Worlds)
+	local firstWorld = Worlds.here().Id == 1
+	self.Client.Intro:SetFor(player, firstWorld and Intro.shouldShow(data.flags, data.tutorialStep))
+	if data.flags.tutorialDone or not firstWorld then
 		self.Client.Step:SetFor(player, nil)
 	else
 		self.Client.Step:SetFor(player, { index = data.tutorialStep, total = #Steps })
