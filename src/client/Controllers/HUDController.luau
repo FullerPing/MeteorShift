@@ -265,6 +265,7 @@ function HUDController:KnitStart()
 		locked = Color3.fromRGB(255, 150, 140),
 		relic = Color3.fromRGB(214, 160, 255),
 		fieldXp = Color3.fromRGB(150, 200, 255),
+		unlock = Color3.fromRGB(140, 255, 150), -- a new ore field opened (DebrisService)
 	}
 	RewardService.Bonus:Connect(function(message)
 		showToast(message.text, BONUS_COLORS[message.kind])

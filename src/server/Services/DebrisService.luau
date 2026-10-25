@@ -35,6 +35,7 @@ local Perks = require(ReplicatedStorage.Shared.Perks)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local DebrisService = Knit.CreateService({
@@ -322,11 +323,35 @@ function DebrisService:KnitInit()
 	TelemetryService = Knit.GetService("TelemetryService")
 end
 
+-- The gated fields of this world each player can mine; a level-up or rebirth that opens one says so in a toast
+local openFields: { [Player]: { [string]: boolean } } = {}
+-- (also run by the /setlevel and /setrebirth commands and the DevLevel hook, which set the count without a level-up)
+function DebrisService:NoteUnlocks(player: Player)
+	-- no state yet: recording "nothing open" would announce every field they already had at their next level-up
+	if not PlayerStateService:Get(player) then return end
+	local was = openFields[player]
+	local open = {}
+	for _, field in FieldTravel.inWorld(Worlds.here().Id) do
+		if field.Unlock and self:IsFieldOpen(player, field.Id) then
+			open[field.Id] = true
+			if was and not was[field.Id] then
+				RewardService:Bonus(player, "unlock", "Unlocked " .. field.Name .. "! Travel there using TELEPORT")
+			end
+		end
+	end
+	openFields[player] = open
+end
+
 function DebrisService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastTravel[player] = nil
 		lastRefusal[player] = nil
+		openFields[player] = nil
 	end)
+	-- the first look (profile loaded) only records what's open
+	Knit.GetService("DataService").ProfileLoaded:Connect(function(player) task.defer(self.NoteUnlocks, self, player) end)
+	Knit.GetService("LevelService").LeveledUp:Connect(function(player) self:NoteUnlocks(player) end)
+	Knit.GetService("RebirthService").Reborn:Connect(function(player) self:NoteUnlocks(player) end)
 	local folder = WorldMap.wait():WaitForChild("Debris")
 	for _, part in folder:GetChildren() do
 		if part:IsA("BasePart") then

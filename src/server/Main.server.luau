@@ -184,6 +184,7 @@ Knit.Start()
 				local progress = Levels.clean(level, 0)
 				data.level, data.xp = progress.level, progress.xp
 				PlayerStateService:ReplicateNow(player)
+				Knit.GetService("DebrisService"):NoteUnlocks(player)
 				return data.level
 			end
 			levelHook.Parent = ServerStorage
@@ -354,6 +355,7 @@ Knit.Start()
 					local progress = Levels.clean(tonumber(wanted), 0)
 					data.level, data.xp, level = progress.level, progress.xp, progress.level
 					PlayerStateService:ReplicateNow(target)
+					Knit.GetService("DebrisService"):NoteUnlocks(target)
 					count += 1
 					if target ~= player then
 						ShopService.Client.Notice:Fire(target, player.DisplayName .. " set your level to " .. level)
@@ -388,6 +390,7 @@ Knit.Start()
 				if data then
 					data.rebirths = rebirths
 					PlayerStateService:ReplicateNow(target)
+					Knit.GetService("DebrisService"):NoteUnlocks(target)
 					count += 1
 					if target ~= player then
 						ShopService.Client.Notice:Fire(target, player.DisplayName .. " set your rebirths to " .. rebirths)
