@@ -191,6 +191,7 @@ function DailyService:KnitStart()
 		if not ok then warn("[DailyService] could not publish for " .. player.Name .. ": " .. tostring(err)) end
 	end
 	DataService.ProfileLoaded:Connect(function(player)
+		Badges.award(player, "welcome")
 		task.defer(publish, player)
 	end)
 	for _, player in Players:GetPlayers() do

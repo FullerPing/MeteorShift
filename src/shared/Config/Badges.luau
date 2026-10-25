@@ -2,6 +2,7 @@
 -- Roblox Badge ids by key (DailyService awards them). 0 means the badge does not exist yet: nothing is awarded.
 -- Create each badge in Creator Hub > Badges, then paste its id here.
 return {
+	welcome = 0, -- joined the game
 	firstMeteor = 0, -- first hit on a meteor
 	firstCore = 0, -- first shared core crack
 	firstRebirth = 3869834119555599,
