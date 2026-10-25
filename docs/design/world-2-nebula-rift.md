@@ -19,6 +19,12 @@ because the code assumes one world per server everywhere:
 Cost: a teleport (5-10 s loading) and the DataStore session lock has to be handed over cleanly; players are split
 across two server pools (late-game players only, so World 2 servers will be small; meteor sizing already scales by crowd).
 
+## Status (2026-10-25)
+
+Done: steps 1-4 (worlds config, travel + portals, content, the map), the ORE menu's world cards (instead of a separate
+WORLDS tab). Open: Index pages for the three new meteors, the Nebula Egg and its pets, World 2 meteor icons, a
+world-aware tutorial, `WorldGeometry` speed lanes for World 2's avenues, and the save/publish of both places.
+
 ## Build steps (one commit each, on release/interim)
 
 1. **World identity.** `Config.Worlds` (Id, Name, PlaceId, Unlock = { Rebirths = 25 }, meteor type ids, field ids,
