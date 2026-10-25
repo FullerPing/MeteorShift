@@ -4,6 +4,7 @@ return function(t)
 
 	t.test("reads the upvotes from a games/votes reply", function()
 		t.eq(LikeGoal.likes({ data = { { id = 1, upVotes = 9, downVotes = 4 } } }), 9)
+		t.eq(LikeGoal.likes({ id = 1, upVotes = 12, downVotes = 4 }), 12, "the single-game endpoint's flat reply")
 		t.eq(LikeGoal.likes({ data = {} }), nil, "no row")
 		t.eq(LikeGoal.likes({ errors = { { code = 0 } } }), nil, "an error reply")
 		t.eq(LikeGoal.likes("<html>"), nil, "not json")

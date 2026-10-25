@@ -19,8 +19,10 @@ local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local LikeGoalService = Knit.CreateService({ Name = "LikeGoalService", Client = {} })
 
-local GLOW = Color3.fromRGB(150, 225, 255)
-local EDGE = Color3.fromRGB(30, 90, 170)
+local WHITE = Color3.new(1, 1, 1)
+local GLOW = Color3.fromRGB(110, 210, 255)
+local GOLD = Color3.fromRGB(255, 214, 70)
+local INK = Color3.fromRGB(16, 28, 66) -- outlines and the bar's backing: keeps it readable against bright sky and grass
 
 local function create(className: string, props: { [string]: any }, parent: Instance?): any
 	local instance = Instance.new(className)
@@ -29,30 +31,32 @@ local function create(className: string, props: { [string]: any }, parent: Insta
 	return instance
 end
 
-local function text(name: string, y: number, h: number, parent: Instance): TextLabel
-	return create("TextLabel", {
+local function text(name: string, y: number, h: number, color: Color3, parent: Instance): TextLabel
+	local label = create("TextLabel", {
 		Name = name, Position = UDim2.fromScale(0, y), Size = UDim2.fromScale(1, h), BackgroundTransparency = 1,
-		Font = Enum.Font.FredokaOne, Text = "", TextScaled = true, TextColor3 = GLOW, TextStrokeColor3 = EDGE, TextStrokeTransparency = 0.3,
+		Font = Enum.Font.FredokaOne, Text = "", TextScaled = true, TextColor3 = color,
 	}, parent)
+	create("UIStroke", { Color = INK, Thickness = 4, LineJoinMode = Enum.LineJoinMode.Round }, label)
+	return label
 end
 
--- See-through glowing text and a thin bar, sized in studs so it reads like an object in the world
+-- Floating text and a bar with no panel behind them, sized in studs so it reads like an object in the world
 local function buildScreen(anchor: BasePart)
 	local old = anchor:FindFirstChild("LikeHologram")
 	if old then old:Destroy() end
 	local gui = create("BillboardGui", {
-		Name = "LikeHologram", Size = UDim2.fromScale(14, 7), LightInfluence = 0, MaxDistance = 200, ResetOnSpawn = false,
+		Name = "LikeHologram", Size = UDim2.fromScale(18, 9), LightInfluence = 0, MaxDistance = 250, ResetOnSpawn = false,
 	}, anchor)
-	local count = text("Count", 0, 0.42, gui)
+	local count = text("Count", 0, 0.44, WHITE, gui)
 	local track = create("Frame", {
-		Name = "Track", Position = UDim2.fromScale(0.1, 0.48), Size = UDim2.fromScale(0.8, 0.08), BackgroundColor3 = GLOW,
-		BackgroundTransparency = 0.8, BorderSizePixel = 0,
+		Name = "Track", Position = UDim2.fromScale(0.08, 0.5), Size = UDim2.fromScale(0.84, 0.13), BackgroundColor3 = INK,
+		BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	}, gui)
 	create("UICorner", { CornerRadius = UDim.new(0.5, 0) }, track)
-	create("UIStroke", { Color = GLOW, Thickness = 2, Transparency = 0.3 }, track)
-	local fill = create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = GLOW, BackgroundTransparency = 0.1, BorderSizePixel = 0 }, track)
+	create("UIStroke", { Color = WHITE, Thickness = 3 }, track)
+	local fill = create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = GLOW, BorderSizePixel = 0 }, track)
 	create("UICorner", { CornerRadius = UDim.new(0.5, 0) }, fill)
-	local reward = text("Reward", 0.64, 0.24, gui)
+	local reward = text("Reward", 0.68, 0.26, GOLD, gui)
 	return { count = count, track = track, fill = fill, reward = reward }
 end
 
