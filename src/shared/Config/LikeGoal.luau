@@ -6,6 +6,8 @@ return {
 	-- the sign aims at the first goal above the current likes; past the last it thanks everyone
 	Goals = { 25, 50, 100, 250, 500, 1000, 2500, 5000, 10000 },
 	Reward = "LIKE FOR NEW CODES!", -- the line under the bar
+	-- the codes the hologram shows (the public ones; Config.Codes also holds giveaway codes that aren't announced)
+	Codes = { "METEOR", "FOXFRIEND" },
 	Url = "https://games.roproxy.com/v1/games/10769303069/votes",
 	RefreshSeconds = 120,
 }

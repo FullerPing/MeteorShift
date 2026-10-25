@@ -45,18 +45,19 @@ local function buildScreen(anchor: BasePart)
 	local old = anchor:FindFirstChild("LikeHologram")
 	if old then old:Destroy() end
 	local gui = create("BillboardGui", {
-		Name = "LikeHologram", Size = UDim2.fromScale(18, 9), LightInfluence = 0, MaxDistance = 250, ResetOnSpawn = false,
+		Name = "LikeHologram", Size = UDim2.fromScale(18, 11), LightInfluence = 0, MaxDistance = 250, ResetOnSpawn = false,
 	}, anchor)
-	local count = text("Count", 0, 0.44, WHITE, gui)
+	local count = text("Count", 0, 0.36, WHITE, gui)
 	local track = create("Frame", {
-		Name = "Track", Position = UDim2.fromScale(0.08, 0.5), Size = UDim2.fromScale(0.84, 0.13), BackgroundColor3 = INK,
+		Name = "Track", Position = UDim2.fromScale(0.08, 0.41), Size = UDim2.fromScale(0.84, 0.11), BackgroundColor3 = INK,
 		BackgroundTransparency = 0.15, BorderSizePixel = 0,
 	}, gui)
 	create("UICorner", { CornerRadius = UDim.new(0.5, 0) }, track)
 	create("UIStroke", { Color = WHITE, Thickness = 3 }, track)
 	local fill = create("Frame", { Name = "Fill", Size = UDim2.fromScale(0, 1), BackgroundColor3 = GLOW, BorderSizePixel = 0 }, track)
 	create("UICorner", { CornerRadius = UDim.new(0.5, 0) }, fill)
-	local reward = text("Reward", 0.68, 0.26, GOLD, gui)
+	local reward = text("Reward", 0.56, 0.2, GOLD, gui)
+	text("Codes", 0.8, 0.17, WHITE, gui).Text = "CURRENT CODES: " .. table.concat(Config.LikeGoal.Codes, ", ")
 	return { count = count, track = track, fill = fill, reward = reward }
 end
 
