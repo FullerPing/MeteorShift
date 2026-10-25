@@ -53,4 +53,5 @@ return {
 	Feedback = require(script.Feedback),
 	Badges = require(script.Badges),
 	Codes = require(script.Codes),
+	Worlds = require(script.Worlds),
 }
