@@ -37,8 +37,9 @@ return {
 	-- tier 7, a rebirth count (EvolveRebirths). Prices don't rise with rebirths, so the late tiers are
 	-- gated by rank: each is priced for the income of the rank that opens it (2026-10-22, tiers 9-16
 	-- added; tiers 7 and 8 used to need levels 24 and 34, hours after the rebirths they were priced for).
-	-- Owner, 2026-10-24: tier 4 opens at the first rebirth and tier 8 at rebirth 10, then one tier every 2 rebirths
+	-- Owner, 2026-10-24: tier 4 opens at the first rebirth and tier 8 at rebirth 10, then one tier every 2 rebirths;
+	-- 2026-10-25: every 3 rebirths from rebirth 10 (tiers 9-16 at 13, 16, ... 34, re-priced for those ranks)
 	EvolveLevel = { 1, 1, 1 },
-	EvolveRebirths = { [4] = 1, [5] = 3, [6] = 5, [7] = 7, [8] = 10, [9] = 12, [10] = 14, [11] = 16, [12] = 18, [13] = 20,
-		[14] = 22, [15] = 24, [16] = 26 },
+	EvolveRebirths = { [4] = 1, [5] = 3, [6] = 5, [7] = 7, [8] = 10, [9] = 13, [10] = 16, [11] = 19, [12] = 22, [13] = 25,
+		[14] = 28, [15] = 31, [16] = 34 },
 }

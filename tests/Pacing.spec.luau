@@ -106,28 +106,29 @@ return function(t: any)
 	end)
 
 	-- Owner, 2026-10-22: faster laps. The first pays for the gear ramp; from the second they lengthen to the fourth. After
-	-- that a lap that buys a newly opened gear tier runs long and the one after it short, about 14 minutes on average
+	-- that each lap is fitted to about 14-15 minutes, through every listed rank (gear tiers open up to rebirth 34)
 	t.test("laps lengthen from the second rebirth to the fourth, then average about 14 minutes", function()
-		local run = Pacing.simulate(8 * 3600, { rebirths = 30 })
-		t.ok(#run.rebirthTimes >= 30, "only " .. #run.rebirthTimes .. " rebirths in eight hours")
+		local ranks = #Config.Rebirth.Costs
+		local run = Pacing.simulate(10 * 3600, { rebirths = ranks })
+		t.ok(#run.rebirthTimes >= ranks, "only " .. #run.rebirthTimes .. " rebirths in ten hours")
 		local lap, previous = {}, 0
-		for index = 1, 30 do
+		for index = 1, ranks do
 			lap[index] = run.rebirthTimes[index] - previous
 			previous = run.rebirthTimes[index]
 		end
 		t.ok(lap[2] < lap[3] and lap[3] < lap[4], "laps two to four get longer")
 		local sum = 0
-		for index = 5, 30 do
+		for index = 5, ranks do
 			sum += lap[index]
 			t.ok(lap[index] >= 8 * 60 and lap[index] <= 22 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
 		end
-		local average = sum / 26 / 60
-		t.ok(average >= 12 and average <= 16, string.format("laps 5 to 30 average %.1f min", average))
+		local average = sum / (ranks - 4) / 60
+		t.ok(average >= 12 and average <= 16, string.format("laps 5 to %d average %.1f min", ranks, average))
 	end)
 
 	t.test("every gear tier is bought within a lap of the rank that opens it", function()
 		local Levels = require(t.shared.Levels)
-		local run = Pacing.simulate(8 * 3600, { rebirths = 30 })
+		local run = Pacing.simulate(10 * 3600, { rebirths = #Config.Rebirth.Costs })
 		for _, kind in { "pickaxe", "backpack" } do
 			for tier = 4, #Config.Pickaxes do
 				local opens = run.rebirthTimes[Levels.evolveRebirths(tier)]

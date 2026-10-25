@@ -103,7 +103,9 @@ return function(t: any)
 			for tier = 1, #list do
 				local sum = 0
 				for level = 1, Gear.cap(tier) - 1 do sum += Gear.price(kind, tier, level) :: number end
-				t.ok(math.abs(sum - list[tier].LevelCost) <= Gear.cap(tier), kind .. " tier " .. tier .. " levels cost " .. sum)
+				-- past ~1e16 a double's step exceeds $1, so allow a relative rounding error too
+				local slack = math.max(Gear.cap(tier), list[tier].LevelCost * 1e-12)
+				t.ok(math.abs(sum - list[tier].LevelCost) <= slack, kind .. " tier " .. tier .. " levels cost " .. sum)
 				t.ok(sum > before, kind .. " tier " .. tier .. " levels cost more than the tier before")
 				before = sum
 			end

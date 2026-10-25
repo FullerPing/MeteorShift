@@ -39,7 +39,7 @@ end
 -- post capacity come with it. Shards buy Colony Perks (Config.Perks), not production.
 Home.Line = {
 	Name = "Production Line",
-	Costs = { 0, 2.8e3, 8.5e3, 24e3, 222e3, 1.71e6, 12.3e6, 173e6, 1.09e9, 6.33e9, 35.6e9, 208e9, 1.16e12, 6.2e12, 32e12, 174e12 },
+	Costs = { 0, 2.8e3, 8.5e3, 24e3, 222e3, 1.71e6, 12.3e6, 173e6, 2.12e9, 25.1e9, 286e9, 3.28e12, 111e12, 1.18e15, 12.6e15, 134e15 },
 }
 
 -- What each station does at each line level (index = line level)
