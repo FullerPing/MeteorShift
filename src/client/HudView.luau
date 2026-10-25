@@ -14,6 +14,7 @@ local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local MeteorIcon = require(ReplicatedStorage.Shared.MeteorIcon)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local UI = require(script.Parent.UI)
 local Cartoon = require(script.Parent.Cartoon)
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
@@ -399,8 +400,10 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 				TextXAlignment = Enum.TextXAlignment.Center,
 			}), tipShown),
 			-- The hourly Quartz meteor (Config.Meteor.Hourly): a line of text under the clock, counting down for everyone
+			-- in World 1, the only world it lands in
 			scope:New("Frame")({
 				Name = "Hourly", AnchorPoint = Vector2.new(0.5, 0), Size = UDim2.fromOffset(0, 36), AutomaticSize = Enum.AutomaticSize.X,
+				Visible = Worlds.here().Id == 1,
 				Position = scope:Computed(function(use) return UDim2.fromOffset(280, if use(tipShown) then 127 else 103) end),
 				BackgroundTransparency = 1,
 				[Children] = {

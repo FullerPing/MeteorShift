@@ -22,14 +22,14 @@ return {
 	CrustHitXp = 0.25,
 	CoreHitXp = 0.5,
 	CrackBonusXp = 25,
-	TypeMult = { iron = 1, frost = 1.5, crystal = 2, alien = 3, quartz = 2 }, -- by ore id
+	TypeMult = { iron = 1, frost = 1.5, crystal = 2, alien = 3, quartz = 2, nebula = 1, solar = 1.5, eclipse = 2 }, -- by ore id
 
 	-- Ore clearance: the player level that mines each ore at its full yield. Under it a hit
 	-- yields UnderLevelFloor of its ore at level 1, rising geometrically to 1 at the clearance
 	-- level (Shared.Levels.oreYield). Nobody is locked out and the refinery never slows down:
 	-- the bar price is the same for everyone, the fraction just keeps a newcomer in a
 	-- Crystal meteor from outrunning the levels that earn it.
-	OreLevel = { iron = 1, frost = 12, crystal = 24, alien = 38, quartz = 1 },
+	OreLevel = { iron = 1, frost = 12, crystal = 24, alien = 38, quartz = 1, nebula = 1, solar = 12, eclipse = 24 },
 	UnderLevelFloor = 0.4,
 
 	-- What evolving the pickaxe or backpack to each tier needs, and buying the same-numbered production

@@ -12,6 +12,7 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local Config = require(ReplicatedStorage.Shared.Config)
 local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
@@ -32,6 +33,7 @@ local PANEL_FLAGS = require(script.Parent.Parent.MenuFlags).ALL
 
 function FieldTravelController:KnitStart()
 	local DebrisService = Knit.GetService("DebrisService")
+	local WorldService = Knit.GetService("WorldService")
 	local PlayerStateService = Knit.GetService("PlayerStateService")
 	local state: any = nil
 	local playerGui = player:WaitForChild("PlayerGui")
@@ -63,12 +65,13 @@ function FieldTravelController:KnitStart()
 
 	-- mirrors DebrisService:IsFieldOpen: a map without gates (the archived v2 map) has no locked fields
 	local function isOpen(field: any): boolean
+		if field.Destination then return Worlds.isOpen(field.Destination, if state then state.rebirths or 0 else 0) end
 		local map = WorldMap.find()
 		if not (map and map:FindFirstChild("Gates")) then return true end
 		return FieldGate.isOpen(field, if state then state.level or 1 else 1, if state then state.rebirths or 0 else 0)
 	end
 	local cards: { [any]: Frame } = {}
-	for _, field in Config.Debris.Fields do
+	for _, field in OreFieldsMenu.entries(Worlds.here().Id) do
 		local card = list:WaitForChild(field.Id) :: Frame
 		cards[field] = card
 		;(card:WaitForChild("Travel") :: TextButton).Activated:Connect(function()
@@ -77,6 +80,12 @@ function FieldTravelController:KnitStart()
 				return
 			end
 			player:SetAttribute(OPEN, false)
+			if field.Destination then
+				-- another world: the server checks the unlock, saves and teleports (WorldService)
+				Sfx.play("Teleport")
+				WorldService:Travel(field.Destination.Id)
+				return
+			end
 			task.spawn(function()
 				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
 				local from = root and root.Position
@@ -99,7 +108,9 @@ function FieldTravelController:KnitStart()
 			travel.Visible = open
 			MenuTheme.state(travel, open, "blue")
 			lock.Visible = not open
-			;(lock:FindFirstChild("Label") :: TextLabel).Text = string.upper(FieldGate.label(field))
+			;(lock:FindFirstChild("Label") :: TextLabel).Text = if field.Destination
+				then "REBIRTH " .. ((field.Destination.Unlock or {}).Rebirths or 0)
+				else string.upper(FieldGate.label(field))
 			card.BackgroundTransparency = if open then 0 else 0.25
 		end
 	end

@@ -9,15 +9,32 @@ local NativeUI = require(script.Parent.Parent.NativeUI)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 
-local OreFields = {}
-OreFields.LAYOUT = 2 -- bumped when the controls change; FieldTravelController rebuilds an older copy
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
+local FieldTravel = require(ReplicatedStorage.Shared.FieldTravel)
 
+local OreFields = {}
+OreFields.LAYOUT = 3 -- bumped when the controls change; FieldTravelController rebuilds an older copy
+
+-- The cards: this world's fields, then one per other world (its `Destination`, which WorldService travels to)
+function OreFields.entries(worldId: number): { any }
+	local list: { any } = {}
+	for _, field in FieldTravel.inWorld(worldId) do table.insert(list, field) end
+	for _, world in Config.Worlds.List do
+		if world.Id ~= worldId then
+			table.insert(list, { Id = "World" .. world.Id, Name = world.Name, Color = world.Color, Destination = world })
+		end
+	end
+	return list
+end
+
+local ENTRIES = OreFields.entries(Worlds.here().Id)
 local CARD_W, CARD_H, GAP, SIDE, TOP = 290, 78, 12, 24, 92
-local ROWS = math.ceil(#Config.Debris.Fields / 2)
+local ROWS = math.ceil(#ENTRIES / 2)
 OreFields.SIZE = Vector2.new(SIDE * 2 + CARD_W * 2 + GAP, TOP + ROWS * (CARD_H + GAP) + 34)
 
 -- What a field's rocks pay, for its card
 function OreFields.pays(field: any): string
+	if field.Destination then return field.Destination.Blurb end
 	local reward = field.Reward
 	if reward.Kind == "Xp" then
 		return "Pays XP to level up"
@@ -36,7 +53,7 @@ function OreFields.build(): ScreenGui
 
 	local list = NativeUI.create("Frame", { Name = "Fields", BackgroundTransparency = 1, Position = UDim2.fromOffset(SIDE, TOP),
 		Size = UDim2.new(1, -SIDE * 2, 0, ROWS * (CARD_H + GAP)), ZIndex = 2 }, panel)
-	for index, field in Config.Debris.Fields do
+	for index, field in ENTRIES do
 		local column, row = (index - 1) % 2, (index - 1) // 2
 		local card = MenuTheme.whiteCard(list, field.Id)
 		card.Position, card.Size = UDim2.fromOffset(column * (CARD_W + GAP), row * (CARD_H + GAP)), UDim2.fromOffset(CARD_W, CARD_H)
@@ -44,7 +61,7 @@ function OreFields.build(): ScreenGui
 		local well = MenuTheme.card(card, "Swatch", field.Color, field.Color:Lerp(Palette.NAVY, 0.25), 12)
 		well.Position, well.Size, well.ZIndex = UDim2.fromOffset(10, 10), UDim2.fromOffset(CARD_H - 20, CARD_H - 20), 3
 		MenuTheme.stroke(well, Palette.NAVY, 2)
-		MenuTheme.icon(well, "Icon", "ore", UDim2.fromScale(0.12, 0.12), UDim2.fromScale(0.76, 0.76))
+		MenuTheme.icon(well, "Icon", if field.Destination then "meteor" else "ore", UDim2.fromScale(0.12, 0.12), UDim2.fromScale(0.76, 0.76))
 
 		local name = MenuTheme.label(card, "Name", string.upper(field.Name), 20, Palette.NAVY, MenuTheme.TITLE_FONT)
 		name.Position, name.Size = UDim2.fromOffset(CARD_H, 12), UDim2.fromOffset(CARD_W - CARD_H - 110, 26)

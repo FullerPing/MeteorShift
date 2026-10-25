@@ -29,6 +29,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local CallMeteor = require(ReplicatedStorage.Shared.CallMeteor)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -213,11 +214,12 @@ local function pickType(): Config.MeteorType
 		return MeteorConfig.Types[forced]
 	end
 	meteorsSinceBoss += 1
-	if meteorsSinceBoss >= MeteorConfig.Boss.EveryMeteors and bossAllowed() then
+	local world = Worlds.here().Id
+	if world == 1 and meteorsSinceBoss >= MeteorConfig.Boss.EveryMeteors and bossAllowed() then
 		meteorsSinceBoss = 0
 		return MeteorConfig.Types[MeteorConfig.Boss.Type]
 	end
-	local picked = MeteorTypes.pick(math.random())
+	local picked = MeteorTypes.pick(math.random(), MeteorConfig.WorldTypeOrder[world])
 	if math.random() < Config.Hooks.GoldenMeteor.Chance then
 		return MeteorTypes.golden(picked)
 	end
@@ -683,7 +685,8 @@ function MeteorService:_loop()
 		local queued = devNext
 		devNext = nil
 		local length = countdownLength(first)
-		local hourlyAt = if queued then nil else MeteorTypes.hourly(now(), length)
+		-- the hourly Quartz meteor lands in World 1 only
+		local hourlyAt = if queued or Worlds.here().Id ~= 1 then nil else MeteorTypes.hourly(now(), length)
 		local meteorType = queued or (if hourlyAt then MeteorConfig.Types[MeteorConfig.Hourly.Type] else pickType())
 		if hourlyAt then
 			RewardService:Announce("Boss", "The hourly Quartz meteor lands at :" .. string.format("%02d", MeteorConfig.Hourly.Minute) .. " on every server!")

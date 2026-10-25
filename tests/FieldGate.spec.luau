@@ -39,8 +39,11 @@ return function(t)
 
 	t.test("the ladder runs in the design's order and only climbs", function()
 		local ids = {}
-		for _, f in Config.Debris.Fields do table.insert(ids, f.Id) end
+		for _, f in require(t.shared.FieldTravel).inWorld(1) do table.insert(ids, f.Id) end
 		t.eq(table.concat(ids, ","), "RustWorks,FrostYard,XpMine,VioletQuarry,SulfurRidge,EmberShelf,GlassScar,Starfall,HaloLedge")
+		local rift = {}
+		for _, f in require(t.shared.FieldTravel).inWorld(2) do table.insert(rift, f.Id) end
+		t.eq(table.concat(rift, ","), "CometDrift,StarlightShelf,EventHorizon", "Nebula Rift's three")
 		local lastLevel = 0
 		for _, f in Config.Debris.Fields do
 			local unlock = f.Unlock

@@ -30,20 +30,21 @@ local MeteorTypes = {}
 -- lands in the types' Weight bands in TypeOrder. Everyone mines the type's own ore; what a
 -- player's level yields in full is Shared.Levels.oreYield (a fraction below it, never nothing), so
 -- no lobby is stuck on one type and nobody is locked out.
-function MeteorTypes.pick(roll: number): MeteorType
+function MeteorTypes.pick(roll: number, order: { string }?): MeteorType
+	local ids = order or TypeOrder -- a world's schedule (Config.Meteor.WorldTypeOrder), World 1's by default
 	local total = 0
-	for _, id in TypeOrder do
+	for _, id in ids do
 		total += Types[id].Weight
 	end
 	local target = roll * total
 	local bandEnd = 0
-	for _, id in TypeOrder do
+	for _, id in ids do
 		bandEnd += Types[id].Weight
 		if target < bandEnd then
 			return Types[id]
 		end
 	end
-	return Types[TypeOrder[#TypeOrder]]
+	return Types[ids[#ids]]
 end
 
 -- Resonance: Mining Power multiplier for each of the players currently on one node.

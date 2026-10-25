@@ -10,8 +10,10 @@ return {
 	-- average (tests/Pacing.spec holds them there). Edit them together with Config.Pickaxes, Config.Backpacks and
 	-- Config.Home, then re-run the model (docs/guide/economy.md).
 	-- Re-fit 2026-10-24 (owner: tier 4 opens at rebirth 1 and tier 8 at rebirth 10, then a tier every 2 rebirths).
+	-- From rebirth 26 the player is in Nebula Rift (Config.Worlds), whose ores pay 3x: those costs are 3x World 1's
+	-- curve, so a lap there takes as long as one did in World 1 (owner, 2026-10-25).
 	Costs = { 34e3, 233e3, 778e3, 1.96e6, 4.64e6, 11.7e6, 28e6, 70.8e6, 159e6, 390e6, 980e6, 2.33e9, 5.83e9, 13.7e9, 33.8e9,
-		80e9, 208e9, 472e9, 1.18e12, 2.8e12, 6.6e12, 15.2e12, 36e12, 84e12, 198e12, 460e12, 1.1e15, 2.6e15, 6e15, 14.2e15 },
+		80e9, 208e9, 472e9, 1.18e12, 2.8e12, 6.6e12, 15.2e12, 36e12, 84e12, 198e12, 1.38e15, 3.3e15, 7.8e15, 18e15, 42.6e15 },
 	CashMult = 2, -- bar sales multiplier gained per rebirth, multiplicative (x2, x4, x8, ...)
 	-- Cash price inflation per rebirth (Shared.Rebirth.priceMult). 1 = gear and production prices never rise,
 	-- so each rebirth really is worth x2. Shard prices and Robux products never inflate.
@@ -36,6 +38,9 @@ return {
 		[2] = "Aurora Egg (Epic or better only), +1 pet slot",
 		[3] = "Alien Boss meteor every hour, new Alien ore, the Halo Ledge field",
 		[4] = "+1 pet slot",
+		[25] = "Nebula Rift, World 2: ores sell for 3x",
+		[27] = "the Starlight Shelf field in Nebula Rift",
+		[30] = "the Event Horizon field in Nebula Rift",
 	},
 
 	ConfirmWindow = 3, -- seconds the panel waits for the second "Are you sure?" press

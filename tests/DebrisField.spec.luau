@@ -120,21 +120,25 @@ return function(t: any)
 		local Levels = require(t.shared.Levels)
 		local Rebirth = require(t.shared.Rebirth)
 		local Pets = require(t.shared.Pets)
+		local Worlds = require(t.shared.Worlds)
 		local balance = Config.Balance
-		local stages = { { 5, 5, 5, 12, 1 }, { 5, 5, 5, 16, 2 }, { 5, 5, 5, 20, 3 }, { 6, 6, 6, 24, 6 }, { 7, 7, 7, 30, 8 }, { 8, 8, 8, 40, 12 }, { 8, 8, 8, 50, 16 } }
+		local stages = { { 5, 5, 5, 12, 1 }, { 5, 5, 5, 16, 2 }, { 5, 5, 5, 20, 3 }, { 6, 6, 6, 24, 6 }, { 7, 7, 7, 30, 8 }, { 8, 8, 8, 40, 12 }, { 8, 8, 8, 50, 16 },
+			{ 15, 15, 15, 60, 27 }, { 16, 16, 16, 70, 30 } } -- the last two in Nebula Rift
 		for _, field in Config.Debris.Fields do
 			local r = field.Reward
 			if r.Kind == "Ore" then
 				for _, stage in stages do
 					local pickTier, packTier, line, level, rebirths = table.unpack(stage)
 					local unlock = field.Unlock or {}
-					if (unlock.Level or 0) <= level and (unlock.Rebirths or 0) <= rebirths then
+					-- each world's fields against that world's income, from the stages played there
+					local world = Worlds.reached(rebirths).Id
+					if (unlock.Level or 0) <= level and (unlock.Rebirths or 0) <= rebirths and (field.World or 1) == world then
 						local pick = Gear.pickaxe(pickTier, Gear.cap(pickTier))
 						local capacity = Gear.capacity(packTier, Gear.cap(packTier))
 						local lineRate = math.min(Line.station("conveyor", line).Rate :: number, Line.station("refinery", line).Rate :: number)
 						local mult = Rebirth.multiplier(rebirths)
 						local income = Pacing.expectedIncome({ orePerHit = pick.OrePerHit, swing = pick.Swing, capacity = capacity, level = level,
-							pets = Pets.bonuses(Pets.fresh()), lineRate = lineRate, saleMult = mult }).perSecond
+							pets = Pets.bonuses(Pets.fresh()), lineRate = lineRate, saleMult = mult, world = world }).perSecond
 						local perHit = pick.OrePerHit * (r.OreMult :: number) * Levels.oreYield(level, r.Ore :: string)
 						local rate = capacity / (capacity / perHit * pick.Swing / balance.HitsPerMinuteShare + balance.TripSeconds)
 						local ratio = math.min(rate, lineRate) * Config.Home.BarPrices[r.Ore :: string] * mult / income

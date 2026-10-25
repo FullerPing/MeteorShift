@@ -78,7 +78,14 @@ Meteor.Knockback = {
 -- rules (odds, twist math). Everyone mines every type; what a hit yields by player level
 -- (Config.Levels, Shared.Levels.oreYield) is what keeps it fair. The Alien boss is not in
 -- the weighted schedule: Meteor.Boss brings it in. Seasonal meteors are not built yet.
-Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest, the weighted schedule
+-- Each world (Config.Worlds) has its own weighted schedule, lowest to highest. Nebula Rift's three mirror World 1's odds
+-- and ore levels with ores worth 3x, so a lap there takes as long as one in World 1 at a third of the rebirth cost.
+-- The Alien boss and the hourly Quartz meteor land in World 1 only.
+Meteor.WorldTypeOrder = {
+	{ "Iron", "Ice", "Crystal" },
+	{ "Nebula", "Solar", "Eclipse" },
+}
+Meteor.TypeOrder = Meteor.WorldTypeOrder[1] -- World 1's: what Pacing and the shop price checks model by default
 
 -- The Alien boss meteor: every EveryMeteors-th meteor (about hourly) on a server where someone
 -- has at least MinRebirths rebirths (the rebirth 3 unlock). It pays a new, rarer ore.
@@ -229,6 +236,73 @@ Meteor.Types = {
 		OreMaterial = Enum.Material.Glass,
 		CoreColor = Color3.fromRGB(255, 150, 220),
 		GlowColor = Color3.fromRGB(255, 190, 240),
+	} :: MeteorType,
+	-- Nebula Rift (World 2)
+	Nebula = {
+		Id = "Nebula",
+		DisplayName = "Nebula Meteor",
+		Ore = "nebula",
+		RequiredTier = 1,
+		YieldMult = 1,
+		HpMult = 1,
+		ActiveDuration = 150,
+		ShardMult = 1,
+		Weight = 60,
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(124, 92, 214),
+			Color3.fromRGB(146, 112, 232),
+			Color3.fromRGB(100, 74, 186),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(196, 170, 255),
+		OreMaterial = Enum.Material.Glass,
+		CoreColor = Color3.fromRGB(138, 92, 255),
+		GlowColor = Color3.fromRGB(170, 130, 255),
+	} :: MeteorType,
+	Solar = {
+		Id = "Solar",
+		DisplayName = "Solar Meteor",
+		Ore = "solar",
+		RequiredTier = 3,
+		YieldMult = 1,
+		HpMult = 1.1,
+		ActiveDuration = 150,
+		ShardMult = 1.5,
+		Weight = 25,
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(240, 160, 64),
+			Color3.fromRGB(255, 186, 90),
+			Color3.fromRGB(214, 132, 44),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(255, 226, 120),
+		OreMaterial = Enum.Material.Neon,
+		CoreColor = Color3.fromRGB(255, 181, 71),
+		GlowColor = Color3.fromRGB(255, 200, 90),
+	} :: MeteorType,
+	Eclipse = {
+		Id = "Eclipse",
+		DisplayName = "Eclipse Meteor",
+		Ore = "eclipse",
+		RequiredTier = 5,
+		YieldMult = 1,
+		HpMult = 1.2,
+		ActiveDuration = 150,
+		ShardMult = 2,
+		Weight = 15,
+		Twist = "Resonance",
+		CrustColors = {
+			Color3.fromRGB(58, 34, 86),
+			Color3.fromRGB(76, 46, 110),
+			Color3.fromRGB(44, 26, 68),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(240, 140, 255),
+		OreMaterial = Enum.Material.Neon,
+		CoreColor = Color3.fromRGB(224, 112, 255),
+		GlowColor = Color3.fromRGB(230, 130, 255),
 	} :: MeteorType,
 } :: { [string]: MeteorType }
 

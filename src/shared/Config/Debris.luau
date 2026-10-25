@@ -18,7 +18,8 @@ export type Reward = {
 }
 -- What opens a field (Shared.FieldGate): a player level, or a number of rebirths. No Unlock means always open.
 export type Unlock = { Level: number?, Rebirths: number? }
-export type Field = { Id: string, Name: string, Color: Color3, Reward: Reward, Unlock: Unlock? }
+export type Field = { Id: string, Name: string, Color: Color3, Reward: Reward, Unlock: Unlock?,
+	World: number? } -- World: the world it is in (Config.Worlds), 1 when left out
 
 return {
 	Hp = 4, -- hits to break for the player a rock is sized for (HP is 4 × that pickaxe's Mining Power); the default for rocks outside a field
@@ -66,6 +67,13 @@ return {
 			Reward = { Kind = "Cash", Hp = 28, Seconds = 40, CashFloor = 200, CeilingShare = 0.06 }, Unlock = { Rebirths = 1 } },
 		{ Id = "HaloLedge", Name = "Halo Ledge", Color = Color3.fromRGB(255, 213, 74),
 			Reward = { Kind = "Ore", Hp = 32, Ore = "alien", OreMult = 0.045 }, Unlock = { Rebirths = 3 } },
+		-- Nebula Rift (World 2, rebirth 25+): the same rules, its rocks sized and paid for that world's income
+		{ Id = "CometDrift", Name = "Comet Drift", Color = Color3.fromRGB(63, 224, 208), World = 2,
+			Reward = { Kind = "Cash", Hp = 28, Seconds = 40, CashFloor = 200, CeilingShare = 0.06 } },
+		{ Id = "StarlightShelf", Name = "Starlight Shelf", Color = Color3.fromRGB(255, 181, 71), World = 2,
+			Reward = { Kind = "Ore", Hp = 32, Ore = "solar", OreMult = 0.48 }, Unlock = { Rebirths = 27 } },
+		{ Id = "EventHorizon", Name = "Event Horizon", Color = Color3.fromRGB(224, 112, 255), World = 2,
+			Reward = { Kind = "Ore", Hp = 36, Ore = "eclipse", OreMult = 0.17 }, Unlock = { Rebirths = 30 } },
 	} :: { Field },
 	TravelCooldown = 3, -- seconds between teleports
 	Rock = {

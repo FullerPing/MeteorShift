@@ -18,6 +18,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Pacing = require(ReplicatedStorage.Shared.Pacing)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Refining = require(script.Parent.Parent.Lib.Refining)
@@ -67,6 +68,7 @@ function EconomyService:ExpectedIncome(player: Player): Pacing.Income
 		pets = PlayerStateService:GetPetBonuses(player),
 		lineRate = if data then Refining.lineRate(data, 1, Perks.lineMult(data.perks)) else 0,
 		saleMult = self:SaleMultiplier(player, true),
+		world = Worlds.here().Id, -- Nebula Rift's ores pay 3x, and field cash and packs follow it
 	})
 end
 

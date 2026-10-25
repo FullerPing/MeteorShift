@@ -21,6 +21,20 @@ function Worlds.current(placeId: number, studio: boolean, override: any): Config
 	return Config.List[1]
 end
 
+-- The world this server or client is in (reads the game; everything above stays pure)
+function Worlds.here(): Config.World
+	return Worlds.current(game.PlaceId, game:GetService("RunService"):IsStudio(), workspace:GetAttribute("DevWorld"))
+end
+
+-- The world a player of `rebirths` plays in when they go as far as they can: the last one they have opened
+function Worlds.reached(rebirths: number): Config.World
+	local best = Config.List[1]
+	for _, world in Config.List do
+		if Worlds.isOpen(world, rebirths) then best = world end
+	end
+	return best
+end
+
 function Worlds.isOpen(world: Config.World, rebirths: number): boolean
 	return world.Unlock == nil or rebirths >= world.Unlock.Rebirths
 end

@@ -106,6 +106,27 @@ ImpactFX.Types = {
 		Rain = { Rate = 20, Seconds = 9, Height = 55, Area = 120, Size = { 1.2, 0 }, Lifetime = { 2.6, 4 },
 			Accel = Vector3.new(0, -6, 0), Colors = { Color3.fromRGB(255, 220, 245), Color3.fromRGB(255, 255, 255) }, LightEmission = 1 },
 	} :: Flavor,
+	-- Nebula Rift: violet stardust that drifts
+	Nebula = {
+		Burst = { Count = 56, Speed = { 25, 90 }, Size = { 1.5, 0 }, Lifetime = { 1.8, 3 }, Accel = Vector3.new(0, -16, 0),
+			Colors = { Color3.fromRGB(210, 190, 255), Color3.fromRGB(138, 92, 255) }, LightEmission = 1, Drag = 0.9 },
+		Rain = { Rate = 18, Seconds = 8, Height = 50, Area = 120, Size = { 1.1, 0 }, Lifetime = { 2.6, 4 },
+			Accel = Vector3.new(0, -5, 0), Colors = { Color3.fromRGB(190, 160, 255), Color3.fromRGB(120, 230, 220) }, LightEmission = 1 },
+	} :: Flavor,
+	-- Solar flares: hot gold sparks
+	Solar = {
+		Burst = { Count = 60, Speed = { 40, 125 }, Size = { 1.1, 0 }, Lifetime = { 1.2, 2.2 }, Accel = Vector3.new(0, -60, 0),
+			Colors = { Color3.fromRGB(255, 244, 170), Color3.fromRGB(255, 160, 40) }, LightEmission = 1, Drag = 0.3 },
+		Rain = { Rate = 22, Seconds = 6, Height = 70, Area = 120, Size = { 1, 0 }, Lifetime = { 2, 3.2 },
+			Accel = Vector3.new(0, -16, 0), Colors = { Color3.fromRGB(255, 220, 110), Color3.fromRGB(255, 120, 30) }, LightEmission = 1 },
+	} :: Flavor,
+	-- Eclipse: dark motes with a magenta rim, rising
+	Eclipse = {
+		Burst = { Count = 64, Speed = { 20, 80 }, Size = { 1.8, 0.3 }, Lifetime = { 2, 3.4 }, Accel = Vector3.new(0, 8, 0),
+			Colors = { Color3.fromRGB(240, 140, 255), Color3.fromRGB(80, 40, 120) }, LightEmission = 0.8, Drag = 1.1 },
+		Rain = { Rate = 16, Seconds = 9, Height = 2, Area = 100, Size = { 1.3, 0 }, Lifetime = { 3, 5 },
+			Accel = Vector3.new(0, 8, 0), Colors = { Color3.fromRGB(230, 130, 255), Color3.fromRGB(110, 60, 170) }, LightEmission = 1 },
+	} :: Flavor,
 }
 
 return ImpactFX
