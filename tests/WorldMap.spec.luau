@@ -20,14 +20,16 @@ return function(t: any)
 		local humanoid = Instance.new("Humanoid"); humanoid.Parent = character
 		return map, character, root, humanoid, point
 	end
-	t.test("refinery menu permits a living character through the 18 stud boundary", function()
+	t.test("refinery menu permits a living character through the RefineryReach boundary", function()
 		local map, character, root, _, point = fixture()
+		local reach = WorldMap.RefineryReach
+		t.ok(reach >= 14 + 8, "covers the 14 stud prompt plus a late server position")
 		t.ok(WorldMap.canUseRefinery(map, character))
-		root.Position = point.Position + Vector3.new(18, 0, 0)
+		root.Position = point.Position + Vector3.new(reach, 0, 0)
 		t.ok(WorldMap.canUseRefinery(map, character))
-		root.Position = point.Position + Vector3.new(18.01, 0, 0)
+		root.Position = point.Position + Vector3.new(reach + 0.01, 0, 0)
 		t.eq(WorldMap.canUseRefinery(map, character), false)
-		root.Position = point.Position + Vector3.new(0, 19, 0)
+		root.Position = point.Position + Vector3.new(0, reach + 1, 0)
 		t.eq(WorldMap.canUseRefinery(map, character), false)
 		map:Destroy(); character:Destroy()
 	end)

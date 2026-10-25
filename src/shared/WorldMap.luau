@@ -56,13 +56,15 @@ function WorldMap.refineryPoints(root: Instance?): { BasePart }
 	return points
 end
 
--- The prompt is 14 studs; menu transactions retain four studs of movement tolerance.
+-- The prompt is 14 studs; menu transactions allow ten more, because the server sees a running (or fast-walking)
+-- character a few hundred ms late: at 18 a deposit tapped right after the prompt was often refused.
+WorldMap.RefineryReach = 24
 function WorldMap.canUseRefinery(map: Instance?, character: Model?): boolean
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	if not (root and root:IsA("BasePart") and humanoid and humanoid.Health > 0) then return false end
 	for _, point in WorldMap.refineryPoints(map) do
-		if (root.Position - point.Position).Magnitude <= 18 then return true end
+		if (root.Position - point.Position).Magnitude <= WorldMap.RefineryReach then return true end
 	end
 	return false
 end

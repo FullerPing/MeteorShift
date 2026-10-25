@@ -323,8 +323,15 @@ function Controller:KnitStart()
 	p.claimCard.Action.Activated:Connect(function() transact("claim") end)
 	p.Order.ResetPriority.Activated:Connect(function() if state then save({}) end end)
 	for _, id in { "refine", "production" } do p[id .. "Tab"].Activated:Connect(function() page, feedback = id, ""; update() end) end
-	service.Notice:Connect(function(message) feedback = message; update() end)
-	upgrades.Notice:Connect(function(message) feedback = message; update() end)
+	local function notice(message: string)
+		feedback = message; update()
+		-- a "Move closer" the server sent while we stand at a refinery point (it saw us late): don't leave it up
+		if message:find("Move closer") and near then
+			task.delay(2, function() if feedback == message then feedback = ""; update() end end)
+		end
+	end
+	service.Notice:Connect(notice)
+	upgrades.Notice:Connect(notice)
 	Knit.GetService("PlayerStateService").State:Observe(function(snapshot) state = snapshot; update() end)
 	service.Open:Connect(function() self:Open() end)
 	N.bindOpen(gui, "RefineryOpen", function() self:Close() end)
