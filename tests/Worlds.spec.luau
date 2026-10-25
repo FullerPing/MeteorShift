@@ -5,13 +5,22 @@ return function(t: any)
 	local Config = require(t.shared.Config.Worlds)
 	local nebula = Worlds.find(2) :: any
 
-	t.test("unknown places are World 1; a listed PlaceId picks its world", function()
+	t.test("unknown places are World 1; either listed PlaceId picks its world", function()
 		t.eq(Worlds.current(123, false, nil).Id, 1)
 		t.eq(Worlds.current(0, false, nil).Id, 1, "PlaceId 0 never matches an uncreated world")
-		local saved = nebula.PlaceId
-		nebula.PlaceId = 555
+		local saved = nebula.PlaceIds
+		nebula.PlaceIds = { 555, 666 }
 		t.eq(Worlds.current(555, false, nil).Id, 2)
-		nebula.PlaceId = saved
+		t.eq(Worlds.current(666, false, nil).Id, 2)
+		nebula.PlaceIds = saved
+	end)
+
+	t.test("travel stays in the same game: live to live, testing to testing", function()
+		local home = Config.List[1]
+		t.eq(Worlds.destination(nebula, home.PlaceIds[1]), nebula.PlaceIds[1])
+		t.eq(Worlds.destination(nebula, home.PlaceIds[2]), nebula.PlaceIds[2])
+		t.eq(Worlds.destination(home, nebula.PlaceIds[2]), home.PlaceIds[2])
+		t.eq(Worlds.destination(nebula, 123), nebula.PlaceIds[1], "an unlisted place uses the live game's")
 	end)
 
 	t.test("DevWorld overrides only in Studio", function()

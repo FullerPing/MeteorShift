@@ -16,9 +16,16 @@ function Worlds.current(placeId: number, studio: boolean, override: any): Config
 	local forced = if studio then Worlds.find(override) else nil
 	if forced then return forced end
 	for _, world in Config.List do
-		if world.PlaceId ~= 0 and world.PlaceId == placeId then return world end
+		if placeId ~= 0 and table.find(world.PlaceIds, placeId) then return world end
 	end
 	return Config.List[1]
+end
+
+-- The place to teleport to for `world` from place `fromPlaceId`: the one in the same slot (live or testing game)
+function Worlds.destination(world: Config.World, fromPlaceId: number): number?
+	local slot = table.find(Worlds.current(fromPlaceId, false, nil).PlaceIds, fromPlaceId) or 1
+	local placeId = world.PlaceIds[slot]
+	return if placeId and placeId ~= 0 then placeId else nil
 end
 
 -- The world this server or client is in (reads the game; everything above stays pure)

@@ -38,9 +38,11 @@ function WorldService:Travel(player: Player, worldId: any): string?
 		return string.format("%s opens at Rebirth %d", world.Name, (world.Unlock :: any).Rebirths)
 	end
 	if RunService:IsStudio() then return "Teleports only work in the live game" end
+	local placeId = Worlds.destination(world, game.PlaceId)
+	if not placeId then return world.Name .. " isn't open yet" end
 	traveling[player] = true
 	DataService:ReleaseForTeleport(player)
-	local ok, err = pcall(TeleportService.TeleportAsync, TeleportService, world.PlaceId, { player })
+	local ok, err = pcall(TeleportService.TeleportAsync, TeleportService, placeId, { player })
 	if not ok then
 		warn("[WorldService] teleport failed for", player.Name, err)
 		traveling[player] = nil
