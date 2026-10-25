@@ -59,8 +59,10 @@ WorldGeometry.Settings = {
 		{ id = "SulfurRidge", x = 311.25, z = 73.25, width = 37.5, depth = 115.5, entrance = Vector3.new(306, 16, 10), pathWidth = 18, field = true },
 		{ id = "EmberShelf", x = -422, z = 84.25, width = 76, depth = 137.5, entrance = Vector3.new(-422, 32, 10), pathWidth = 18, field = true },
 		{ id = "GlassScar", x = 455, z = 87.25, width = 123.1, depth = 143.5, entrance = Vector3.new(455, 32, 10), pathWidth = 18, field = true },
-		{ id = "Starfall", x = -91, z = 452, width = 88, depth = 74, entrance = Vector3.new(-85, 56, 425), pathWidth = 18, field = true },
-		{ id = "HaloLedge", x = 82, z = 450.5, width = 96, depth = 71, entrance = Vector3.new(70, 56, 425), pathWidth = 18, field = true },
+		-- the Crown's two gardens either side of its promenade (rebuilt in Studio, owner 2026-10-25): each field fills its
+		-- half; the entrances are on the promenade, outside the floors, where a locked player is put back
+		{ id = "Starfall", x = -80, z = 470, width = 128, depth = 128, entrance = Vector3.new(-8, 56, 425), pathWidth = 18, field = true },
+		{ id = "HaloLedge", x = 80, z = 470, width = 128, depth = 128, entrance = Vector3.new(8, 56, 425), pathWidth = 18, field = true },
 		-- the XP Mine on T2 straight behind the south avenue, reached by a ramp up the cliff where the Rebirth shrine stood:
 		-- 12 rocks across by 6 deep with uneven gaps (11 to 27 studs, seeded 20261024; placed in Studio, not by tools/map-v3;
 		-- the entrance is on its crater side)
