@@ -106,22 +106,27 @@ function MeteorTypes.admin(meteorType: MeteorType): MeteorType
 	return copy
 end
 
--- The hourly meteor (Config.Meteor.Hourly): the next landing time after `now` (server clock seconds), and whether the
--- countdown starting now must be it, because a normal meteor (this countdown plus its longest event) would still be
--- down then. Returns the landing time for the hourly countdown, else nil.
+-- The hourly meteor (Config.Meteor.Hourly): the next landing time after `now` (server clock seconds)
 function MeteorTypes.nextHourly(now: number): number
 	local slot = math.floor(now / 3600) * 3600 + Meteor.Hourly.Minute * 60
 	return if slot > now then slot else slot + 3600
 end
 
-function MeteorTypes.hourly(now: number, countdown: number): number?
-	local longest = 0
-	for _, meteorType in Types do
-		longest = math.max(longest, meteorType.ActiveDuration)
-	end
-	local event = Meteor.ImpactDuration + longest + math.max(Meteor.CrackedDuration, Meteor.CooledDuration) + Meteor.CleanupDuration
+-- Whether the countdown starting now is the hourly meteor's: returns its landing time and the slot it serves, else nil.
+-- `served` is the last slot that got its meteor (the server's start time at first). A countdown that would run past
+-- the minute lands on it; a minute that passed while a normal meteor was down queues it, so the next countdown (its
+-- usual length) is the hourly one. A normal meteor is never held back to wait for the minute.
+function MeteorTypes.hourly(now: number, countdown: number, served: number): (number?, number?)
 	local at = MeteorTypes.nextHourly(now)
-	return if at - now <= countdown + event then at else nil
+	local missed = at - 3600
+	if missed > served then return now + countdown, missed end
+	if at - now <= countdown then return at, at end
+	return nil, nil
+end
+
+-- Whether the hourly meteor is queued behind the meteor that's down now (its minute passed, not yet served)
+function MeteorTypes.hourlyQueued(now: number, served: number?): boolean
+	return served ~= nil and MeteorTypes.nextHourly(now) - 3600 > served
 end
 
 -- The core is nearly cracked (some HP left, under Overtime.Below of its max) when the timer runs out

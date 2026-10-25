@@ -413,10 +413,18 @@ function HudView.main(scope: Scope, hud: any, data: { [string]: any })
 					scope:Hydrate(text(scope, "HourlyText", scope:Computed(function(use)
 						local s = use(data.meteorState)
 						local p = use(data.phase)
-						if s and s.type == Config.Meteor.Hourly.Type and (p == Phase.Impact or p == Phase.Active) then
+						local hourly = s and s.type == Config.Meteor.Hourly.Type
+						if hourly and (p == Phase.Impact or p == Phase.Active) then
 							return "QUARTZ IS DOWN!"
 						end
 						local now = use(data.serverNow)
+						if hourly and p == Phase.Countdown then
+							return "QUARTZ in " .. Format.time(math.max(0, s.endsAt - now))
+						end
+						-- its minute passed while this meteor was down: it's the next one
+						if s and MeteorTypes.hourlyQueued(now, s.hourlyServed) then
+							return "QUARTZ NEXT!"
+						end
 						return "QUARTZ in " .. Format.time(MeteorTypes.nextHourly(now) - now)
 					end), 0, 0, 0, 32, timerFont(26, 13), Color3.fromRGB(255, 176, 232)))({ AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = 2 }),
 				},

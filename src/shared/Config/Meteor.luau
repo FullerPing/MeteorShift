@@ -92,7 +92,8 @@ Meteor.TypeOrder = Meteor.WorldTypeOrder[1] -- World 1's: what Pacing and the sh
 Meteor.Boss = { Type = "Alien", EveryMeteors = 10, MinRebirths = 3 }
 
 -- The hourly Quartz meteor (owner, 2026-10-24): lands at Minute past every hour (UTC, server clock) on every server,
--- open to everyone. The countdown that would otherwise run past that minute becomes its countdown (MeteorTypes.hourly).
+-- open to everyone. The countdown that would otherwise run past that minute becomes its countdown; if a normal meteor
+-- is down at the minute, the Quartz is queued as the next meteor instead (MeteorTypes.hourly; owner, 2026-10-25).
 Meteor.Hourly = { Type = "Quartz", Minute = 30 }
 
 Meteor.Twists = {

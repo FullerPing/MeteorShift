@@ -65,8 +65,9 @@ Scheduled weights Iron 60 / Ice 25 / Crystal 15 (`src/shared/Config/Meteor.luau:
 the Alien boss is never weighted in — it replaces every 10th meteor once someone on the server has
 3 rebirths (`src/shared/Config/Meteor.luau:80`). The Quartz meteor is never weighted in either: it lands at
 :30 past every hour (UTC) on every server, open to everyone, with a double-HP core, triple shards and a 5-minute mining window
-(`Meteor.Hourly`, `MeteorTypes.hourly`: the countdown that would run past :30 becomes its countdown; Call a Meteor
-can't pull it in). A line under the HUD's meteor timer, the Quartz icon and "QUARTZ in 19:11", counts down to it (`HudView`, `Hourly`). Shards come only from finished (or half-down,
+(`Meteor.Hourly`, `MeteorTypes.hourly`: the countdown that would run past :30 becomes its countdown; if a normal meteor
+is down at :30, the Quartz is queued as the next meteor, so nobody waits for the minute; Call a Meteor can't pull it in).
+A line under the HUD's meteor timer, the Quartz icon and "QUARTZ in 19:11" ("QUARTZ NEXT!" while queued), counts down to it (`HudView`, `Hourly`). Shards come only from finished (or half-down,
 cooled) cores: 5 floor per hitter, an 8-per-hitter bonus pool split by Mining Power share, 10/6/3
 podium bonuses (`src/shared/Config/Meteor.luau:49-51`), a 6% crust-node crumb of 1-3
 (`src/shared/Config/Hooks.luau:27`) and the consolation rule (`src/shared/Config/Hooks.luau:31`).

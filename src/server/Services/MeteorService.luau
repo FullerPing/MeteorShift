@@ -45,7 +45,8 @@ local interval = MeteorConfig.Countdown
 local MeteorService = Knit.CreateService({
 	Name = "MeteorService",
 	Client = {
-		-- { phase, endsAt, type, typeName, requiredTier, eventId, crustTotal, crustBroken, unlocked }
+		-- { phase, endsAt, type, typeName, requiredTier, eventId, crustTotal, crustBroken, unlocked, hourlyServed }
+		-- (hourlyServed: the last hourly Quartz slot that got its meteor, from the first countdown on; World 1)
 		-- endsAt is in workspace:GetServerTimeNow() time. type is the Config.Meteor.Types
 		-- id, picked at the start of each countdown; requiredTier is its pickaxe tier.
 		State = Knit.CreateProperty(nil),
@@ -681,15 +682,20 @@ end
 
 function MeteorService:_loop()
 	local first = true
+	local hourlyServed = now() -- the last hourly slot that got its Quartz; published so the HUD can say it's queued
 	while true do
 		local queued = devNext
 		devNext = nil
 		local length = countdownLength(first)
 		-- the hourly Quartz meteor lands in World 1 only
-		local hourlyAt = if queued or Worlds.here().Id ~= 1 then nil else MeteorTypes.hourly(now(), length)
+		local hourlyAt, slot = nil, nil
+		if not queued and Worlds.here().Id == 1 then
+			hourlyAt, slot = MeteorTypes.hourly(now(), length, hourlyServed)
+			hourlyServed = slot or hourlyServed
+		end
 		local meteorType = queued or (if hourlyAt then MeteorConfig.Types[MeteorConfig.Hourly.Type] else pickType())
 		if hourlyAt then
-			RewardService:Announce("Boss", "The hourly Quartz meteor lands at :" .. string.format("%02d", MeteorConfig.Hourly.Minute) .. " on every server!")
+			RewardService:Announce("Boss", "The hourly Quartz meteor is up next!")
 		elseif meteorType.Golden then
 			RewardService:Announce("Golden", "A GOLDEN meteor is coming: its ore pays " .. Config.Hooks.GoldenMeteor.PayMult .. "x!")
 		elseif meteorType.Id == MeteorConfig.Boss.Type then
@@ -698,6 +704,7 @@ function MeteorService:_loop()
 		self:_publish({
 			phase = Phase.Countdown,
 			endsAt = hourlyAt or (now() + (if queued then MeteorConfig.StreakLeadTime else length)),
+			hourlyServed = hourlyServed,
 			type = meteorType.Id,
 			typeName = meteorType.DisplayName,
 			requiredTier = meteorType.RequiredTier,

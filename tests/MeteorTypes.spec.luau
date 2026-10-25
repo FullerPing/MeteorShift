@@ -115,11 +115,24 @@ return function(t: any)
 		t.eq(MeteorTypes.nextHourly(hour), hour + minute)
 		t.eq(MeteorTypes.nextHourly(hour + minute - 0.5), hour + minute)
 		t.eq(MeteorTypes.nextHourly(hour + minute), hour + minute + 3600, "strictly after now")
-		-- an hour away: a normal meteor; 2 minutes away with a 2-minute countdown: this one is the Quartz
-		t.eq(MeteorTypes.hourly(hour + minute - 3000, 120), nil)
-		t.eq(MeteorTypes.hourly(hour + minute - 120, 120), hour + minute)
-		-- a normal meteor starting now would still be down at the minute, so this countdown waits for it
-		t.eq(MeteorTypes.hourly(hour + minute - 250, 120), hour + minute)
+		local served = hour + minute - 3600 -- the previous hour's Quartz landed: nothing missed
+		-- an hour away: a normal meteor; 2 minutes away with a 2-minute countdown: this one is the Quartz, on the minute
+		t.eq(MeteorTypes.hourly(hour + minute - 3000, 120, served), nil)
+		local at, slot = MeteorTypes.hourly(hour + minute - 100, 120, served)
+		t.eq(at, hour + minute)
+		t.eq(slot, hour + minute)
+		-- 5 minutes away: a normal meteor goes now instead of everyone waiting for the minute
+		t.eq(MeteorTypes.hourly(hour + minute - 300, 120, served), nil)
+		-- the minute passed while that meteor was down: the next countdown, at its usual length, is the Quartz
+		local late = hour + minute + 200
+		t.eq(MeteorTypes.hourlyQueued(late, hour + minute - 3600), true)
+		local queuedAt, queuedSlot = MeteorTypes.hourly(late, 120, hour + minute - 3600)
+		t.eq(queuedAt, late + 120)
+		t.eq(queuedSlot, hour + minute)
+		-- once served it isn't queued again
+		t.eq(MeteorTypes.hourlyQueued(late, hour + minute), false)
+		t.eq(MeteorTypes.hourly(late + 400, 120, hour + minute), nil)
+		t.eq(MeteorTypes.hourlyQueued(late, nil), false, "no state yet")
 		local quartz = Meteor.Types[Meteor.Hourly.Type]
 		t.eq(quartz.Weight, 0, "never in the weighted rotation")
 		t.eq(quartz.RequiredTier, 1, "open to everyone")
