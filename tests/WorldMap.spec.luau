@@ -20,14 +20,16 @@ return function(t: any)
 		local humanoid = Instance.new("Humanoid"); humanoid.Parent = character
 		return map, character, root, humanoid, point
 	end
-	t.test("refinery menu permits a living character through the 18 stud boundary", function()
+	t.test("refinery menu permits a living character through the RefineryReach boundary", function()
 		local map, character, root, _, point = fixture()
+		local reach = WorldMap.RefineryReach
+		t.ok(reach >= 14 + 8, "covers the 14 stud prompt plus a late server position")
 		t.ok(WorldMap.canUseRefinery(map, character))
-		root.Position = point.Position + Vector3.new(18, 0, 0)
+		root.Position = point.Position + Vector3.new(reach, 0, 0)
 		t.ok(WorldMap.canUseRefinery(map, character))
-		root.Position = point.Position + Vector3.new(18.01, 0, 0)
+		root.Position = point.Position + Vector3.new(reach + 0.01, 0, 0)
 		t.eq(WorldMap.canUseRefinery(map, character), false)
-		root.Position = point.Position + Vector3.new(0, 19, 0)
+		root.Position = point.Position + Vector3.new(0, reach + 1, 0)
 		t.eq(WorldMap.canUseRefinery(map, character), false)
 		map:Destroy(); character:Destroy()
 	end)
@@ -45,6 +47,36 @@ return function(t: any)
 		t.eq(WorldMap.canUseRefinery(nil, character), false)
 		point.Name = "Body"
 		t.eq(WorldMap.canUseRefinery(map, character), false)
+		map:Destroy(); character:Destroy()
+	end)
+	t.test("the Commissary is a second place to use the refinery", function()
+		local map, character, root, _, point = fixture()
+		root.Position = point.Position + Vector3.new(0, 0, 300)
+		t.eq(WorldMap.canUseRefinery(map, character), false)
+		local commissary = Instance.new("Model"); commissary.Name = "Commissary"; commissary.Parent = map.TownSquare
+		local second = Instance.new("Part"); second.Name = "UsePoint"; second.Position = point.Position + Vector3.new(0, 0, 310); second.Parent = commissary
+		t.ok(WorldMap.canUseRefinery(map, character))
+		t.eq(#WorldMap.refineryPoints(map), 2)
+		second.Name = "Sign"
+		t.eq(WorldMap.canUseRefinery(map, character), false, "only its exact UsePoint counts")
+		t.eq(#WorldMap.refineryPoints(map), 1)
+		map:Destroy(); character:Destroy()
+	end)
+	t.test("every ore chute is a place to deposit, after the Foundry and the Commissary", function()
+		local map, character, root, _, point = fixture()
+		local chutes = Instance.new("Folder"); chutes.Name = "Chutes"; chutes.Parent = map
+		for i, name in { "RustWorks", "FrostYard" } do
+			local chute = Instance.new("Model"); chute.Name = name; chute.Parent = chutes
+			local use = Instance.new("Part"); use.Name = "UsePoint"; use.Position = point.Position + Vector3.new(i * 100, 0, 0); use.Parent = chute
+		end
+		local decoy = Instance.new("Model"); decoy.Name = "Broken"; decoy.Parent = chutes -- no UsePoint: ignored
+		local points = WorldMap.refineryPoints(map)
+		t.eq(#points, 3)
+		t.eq(points[1], point, "the Foundry comes first")
+		t.eq(points[2].Parent.Name, "FrostYard", "chutes are sorted by name")
+		t.eq(points[3].Parent.Name, "RustWorks")
+		root.Position = point.Position + Vector3.new(200, 0, 0)
+		t.ok(WorldMap.canUseRefinery(map, character), "standing at a chute counts")
 		map:Destroy(); character:Destroy()
 	end)
 	t.test("production ignores the development map override", function()

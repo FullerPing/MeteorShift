@@ -65,15 +65,31 @@ return function(t: any)
 		t.eq(Perks.keptStation(owned, 0), 1)
 	end)
 
-	t.test("Head Start raises the start tier but holds it to the player level", function()
+	t.test("Head Start pays a percent of the next rebirth's cost", function()
 		local owned = Perks.fresh()
-		local function gate(tier: number): number return ({ 1, 1, 1, 1, 10, 16, 24, 34 })[tier] end
-		t.eq(Perks.startTier(owned, 50, 8, gate), 1)
-		owned.headStart = 3
-		t.eq(Perks.startTier(owned, 50, 8, gate), 4)
+		t.eq(Perks.startCash(owned, 1e6), 0)
+		owned.headStart = 1
+		t.eq(Perks.startCash(owned, 1e6), 30000)
 		owned.headStart = 4
-		t.eq(Perks.startTier(owned, 50, 8, gate), 5)
-		t.eq(Perks.startTier(owned, 5, 8, gate), 4, "level 5 cannot wield tier 5 yet")
-		t.eq(Perks.startTier(owned, 50, 3, gate), 3, "capped by the highest tier")
+		t.eq(Perks.startCash(owned, 1e6), 150000)
+		t.eq(Perks.startCash(owned, -5), 0, "never negative")
+	end)
+
+	t.test("the mining perks: crit chance and power, field pay and core shards", function()
+		local none = Perks.fresh()
+		t.eq(Perks.critChance(none), 0)
+		t.eq(Perks.critBonus(none), 0)
+		t.eq(Perks.fieldMult(none), 1)
+		t.eq(Perks.coreShards(none, 13), 13, "no perk, no change")
+		local maxed = Perks.fresh()
+		for _, id in { "critChance", "critPower", "fieldExpert", "shardSense" } do maxed[id] = Perks.maxLevel(id) end
+		t.near(Perks.critChance(maxed), 0.05, 1e-9)
+		t.near(Perks.critBonus(maxed), 1, 1e-9)
+		t.near(Perks.fieldMult(maxed), 1.4, 1e-9)
+		t.eq(Perks.coreShards(maxed, 13), 15, "13 x 1.2 rounds down")
+		t.eq(Perks.coreShards(maxed, 0), 0)
+		local cleaned = Perks.clean({ headStart = 2 }) -- a save from before these perks
+		t.eq(cleaned.critChance, 0)
+		t.eq(cleaned.headStart, 2)
 	end)
 end

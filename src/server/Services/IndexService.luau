@@ -18,6 +18,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Hooks = require(ReplicatedStorage.Shared.Hooks)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
@@ -29,6 +30,8 @@ local IndexService = Knit.CreateService({
 		Discovered = Knit.CreateSignal(),
 	},
 })
+
+IndexService.PageCompleted = Signal.new() -- (player, pageId) when a first find completes a page
 
 local PlayerStateService
 local MeteorService
@@ -94,6 +97,7 @@ function IndexService:Award(player: Player, mineralId: string)
 	if isNew and MineralIndex.pageComplete(data.index, page.Id) then
 		RewardService:Announce("Index", string.format("%s completed the %s page!", player.DisplayName, page.Name))
 		applyTitle(player, data.index)
+		self.PageCompleted:Fire(player, page.Id)
 	end
 end
 

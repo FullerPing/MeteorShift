@@ -11,6 +11,8 @@
 --                  default interval (private servers)
 --   golden         the golden variant of a type (Config.Hooks.GoldenMeteor): same Id and twist, its
 --                  ore pays PayMult times, gold crust and ore chunks
+--   hourly         the hourly Quartz meteor's landing time when the countdown starting now must be it
+--   overtime       whether a meteor whose timer ran out gets Config.Meteor.Overtime's extra seconds
 --
 -- Pure functions only, so the rules are covered by tests/MeteorTypes.spec.
 
@@ -28,20 +30,21 @@ local MeteorTypes = {}
 -- lands in the types' Weight bands in TypeOrder. Everyone mines the type's own ore; what a
 -- player's level yields in full is Shared.Levels.oreYield (a fraction below it, never nothing), so
 -- no lobby is stuck on one type and nobody is locked out.
-function MeteorTypes.pick(roll: number): MeteorType
+function MeteorTypes.pick(roll: number, order: { string }?): MeteorType
+	local ids = order or TypeOrder -- a world's schedule (Config.Meteor.WorldTypeOrder), World 1's by default
 	local total = 0
-	for _, id in TypeOrder do
+	for _, id in ids do
 		total += Types[id].Weight
 	end
 	local target = roll * total
 	local bandEnd = 0
-	for _, id in TypeOrder do
+	for _, id in ids do
 		bandEnd += Types[id].Weight
 		if target < bandEnd then
 			return Types[id]
 		end
 	end
-	return Types[TypeOrder[#TypeOrder]]
+	return Types[ids[#ids]]
 end
 
 -- Resonance: Mining Power multiplier for each of the players currently on one node.
@@ -86,6 +89,49 @@ function MeteorTypes.golden(meteorType: MeteorType): MeteorType
 	copy.OreColor = Color3.fromRGB(255, 226, 120)
 	copy.Golden = true
 	return copy
+end
+
+-- The admin meteor, a gift from the team: a copy of `meteorType` (Iron, so tier 1 mines it) that keeps its Id,
+-- pays Config.Hooks.AdminMeteor.PayMult times the ore, has a fraction of the HP and a bigger shard pool
+function MeteorTypes.admin(meteorType: MeteorType): MeteorType
+	local tuning = Hooks.AdminMeteor
+	local copy = table.clone(meteorType)
+	copy.DisplayName = "Admin Meteor"
+	copy.YieldMult = meteorType.YieldMult * tuning.PayMult
+	copy.HpMult = meteorType.HpMult * tuning.HpMult
+	copy.ShardMult = meteorType.ShardMult * tuning.ShardMult
+	copy.CrustColors = { Color3.fromRGB(214, 58, 72), Color3.fromRGB(236, 84, 96), Color3.fromRGB(184, 40, 58) }
+	copy.OreColor = Color3.fromRGB(255, 220, 90)
+	copy.GlowColor = Color3.fromRGB(255, 120, 140)
+	return copy
+end
+
+-- The hourly meteor (Config.Meteor.Hourly): the next landing time after `now` (server clock seconds)
+function MeteorTypes.nextHourly(now: number): number
+	local slot = math.floor(now / 3600) * 3600 + Meteor.Hourly.Minute * 60
+	return if slot > now then slot else slot + 3600
+end
+
+-- Whether the countdown starting now is the hourly meteor's: returns its landing time and the slot it serves, else nil.
+-- `served` is the last slot that got its meteor (the server's start time at first). A countdown that would run past
+-- the minute lands on it; a minute that passed while a normal meteor was down queues it, so the next countdown (its
+-- usual length) is the hourly one. A normal meteor is never held back to wait for the minute.
+function MeteorTypes.hourly(now: number, countdown: number, served: number): (number?, number?)
+	local at = MeteorTypes.nextHourly(now)
+	local missed = at - 3600
+	if missed > served then return now + countdown, missed end
+	if at - now <= countdown then return at, at end
+	return nil, nil
+end
+
+-- Whether the hourly meteor is queued behind the meteor that's down now (its minute passed, not yet served)
+function MeteorTypes.hourlyQueued(now: number, served: number?): boolean
+	return served ~= nil and MeteorTypes.nextHourly(now) - 3600 > served
+end
+
+-- The core is nearly cracked (some HP left, under Overtime.Below of its max) when the timer runs out
+function MeteorTypes.overtime(coreHp: number, coreMax: number): boolean
+	return coreMax > 0 and coreHp > 0 and coreHp / coreMax < Meteor.Overtime.Below
 end
 
 return MeteorTypes

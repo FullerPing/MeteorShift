@@ -4,7 +4,7 @@
 --   sale = base price × rebirth multiplier × index bonus × VIP bonus × Merchant pet bonus
 --
 -- The rebirth multiplier is Shared.Rebirth.multiplier of the profile's rebirths
--- (×5 per rebirth for the first sixteen, multiplicative, spec §8.3). The index bonus adds each completed
+-- (×2 per rebirth, multiplicative, spec §8.3). The index bonus adds each completed
 -- mineral index page's CashBonus, additive across pages (spec §8.2,
 -- Shared.MineralIndex.cashBonus). The VIP pass adds Config.Monetization.VIPBarBonus
 -- (+10%, spec §9.1) as its own factor (MonetizationService:VIPMult).
@@ -17,7 +17,11 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local Pacing = require(ReplicatedStorage.Shared.Pacing)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
+local Perks = require(ReplicatedStorage.Shared.Perks)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Refining = require(script.Parent.Parent.Lib.Refining)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local EconomyService = Knit.CreateService({
@@ -34,7 +38,8 @@ local PlayerStateService
 local MonetizationService
 local lastSellRequest: { [Player]: number } = {}
 
-function EconomyService:SaleMultiplier(player: Player): number
+-- `permanentOnly` leaves out timed boosts (a running Overclock), for quotes that must not be pumped by them
+function EconomyService:SaleMultiplier(player: Player, permanentOnly: boolean?): number
 	local data = PlayerStateService:Get(player)
 	if not data then
 		return 1
@@ -43,7 +48,28 @@ function EconomyService:SaleMultiplier(player: Player): number
 	local index = MineralIndex.cashBonus(data.index)
 	local vip = MonetizationService:VIPMult(player)
 	local merchant = 1 + PlayerStateService:GetPetBonuses(player).merchant
-	return rebirth * index * vip * merchant
+	local overclock = if permanentOnly then 1 else MonetizationService:OverclockSaleMult(data)
+	-- a running Golden Hour (GlobalEventService) is temporary, so it stays out of permanentOnly
+	local event = if permanentOnly then 1 else Knit.GetService("GlobalEventService"):Mult("sales")
+	return rebirth * index * vip * merchant * MonetizationService:CashMult(player) * overclock * event
+end
+
+-- What this player is expected to earn per second of ordinary play with the gear, pets, line and
+-- passes they have right now (Shared.Pacing.expectedIncome). Packs, daily cash, offline crew and field rocks are
+-- sized from it. Timed boosts (Ore Rush, Overclock) are left out, so buying one first can't inflate a quote.
+function EconomyService:ExpectedIncome(player: Player): Pacing.Income
+	local data = PlayerStateService:Get(player)
+	local pickaxe = PlayerStateService:GetPickaxe(player)
+	return Pacing.expectedIncome({
+		orePerHit = pickaxe.OrePerHit * MonetizationService:OreMult(player, true),
+		swing = pickaxe.Swing,
+		capacity = PlayerStateService:GetCapacity(player),
+		level = if data then data.level else 1,
+		pets = PlayerStateService:GetPetBonuses(player),
+		lineRate = if data then Refining.lineRate(data, 1, Perks.lineMult(data.perks)) else 0,
+		saleMult = self:SaleMultiplier(player, true),
+		world = Worlds.here().Id, -- Nebula Rift's ores pay 3x, and field cash and packs follow it
+	})
 end
 
 function EconomyService:SellAll(player: Player): number

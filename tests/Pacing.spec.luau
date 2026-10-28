@@ -1,22 +1,69 @@
 --!strict
--- Spec for Shared.Pacing, the economy pacing model (docs/balance.md). The checkpoints are
+-- Spec for Shared.Pacing, the economy pacing model (docs/guide/balance.md). The checkpoints are
 -- the targets of the rebased economy: a first session of about 45 minutes ends in the first
 -- rebirth, and the rebirths after it keep coming at a steady pace (rebirth cost grows as fast
 -- as the multiplier it pays). Dollar amounts are in the game's own numbers.
 
 return function(t: any)
 	local Pacing = require(t.shared.Pacing)
+	local Combo = require(t.shared.Combo)
 	local Config = require(t.shared.Config)
 
 	local result = Pacing.simulate(4 * 3600)
 	local at30 = Pacing.sampleAt(result, 30 * 60)
 	local at35 = Pacing.sampleAt(result, 35 * 60)
 
-	t.test("the model is deterministic and reports a cycle of about six minutes", function()
+	t.test("the model is deterministic and reports a cycle of about five minutes", function()
 		local again = Pacing.simulate(4 * 3600)
 		t.eq(#again.purchases, #result.purchases)
 		t.eq(again.samples[#again.samples].earned, result.samples[#result.samples].earned)
-		t.ok(result.cycle > 5 * 60 and result.cycle < 7 * 60, "cycle " .. result.cycle)
+		t.ok(result.cycle > 4 * 60 and result.cycle < 6 * 60, "cycle " .. result.cycle)
+	end)
+
+	-- A fresh player's loadout, the way Economy:ExpectedIncome reads it from a profile
+	local function fresh(overrides: any?): any
+		local Pets = require(t.shared.Pets)
+		local stations = Config.Home.Stations
+		local input: any = {
+			orePerHit = Config.Pickaxes[1].OrePerHit,
+			swing = Config.Pickaxes[1].Swing,
+			capacity = Config.Backpacks[1].Capacity,
+			level = 1,
+			pets = Pets.bonuses(Pets.fresh()),
+			lineRate = math.min(stations.conveyor.Levels[1].Rate :: number, stations.refinery.Levels[1].Rate :: number),
+			saleMult = 1,
+		}
+		for key, value in overrides or {} do
+			input[key] = value
+		end
+		return input
+	end
+
+	t.test("expected income of a fresh loadout is the model's own income at the start", function()
+		local income = Pacing.expectedIncome(fresh())
+		t.ok(income.perSecond > 0, "positive")
+		t.near(income.perSecond * 60, result.samples[1].incomePerMinute, 1e-6)
+	end)
+
+	t.test("expected income scales with the sale multiplier and with a bigger loadout", function()
+		local base = Pacing.expectedIncome(fresh()).perSecond
+		t.near(Pacing.expectedIncome(fresh({ saleMult = 2.5 })).perSecond, base * 2.5, 1e-9)
+		-- with a line wide enough that mining is the limit, more mining means more income
+		local open = Pacing.expectedIncome(fresh({ lineRate = 1e6 })).perSecond
+		t.ok(Pacing.expectedIncome(fresh({ lineRate = 1e6, capacity = Config.Backpacks[1].Capacity * 4 })).perSecond > open, "a bigger backpack")
+		t.ok(Pacing.expectedIncome(fresh({ lineRate = 1e6, swing = Config.Pickaxes[1].Swing / 2 })).perSecond > open, "a faster swing")
+		t.ok(Pacing.expectedIncome(fresh({ lineRate = 1e6, orePerHit = Config.Pickaxes[1].OrePerHit * 3 })).perSecond > open, "more ore per hit")
+	end)
+
+	t.test("expected income is held back by the slower of mining and the line", function()
+		local slowLine = Pacing.expectedIncome(fresh({ lineRate = 0.001 }))
+		t.eq(slowLine.limit, "line")
+		t.near(slowLine.bars, 0.001, 1e-12)
+		local fastLine = Pacing.expectedIncome(fresh({ lineRate = 1e6 }))
+		t.eq(fastLine.limit, "mining")
+		t.near(fastLine.bars, fastLine.mining, 1e-12)
+		t.ok(fastLine.perSecond > slowLine.perSecond, "a wider line earns more")
+		t.eq(Pacing.expectedIncome(fresh({ orePerHit = 0 })).perSecond, 0, "no ore, no income")
 	end)
 
 	t.test("lifetime sales reach the Steel price within one cycle of the first meteor cycle ending", function()
@@ -26,13 +73,29 @@ return function(t: any)
 		t.ok(steel <= result.firstCycleEnd + result.cycle, "later than one cycle after the first: " .. tostring(steel))
 	end)
 
+	-- Owner, 2026-10-19: the first meteor cycle used to hand a new player the Drill Pick outright
+	t.test("the Drill Pick is bought 8 to 10 minutes in, after the first meteor cycle", function()
+		local drill = nil
+		for _, purchase in result.purchases do
+			if purchase.id == "pickaxe3" then
+				drill = purchase.time
+				break
+			end
+		end
+		t.ok(drill ~= nil, "Drill Pick never bought")
+		t.ok((drill :: number) >= result.firstCycleEnd, "before the first cycle ended: " .. tostring(drill))
+		t.ok((drill :: number) >= 8 * 60 and (drill :: number) <= 10 * 60, "Drill Pick at " .. tostring(drill) .. " s")
+	end)
+
 	t.test("by 15 minutes the player owns Steel and the Drill Pick, so Ice meteors pay", function()
 		local at15 = Pacing.sampleAt(result, 15 * 60)
 		t.ok(at15.owned.pickaxe >= 3, "pickaxe tier " .. at15.owned.pickaxe)
 	end)
 
-	t.test("by 30 minutes the Meteorite Pick is owned, so Crystal meteors pay", function()
-		t.ok(at30.owned.pickaxe >= 5, "pickaxe tier " .. at30.owned.pickaxe)
+	-- Owner, 2026-10-24: tier 4 opens at the first rebirth, tier 5 (Crystal meteors) at the third
+	t.test("by 30 minutes the Plasma Pick is owned, the tier the first rebirth opens", function()
+		local run = Pacing.simulate(3600, { rebirths = 3 })
+		t.ok(Pacing.sampleAt(run, 30 * 60).owned.pickaxe >= 4, "pickaxe tier " .. Pacing.sampleAt(run, 30 * 60).owned.pickaxe)
 	end)
 
 	t.test("the first rebirth lands between 10 and 20 minutes in", function()
@@ -42,34 +105,85 @@ return function(t: any)
 		t.ok(first >= 10 * 60 and first <= 20 * 60, "first rebirth at " .. tostring(first and first / 60) .. " min")
 	end)
 
-	t.test("laps lengthen from the first rebirth to the fourth, then stay level", function()
-		local run = Pacing.simulate(6 * 3600, { rebirths = 8 })
-		t.ok(#run.rebirthTimes >= 8, "only " .. #run.rebirthTimes .. " rebirths in six hours")
+	-- Owner, 2026-10-22: faster laps. The first pays for the gear ramp; from the second they lengthen to the fourth. After
+	-- that each lap is fitted to about 14-15 minutes, through every listed rank (gear tiers open up to rebirth 34)
+	t.test("laps lengthen from the second rebirth to the fourth, then average about 14 minutes", function()
+		local ranks = #Config.Rebirth.Costs
+		local run = Pacing.simulate(10 * 3600, { rebirths = ranks })
+		t.ok(#run.rebirthTimes >= ranks, "only " .. #run.rebirthTimes .. " rebirths in ten hours")
 		local lap, previous = {}, 0
-		for index = 1, 8 do
+		for index = 1, ranks do
 			lap[index] = run.rebirthTimes[index] - previous
 			previous = run.rebirthTimes[index]
 		end
-		t.ok(lap[1] < lap[2] and lap[2] < lap[3] and lap[3] < lap[4], "the first four laps get longer")
-		for index = 5, 8 do
-			t.ok(lap[index] >= 18 * 60 and lap[index] <= 32 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
+		t.ok(lap[2] < lap[3] and lap[3] < lap[4], "laps two to four get longer")
+		local sum = 0
+		for index = 5, ranks do
+			sum += lap[index]
+			t.ok(lap[index] >= 8 * 60 and lap[index] <= 22 * 60, "lap " .. index .. " took " .. math.floor(lap[index] / 60) .. " min")
+		end
+		local average = sum / (ranks - 4) / 60
+		t.ok(average >= 12 and average <= 16, string.format("laps 5 to %d average %.1f min", ranks, average))
+	end)
+
+	t.test("every gear tier is bought within a lap of the rank that opens it", function()
+		local Levels = require(t.shared.Levels)
+		local run = Pacing.simulate(10 * 3600, { rebirths = #Config.Rebirth.Costs })
+		for _, kind in { "pickaxe", "backpack" } do
+			for tier = 4, #Config.Pickaxes do
+				local opens = run.rebirthTimes[Levels.evolveRebirths(tier)]
+				local bought
+				for _, purchase in run.purchases do
+					if purchase.id == kind .. tier then bought = purchase.time; break end
+				end
+				t.ok(bought ~= nil, kind .. " " .. tier .. " never bought")
+				t.ok((bought :: number) - opens <= 22 * 60, kind .. " " .. tier .. " bought " .. math.floor(((bought :: number) - opens) / 60) .. " min after it opened")
+			end
 		end
 	end)
 
-	t.test("rebirths keep a steady pace: each comes within 30 minutes of the one before", function()
+	t.test("rebirths keep a steady pace: each comes within 22 minutes of the one before", function()
 		local run = Pacing.simulate(4 * 3600, { rebirths = 5 })
 		t.ok(#run.rebirthTimes >= 5, "only " .. #run.rebirthTimes .. " rebirths in four hours")
 		for index = 2, 5 do
 			local gap = run.rebirthTimes[index] - run.rebirthTimes[index - 1]
-			t.ok(gap <= 30 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
+			t.ok(gap <= 22 * 60, "rebirth " .. index .. " took " .. math.floor(gap / 60) .. " min")
 		end
 	end)
 
-	t.test("once the Drill Pick unlocks Ice meteors, the Plasma Pick is affordable within 3 hours", function()
-		local plasma = result.earnedAt.pickaxe4
-		t.ok(plasma ~= nil and plasma <= 3 * 3600, "Plasma in reach at " .. tostring(plasma))
+	t.test("each rebirth makes the model's cash prices dearer by Rebirth.priceMult", function()
+		local Rebirth = require(t.shared.Rebirth)
+		local Price = require(t.shared.Price)
+		local run = Pacing.simulate(4 * 3600, { rebirths = 3 })
+		t.ok(#run.rebirthTimes >= 3, "only " .. #run.rebirthTimes .. " rebirths in four hours")
+		local base = Config.Home.Line.Costs[2]
+		local first, afterThird
+		for _, purchase in run.purchases do
+			if purchase.id == "line2" then
+				first = first or purchase
+				if purchase.time > run.rebirthTimes[3] then
+					afterThird = afterThird or purchase
+				end
+			end
+		end
+		t.ok(first ~= nil and afterThird ~= nil, "line level 2 is bought before and after the third rebirth")
+		t.eq((first :: any).cost, base)
+		t.eq((afterThird :: any).cost, Price.scaled(base, Rebirth.priceMult(3)))
+	end)
+
+	t.test("gear tiers survive a rebirth in the model, so a lap starts with the pickaxe it ended with", function()
+		local run = Pacing.simulate(3 * 3600, { rebirths = 2 })
+		t.ok(#run.rebirthTimes >= 2, "needs two rebirths")
+		local before = Pacing.sampleAt(run, run.rebirthTimes[1] - 1)
+		local after = Pacing.sampleAt(run, run.rebirthTimes[1] + 60)
+		t.ok(after.owned.pickaxe >= before.owned.pickaxe, "pickaxe tier " .. before.owned.pickaxe .. " fell to " .. after.owned.pickaxe)
+		t.ok(after.owned.backpack >= before.owned.backpack, "backpack tier fell")
+	end)
+
+	t.test("once the Drill Pick unlocks Ice meteors, the Plasma Pick is bought within 3 hours", function()
+		local run = Pacing.simulate(3 * 3600, { rebirths = 1 })
 		local bought
-		for _, purchase in result.purchases do
+		for _, purchase in run.purchases do
 			if purchase.id == "pickaxe4" then
 				bought = purchase.time
 			end
@@ -81,13 +195,13 @@ return function(t: any)
 		t.ok(at30.owned.backpack >= 3, "backpack tier " .. at30.owned.backpack)
 	end)
 
-	t.test("by 30 minutes a refinery upgrade is bought", function()
-		t.ok(at30.owned.refinery >= 2, "refinery level " .. at30.owned.refinery)
+	t.test("by 30 minutes a production line upgrade is bought", function()
+		t.ok(at30.owned.line >= 2, "line level " .. at30.owned.line)
 	end)
 
 	t.test("sales cover the gear owned (no free lunch), and millions come within the hour", function()
 		t.ok(at30.earned >= 100e3, "earned by 30 min: " .. at30.earned)
-		local at60 = Pacing.sampleAt(result, 60 * 60)
+		local at60 = Pacing.sampleAt(Pacing.simulate(3600, { rebirths = 3 }), 60 * 60)
 		t.ok(at60.earned >= 1e6, "earned by 60 min: " .. at60.earned)
 	end)
 
@@ -125,10 +239,12 @@ return function(t: any)
 		local miner = 0.25 + 0.15 * 4 / 9
 		for _, quantity in { 1, Config.Debris.YieldFraction } do
 			local perHit = pickaxe.OrePerHit * quantity * Config.Meteor.Types.Iron.YieldMult * (1 + yield)
-			local fillSeconds = backpack.Capacity / perHit * pickaxe.Swing * (1 - swift) / Config.Balance.HitsPerMinuteShare
-			local playerRate = backpack.Capacity / (fillSeconds + Config.Balance.TripSeconds)
+			-- each fill climbs a fresh mining combo (Shared.Combo)
+			local hits = Combo.fillHits(backpack.Capacity, perHit)
+			local fillSeconds = hits * pickaxe.Swing * (1 - swift) / Config.Balance.HitsPerMinuteShare
 			-- During filling, each owner's landed hit corresponds to 1 / hit-share miner swings.
-			local expected = playerRate * (1 + miner / Config.Balance.HitsPerMinuteShare)
+			local petOre = perHit * miner * hits / Config.Balance.HitsPerMinuteShare
+			local expected = (backpack.Capacity + petOre) / (fillSeconds + Config.Balance.TripSeconds)
 			t.near(Pacing.oreRate(3, 2, quantity, 5), expected, 1e-10)
 			t.ok(Pacing.oreRate(3, 2, quantity, 5) > Pacing.oreRate(3, 2, quantity), "all three perks improve supply")
 		end
@@ -149,5 +265,17 @@ return function(t: any)
 		t.eq(again.rebirthTimes[1], paid.rebirthTimes[1], "pet run is deterministic")
 		t.eq(again.samples[#again.samples].earned, paid.samples[#paid.samples].earned)
 		for _, role in Config.Pets.RoleOrder do t.eq(free.petBonuses[role], 0, "default run has no pets") end
+	end)
+
+	t.test("shard income buys a Meteor Egg about every 5 minutes, a Crystal every 20, an Aurora every 45", function()
+		local perMinute = Config.Balance.ShardsPerMeteor / Pacing.cycleSeconds() * 60
+		local targets = { meteorEgg = { 4, 6 }, crystalEgg = { 17, 23 }, auroraEgg = { 40, 50 } }
+		for _, egg in Config.Pets.Eggs do
+			local band = targets[egg.Id]
+			if band then
+				local minutes = egg.Cost / perMinute
+				t.ok(minutes >= band[1] and minutes <= band[2], string.format("%s every %.1f min", egg.Id, minutes))
+			end
+		end
 	end)
 end

@@ -6,6 +6,10 @@ local keys: { [string]: string } = table.freeze({
 	Ice = "meteorIce",
 	Frost = "meteorIce",
 	Alien = "meteorAlien",
+	Quartz = "meteorQuartz",
+	-- Nebula Rift: the nearest existing art until its own icons are made
+	Nebula = "meteorCrystal",
+	Eclipse = "meteorQuartz",
 })
 
 function MeteorIcon.resolve(typeId: string?): string

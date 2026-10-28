@@ -51,13 +51,26 @@ return function(t: any)
 		t.eq(Levels.clean(3, Levels.xpToNext(3) :: number + 1).level, 4)
 	end)
 
-	t.test("evolve levels never fall as tiers rise and start free", function()
+	t.test("evolve gates start free, rise with the tier, and hand over from player level to rebirths", function()
 		t.eq(Levels.evolveLevel(2), 1)
-		local last = 1
+		t.eq(Levels.evolveRebirths(2), 0)
+		local lastLevel, lastRebirths = 1, 0
 		for tier = 1, #Config.Pickaxes do
-			t.ok(Levels.evolveLevel(tier) >= last)
-			last = Levels.evolveLevel(tier)
+			local level, rebirths = Levels.evolveLevel(tier), Levels.evolveRebirths(tier)
+			t.ok(level == 1 or rebirths == 0, "tier " .. tier .. " has one gate")
+			if rebirths > 0 then
+				t.ok(rebirths > lastRebirths, "tier " .. tier .. " needs more rebirths than the tier before")
+				lastRebirths = rebirths
+			else
+				t.eq(lastRebirths, 0, "tier " .. tier .. " is level-gated after a rebirth-gated tier")
+				t.ok(level >= lastLevel, "tier " .. tier)
+				lastLevel = level
+			end
 		end
+		t.ok(Levels.evolveRebirths(#Config.Pickaxes) > 0, "the top tier opens by rebirth")
+		t.ok(Levels.canEvolve(7, 1, Levels.evolveRebirths(7)))
+		t.ok(not Levels.canEvolve(7, 50, Levels.evolveRebirths(7) - 1))
+		t.ok(not Levels.canEvolve(5, 99, Levels.evolveRebirths(5) - 1))
 	end)
 
 	t.test("an average player (70 XP a meteor) never waits on a level for the early tiers", function()

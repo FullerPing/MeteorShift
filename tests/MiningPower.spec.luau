@@ -6,6 +6,27 @@
 return function(t: any)
 	local MiningPower = require(t.shared.MiningPower)
 
+	t.test("a player's sizing rate counts the average crit and a miner pet's hits", function()
+		local pickaxe = { Power = 10, Swing = 0.5, CritChance = 0, CritMult = 2 }
+		t.near(MiningPower.playerRate(pickaxe, 0), 20, 1e-9)
+		pickaxe.CritChance = 0.25 -- a quarter of hits do double: 1.25x on average
+		t.near(MiningPower.playerRate(pickaxe, 0), 25, 1e-9)
+		t.near(MiningPower.playerRate(pickaxe, 1.5), 55, 1e-9) -- plus a maxed miner pet at 150%
+	end)
+
+	t.test("a meteor toughens at once but eases only after the cooldown", function()
+		local Meteor = require(t.shared.Config).Meteor
+		t.ok(MiningPower.rescaleDue(10, 30, 0), "more power: rescale straight away")
+		t.ok(not MiningPower.rescaleDue(30, 10, 0), "less power: wait for the cooldown")
+		t.ok(MiningPower.rescaleDue(30, 10, Meteor.RescaleCooldown), "less power after the cooldown")
+		t.ok(not MiningPower.rescaleDue(10, 10.5, 99), "a small drift never rescales")
+	end)
+
+	t.test("players who waited out the countdown still count at impact", function()
+		local Meteor = require(t.shared.Config).Meteor
+		t.ok(Meteor.ActiveWindow > Meteor.Countdown + Meteor.ImpactDuration, "the active window outlasts the countdown")
+	end)
+
 	t.test("tier 1 power is 1", function()
 		t.eq(MiningPower.power(1), 1)
 	end)
@@ -52,15 +73,17 @@ return function(t: any)
 	end)
 
 	t.test("size splits crust HP across nodes and scales the core separately", function()
+		local Meteor = require(t.shared.Config.Meteor)
 		local crustHp, coreHp = MiningPower.size(10, 36, 1)
-		t.near(crustHp, 10 * 70 / 36, 0.0001) -- CrustSeconds = 70
-		t.near(coreHp, 10 * 45, 0.0001) -- CoreSeconds = 45
+		t.near(crustHp, 10 * Meteor.CrustSeconds / 36, 0.0001)
+		t.near(coreHp, 10 * Meteor.CoreSeconds, 0.0001)
 	end)
 
 	t.test("size applies the meteor type's HP multiplier", function()
+		local Meteor = require(t.shared.Config.Meteor)
 		local crustHp, coreHp = MiningPower.size(10, 36, 1.2)
-		t.near(crustHp, 10 * 70 * 1.2 / 36, 0.0001)
-		t.near(coreHp, 10 * 45 * 1.2, 0.0001)
+		t.near(crustHp, 10 * Meteor.CrustSeconds * 1.2 / 36, 0.0001)
+		t.near(coreHp, 10 * Meteor.CoreSeconds * 1.2, 0.0001)
 	end)
 
 	t.test("shouldRescale trips once drift passes 15%", function()

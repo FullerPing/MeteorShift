@@ -1,0 +1,120 @@
+--!strict
+-- Spec for Shared.MenuFit: on small screens a menu is laid out for a larger "virtual" screen and drawn smaller,
+-- so phones show the same menu a small desktop window does instead of a cramped slice of it.
+
+return function(t: any)
+	local MenuFit = require(t.shared.MenuFit)
+
+	local screens = {
+		{ "2560x1440", Vector2.new(2560, 1440), 58 },
+		{ "1920x1080", Vector2.new(1920, 1080), 58 },
+		{ "1280x720", Vector2.new(1280, 720), 58 },
+		{ "844x390", Vector2.new(844, 390), 58 },
+		{ "749x381", Vector2.new(749, 381), 58 },
+		{ "667x375", Vector2.new(667, 375), 58 },
+		{ "390x844", Vector2.new(390, 844), 58 },
+		{ "360x640", Vector2.new(360, 640), 58 },
+	}
+
+	t.test("a whole menu keeps its natural size and is drawn smaller where it does not fit", function()
+		for _, screen in screens do
+			local view = MenuFit.view(screen[2], screen[3])
+			for _, natural in { Vector2.new(560, 400), Vector2.new(540, 520), Vector2.new(860, 572) } do
+				local whole, rect = MenuFit.whole(view, natural)
+				t.near(rect.w, natural.X, 0.01)
+				t.near(rect.h, natural.Y, 0.01)
+				-- on the real screen: the ribbon clears the top bar, the lip the bottom, the sides the edges
+				t.ok((rect.y - 24) * whole.scale >= screen[3] - 0.01, screen[1] .. " ribbon clears the top bar")
+				t.ok((rect.y + rect.h + 7) * whole.scale <= screen[2].Y + 0.01, screen[1] .. " lip on screen")
+				t.ok(rect.x * whole.scale >= 0 and (rect.x + rect.w) * whole.scale <= screen[2].X + 0.01, screen[1] .. " sides on screen")
+				t.ok(whole.scale <= view.scale + 1e-6, "never drawn larger than the menu's view")
+			end
+		end
+	end)
+
+	t.test("desktop windows draw menus at full size", function()
+		local view = MenuFit.view(Vector2.new(1280, 720), 58)
+		t.eq(view.scale, 1)
+		t.eq(view.viewport, Vector2.new(1280, 720))
+		t.eq(view.inset, 58)
+	end)
+
+	t.test("a landscape phone gets a taller virtual screen and a smaller draw scale", function()
+		local view = MenuFit.view(Vector2.new(749, 381), 58)
+		t.ok(view.scale < 0.9 and view.scale >= MenuFit.MinScale, "scale " .. view.scale)
+		t.near(view.viewport.Y, MenuFit.LandscapeMin.Y, 0.01)
+		t.near(view.viewport.X * view.scale, 749, 0.01)
+		t.near(view.inset * view.scale, 58, 0.01)
+	end)
+
+	t.test("portrait phones scale by width only", function()
+		local view = MenuFit.view(Vector2.new(390, 844), 58)
+		t.near(view.scale, 390 / MenuFit.PortraitMinWidth, 0.001)
+	end)
+
+	t.test("screens bigger than 1080p draw menus bigger, in proportion", function()
+		t.eq(MenuFit.view(Vector2.new(1920, 1080), 58).scale, 1)
+		t.near(MenuFit.view(Vector2.new(2560, 1440), 58).scale, 4 / 3, 0.001)
+		t.near(MenuFit.view(Vector2.new(3440, 1440), 58).scale, 4 / 3, 0.001) -- ultrawide: the height decides
+		t.eq(MenuFit.view(Vector2.new(3840, 2160), 58).scale, 2)
+		t.eq(MenuFit.view(Vector2.new(7680, 4320), 58).scale, MenuFit.MaxScale)
+		local view = MenuFit.view(Vector2.new(2560, 1440), 58)
+		t.near(view.viewport.X, 1920, 0.01, "laid out like a 1080p screen")
+	end)
+
+	t.test("very small screens stop shrinking at the minimum scale", function()
+		t.eq(MenuFit.view(Vector2.new(400, 200), 58).scale, MenuFit.MinScale)
+	end)
+
+	t.test("a virtual rect's centre lands on the matching real point", function()
+		local view = MenuFit.view(Vector2.new(749, 381), 58)
+		local centre = MenuFit.centre(view, { x = 100, y = 80, w = 400, h = 200 })
+		t.near(centre.X, 300 * view.scale, 0.01)
+		t.near(centre.Y, 180 * view.scale, 0.01)
+	end)
+
+	t.test("a centred menu keeps its natural size when it fits and stays on screen under the top bar", function()
+		t.eq(MenuFit.centred(MenuFit.view(Vector2.new(1920, 1080), 58), Vector2.new(660, 640)).w, 660)
+		for _, s in screens do
+			local view = MenuFit.view(s[2], s[3])
+			for _, natural in { Vector2.new(660, 640), Vector2.new(420, 300), Vector2.new(360, 350) } do
+				local r = MenuFit.centred(view, natural)
+				local k = view.scale
+				t.ok(r.w <= natural.X and r.h <= natural.Y, s[1] .. " no bigger than natural")
+				-- the title ribbon pokes 24 px above the panel and the lip hangs 7 px under it: keep both on screen
+				t.ok((r.y - 24) * k >= s[3] - 0.5, s[1] .. " ribbon below the top bar " .. tostring(natural))
+				t.ok((r.y + r.h + 7) * k <= s[2].Y + 0.5, s[1] .. " lip on screen " .. tostring(natural))
+				t.ok(r.x * k >= 0 and (r.x + r.w) * k <= s[2].X + 0.5, s[1] .. " inside horizontally")
+				t.ok((r.y + r.h) * k <= s[2].Y + 0.5, s[1] .. " inside vertically")
+			end
+		end
+	end)
+
+	t.test("text limits follow the draw scale so capped text grows with a menu on a big screen", function()
+		local min, max = MenuFit.textLimits(8, 18, 4 / 3) -- 2560 x 1440
+		t.eq(max, 24)
+		t.eq(min, 11)
+		min, max = MenuFit.textLimits(8, 18, 1)
+		t.eq(min, 8)
+		t.eq(max, 18)
+		-- a small screen shrinks the cap down to the readable size but keeps the authored floor, and the floor never
+		-- passes the cap
+		min, max = MenuFit.textLimits(8, 18, 0.6)
+		t.eq(max, MenuFit.MinTextPx)
+		t.eq(min, 8)
+		min, max = MenuFit.textLimits(16, 20, 0.5)
+		t.eq(max, MenuFit.MinTextPx)
+		t.eq(min, MenuFit.MinTextPx)
+		-- Roblox's 1 to 100 range
+		t.eq(select(2, MenuFit.textLimits(10, 60, 2)), 100)
+		-- the same inputs give the same limits however often they are applied (the base is kept, not the result)
+		t.eq(select(2, MenuFit.textLimits(8, 18, 4 / 3)), 24)
+	end)
+
+	t.test("text drawn smaller keeps a readable size, and small authored text keeps its own", function()
+		t.eq(MenuFit.drawnTextSize(20, 1.5), 30)
+		t.eq(MenuFit.drawnTextSize(20, 0.5), MenuFit.MinTextPx)
+		t.eq(MenuFit.drawnTextSize(10, 0.6), 10)
+		t.eq(MenuFit.drawnTextSize(12, 1), 12)
+	end)
+end

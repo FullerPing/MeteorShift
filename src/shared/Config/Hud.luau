@@ -15,6 +15,9 @@ Hud.ScaleRefWidth = 1440
 Hud.ScaleRefHeight = 810
 Hud.ScaleMin = 0.7
 Hud.ScaleMax = 1
+-- Past this screen size the HUD grows in proportion (min of width and height ratios), up to ScaleUpMax
+Hud.ScaleUpRef = Vector2.new(1920, 1080)
+Hud.ScaleUpMax = 3
 
 -- Smallest touch target (spec §10). No HUD button is ever drawn smaller than this.
 Hud.MinTouch = 44
@@ -23,8 +26,8 @@ Hud.MinTouch = 44
 Hud.EdgeMargin = 24
 
 -- HUD buttons in top-to-bottom / left-to-right order
-Hud.ButtonOrder = { "SHOP", "INDEX", "REBIRTH", "STORE" }
-Hud.DesktopButtonOrder = { "SHOP", "REBIRTH", "STORE" }
+Hud.ButtonOrder = { "SHOP", "PETS", "INDEX", "REBIRTH", "STORE" }
+Hud.DesktopButtonOrder = { "SHOP", "PETS", "REBIRTH", "STORE" }
 
 -- Mouse layout: the Figma navigation column on the left. Base units, scaled by
 -- the HUD scale, with buttons kept at least MinTouch tall.
@@ -32,7 +35,7 @@ Hud.Column = {
 	Width = 88,
 	Height = 88,
 	Gap = 0,
-	Top = 270,
+	Top = 300, -- under the level card and the desktop event card
 	Left = 24,
 }
 
@@ -48,6 +51,9 @@ Hud.TouchRow = {
 	TextSize = 26, -- unscaled; the 0.5 navigation scale keeps labels at 13 px
 }
 
+-- Touch and portrait: how many cells HudLayout.offerSlots finds for the Offers buttons (2x Ore, 2x Cash, Starter Pack)
+Hud.OfferSlots = 3
+
 -- Landscape training scale. Skip keeps a 44 px target through closeSize().
 Hud.TouchCardScale = 0.65
 
@@ -55,6 +61,9 @@ Hud.TouchCardScale = 0.65
 Hud.EventPanel = { Width = 284, Height = 170, Top = 153, Gap = 6 }
 -- Figma event clock at the top centre (base units).
 Hud.Timer = { Width = 593, Height = 130, Top = 49 }
+-- A line under the clock during the countdown, for players up to MaxLevel (telemetry: most new players left while
+-- waiting for the meteor, not knowing the fields are open between meteors)
+Hud.CountdownTip = { Text = "TIP: Mine the ore fields while you wait - press TELEPORT!", MaxLevel = 10 }
 
 -- Transparent wallet and backpack occupy opposite bottom corners. The foundry
 -- summary is centred, with training above it. Equipment aliases the SHOP rect.
@@ -63,7 +72,7 @@ Hud.LeftCards = {
 	Gap = 6,
 	Resources = { Width = 250, Height = 116, Bottom = 18 },
 	Equipment = { Width = 88, Height = 88 },
-	Production = { Width = 400, Height = 82, ExpandedHeight = 322, Bottom = 16 },
+	Production = { Width = 218, Height = 84, ExpandedHeight = 322, Bottom = 18 }, -- 18 like Resources and the backpack: one bottom line
 }
 Hud.Backpack = { Width = 230, Height = 86, Right = 24, Bottom = 18 }
 Hud.Training = { Width = 332, Height = 125, Gap = 14 }
@@ -71,19 +80,22 @@ Hud.SettingsSize = 44
 -- Mouse layouts: the player level badge in the top-left corner under the Roblox
 -- top bar (base units). It shrinks to clear the clock and is dropped below
 -- MinHeight px; touch and cramped screens show the level on the wallet card.
-Hud.Level = { Width = 360, Height = 96, Top = 10, MinHeight = 48 }
+Hud.Level = { Width = 316, Height = 84, Top = 10, MinHeight = 48 }
 
 -- Desktop reference layout. Touch and portrait retain their authored geometry.
 Hud.Desktop = {
+	-- the menu buttons (left column and INDEX on the right) are drawn at this share of their base size
+	ButtonScale = 0.88,
 	Timer = { Width = 560, Height = 108, Top = 28 },
 	LeftCards = {
 		X = 24,
 		Gap = 6,
 		Resources = { Width = 292, Height = 116, Bottom = 18 },
 		Equipment = { Width = 88, Height = 88 },
-		Production = { Width = 550, Height = 116, ExpandedHeight = 356, Bottom = 16 },
+		-- foundry and backpack are drawn at 0.88 of their 300 x 116 and 292 x 116 artwork
+		Production = { Width = 264, Height = 102, ExpandedHeight = 313, Bottom = 18 }, -- 18 like Resources and the backpack: one bottom line
 	},
-	Backpack = { Width = 292, Height = 116, Right = 24, Bottom = 18 },
+	Backpack = { Width = 257, Height = 102, Right = 24, Bottom = 18 },
 }
 
 -- Roblox's own touch controls, which the HUD has to keep clear of. Mirrors TouchGui: the
@@ -120,6 +132,9 @@ Hud.Mine = {
 	FaceTurnRate = 18,
 	FaceHold = 0.35,
 }
+
+-- The round SPRINT button and the TELEPORT button stacked above it (real pixels)
+Hud.SideButtons = { Size = 54, Gap = 8 }
 
 -- Panels (shop, index, rebirth, store): margin kept above and below, and the smallest scale
 Hud.Panel = { Margin = 8, MinScale = 0.35, SideMargin = 12 }

@@ -1,79 +1,84 @@
 --!strict
--- Personal production upgrades purchased at the shared refinery.
+-- Personal production upgrades purchased at the shared refinery: one level for the whole line
+-- (hopper, conveyor, refinery and collection post together; Shared.Line).
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
-local Levels = require(ReplicatedStorage.Shared.Levels)
+local Line = require(ReplicatedStorage.Shared.Line)
 local Price = require(ReplicatedStorage.Shared.Price)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 
 local UpgradeService = Knit.CreateService({
 	Name = "UpgradeService",
 	Client = {
-		Upgraded = Knit.CreateSignal(), -- (stationId, newLevel)
+		Upgraded = Knit.CreateSignal(), -- (newLevel) once per purchase, however many levels it took
 		Notice = Knit.CreateSignal(), -- (text)
 	},
 })
 
-UpgradeService.StationUpgraded = Signal.new() -- (player, stationId, newLevel)
+UpgradeService.LineUpgraded = Signal.new() -- (player, newLevel, cash) for every level bought
 
 local PlayerStateService
 local RefineryService
 local lastBuyRequest: { [Player]: number } = {}
 
--- Returns true when the upgrade went through.
-function UpgradeService:BuyStation(player: Player, stationId: string): boolean
-	local stationConfig = Config.Home.Stations[stationId]
+-- Buys up to `count` line levels in a row, stopping at the top, at a player-level or rebirth gate
+-- (Config.Levels) or when the cash runs out. A notice only explains why nothing at
+-- all was bought. Returns true when at least one level went through.
+function UpgradeService:BuyLine(player: Player, count: number?): boolean
 	local data = PlayerStateService:Get(player)
-	if not stationConfig or not data then
+	if not data then
 		return false
 	end
-	local current = data.stations[stationId]
-	local nextLevel = stationConfig.Levels[current + 1]
-	if not nextLevel then
-		self.Client.Notice:Fire(player, stationConfig.Name .. " is already at max level.")
+	local name = Config.Home.Line.Name
+	local level = Line.clean(data.line)
+	local priceMult = Rebirth.priceMult(data.rebirths)
+	local bought, _, stop = Line.plan(level, math.max(count or 1, 1), data.cash, data.level or 1, priceMult, data.rebirths)
+	if bought == 0 then
+		local target = level + 1
+		if stop == "max" then
+			self.Client.Notice:Fire(player, name .. " is already at max level.")
+		elseif stop == "level" then
+			self.Client.Notice:Fire(player, string.format("Reach player level %d for %s Lv %d. Take part in meteors to earn XP.", Line.levelNeeded(target), name, target))
+		elseif stop == "rebirth" then
+			self.Client.Notice:Fire(player, string.format("%s Lv %d opens at rebirth %d.", name, target, Line.rebirthsNeeded(target)))
+		else
+			self.Client.Notice:Fire(player, Price.shortfall(data, Line.cost(target, priceMult) or 0, 0, name .. " Lv " .. target) or "Couldn't upgrade.")
+		end
 		return false
 	end
-	-- Conveyor and refinery levels 5 to 8 need the player level of the same-numbered tier
-	-- (Config.Levels.EvolveLevel); the hopper and collection post only cost cash
-	local levelNeeded = if stationId == "conveyor" or stationId == "refinery" then Levels.evolveLevel(current + 1) else 1
-	if (data.level or 1) < levelNeeded then
-		self.Client.Notice:Fire(player, string.format("Reach player level %d for %s Lv %d. Take part in meteors to earn XP.", levelNeeded, stationConfig.Name, current + 1))
-		return false
+	for target = level + 1, level + bought do
+		local price = Line.cost(target, priceMult) :: number
+		data.cash -= price
+		data.line = target
+		-- TelemetryService hears LineUpgraded and sets flags.firstRefinery with
+		-- first_refinery_bought (spec §13)
+		self.LineUpgraded:Fire(player, target, price)
 	end
-	local shortfall = Price.shortfall(data, nextLevel.Cost, nextLevel.Shards, stationConfig.Name .. " Lv " .. (current + 1))
-	if shortfall then
-		self.Client.Notice:Fire(player, shortfall)
-		return false
-	end
-
-	data.cash -= nextLevel.Cost
-	data.shards -= nextLevel.Shards
-	data.stations[stationId] = current + 1
-	-- TelemetryService hears StationUpgraded and sets flags.firstRefinery with
-	-- first_refinery_bought (spec §13)
-	self.Client.Upgraded:Fire(player, stationId, current + 1)
+	self.Client.Upgraded:Fire(player, data.line)
 	RefineryService:Refresh(player, true)
-	self.StationUpgraded:Fire(player, stationId, current + 1)
 	return true
 end
 
--- Production menu purchases require the shared refinery.
-function UpgradeService.Client:BuyStation(player: Player, stationId: string): boolean
+-- Production menu purchases require the shared refinery. `count` is how many levels the
+-- menu's 1x / 5x / MAX wants; the server prices and checks each one.
+function UpgradeService.Client:BuyLine(player: Player, count: number?): boolean
 	local allowed, stamp = RequestGate.check(lastBuyRequest[player], os.clock(), 0.15)
 	lastBuyRequest[player] = stamp
 	if not allowed then return false end
-	if typeof(stationId) ~= "string" or not Config.Home.Stations[stationId] then
-		return false
+	local wanted = 1
+	if typeof(count) == "number" and count == count then
+		wanted = math.clamp(math.floor(count), 1, Line.max())
 	end
 	if not RefineryService:CanUseMenu(player) then
 		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to upgrade production.")
 		return false
 	end
-	return self.Server:BuyStation(player, stationId)
+	return self.Server:BuyLine(player, wanted)
 end
 
 function UpgradeService:KnitInit()

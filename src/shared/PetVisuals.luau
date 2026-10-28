@@ -18,12 +18,10 @@ function PetVisuals.loadout(ids: string?, levels: string?, slots: number?): { En
 	local out: { Entry } = {}
 	if not ids or ids == "" then return out end
 	local levelList = string.split(levels or "", ",")
-	local seen: { [string]: boolean } = {}
 	local limit = math.clamp(math.floor(finite(slots, 3)), 0, 4)
 	for index, id in string.split(ids, ",") do
 		if #out >= limit then break end
-		if known[id] and not seen[id] then
-			seen[id] = true
+		if known[id] then -- a pet can be out twice (duplicate copies)
 			local level = math.clamp(math.floor(finite(tonumber(levelList[index]), 1)), 1, Config.MaxLevel)
 			table.insert(out, { id = id, level = level, slot = #out + 1 })
 		end

@@ -1,5 +1,6 @@
 --!strict
--- Pixel geometry keeps the shop controls reachable while the card carousel scrolls.
+-- Pixel geometry keeps the gear shop reachable on every screen: a roomy window draws the owner's 760 x 501 frame scaled
+-- to the screen; a small one draws a single 560-wide column with the evolution stacked inside it.
 return function(t: any)
 	local EquipmentShopLayout = require(t.shared.EquipmentShopLayout)
 	local viewports = {
@@ -7,162 +8,110 @@ return function(t: any)
 		Vector2.new(667, 375), Vector2.new(844, 390), Vector2.new(932, 430),
 		Vector2.new(1375, 659), Vector2.new(1920, 1080),
 	}
-	local function layout(viewport: Vector2, inset: number): any
+	local function column(viewport: Vector2, inset: number): any
 		t.ok(type(EquipmentShopLayout.compute) == "function", "shop geometry compute is available")
-		return EquipmentShopLayout.compute(viewport, inset)
+		return EquipmentShopLayout.compute(viewport, inset, false)
 	end
 
-	t.test("shop panel clears the top inset and all screen edges", function()
+	t.test("the single column clears the top inset and all screen edges", function()
 		for _, viewport in viewports do
 			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
+				local l = column(viewport, inset)
 				local p = l.panel
 				local context = tostring(viewport) .. " inset=" .. inset
 				t.ok(p.x >= 12 and p.y >= inset + 12, context .. " clears left and top")
 				t.ok(p.x + p.w <= viewport.X - 12, context .. " clears right")
 				t.ok(p.y + p.h <= viewport.Y - 12, context .. " clears bottom")
 				local maxHeight = if l.narrow then 500 else 520
-				t.ok(p.w > 0 and p.w <= 860 and p.h > 0 and p.h <= maxHeight, context .. " compact bounded panel")
+				t.ok(p.w > 0 and p.w <= 560 and p.h > 0 and p.h <= maxHeight, context .. " bounded panel")
+				t.ok(not l.popout and l.evolvePanel.w == 0, context .. " the evolution is stacked, not a column")
+				t.eq(l.contentW, p.w - l.padding * 2, context .. " the content is the panel's width")
 			end
 		end
 	end)
 
-	t.test("desktop panel is centered within the unobstructed viewport", function()
-		local p = layout(Vector2.new(1920, 1080), 58).panel
-		t.eq(p.w, 860)
-		t.eq(p.h, 520)
-		t.near(p.x + p.w / 2, 960, 0.01, "horizontal center")
-		t.near(p.y + p.h / 2, 569, 0.01, "center below the inset")
+	t.test("the view draws the owner's frame scaled to the screen when there is room", function()
+		local desktop = EquipmentShopLayout.view(Vector2.new(1920, 1080), 58)
+		t.ok(desktop.wide, "a 1080p window is wide")
+		t.near(desktop.scale, 1.621, 0.01, "at 64% of the width, like the owner's frame")
+		t.near(desktop.viewport.X * desktop.scale, 1920, 0.01, "the virtual viewport covers the real one")
+		local small = EquipmentShopLayout.view(Vector2.new(1280, 720), 58)
+		t.ok(small.wide, "a 720p window is wide")
+		t.near(small.scale, 1.081, 0.01, "and scaled down")
+		for _, phone in { Vector2.new(844, 390), Vector2.new(667, 375), Vector2.new(390, 844), Vector2.new(360, 640) } do
+			t.ok(not EquipmentShopLayout.view(phone, 58).wide, tostring(phone) .. " keeps the single column")
+		end
+		-- the panel is never taller than 75% of the screen or wider than 64% of it
+		for _, viewport in { Vector2.new(1920, 1080), Vector2.new(1280, 720), Vector2.new(1597, 639), Vector2.new(1024, 768) } do
+			local v = EquipmentShopLayout.view(viewport, 58)
+			if v.wide then
+				t.ok(EquipmentShopLayout.WIDE_W * v.scale <= viewport.X * 0.6417 + 1e-3, tostring(viewport) .. " the width share")
+				t.ok(EquipmentShopLayout.WIDE_H * v.scale <= viewport.Y * 0.7519 + 1e-3, tostring(viewport) .. " the height share")
+			end
+		end
 	end)
 
-	t.test("tabs and footer stay outside the scrollable card area with 44 px targets", function()
+	t.test("the wide panel is the owner's frame, centred, with the evolution as a column", function()
+		local view = EquipmentShopLayout.view(Vector2.new(1920, 1080), 58)
+		local l = EquipmentShopLayout.compute(view.viewport, view.inset, true)
+		local R = EquipmentShopLayout.RIBBON
+		t.eq(l.panel.w, 760)
+		t.eq(l.panel.h + R, 501, "the body plus the ribbon above it is the frame")
+		t.near(l.panel.x + l.panel.w / 2, view.viewport.X / 2, 0.01, "centred horizontally")
+		t.near(l.panel.y - R + 501 / 2, view.viewport.Y / 2, 0.01, "and vertically, ribbon included")
+		t.ok(l.popout and not l.narrow and not l.compact, "the wide layout")
+		local e = l.evolvePanel
+		t.ok(e.x >= l.padding + l.contentW, "the column sits right of the tabs and the card")
+		t.ok(e.x + e.w <= l.panel.w, "and inside the panel")
+		t.ok(e.y >= l.tabsY + l.tabsH, "and starts below the tabs")
+		t.ok(e.y + e.h <= l.panel.h, "and ends inside the panel")
+		t.ok(l.carouselY >= l.tabsY + l.tabsH and l.carouselY + l.carouselH <= l.panel.h, "the screen sits between the tabs and the bottom")
+		t.ok(l.headerTop + l.headerH <= l.tabsY, "the tabs clear the header")
+	end)
+
+	t.test("the single column's header, tabs and footer keep 44 px targets", function()
 		for _, viewport in viewports do
 			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
+				local l = column(viewport, inset)
 				t.ok(l.padding >= 12, "visible padding")
 				t.ok(l.headerH >= 44, "header holds a 44 px close target")
-				t.ok(l.tabsY >= l.padding + l.headerH, "tabs clear header")
+				t.ok(l.tabsY >= l.headerTop + l.headerH, "tabs clear the header")
 				t.ok(l.tabsH >= 44, "tabs keep minimum touch height")
-				t.ok((l.panel.w - l.padding * 2 - l.gap * 2) / 3 >= 44, "three tabs keep minimum touch width")
-				t.ok(l.carouselY >= l.tabsY + l.tabsH + 6, "carousel clears tabs")
-				t.ok(l.carouselH > 0, "carousel has a visible window")
-				t.ok(l.carouselY + l.carouselH + 6 <= l.footerY, "carousel clears footer")
-				t.ok(l.footerY + 44 <= l.panel.h - l.padding, "footer is fully reachable")
+				t.ok((l.contentW - l.gap) / 2 >= 44, "two tabs keep minimum touch width")
+				t.ok(l.carouselY >= l.tabsY + l.tabsH + 6, "the screen clears the tabs")
+				t.ok(l.carouselH > 0, "the screen has a visible window")
+				if l.compact then
+					-- phones in landscape: the footer line moves up into the header
+					t.ok(l.carouselY + l.carouselH <= l.panel.h - l.padding, "the screen clears the panel's bottom padding")
+				else
+					t.ok(l.carouselY + l.carouselH + 6 <= l.footerY, "the screen clears the footer")
+					t.ok(l.footerY + l.footerH <= l.panel.h, "footer is fully inside the panel")
+				end
 			end
 		end
 	end)
 
-	t.test("narrow portraits preserve room for the wallet and readable vertical cards", function()
+	t.test("narrow portraits preserve room for the wallet", function()
 		for _, viewport in { Vector2.new(320, 568), Vector2.new(390, 667), Vector2.new(430, 932) } do
-			local l = layout(viewport, 58)
-			t.ok(l.narrow and not l.short, "portrait uses the vertical card composition")
+			local l = column(viewport, 58)
+			t.ok(l.narrow, "portrait uses the stacked composition")
 			t.ok(l.headerH >= 80 and l.headerH <= 84, "wallet fits a compact second header row")
-			t.ok(l.cardWidth >= 240 and l.cardWidth <= l.panel.w - l.padding * 2, "one portrait card fits in width")
-			t.ok(l.cardHeight >= 270 and l.cardHeight <= 300, "compact preview, name, stats and purchase remain readable")
-			t.ok(l.cardHeight + 8 <= l.carouselH - 4, "portrait card canvas fits above the horizontal scrollbar")
-		end
-		local smallest = layout(Vector2.new(320, 568), 58)
-		t.eq(smallest.cardHeight, 270, "small portrait keeps the readable minimum without vertical scrolling")
-	end)
-
-	t.test("short landscape uses wide cards with space for a real model and purchase target", function()
-		for _, viewport in { Vector2.new(667, 375), Vector2.new(844, 390), Vector2.new(932, 430) } do
-			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
-				t.ok(l.short and not l.narrow, "landscape uses the side by side card composition")
-				t.ok(l.headerH >= 54 and l.headerH <= 64, "short header preserves carousel space")
-				t.ok(l.cardWidth >= 400 and l.cardWidth <= l.panel.w - l.padding * 2, "wide card fits the carousel width")
-				t.ok(l.cardHeight >= 166 and l.cardHeight <= 250, "model and right hand purchase content stay readable")
-				t.ok(l.cardWidth - 128 - 48 >= 180, "model and text have separate columns")
-			end
-		end
-		local smallest = layout(Vector2.new(667, 375), 58)
-		t.ok(smallest.cardHeight > smallest.carouselH, "short screen scrolls card content without shrinking")
-	end)
-
-	t.test("desktop popup shows two compact model and stats cards side by side", function()
-		for _, viewport in { Vector2.new(1375, 659), Vector2.new(1920, 1080) } do
-			local l = layout(viewport, 58)
-			t.ok(not l.short and not l.narrow, "desktop uses the normal side by side card composition")
-			t.ok(l.headerH >= 54 and l.headerH <= 58, "desktop header keeps room for the catalogue")
-			t.ok(l.cardWidth >= 345 and l.cardWidth <= 360, "desktop card has room for model and stats columns")
-			t.ok(l.cardHeight >= 242 and l.cardHeight <= 250, "desktop card has a compact readable height")
-			t.ok(l.cardWidth * 2 + l.gap <= l.panel.w - l.padding * 2, "two desktop cards fit beside each other")
-			t.ok(l.cardHeight + 8 <= l.carouselH, "desktop card clears the horizontal scrollbar")
 		end
 	end)
 
-	t.test("ordinary desktop card canvas fits the window above its horizontal scrollbar", function()
-		for _, viewport in { Vector2.new(1375, 659), Vector2.new(1920, 1080) } do
-			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
-				-- Studio reserves four pixels of AbsoluteWindowSize for the horizontal bar.
-				local windowHeight = l.carouselH - 4
-				local cardCanvasHeight = l.cardHeight + 8
-				t.ok(cardCanvasHeight <= windowHeight, tostring(viewport) .. " has no unnecessary vertical scrollbar")
-				t.ok(l.cardHeight >= 242, "all compact card content remains readable")
-			end
-		end
+	t.test("short landscape keeps a window tall enough for the controls", function()
+		local smallest = column(Vector2.new(667, 375), 58)
+		t.ok(smallest.compact, "phones in landscape use the compact header")
+		t.ok(smallest.carouselH >= 160, "the compact header leaves the screen room for its rows")
 	end)
 
-	t.test("short composition begins when the card window cannot hold a 242 px normal card", function()
-		local normal = layout(Vector2.new(844, 514), 58)
-		local shorter = layout(Vector2.new(844, 513), 58)
-		t.ok(not normal.short and normal.carouselH >= 254, "normal card has its content and scrollbar clearance")
-		t.ok(shorter.short and shorter.carouselH < 254, "one fewer available pixel selects the short composition")
-		t.ok(normal.cardWidth < shorter.cardWidth, "short composition makes more room for horizontal content")
-		t.ok(normal.cardHeight + 8 <= normal.carouselH - 4, "last normal height fits the actual scroll window")
-	end)
-
-	t.test("twenty equipment cards keep their readable width and overflow horizontally", function()
-		for _, viewport in viewports do
-			local l = layout(viewport, 58)
-			local contentWidth = l.cardWidth * 20 + l.gap * 19
-			local visibleWidth = l.panel.w - l.padding * 2
-			t.ok(l.gap >= 12, "cards have distinct edges")
-			t.ok(contentWidth > visibleWidth, "the carousel scrolls a large catalogue")
-			t.ok(contentWidth - visibleWidth > l.cardWidth * 10, "the full catalogue remains reachable without compressing cards")
-		end
-	end)
-
-	t.test("pet carousel geometry is available", function()
-		t.ok(type(EquipmentShopLayout.petCards) == "function", "eggs and pets share a full card layout")
-	end)
-	if type(EquipmentShopLayout.petCards) ~= "function" then return end
-
-	t.test("eggs and pets share full card heights without changing equipment geometry", function()
-		for _, viewport in viewports do
-			for _, inset in { 36, 58 } do
-				local equipment = layout(viewport, inset)
-				local equipmentHeight = equipment.cardHeight
-				local egg = EquipmentShopLayout.petCards(equipment)
-				local pet = EquipmentShopLayout.petCards(equipment)
-				t.ok(egg.pet and pet.pet, "both use the full pet card composition")
-				t.eq(egg.cardHeight, if equipment.short then 310 else 410, "perks and hatch content retain their full height")
-				t.eq(egg.cardHeight, pet.cardHeight, "the tallest card cannot create blank overscroll for shorter eggs")
-				t.eq(egg.cardWidth, equipment.cardWidth, "responsive horizontal card width is preserved")
-				t.eq(equipment.cardHeight, equipmentHeight, "equipment height is not mutated")
-				t.eq(equipment.pet, nil, "equipment keeps its existing composition")
-			end
-		end
-		local nativeLandscape = layout(Vector2.new(844, 390), 58)
-		t.eq(nativeLandscape.cardHeight, 166, "the original short egg height reproduced the blank-scroll bug")
-		t.eq(EquipmentShopLayout.petCards(nativeLandscape).cardHeight, 310, "the native landscape egg now matches its pet neighbours")
-	end)
-
-	t.test("maximum pet carousel scroll still shows each complete 44 px action", function()
-		for _, viewport in viewports do
-			for _, inset in { 36, 58 } do
-				local cards = EquipmentShopLayout.petCards(layout(viewport, inset))
-				local windowHeight = cards.carouselH - 4 -- Horizontal scrollbar.
-				local canvasHeight = cards.cardHeight + 8 -- Shared top/bottom canvas allowance.
-				local maximumScroll = math.max(0, canvasHeight - windowHeight)
-				local cardBottom = 4 + cards.cardHeight - maximumScroll
-				local actionTop = 4 + cards.cardHeight - 52 - maximumScroll
-				local context = tostring(viewport) .. " inset=" .. inset
-				t.ok(cardBottom > 0, context .. " cannot scroll below the entire egg or pet card")
-				t.ok(actionTop >= 0 and actionTop + 44 <= windowHeight, context .. " hatch/equip action is fully reachable at maximum scroll")
-			end
-		end
+	t.test("the wide screen holds the card, the quantity strip and Upgrade without scrolling", function()
+		local l = EquipmentShopLayout.compute(Vector2.new(1184, 780), 36, true)
+		-- ShopController gives the wide screen the content width plus its 4 px margins, and the carousel plus its margins
+		local screen = EquipmentShopLayout.screen(l.contentW + 8, l.carouselH + 8, false, false, 4, true)
+		t.ok(screen.canvasH <= l.carouselH + 8 + 1e-6, "the screen fits its window (" .. screen.canvasH .. " of " .. l.carouselH + 8 .. ")")
+		t.eq(screen.card.w, l.contentW, "the card is as wide as the tabs")
+		local body = EquipmentShopLayout.evolve(l.evolvePanel.w, false, true)
+		t.ok(body.height <= l.evolvePanel.h + 1e-6, "the evolution body fits its column (" .. body.height .. " of " .. l.evolvePanel.h .. ")")
 	end)
 end

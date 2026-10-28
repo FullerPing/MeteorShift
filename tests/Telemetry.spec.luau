@@ -69,6 +69,21 @@ return function(t: any)
 		t.eq(drained.b, 1)
 	end)
 
+	t.test("economy flows sum per line and keep the latest balance until drained", function()
+		local pending = {}
+		Telemetry.addFlow(pending, "p", "Source", "Cash", 10, 110, "Gameplay", "field_cash")
+		Telemetry.addFlow(pending, "p", "Source", "Cash", 5, 115, "Gameplay", "field_cash")
+		Telemetry.addFlow(pending, "p", "Source", "Cash", 50, 165, "Gameplay", "sell_bars")
+		Telemetry.addFlow(pending, "q", "Sink", "Cash", 7, 0, "Shop", "pickaxe")
+		local flows = Telemetry.drainFlows(pending, "p")
+		t.eq(#flows, 2)
+		local field = if flows[1].sku == "field_cash" then flows[1] else flows[2]
+		t.eq(field.amount, 15)
+		t.eq(field.balance, 115)
+		t.eq(#Telemetry.drainFlows(pending, "p"), 0)
+		t.eq(#Telemetry.drainFlows(pending, "q"), 1)
+	end)
+
 	local function byName(rows: { Telemetry.Row }): { [string]: Telemetry.Row }
 		local map = {}
 		for _, row in rows do
@@ -111,8 +126,115 @@ return function(t: any)
 		t.eq(rows.meteor_event_node_hitters.Value, 0)
 	end)
 
+	t.test("session minutes fall into coarse buckets", function()
+		t.eq(Telemetry.sessionBucket(0), "0-2")
+		t.eq(Telemetry.sessionBucket(119), "0-2")
+		t.eq(Telemetry.sessionBucket(120), "2-5")
+		t.eq(Telemetry.sessionBucket(9 * 60), "5-10")
+		t.eq(Telemetry.sessionBucket(15 * 60), "10-20")
+		t.eq(Telemetry.sessionBucket(30 * 60), "20-40")
+		t.eq(Telemetry.sessionBucket(40 * 60), "40-90")
+		t.eq(Telemetry.sessionBucket(5 * 3600), "90+")
+		t.eq(Telemetry.sessionBucket(-5), "0-2")
+	end)
+
+	t.test("a leave is filed under the part of the meteor cycle it happened in", function()
+		t.eq(Telemetry.leavePhase("Countdown"), "countdown")
+		t.eq(Telemetry.leavePhase("Impact"), "meteor")
+		t.eq(Telemetry.leavePhase("Active"), "meteor")
+		t.eq(Telemetry.leavePhase("CoreCracked"), "aftermath")
+		t.eq(Telemetry.leavePhase("Cooled"), "aftermath")
+		t.eq(Telemetry.leavePhase("Cleanup"), "aftermath")
+		t.eq(Telemetry.leavePhase("Nonsense"), "unknown")
+	end)
+
+	t.test("player_left counts 1 and carries the cycle phase, the session bucket and onboarding", function()
+		local row = Telemetry.playerLeft(14 * 60 + 40, "Countdown", true)
+		t.eq(row.Name, "player_left")
+		t.eq(row.Value, 1)
+		t.eq(row.Fields[1], "countdown")
+		t.eq(row.Fields[2], "10-20")
+		t.eq(row.Fields[3], "tutorial_done")
+		t.eq(Telemetry.playerLeft(30, "Active", false).Fields[3], "in_tutorial")
+		t.eq(Telemetry.playerLeft(30, "Active", nil).Fields[3], "unknown")
+	end)
+
 	t.test("the Studio log line names kind, event, player, value and fields", function()
 		t.eq(Telemetry.line("custom", "first_core_reward", "Ana", 7, { "Iron" }), "[Telemetry] custom first_core_reward Ana 7 Iron")
 		t.eq(Telemetry.line("funnel", "3 mine_node", "Ana", nil, nil), "[Telemetry] funnel 3 mine_node Ana")
 	end)
+	t.test("the event summary adds seconds to the core when the core opened", function()
+		local rows = Telemetry.eventSummary({
+			MeteorType = "Iron", Cracked = false, Players = 3, NodeHitters = 2, CoreHitters = 0, SecondsToCore = 41.6,
+		})
+		local found = nil
+		for _, row in rows do
+			if row.Name == "meteor_event_seconds_to_core" then found = row end
+		end
+		t.ok(found ~= nil, "row present")
+		t.eq((found :: any).Value, 42)
+		t.eq(#Telemetry.eventSummary({ MeteorType = "Iron", Cracked = false, Players = 1, NodeHitters = 0, CoreHitters = 0 }), 4)
+	end)
+
+	t.test("days away buckets a returning player and calls a first join new", function()
+		local now = 1_800_000_000
+		t.eq(Telemetry.daysAway(0, now), "new")
+		t.eq(Telemetry.daysAway(now - 3600, now), "0")
+		t.eq(Telemetry.daysAway(now - 86400 - 1, now), "1")
+		t.eq(Telemetry.daysAway(now - 3 * 86400, now), "2-3")
+		t.eq(Telemetry.daysAway(now - 7 * 86400, now), "4-7")
+		t.eq(Telemetry.daysAway(now - 30 * 86400, now), "8-30")
+		t.eq(Telemetry.daysAway(now - 31 * 86400, now), "30+")
+		t.eq(Telemetry.daysAway(now + 50, now), "0") -- a clock running behind never goes negative
+	end)
+
+	t.test("stage buckets rebirths", function()
+		t.eq(Telemetry.stage(nil), "r0")
+		t.eq(Telemetry.stage(0), "r0")
+		t.eq(Telemetry.stage(1), "r1")
+		t.eq(Telemetry.stage(4), "r2-4")
+		t.eq(Telemetry.stage(9), "r5-9")
+		t.eq(Telemetry.stage(25), "r10+")
+	end)
+
+	t.test("session_start counts 1 and carries the days-away bucket, the stage and onboarding", function()
+		local now = 1_800_000_000
+		local row = Telemetry.sessionStart(now - 2 * 86400 - 60, now, 3, true)
+		t.eq(row.Name, "session_start")
+		t.eq(row.Value, 1)
+		t.eq(row.Fields[1], "2-3")
+		t.eq(row.Fields[2], "r2-4")
+		t.eq(row.Fields[3], "tutorial_done")
+		local first = Telemetry.sessionStart(0, now, 0, false)
+		t.eq(first.Value, 1)
+		t.eq(first.Fields[1], "new")
+		t.eq(first.Fields[3], "in_tutorial")
+	end)
+
+	t.test("participation gives hits and the player's role", function()
+		local core = Telemetry.participation("Iron", true, { Hits = 30, Core = true })
+		t.eq(core.Name, "meteor_participation")
+		t.eq(core.Value, 30)
+		t.eq(core.Fields[1], "Iron")
+		t.eq(core.Fields[2], "cracked")
+		t.eq(core.Fields[3], "core")
+		t.eq(Telemetry.participation("Iron", false, { Hits = 4, Core = false }).Fields[3], "crust")
+		local idle = Telemetry.participation("Iron", false, nil)
+		t.eq(idle.Value, 0)
+		t.eq(idle.Fields[3], "none")
+	end)
+
+	t.test("keyForId finds the pass or product, never for id 0", function()
+		local list = { TwoXOre = { Id = 11 }, VIP = { Id = 22 }, Soon = { Id = 0 } }
+		t.eq(Telemetry.keyForId(list, 22), "VIP")
+		t.eq(Telemetry.keyForId(list, 33), nil)
+		t.eq(Telemetry.keyForId(list, 0), nil)
+	end)
+
+	t.test("only listed menu names are counted", function()
+		t.ok(Telemetry.knownMenu(Config.Menus, "Store"), "Store counts")
+		t.ok(not Telemetry.knownMenu(Config.Menus, "Hacked"), "unknown name refused")
+		t.ok(not Telemetry.knownMenu(Config.Menus, 5), "non-string refused")
+	end)
+
 end

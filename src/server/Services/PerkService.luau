@@ -13,6 +13,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 
 local PerkService = Knit.CreateService({
 	Name = "PerkService",
@@ -47,7 +48,7 @@ function PerkService:Buy(player: Player, perkId: string): boolean
 		self.Client.Notice:Fire(player, string.format("Need %d Core Shards for %s. Crack meteor cores to earn them!", cost, perk.Name))
 		return false
 	end
-	data.shards -= cost
+	ShardWallet.spend(data, cost)
 	data.perks[perkId] = Perks.level(data.perks, perkId) + 1
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Bought:Fire(player, perkId, data.perks[perkId])

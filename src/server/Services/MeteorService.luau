@@ -29,6 +29,7 @@ local Phase = require(ReplicatedStorage.Shared.Phase)
 local MiningPower = require(ReplicatedStorage.Shared.MiningPower)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
 local MeteorTypes = require(ReplicatedStorage.Shared.MeteorTypes)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
 local MineralIndex = require(ReplicatedStorage.Shared.MineralIndex)
 local CallMeteor = require(ReplicatedStorage.Shared.CallMeteor)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -44,7 +45,8 @@ local interval = MeteorConfig.Countdown
 local MeteorService = Knit.CreateService({
 	Name = "MeteorService",
 	Client = {
-		-- { phase, endsAt, type, typeName, requiredTier, eventId, crustTotal, crustBroken, unlocked }
+		-- { phase, endsAt, type, typeName, requiredTier, eventId, crustTotal, crustBroken, unlocked, hourlyServed }
+		-- (hourlyServed: the last hourly Quartz slot that got its meteor, from the first countdown on; World 1)
 		-- endsAt is in workspace:GetServerTimeNow() time. type is the Config.Meteor.Types
 		-- id, picked at the start of each countdown; requiredTier is its pickaxe tier.
 		State = Knit.CreateProperty(nil),
@@ -54,6 +56,7 @@ local MeteorService = Knit.CreateService({
 })
 
 MeteorService.Landed = Signal.new() -- (position: Vector3) at impact
+MeteorService.CoreUnlocked = Signal.new() -- () enough crust broke: the core is open to hit
 -- (meteorType: string, cracked: boolean, secondsToCrack: number?) when the Active
 -- phase ends; secondsToCrack runs from the start of Active, nil when it cooled
 MeteorService.Ended = Signal.new()
@@ -102,6 +105,7 @@ local callTimes: { number } = {}
 -- DevSpawn: the meteor type asked for from the command bar or chat. It
 -- ends a meteor that is still down and comes in StreakLeadTime seconds into its countdown.
 local devNext: Config.MeteorType? = nil
+local meteorsSinceBoss = 0 -- meteors since the last Alien boss (scheduled or called)
 local lastDevSkipRequest: { [Player]: number } = {}
 
 local function now(): number
@@ -137,6 +141,10 @@ end
 
 -- Whether Call a Meteor can be bought right now, and why not (Shared.CallMeteor).
 function MeteorService:CanCallMeteor(): (boolean, string?)
+	-- the hourly meteor lands at its minute on every server; a call can't pull it in
+	if state.phase == Phase.Countdown and state.type == MeteorConfig.Hourly.Type then
+		return false, "The hourly Quartz meteor is on its way"
+	end
 	local clock = os.clock()
 	local sinceLastEnd = if lastCalledEnd then clock - lastCalledEnd else nil
 	return CallMeteor.available(
@@ -151,11 +159,14 @@ end
 -- allow it: the countdown jumps to Config.Monetization.CallMeteor.SetCountdownTo and
 -- the server hears who called it. The meteor type was already picked; a call can't
 -- change it or the loot. Returns whether it went through and, if not, why.
-function MeteorService:CallMeteor(player: Player): (boolean, string?)
+-- With `boss` the called meteor is the Alien boss instead (Call a Boss Meteor): same limits,
+-- and it restarts the count to the next scheduled boss.
+function MeteorService:CallMeteor(player: Player, boss: boolean?): (boolean, string?)
 	local ok, reason = self:CanCallMeteor()
 	if not ok then
 		return false, reason
 	end
+	local bossType = if boss then MeteorConfig.Types[MeteorConfig.Boss.Type] else nil
 	local clock = os.clock()
 	local window = Config.Monetization.CallMeteor.CapWindow
 	for index = #callTimes, 1, -1 do
@@ -165,8 +176,13 @@ function MeteorService:CallMeteor(player: Player): (boolean, string?)
 	end
 	table.insert(callTimes, clock)
 	eventCalled = true
+	if bossType then
+		devNext = bossType -- the loop swaps the picked type for it when the countdown ends
+		meteorsSinceBoss = 0
+		self:_publish({ type = bossType.Id, typeName = bossType.DisplayName, requiredTier = bossType.RequiredTier })
+	end
 	self:SetCountdownRemaining(Config.Monetization.CallMeteor.SetCountdownTo)
-	RewardService:Announce("CallMeteor", player.DisplayName .. " called a meteor!")
+	RewardService:Announce(if bossType then "Boss" else "CallMeteor", player.DisplayName .. (if bossType then " called the Alien boss meteor!" else " called a meteor!"))
 	return true, nil
 end
 
@@ -174,12 +190,11 @@ local function countdownLength(first: boolean): number
 	if RunService:IsStudio() and MeteorConfig.StudioCountdown then
 		return MeteorConfig.StudioCountdown
 	end
-	return if first then MeteorConfig.FirstCountdown else interval
+	-- a Meteor Shower (GlobalEventService) shortens the wait on every server at once
+	return if first then MeteorConfig.FirstCountdown else math.floor(interval * Knit.GetService("GlobalEventService"):Mult("countdown"))
 end
 
--- Meteors since the last Alien boss, and whether anyone here has the rebirths to see one
-local meteorsSinceBoss = 0
-
+-- Whether anyone here has the rebirths to see an Alien boss
 local function bossAllowed(): boolean
 	for _, other in Players:GetPlayers() do
 		local data = PlayerStateService:Get(other)
@@ -200,20 +215,22 @@ local function pickType(): Config.MeteorType
 		return MeteorConfig.Types[forced]
 	end
 	meteorsSinceBoss += 1
-	if meteorsSinceBoss >= MeteorConfig.Boss.EveryMeteors and bossAllowed() then
+	local world = Worlds.here().Id
+	if world == 1 and meteorsSinceBoss >= MeteorConfig.Boss.EveryMeteors and bossAllowed() then
 		meteorsSinceBoss = 0
 		return MeteorConfig.Types[MeteorConfig.Boss.Type]
 	end
-	local picked = MeteorTypes.pick(math.random())
+	local picked = MeteorTypes.pick(math.random(), MeteorConfig.WorldTypeOrder[world])
 	if math.random() < Config.Hooks.GoldenMeteor.Chance then
 		return MeteorTypes.golden(picked)
 	end
 	return picked
 end
 
--- Mining Power per second of the active players, with the floor (spec §5.3).
-local function serverPower(): number
-	return MiningPower.serverPowerRates(ActivityService:GetActiveRates())
+-- Mining Power per second of the active players, with the floor (spec §5.3). `everyone` counts every player in the
+-- server, active or not: used at impact, when a strong player who hasn't swung lately would otherwise be missed.
+local function serverPower(everyone: boolean?): number
+	return MiningPower.serverPowerRates(ActivityService:GetActiveRates(everyone))
 end
 
 -- Moves a part and the decorative parts parented under it together.
@@ -320,12 +337,14 @@ function MeteorService:_unlockCore(meteor: Meteor)
 	end
 	self:_publish({ unlocked = true })
 	RewardService:Announce("CoreUnlocked", "The core is exposed! Hit it before it cools!")
+	self.CoreUnlocked:Fire()
 end
 
 -- Variable rewards for breaking a crust node (Config.Hooks): a chance of a shard crumb for the player
--- who broke it, and the Golden Node's ore lumps for its breaker and everyone else who hit it. Lumps
+-- who broke it, and the Golden Node's ore lumps for its breaker and everyone else who dealt a real share
+-- of its Mining Power (Hooks.goldenAssist; `hitters` maps each hitter to the power they dealt). Lumps
 -- go straight to the hopper, so a full backpack never wastes them.
-function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: { [Player]: boolean }, oreFor: (Player) -> (string?, number))
+function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: { [Player]: number }, oreFor: (Player) -> (string?, number))
 	local crumb = Hooks.shardCrumb(math.random(), math.random())
 	if crumb > 0 and PlayerStateService:Get(breaker) then
 		PlayerStateService:AddShards(breaker, crumb)
@@ -334,9 +353,13 @@ function MeteorService:_crustBonuses(breaker: Player, golden: boolean, hitters: 
 	if not golden then
 		return
 	end
-	hitters[breaker] = true
-	for hitter in hitters do
-		if hitter.Parent and PlayerStateService:Get(hitter) then
+	local total = 0
+	for _, power in hitters do
+		total += power
+	end
+	hitters[breaker] = hitters[breaker] or 0 -- the breaker is always paid (a pet's hit can break it)
+	for hitter, power in hitters do
+		if hitter.Parent and PlayerStateService:Get(hitter) and (hitter == breaker or Hooks.goldenAssist(power, total)) then
 			local oreId, oreMult = oreFor(hitter)
 			if oreId then
 				local ore = Hooks.goldenNodeOre(NodeService:OrePerHit(hitter, oreMult), hitter == breaker)
@@ -380,7 +403,9 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 	core.Parent = model
 	model.PrimaryPart = core
 
-	local power = serverPower()
+	-- sized for everyone here (a landing is when people gather); an idle player is rescaled out after RescaleCooldown
+	local power = serverPower(true)
+	-- every slot is a mineable crust node; the upper ones are hit with the upward reach (Shared.MiningReach)
 	local slots = {}
 	for _, child in core:GetChildren() do
 		if child:IsA("Attachment") and child.Name == "NodeSlot" then
@@ -439,7 +464,7 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 		end
 		goldenIndex = if #candidates > 0 then candidates[math.random(1, #candidates)] else math.random(1, #slots)
 	end
-	local goldenHitters: { [Player]: boolean } = {}
+	local goldenHitters: { [Player]: number } = {} -- Mining Power each player dealt the Golden Node
 	for index, slot in slots do
 		local piece = (pieces[math.random(1, #pieces)] :: BasePart):Clone()
 		piece.Name = "CrustNode" .. index
@@ -467,16 +492,20 @@ function MeteorService:_spawnMeteor(meteorType: Config.MeteorType): Meteor
 			OnHit = function(player, power, ore)
 				ContributionService:AddCrust(player, power, ore)
 				if index == goldenIndex then
-					goldenHitters[player] = true
+					goldenHitters[player] = (goldenHitters[player] or 0) + power
 				end
 			end,
 			OnBroken = function(breaker)
-				self:_crustBonuses(breaker, index == goldenIndex, goldenHitters, oreFor)
+				-- count, hide and unlock first: a failing bonus must not leave the core locked
 				meteor.CrustBroken += 1
 				self:_breakPart(piece)
 				self:_publish({ crustBroken = meteor.CrustBroken })
 				if not meteor.Unlocked and meteor.CrustBroken >= meteor.UnlockAt then
 					self:_unlockCore(meteor)
+				end
+				local ok, err = pcall(self._crustBonuses, self, breaker, index == goldenIndex, goldenHitters, oreFor)
+				if not ok then
+					warn("[MeteorService] crust bonuses failed:", err)
 				end
 			end,
 		})
@@ -507,14 +536,11 @@ end
 
 -- Mid-event joins and leaves (spec §5.3): when the active server power drifts more
 -- than 15% from what the meteor was sized for, rescale the remaining HP of every
--- node and the core to the new power, keeping the same fraction done. At most once
--- every RescaleCooldown seconds.
+-- node and the core to the new power, keeping the same fraction done. Tougher at once, easier at most once every
+-- RescaleCooldown seconds (MiningPower.rescaleDue).
 function MeteorService:_checkRescale(meteor: Meteor)
-	if os.clock() - meteor.LastRescale < MeteorConfig.RescaleCooldown then
-		return
-	end
 	local power = serverPower()
-	if not MiningPower.shouldRescale(meteor.SizedPower, power) then
+	if not MiningPower.rescaleDue(meteor.SizedPower, power, os.clock() - meteor.LastRescale) then
 		return
 	end
 	local ratio = power / meteor.SizedPower
@@ -604,8 +630,16 @@ function MeteorService:_runEvent(meteorType: Config.MeteorType)
 	local nextCheck = os.clock() + MeteorConfig.RescaleCheckInterval
 	local refreezing = meteorType.Twist == "Refreeze"
 	local lastRefreeze = os.clock()
+	local overtimeChecked = false
 	waitUntil(function()
 		local clock = os.clock()
+		if not overtimeChecked and not meteor.Cracked and devNext == nil and now() >= state.endsAt then
+			overtimeChecked = true
+			if MeteorTypes.overtime(NodeService:GetHp(meteor.CoreId)) then
+				self:_publish({ endsAt = state.endsAt + MeteorConfig.Overtime.Seconds })
+				RewardService:Announce("Overtime", string.format("OVERTIME! The core is almost cracked: +%d s", MeteorConfig.Overtime.Seconds))
+			end
+		end
 		if clock >= nextCheck then
 			nextCheck = clock + MeteorConfig.RescaleCheckInterval
 			self:_checkRescale(meteor)
@@ -648,18 +682,29 @@ end
 
 function MeteorService:_loop()
 	local first = true
+	local hourlyServed = now() -- the last hourly slot that got its Quartz; published so the HUD can say it's queued
 	while true do
 		local queued = devNext
 		devNext = nil
-		local meteorType = queued or pickType()
-		if meteorType.Golden then
+		local length = countdownLength(first)
+		-- the hourly Quartz meteor lands in World 1 only
+		local hourlyAt, slot = nil, nil
+		if not queued and Worlds.here().Id == 1 then
+			hourlyAt, slot = MeteorTypes.hourly(now(), length, hourlyServed)
+			hourlyServed = slot or hourlyServed
+		end
+		local meteorType = queued or (if hourlyAt then MeteorConfig.Types[MeteorConfig.Hourly.Type] else pickType())
+		if hourlyAt then
+			RewardService:Announce("Boss", "The hourly Quartz meteor is up next!")
+		elseif meteorType.Golden then
 			RewardService:Announce("Golden", "A GOLDEN meteor is coming: its ore pays " .. Config.Hooks.GoldenMeteor.PayMult .. "x!")
 		elseif meteorType.Id == MeteorConfig.Boss.Type then
 			RewardService:Announce("Boss", "The Alien boss meteor is coming!")
 		end
 		self:_publish({
 			phase = Phase.Countdown,
-			endsAt = now() + (if queued then MeteorConfig.StreakLeadTime else countdownLength(first)),
+			endsAt = hourlyAt or (now() + (if queued then MeteorConfig.StreakLeadTime else length)),
+			hourlyServed = hourlyServed,
 			type = meteorType.Id,
 			typeName = meteorType.DisplayName,
 			requiredTier = meteorType.RequiredTier,
@@ -700,14 +745,14 @@ end
 -- seconds; otherwise the meteor that is down ends early (it cools) and the asked-for one
 -- comes in StreakLeadTime seconds into the next countdown. Returns what will happen.
 function MeteorService:DevSpawn(typeId: string): string
-	local meteorType: Config.MeteorType? = nil
+	local meteorType: Config.MeteorType? = if string.lower(tostring(typeId)) == "admin" then MeteorTypes.admin(MeteorConfig.Types.Iron) else nil
 	for id, candidate in MeteorConfig.Types do
 		if string.lower(id) == string.lower(tostring(typeId)) then
 			meteorType = candidate
 		end
 	end
 	if not meteorType then
-		return string.format("No meteor type %q (try %s)", tostring(typeId), table.concat(MeteorConfig.TypeOrder, ", "))
+		return string.format("No meteor type %q (try %s, Admin)", tostring(typeId), table.concat(MeteorConfig.TypeOrder, ", "))
 	end
 	devNext = meteorType
 	if state.phase == Phase.Countdown then

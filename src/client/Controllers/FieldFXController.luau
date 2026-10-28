@@ -2,7 +2,9 @@
 -- Juice for the ore fields (Workspace.Map.Debris): every live rock glows softly and sparkles in its
 -- ore colour, breaks in a spray of chips, and flashes when it grows back. All local and cosmetic: the
 -- server owns HP and drops (DebrisService); this only reacts to a rock's Transparency, which the
--- server sets to 1 when it breaks and back to 0 when it respawns.
+-- server sets to 1 when it breaks and back to 0 when it respawns. Only rocks within NEAR studs of the camera glow
+-- and sparkle, and none do with the ReduceEffects setting on.
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
@@ -14,8 +16,11 @@ local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local FieldFXController = Knit.CreateController({ Name = "FieldFXController" })
 
 local STONE = Color3.fromRGB(150, 146, 156)
+local NEAR = 150 -- studs from the camera
+local player = Players.LocalPlayer
+local reduced = player:GetAttribute("ReduceEffects") == true
 
-type Juice = { rock: BasePart, light: PointLight, sparkle: ParticleEmitter, chips: ParticleEmitter, phase: number }
+type Juice = { rock: BasePart, light: PointLight, sparkle: ParticleEmitter, chips: ParticleEmitter, phase: number, live: boolean, near: boolean }
 
 -- The ore colour a rock shows right now (the server tints flecks by the tier a rock is sized for)
 local function oreColor(rock: BasePart): Color3
@@ -66,12 +71,13 @@ local function makeJuice(rock: BasePart, index: number): Juice
 	chips.LightEmission = 0.4
 	chips.Parent = rock
 
-	return { rock = rock, light = light, sparkle = sparkle, chips = chips, phase = index * 1.7 }
+	return { rock = rock, light = light, sparkle = sparkle, chips = chips, phase = index * 1.7, live = false, near = false }
 end
 
-local function setLive(juice: Juice, live: boolean)
-	juice.light.Enabled = live
-	juice.sparkle.Enabled = live
+local function apply(juice: Juice)
+	local on = juice.live and juice.near and not reduced
+	juice.light.Enabled = on
+	juice.sparkle.Enabled = on
 end
 
 -- A rock just broke: chips in its ore and stone colours
@@ -86,6 +92,7 @@ local function pop(juice: Juice)
 	local color = oreColor(juice.rock)
 	juice.light.Color = color
 	juice.sparkle.Color = ColorSequence.new(color)
+	if reduced or not juice.near then return end
 	juice.sparkle:Emit(8)
 	local flash = Instance.new("Highlight")
 	flash.Name = "FieldPop"
@@ -107,23 +114,49 @@ function FieldFXController:KnitStart()
 		if not rock:IsA("BasePart") then return end
 		local juice = makeJuice(rock, #all + 1)
 		table.insert(all, juice)
-		local live = rock.Transparency < 1
-		setLive(juice, live)
+		juice.live = rock.Transparency < 1
+		apply(juice)
 		rock:GetPropertyChangedSignal("Transparency"):Connect(function()
 			local now = rock.Transparency < 1
-			if now == live then return end
-			live = now
-			setLive(juice, now)
+			if now == juice.live then return end
+			juice.live = now
+			apply(juice)
 			if now then pop(juice) else burst(juice) end
 		end)
 	end
 	for _, rock in debris:GetChildren() do track(rock) end
 	debris.ChildAdded:Connect(track)
+	player:GetAttributeChangedSignal("ReduceEffects"):Connect(function()
+		reduced = player:GetAttribute("ReduceEffects") == true
+		for _, juice in all do apply(juice) end
+	end)
 
-	-- One shared loop breathes every glow
+	-- Twice a second: which rocks are near the camera (only those glow, sparkle and breathe)
+	local nearby: { Juice } = {}
+	task.spawn(function()
+		while true do
+			local camera = workspace.CurrentCamera
+			if camera then
+				local eye = camera.CFrame.Position
+				local list = {}
+				for _, juice in all do
+					local near = (juice.rock.Position - eye).Magnitude <= NEAR
+					if near ~= juice.near then
+						juice.near = near
+						apply(juice)
+					end
+					if near then table.insert(list, juice) end
+				end
+				nearby = list
+			end
+			task.wait(0.5)
+		end
+	end)
+
+	-- One shared loop breathes the nearby glows
 	RunService.Heartbeat:Connect(function()
 		local t = os.clock()
-		for _, juice in all do
+		for _, juice in nearby do
 			if juice.light.Enabled then
 				juice.light.Brightness = Config.Debris.Rock.LightBrightness * (0.75 + 0.25 * math.sin(t * 2.2 + juice.phase))
 			end

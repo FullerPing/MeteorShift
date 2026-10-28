@@ -30,6 +30,18 @@ local rumbleLevel = 0 -- sustained shake while the meteor approaches
 local streak: BasePart? = nil
 local streakTween: Tween? = nil
 local rumble: Sound? = nil
+local approach = Config.ImpactFX.Approach
+-- the sky warming as the fireball comes down (Config.ImpactFX.Approach); it peaks at impact, then eases off
+local skyTint: ColorCorrectionEffect? = nil
+
+local function releaseSky()
+	local tint = skyTint
+	skyTint = nil
+	if not tint then return end
+	local tween = TweenService:Create(tint, TweenInfo.new(approach.Release), { TintColor = Color3.new(1, 1, 1), Saturation = 0, Contrast = 0 })
+	tween.Completed:Once(function() tint:Destroy() end)
+	tween:Play()
+end
 
 local function spawnPoint(): Vector3?
 	local map = WorldMap.find()
@@ -67,6 +79,7 @@ function MeteorFXController:_clearStreak()
 		rumble = nil
 	end
 	rumbleLevel = 0
+	releaseSky()
 end
 
 -- The fireball crossing the sky before impact
@@ -101,13 +114,13 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	flame.Color = ColorSequence.new(Color3.fromRGB(255, 230, 120), color)
 	flame.Transparency = NumberSequence.new(0.1, 1)
 	flame.Lifetime = NumberRange.new(0.4, 0.7)
-	flame.Rate = 20
+	flame.Rate = approach.FlameRate
 	flame.LightEmission = 1
 	flame.SpreadAngle = Vector2.new(15, 15)
 	flame.Parent = ball
 
 	local light = Instance.new("PointLight")
-	light.Brightness = 6
+	light.Brightness = approach.LightBrightness
 	light.Range = geometry.Streak.LightRange
 	light.Color = color
 	light.Parent = ball
@@ -134,12 +147,36 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	smoke.Size = geometry.Streak.SmokeSize
 	smoke.Transparency = NumberSequence.new(0.3, 1)
 	smoke.Lifetime = NumberRange.new(2, 3)
-	smoke.Rate = 40
+	smoke.Rate = approach.SmokeRate
 	smoke.Speed = geometry.Streak.SmokeSpeed
 	smoke.Parent = ball
 
+	-- a soft glowing halo round the fireball, so it reads from anywhere on the map
+	local halo = Instance.new("Part")
+	halo.Name = "MeteorHalo"
+	halo.Shape = Enum.PartType.Ball
+	halo.Size = geometry.Streak.StartSize * approach.Halo
+	halo.Material = Enum.Material.Neon
+	halo.Color = color
+	halo.Transparency = approach.HaloTransparency
+	halo.Anchored, halo.CanCollide, halo.CanQuery, halo.CastShadow = true, false, false, false
+	halo.CFrame = ball.CFrame
+	halo.Parent = ball
+	ball:GetPropertyChangedSignal("CFrame"):Connect(function() halo.CFrame = ball.CFrame end)
+	ball:GetPropertyChangedSignal("Size"):Connect(function() halo.Size = ball.Size * approach.Halo end)
+
 	ball.Parent = workspace.CurrentCamera
 	streak = ball
+
+	if not skyTint then
+		local tint = Instance.new("ColorCorrectionEffect")
+		tint.Name = "MeteorApproach"
+		tint.Parent = Lighting
+		skyTint = tint
+	end
+	TweenService:Create(skyTint :: ColorCorrectionEffect, TweenInfo.new(math.max(secondsLeft, 0.2), Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+		TintColor = approach.Tint, Saturation = approach.Saturation, Contrast = approach.Contrast,
+	}):Play()
 
 	streakTween = TweenService:Create(ball, TweenInfo.new(math.max(secondsLeft, 0.2), Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
 		Position = target,
@@ -151,6 +188,7 @@ function MeteorFXController:_startStreak(target: Vector3, secondsLeft: number, c
 	local sound = Instance.new("Sound")
 	sound.SoundId = rumbleEntry.Id
 	sound.Looped = true
+	sound.SoundGroup = Sfx.group("SFX")
 	sound.Volume = rumbleEntry.Volume
 	sound.PlaybackSpeed = Sfx.pitch(rumbleEntry)
 	sound.RollOffMinDistance = geometry.Sound.minDistance
@@ -330,12 +368,12 @@ function MeteorFXController:_onImpact(position: Vector3, typeId: string?)
 	self:_shockwave(position, meteorType.GlowColor)
 	knockback(position)
 	addShake(0.4 + distanceScale(position, geometry.Shake.ImpactRadius) * 0.6)
-	flashScreen(0.5, 0.8)
+	flashScreen(0.7, 1.0)
 end
 
 function MeteorFXController:_onCoreCracked(position: Vector3)
-	flashScreen(0.8, 1.2)
-	addShake(0.3 + distanceScale(position, geometry.Shake.CoreRadius) * 0.5)
+	flashScreen(Config.ImpactFX.Crack.Flash, Config.ImpactFX.Crack.FlashSeconds)
+	addShake(0.4 + distanceScale(position, geometry.Shake.CoreRadius) * 0.6)
 	if player:GetAttribute("ReduceEffects") == true then return end
 
 	local burst = Instance.new("Part")
@@ -364,7 +402,7 @@ function MeteorFXController:_onCoreCracked(position: Vector3)
 	shards.Acceleration = geometry.Core.ShardsAcceleration
 	shards.Enabled = false
 	shards.Parent = burst
-	shards:Emit(80)
+	shards:Emit(Config.ImpactFX.Crack.Shards)
 
 	Sfx.play("CoreCrack", burst, geometry.Sound)
 	Sfx.play("CoreWhoosh", burst, geometry.Sound)
@@ -432,8 +470,97 @@ function MeteorFXController:KnitStart()
 		end
 	end)
 
-	-- Camera shake, applied after the default camera update
-	RunService:BindToRenderStep("MeteorShake", Enum.RenderPriority.Camera.Value + 1, function(dt)
+	-- Landing camera: from LeadTime to CountdownUntil seconds left, look from behind the player at the countdown board
+	-- over the crater (unless a menu is open or the tutorial is still on its first steps); then follow the falling meteor (the streak) down, hold on the impact briefly and blend back to
+	-- the player's camera. Applied after the default camera update.
+	local look = Config.Meteor.LandingCamera
+	local lookWeight, impactAt = 0, -math.huge
+	-- Not while a menu is open, nor before the tutorial reaches its "watch the meteor" step
+	local MENU_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "PetsOpen", "DailyOpen", "CodesOpen", "OreFieldsOpen", "OfferPreviewOpen", "SettingsOpen", "RefineryOpen",
+		"HatchOpen", "BackpackOpen", "PerksOpen", "IntroOpen", "QuestsOpen" }
+	local watchStep = 1
+	for index, step in Config.Tutorial.Steps do
+		if step.Id == "first_upgrade" then watchStep = index break end
+	end
+	local tutorialStep: number? = nil -- nil once the tutorial is done or skipped
+	Knit.GetService("TutorialService").Step:Observe(function(value)
+		tutorialStep = if value then value.index else nil
+	end)
+	local function lookAllowed(): boolean
+		if tutorialStep and tutorialStep < watchStep then return false end
+		for _, flag in MENU_FLAGS do
+			if player:GetAttribute(flag) == true then return false end
+		end
+		return true
+	end
+	local lookTarget: Vector3? = nil -- smoothed, so the swing from the board to the meteor is a turn, not a cut
+	local function countdownBoard(): Vector3?
+		local map = WorldMap.find()
+		local timer = map and map:FindFirstChild("Crater") and map.Crater:FindFirstChild("SkyTimer")
+		return if timer and timer:IsA("BasePart") then timer.Position + Vector3.new(0, 4, 0) else nil
+	end
+	MeteorService.Impact:Connect(function(position: Vector3)
+		impactAt = os.clock()
+		lookTarget = position
+	end)
+	RunService:BindToRenderStep("MeteorLook", Enum.RenderPriority.Camera.Value + 1, function(dt)
+		local camera = workspace.CurrentCamera
+		local state = MeteorService.State:Get()
+		local active = false
+		local want: Vector3? = nil
+		if look.Enabled and player:GetAttribute("ReduceCameraShake") ~= true and camera.CameraType == Enum.CameraType.Custom
+			and lookAllowed() then
+			if state and state.phase == Phase.Countdown then
+				local left = state.endsAt - workspace:GetServerTimeNow()
+				if left <= look.LeadTime and left > 0 then
+					active = true
+					want = if left > look.CountdownUntil then countdownBoard() or spawnPoint()
+						elseif streak then streak.Position
+						else spawnPoint()
+				end
+			end
+			if os.clock() - impactAt < look.HoldAfterImpact then
+				active = true
+			end
+		end
+		if want then
+			lookTarget = if lookTarget and lookWeight > 0 then lookTarget:Lerp(want, 1 - math.exp(-dt * look.TurnSpeed)) else want
+		end
+		lookWeight = math.clamp(lookWeight + dt / (if active then look.BlendIn else -look.BlendOut), 0, 1)
+		local character = player.Character
+		local head = character and character:FindFirstChild("Head") :: BasePart?
+		if lookWeight <= 0 or not lookTarget or not head then
+			return
+		end
+		local lookAim = lookTarget
+		local focus = head.Position
+		local flat = Vector3.new(lookTarget.X - focus.X, 0, lookTarget.Z - focus.Z)
+		if flat.Magnitude < 1 then
+			return -- standing under the meteor: nothing sensible to frame
+		end
+		local distance = math.clamp((camera.CFrame.Position - camera.Focus.Position).Magnitude, 8, 24)
+		local right = flat.Unit:Cross(Vector3.yAxis)
+		local position = focus - flat.Unit * distance + right * look.Shoulder + Vector3.new(0, look.Height, 0)
+		-- pull in front of anything behind the player (the Refinery stands right behind the spawn)
+		local blockers = RaycastParams.new()
+		blockers.FilterType = Enum.RaycastFilterType.Exclude
+		blockers.FilterDescendantsInstances = { character :: Instance, camera }
+		local hit = workspace:Raycast(focus, position - focus, blockers)
+		if hit then
+			position = hit.Position + (focus - hit.Position).Unit * 1.5
+		end
+		-- aim at the board or the meteor, but never tilt up more than MaxPitch
+		local toTarget, toAim = lookTarget - position, lookAim - position
+		local horizontal = Vector3.new(toTarget.X, 0, toTarget.Z)
+		local pitch = math.min(math.atan2(toAim.Y, Vector3.new(toAim.X, 0, toAim.Z).Magnitude), math.rad(look.MaxPitch))
+		local direction = horizontal.Unit * math.cos(pitch) + Vector3.new(0, math.sin(pitch), 0)
+		local desired = CFrame.lookAt(position, position + direction)
+		local eased = lookWeight * lookWeight * (3 - 2 * lookWeight)
+		camera.CFrame = camera.CFrame:Lerp(desired, eased)
+	end)
+
+	-- Camera shake, applied after the default camera update and the landing camera
+	RunService:BindToRenderStep("MeteorShake", Enum.RenderPriority.Camera.Value + 2, function(dt)
 		shakeTrauma = math.max(0, shakeTrauma - dt * 0.9)
 		if player:GetAttribute("ReduceCameraShake") == true then return end
 		local amount = math.max(shakeTrauma * shakeTrauma, rumbleLevel * rumbleLevel * 0.25)

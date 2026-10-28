@@ -2,6 +2,11 @@
   "name": "MeteorShift",
   "tree": {
     "$className": "DataModel",
+    "ReplicatedFirst": {
+      "$className": "ReplicatedFirst",
+      "$ignoreUnknownInstances": true,
+      "LoadingScreen": { "$path": "src/loading/LoadingScreen.client.luau" }
+    },
     "ReplicatedStorage": {
       "Packages": {
         "$path": "Packages"

@@ -7,7 +7,11 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local HudResources = require(ReplicatedStorage.Shared.HudResources)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Icons = require(ReplicatedStorage.Shared.Config.HudIcons)
 local UI = require(script.Parent.NativeUI)
+local SettingsMenu = require(script.Parent.NativeMenus.Settings)
+local MenuTheme = require(script.Parent.MenuTheme)
+local MenuFlags = require(script.Parent.MenuFlags)
 local player = Players.LocalPlayer
 local NativeHudMenus = {}
 local started = false
@@ -16,21 +20,21 @@ local PREFERENCES = {
 	{ name = "HudShowEventTips", default = true },
 	{ name = "ReduceCameraShake", default = false },
 	{ name = "ReduceEffects", default = false },
+	{ name = "MusicOn", default = true, label = "Music" },
+	{ name = "SfxOn", default = true, label = "Sound effects" },
 }
-local SETTINGS_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "RefineryOpen", "HatchOpen" }
-local BACKPACK_BLOCKERS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen", "RefineryOpen" }
-
-local function anotherMenuOpen(flags: { string }): boolean
-	for _, name in flags do if player:GetAttribute(name) == true then return true end end
-	return false
-end
+-- Settings opening closes the Backpack popup (below), so the popup doesn't block Settings
+local SETTINGS_BLOCKERS = MenuFlags.except("SettingsOpen", "BackpackOpen")
+local BACKPACK_BLOCKERS = MenuFlags.except("BackpackOpen")
+local anotherMenuOpen = MenuFlags.anyOpen
 
 function NativeHudMenus.start()
 	if started then return end
-	local settings = UI.get("HudSettings")
+	local settings = UI.getFresh("HudSettings", SettingsMenu.build, SettingsMenu.LAYOUT)
 	local backpack = UI.get("BackpackMenu")
 	started = true
 	local settingsPanel = settings:WaitForChild("SettingsPanel") :: Frame
+	UI.fitCentred(settingsPanel, SettingsMenu.SIZE)
 	local backdrop = settings:WaitForChild("SettingsBackdrop") :: TextButton
 	local openSettings = settings:WaitForChild("OpenSettings") :: ImageButton
 	local settingsClose = settingsPanel:WaitForChild("Close") :: GuiButton
@@ -41,19 +45,27 @@ function NativeHudMenus.start()
 	local empty = backpackPanel:WaitForChild("Empty") :: TextLabel
 	local title = backpackPanel:WaitForChild("Title") :: TextLabel
 	local template = backpack:WaitForChild("Templates"):WaitForChild("OreRow") :: Frame
+	local oreImage = (template:WaitForChild("Icon") :: ImageLabel).Image
 	-- The popup is a short list under a slim ribbon: a small red X badge on the
 	-- corner, and rows that shrink to fit instead of scrolling.
-	backpackClose.AnchorPoint, backpackClose.Position, backpackClose.Size = Vector2.zero, UDim2.new(1, -24, 0, -12), UDim2.fromOffset(32, 32)
+	backpackClose.AnchorPoint = Vector2.zero
 	backpackClose.ZIndex = math.max(backpackClose.ZIndex, 8)
 	local closeIcon = backpackClose:FindFirstChild("Icon")
-	if closeIcon and closeIcon:IsA("GuiObject") then closeIcon.Size = UDim2.fromOffset(16, 16) end
+	-- 32 px with a mouse; at least Hud.MinTouch on touch (the popup is drawn unscaled)
+	local function sizeClose(touch: boolean)
+		local size = if touch then HudLayout.closeSize(32, 1) else 32
+		backpackClose.Position, backpackClose.Size = UDim2.new(1, 8 - size, 0, -12), UDim2.fromOffset(size, size)
+		if closeIcon and closeIcon:IsA("GuiObject") then closeIcon.Size = UDim2.fromOffset(size // 2, size // 2) end
+	end
 	inventory.Position, inventory.Size = UDim2.fromOffset(8, 34), UDim2.new(1, -16, 1, -40)
 	inventory.ScrollingEnabled, inventory.Active, inventory.ScrollBarThickness = false, false, 0
 	local padding = inventory:FindFirstChildOfClass("UIPadding")
 	if padding then padding.PaddingTop, padding.PaddingBottom = UDim.new(0, 0), UDim.new(0, 0) end
 	empty.Position = UDim2.fromOffset(8, 34)
 	local rowViews: { [string]: Frame } = {}
-	local rows: { HudResources.OreRow } = {}
+	-- raw ore, then the bars you carry (tinted ingots); the sell button on the HUD shows their value
+	type Row = { id: string, name: string, amount: number, bar: boolean? }
+	local rows: { Row } = {}
 	local layout = UI.hudLayout()
 	local function closeSettings() player:SetAttribute("SettingsOpen", false) end
 	local function closeBackpack() player:SetAttribute("BackpackOpen", false) end
@@ -77,21 +89,22 @@ function NativeHudMenus.start()
 		title.Text, empty.Visible = if wide then "Backpack" else "Bag", #rows == 0
 		local visible: { [string]: boolean } = {}
 		for index, resource in rows do
-			visible[resource.id] = true
-			local row = rowViews[resource.id]
+			local key = resource.id .. (if resource.bar then "Bars" else "Ore")
+			visible[key] = true
+			local row = rowViews[key]
 			if not row then
 				row = template:Clone()
-				row.Name, row.Parent = resource.id .. "Ore", inventory
-				rowViews[resource.id] = row
+				row.Name, row.Parent = key, inventory
+				rowViews[key] = row
 			end
 			row.Visible, row.LayoutOrder, row.Size = true, index, UDim2.new(1, 0, 0, rowHeight)
 			local tint = if resource.id == "frost" then Color3.fromRGB(123, 230, 239) elseif resource.id == "crystal" then Color3.fromRGB(221, 161, 255) else UI.HUD_GOLD
 			local textHeight = rowHeight - 4
 			local icon = row:WaitForChild("Icon") :: ImageLabel
-			icon.Visible, icon.ImageColor3 = wide, tint
+			icon.Visible, icon.ImageColor3, icon.Image = wide, tint, if resource.bar then Icons.barStack else oreImage
 			icon.Position, icon.Size = UDim2.fromOffset(0, math.floor((rowHeight - textHeight) / 2)), UDim2.fromOffset(textHeight, textHeight)
 			local kind = row:WaitForChild("Type") :: TextLabel
-			kind.Text, kind.TextColor3 = resource.name, tint
+			kind.Text, kind.TextColor3 = if resource.bar then resource.name .. " bars" else resource.name, tint
 			kind.TextSize = math.floor(textHeight * (if wide then 0.7 else 0.6))
 			kind.Position, kind.Size = UDim2.fromOffset(if wide then textHeight + 6 else 0, 2), UDim2.new(1, -(if wide then textHeight + 56 else 38), 0, textHeight)
 			local amount = row:WaitForChild("Amount") :: TextLabel
@@ -104,28 +117,67 @@ function NativeHudMenus.start()
 	end
 	local function updateLayout(nextLayout: HudLayout.Layout)
 		layout = nextLayout
+		sizeClose(layout.touch)
 		local button = layout.settings
 		openSettings.Visible = button ~= nil
 		if button then
 			openSettings.Position, openSettings.Size = UDim2.fromOffset(button.x, button.y), UDim2.fromOffset(button.w, button.h)
 		end
-		settingsPanel.Position = UDim2.new(0.5, 0, 0, layout.inset + 12)
-		settingsPanel.Size = UDim2.fromOffset(math.max(0, math.min(360, layout.viewport.X - 24)), math.max(0, math.min(350, layout.viewport.Y - layout.inset - 24)))
 		updateBackpack()
 	end
+	-- each switch row (a Frame in a section card, named after its attribute) has a chunky Toggle: lime ON, pale OFF.
+	-- Saved values arrive with the first State (state.settings) and a toggle is saved with PlayerStateService:SetSetting.
+	local stateService = Knit.GetService("PlayerStateService")
+	local touched: { [string]: boolean } = {} -- toggled this session: a late State must not undo them
 	for _, preference in PREFERENCES do
 		if player:GetAttribute(preference.name) == nil then player:SetAttribute(preference.name, preference.default) end
-		local row = preferences:WaitForChild(preference.name) :: TextButton
-		local value = row:WaitForChild("State") :: TextLabel
+		local row = preferences:FindFirstChild(preference.name, true) :: Frame
+		local toggle = row:WaitForChild("Toggle") :: TextButton
 		local function update()
 			local enabled = player:GetAttribute(preference.name) == true
-			value.Text = if enabled then "ON" else "OFF"
-			value.BackgroundColor3 = if enabled then UI.GREEN else Color3.fromRGB(29, 30, 35)
+			toggle.Text = if enabled then "ON" else "OFF"
+			MenuTheme.paint(toggle, if enabled then "lime" else "tabOff")
 		end
-		row.Activated:Connect(function() player:SetAttribute(preference.name, player:GetAttribute(preference.name) ~= true) end)
+		toggle.Activated:Connect(function()
+			local value = player:GetAttribute(preference.name) ~= true
+			touched[preference.name] = true
+			player:SetAttribute(preference.name, value)
+			task.spawn(function() pcall(function() stateService:SetSetting(preference.name, value) end) end)
+		end)
 		player:GetAttributeChangedSignal(preference.name):Connect(update)
 		update()
 	end
+	-- Daily rewards and Codes: the two buttons under the switches, and a dot on the gear while a daily reward is waiting
+	local dailyRow = settingsPanel:WaitForChild("OpenDaily") :: TextButton
+	local codesRow = settingsPanel:WaitForChild("OpenCodes") :: TextButton
+	local dot = Instance.new("Frame")
+	dot.Name, dot.Size, dot.AnchorPoint, dot.Position = "DailyDot", UDim2.fromOffset(12, 12), Vector2.new(1, 0), UDim2.new(1, -2, 0, 2)
+	dot.BackgroundColor3, dot.BorderSizePixel, dot.ZIndex, dot.Visible = Color3.fromRGB(255, 80, 80), 0, 10, false
+	Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+	dot.Parent = openSettings
+	local function updateDailyDot() dot.Visible = player:GetAttribute("DailyReady") == true end
+	player:GetAttributeChangedSignal("DailyReady"):Connect(updateDailyDot)
+	updateDailyDot()
+	-- Daily Rewards waits for the first-session tutorial (DailyController sets DailyUnlocked when it is over)
+	local openDailyRow = dailyRow
+	local function updateDailyRow()
+		-- before Daily opens, Codes takes the whole row
+		local unlocked = player:GetAttribute("DailyUnlocked") == true
+		openDailyRow.Visible = unlocked
+		codesRow.Position = if unlocked then UDim2.new(0.5, 6, 1, -78) else UDim2.new(0, 18, 1, -78)
+		codesRow.Size = if unlocked then UDim2.new(0.5, -24, 0, 56) else UDim2.new(1, -36, 0, 56)
+	end
+	player:GetAttributeChangedSignal("DailyUnlocked"):Connect(updateDailyRow)
+	updateDailyRow()
+	openDailyRow.Activated:Connect(function()
+		player:SetAttribute("SettingsOpen", false)
+		player:SetAttribute("DailyOpen", true)
+	end)
+	-- Codes, also for the screens with no room for the HUD button
+	codesRow.Activated:Connect(function()
+		player:SetAttribute("SettingsOpen", false)
+		player:SetAttribute("CodesOpen", true)
+	end)
 	if player:GetAttribute("SettingsOpen") == nil then player:SetAttribute("SettingsOpen", false) end
 	if player:GetAttribute("BackpackOpen") == nil then player:SetAttribute("BackpackOpen", false) end
 	openSettings.Activated:Connect(function() player:SetAttribute("SettingsOpen", player:GetAttribute("SettingsOpen") ~= true) end)
@@ -144,8 +196,21 @@ function NativeHudMenus.start()
 		if input.KeyCode == Enum.KeyCode.Escape or input.KeyCode == Enum.KeyCode.ButtonB then closeSettings(); closeBackpack() end
 	end)
 	UI.onLayoutChanged(updateLayout)
-	Knit.GetService("PlayerStateService").State:Observe(function(state)
-		rows = HudResources.ores(state)
+	UI.watchGamepadFocus(MenuFlags.except("IntroOpen")) -- the Intro selects its own NEXT
+	local savedApplied = false
+	stateService.State:Observe(function(state)
+		if not state then return end
+		if not savedApplied and state.settings then
+			savedApplied = true
+			for _, preference in PREFERENCES do
+				local saved = state.settings[preference.name]
+				if type(saved) == "boolean" and not touched[preference.name] then player:SetAttribute(preference.name, saved) end
+			end
+		end
+		rows = HudResources.ores(state) :: { any }
+		for _, bar in HudResources.bars(state) do
+			if bar.amount > 0 then table.insert(rows, { id = bar.id, name = bar.name, amount = bar.amount, bar = true }) end
+		end
 		updateBackpack()
 	end)
 	updateSettingsOpen()

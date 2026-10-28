@@ -3,13 +3,15 @@
 -- REBIRTH panel; the server re-checks the price (Shared.Rebirth.cost) against the
 -- player's cash.
 --
--- Rebirth resets cash, gear, all ore/bars, other production upgrades and décor (Colony Perks
--- can keep or head-start parts of that, Lib.RebirthReset). Refinery level, Core Shards, perks and
--- mineral-index rewards survive. Bar-sale cash earned beyond the rebirth's cost pays overstay
+-- Rebirth resets cash, gear stat levels, all ore/bars, the production line level and décor (Colony Perks
+-- can keep or head-start parts of that, Lib.RebirthReset). Pickaxe and backpack tiers, pets, Core Shards, perks
+-- and mineral-index rewards survive. Bar-sale cash earned beyond the rebirth's cost pays overstay
 -- shards (Shared.Rebirth.overstayShards), and each rank announces what it unlocks. Purchased value,
 -- preferences and lifetime history are retained independently of gameplay resets.
 -- In return the rebirth count goes up by one, and with it the permanent bar sale
 -- multiplier (Shared.Rebirth.multiplier, read by EconomyService:SaleMultiplier).
+-- A Rebirth and Keep Everything credit (Monetization) makes one rebirth reset nothing, and
+-- works even when the player cannot afford the rebirth yet.
 -- The server hears about it: "<name> relocated the colony! (Rebirth N, ×M cash)".
 
 local Players = game:GetService("Players")
@@ -38,28 +40,40 @@ local RefineryService
 local lastRebirthRequest: { [Player]: number } = {}
 
 -- Rebirths the player if they can pay for it. Returns true when it went through.
-function RebirthService:Rebirth(player: Player): boolean
+-- useKeep spends a Keep Everything credit; a plain rebirth never does, so a paid credit is only used on purpose.
+function RebirthService:Rebirth(player: Player, useKeep: boolean?): boolean
 	local data = PlayerStateService:Get(player)
 	if not data then
 		return false
 	end
 	local rebirths = data.rebirths or 0
 	local cost = Rebirth.cost(rebirths)
-	if data.cash < cost then
+	-- A paid Keep Everything credit rebirths at any time, without the cash (nothing is spent or reset)
+	local keepAll = useKeep == true and (data.credits.rebirthKeep or 0) > 0
+	if useKeep == true and not keepAll then
+		self.Client.Notice:Fire(player, "You have no Keep Everything credit.")
+		return false
+	end
+	if data.cash < cost and not keepAll then
 		self.Client.Notice:Fire(player, "You need " .. Format.cash(cost) .. " to relocate the colony.")
 		return false
 	end
 
 	local cashSpent = data.cash
 	local bonusShards = Rebirth.overstayShards(data.overflow or 0, cost)
-	RebirthReset.apply(data, os.time())
+	if keepAll then
+		data.credits.rebirthKeep -= 1
+	end
+	RebirthReset.apply(data, os.time(), keepAll)
 	rebirths += 1
 	data.rebirths = rebirths
 	if bonusShards > 0 then
 		PlayerStateService:AddShards(player, bonusShards)
 	end
 
-	PlayerStateService:ResetTransientInventory(player)
+	if not keepAll then
+		PlayerStateService:ResetTransientInventory(player)
+	end
 	ShopService:ApplyPickaxe(player)
 	RefineryService:ResetAfterRebirth(player)
 	PlayerStateService:ReplicateNow(player)
@@ -73,7 +87,7 @@ function RebirthService:Rebirth(player: Player): boolean
 		)
 	)
 	local unlock = Rebirth.unlock(rebirths)
-	local parts = { string.format("Rebirth %d! Bars sell for ×%s.", rebirths, Format.number(Rebirth.multiplier(rebirths))) }
+	local parts = { string.format("Rebirth %d! %sBars sell for ×%s.", rebirths, if keepAll then "You kept everything. " else "", Format.number(Rebirth.multiplier(rebirths))) }
 	if bonusShards > 0 then
 		table.insert(parts, string.format("+%d bonus shards for the progress you didn't need.", bonusShards))
 	end
@@ -85,11 +99,11 @@ function RebirthService:Rebirth(player: Player): boolean
 	return true
 end
 
-function RebirthService.Client:Rebirth(player: Player): boolean
+function RebirthService.Client:Rebirth(player: Player, useKeep: any): boolean
 	local allowed, stamp = RequestGate.check(lastRebirthRequest[player], os.clock(), 1)
 	lastRebirthRequest[player] = stamp
 	if not allowed then return false end
-	return self.Server:Rebirth(player)
+	return self.Server:Rebirth(player, useKeep == true)
 end
 
 function RebirthService:KnitInit()

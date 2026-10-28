@@ -7,6 +7,7 @@ local ServerStorage = game:GetService("ServerStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
+local AdminGive = require(script.Parent.Lib.AdminGive)
 local Admins = require(script.Parent.Lib.Admins)
 
 Knit.AddServices(script.Parent.Services)
@@ -14,6 +15,12 @@ Knit.AddServices(script.Parent.Services)
 Knit.Start()
 	:andThen(function()
 		print("[MeteorShift] server started")
+		-- the [DEVELOPER] chat tag (StoreController) for the user ids in Lib.Admins; the list itself stays on the server
+		local function tagDeveloper(player: Player)
+			if Admins.List[player.UserId] then player:SetAttribute("Developer", true) end
+		end
+		Players.PlayerAdded:Connect(tagDeveloper)
+		for _, player in Players:GetPlayers() do tagDeveloper(player) end
 		local PlayerStateService = Knit.GetService("PlayerStateService")
 		local MeteorService = Knit.GetService("MeteorService")
 		local ShopService = Knit.GetService("ShopService")
@@ -22,7 +29,7 @@ Knit.Start()
 		-- Config.Pickaxes and Config.Backpacks; nil leaves it as is) and restyles the
 		-- pickaxe. Returns what the player now has.
 		-- game.ServerStorage.DevGear:Invoke(game.Players:GetPlayers()[1], 5, 8)
-		-- (stat levels start at the first level of the tier, as after evolving)
+		-- (the level starts at the first level of the tier, as after evolving)
 		local function setGear(player: Player, pickaxeTier: number?, backpackTier: number?): string
 			local data = PlayerStateService:Get(player)
 			if not data then
@@ -30,13 +37,13 @@ Knit.Start()
 			end
 			if pickaxeTier then
 				data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
-				data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
-				ShopService:ApplyPickaxe(player)
+				data.pickaxeLevel = Gear.levelsForTier(data.pickaxeTier)
 			end
 			if backpackTier then
 				data.backpackTier = math.clamp(math.floor(backpackTier), 1, #Config.Backpacks)
-				data.backpackStats = Gear.freshBackpackStats(data.backpackTier)
+				data.backpackLevel = Gear.levelsForTier(data.backpackTier)
 			end
+			ShopService:ApplyPickaxe(player) -- restyles the pickaxe tool and swaps the backpack on the character
 			PlayerStateService:ReplicateNow(player)
 			return string.format("%s, %s", Config.Pickaxes[data.pickaxeTier].Name, Config.Backpacks[data.backpackTier].Name)
 		end
@@ -60,7 +67,7 @@ Knit.Start()
 				local data = PlayerStateService:Get(player)
 				if pickaxeTier and data then
 					data.pickaxeTier = math.clamp(math.floor(pickaxeTier), 1, #Config.Pickaxes)
-					data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier)
+					data.pickaxeLevel = Gear.levelsForTier(data.pickaxeTier)
 					Knit.GetService("ShopService"):ApplyPickaxe(player)
 				end
 				PlayerStateService:ReplicateNow(player)
@@ -106,9 +113,9 @@ Knit.Start()
 				if not data then
 					return nil
 				end
-				local ownTier, ownStats, ownBackpack = data.backpackTier, data.backpackStats, table.clone(data.backpack)
+				local ownTier, ownLevel, ownBackpack = data.backpackTier, data.backpackLevel, table.clone(data.backpack)
 				data.backpackTier = #Config.Backpacks
-				data.backpackStats = { capacity = Gear.cap(#Config.Backpacks) }
+				data.backpackLevel = Gear.cap(#Config.Backpacks)
 				table.clear(data.backpack)
 
 				local result
@@ -129,7 +136,7 @@ Knit.Start()
 
 				-- always give the player their own backpack back
 				data.backpackTier = ownTier
-				data.backpackStats = ownStats
+				data.backpackLevel = ownLevel
 				table.clear(data.backpack)
 				for oreType, n in ownBackpack do
 					data.backpack[oreType] = n
@@ -155,12 +162,13 @@ Knit.Start()
 			local Pets = require(ReplicatedStorage.Shared.Pets)
 			local petHook = Instance.new("BindableFunction")
 			petHook.Name = "DevPet"
-			petHook.OnInvoke = function(player: Player, petId: string, level: number?)
+			petHook.OnInvoke = function(player: Player, petId: string, level: number?, copies: number?)
 				local data = PlayerStateService:Get(player)
 				if not data or not Pets.def(petId) then
 					return nil
 				end
-				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0 }
+				local old = data.pets.owned[petId]
+				data.pets.owned[petId] = { level = math.clamp(math.floor(level or 1), 1, Config.Pets.MaxLevel), xp = 0, copies = if copies and copies > 1 then math.floor(copies) else old and old.copies, fused = old and old.fused }
 				if not table.find(data.pets.equipped, petId) and #data.pets.equipped < PlayerStateService:PetSlots(player) then
 					table.insert(data.pets.equipped, petId)
 				end
@@ -182,9 +190,42 @@ Knit.Start()
 				local progress = Levels.clean(level, 0)
 				data.level, data.xp = progress.level, progress.xp
 				PlayerStateService:ReplicateNow(player)
+				Knit.GetService("DebrisService"):NoteUnlocks(player)
 				return data.level
 			end
 			levelHook.Parent = ServerStorage
+
+			-- game.ServerStorage.DevQuest:Invoke(game.Players:GetPlayers()[1], 3, 2): jump to a step of this world's quest
+			-- line (and its event count)
+			local questHook = Instance.new("BindableFunction")
+			questHook.Name = "DevQuest"
+			questHook.OnInvoke = function(player: Player, step: number, count: number?)
+				local data = PlayerStateService:Get(player)
+				if not data then
+					return nil
+				end
+				local key = require(ReplicatedStorage.Shared.Quests).saveKey(require(ReplicatedStorage.Shared.Worlds).here().Id)
+				data[key] = { step = math.max(1, math.floor(step)), progress = math.max(0, count or 0) }
+				return data[key].step
+			end
+			questHook.Parent = ServerStorage
+
+			-- game.ServerStorage.DevRelic:Invoke(game.Players:GetPlayers()[1], "sageLens", 60): add a relic (nil for none) and Relic Fragments
+			local Relics = require(ReplicatedStorage.Shared.Relics)
+			local relicHook = Instance.new("BindableFunction")
+			relicHook.Name = "DevRelic"
+			relicHook.OnInvoke = function(player: Player, relicId: string?, fragments: number?)
+				local data = PlayerStateService:Get(player)
+				if not data then
+					return nil
+				end
+				data.relics = Relics.clean(data.relics)
+				if relicId then Relics.add(data.relics, relicId) end
+				data.relics.fragments += math.max(0, math.floor(fragments or 0))
+				PlayerStateService:ReplicateNow(player)
+				return Relics.count(data.relics), data.relics.fragments
+			end
+			relicHook.Parent = ServerStorage
 
 			local gearHook = Instance.new("BindableFunction")
 			gearHook.Name = "DevGear"
@@ -194,9 +235,17 @@ Knit.Start()
 
 		-- Dev chat commands, for Studio and for the user ids in Lib.Admins on a live server (anyone
 		-- else typing them is ignored without a reply). The reply shows as a notice on the HUD.
-		--   /meteor <Iron|Ice|Crystal|Alien>   /pickaxe <1-8>   /backpack <1-8>
+		--   /meteor <Iron|Ice|Crystal|Alien|Admin>   /pickaxe <1-8>   /backpack <1-8>   (Admin: the beginners' gift meteor)
+		--   /give <player|all> cash|shards <amount> | pickaxe|backpack <tier> | pet <pet> [level]   (Lib.AdminGive)
+		--   /giveall <item> ... [message]   the same as /give all ...: everyone, announced as "[DEV] Name: message"
+		--   /announce <message>   a "[DEV] Name: message" banner for everyone (AnnounceService)
+		--   /setlevel <player|all> <level>   sets the player level (XP cleared), up or down; the player is told
+		--   /setrebirth <player|all> <rebirths>   sets the rebirth count (0-1000), up or down, nothing reset; the player is told
+		--   /likes <count>   the like goal hologram's count, on every server, for when its live count can't load (LikeGoalService)
+		--   /event <id> [minutes]   starts a game-wide event on every server now (GlobalEventService, Config.Events)
+		--   /feedback [count]   prints the newest player feedback (FeedbackService) to the output (F9 on a live server)
 		local TextChatService = game:GetService("TextChatService")
-		local function chatCommand(alias: string, run: (Player, string?) -> string)
+		local function chatCommand(alias: string, run: (Player, string?, string) -> string)
 			local command = Instance.new("TextChatCommand")
 			command.Name = "Dev" .. string.sub(alias, 2)
 			command.PrimaryAlias = alias
@@ -206,15 +255,20 @@ Knit.Start()
 				end
 				local player = Players:GetPlayerByUserId(source.UserId)
 				if player then
-					local reply = run(player, string.match(text, "^%S+%s+(%S+)"))
+					local reply = run(player, string.match(text, "^%S+%s+(%S+)"), text)
 					print("[Dev] " .. player.Name .. " " .. text .. ": " .. reply)
 					ShopService.Client.Notice:Fire(player, reply)
 				end
 			end)
 			command.Parent = TextChatService
 		end
-		chatCommand("/meteor", function(_player, typeId)
-			return MeteorService:DevSpawn(typeId or "")
+		chatCommand("/meteor", function(player, typeId)
+			local reply = MeteorService:DevSpawn(typeId or "")
+			if string.lower(typeId or "") == "admin" then
+				Knit.GetService("AnnounceService"):Dev(player, string.format("ADMIN METEOR incoming! Everyone can mine it: %dx ore!",
+					Config.Hooks.AdminMeteor.PayMult))
+			end
+			return reply
 		end)
 		chatCommand("/pickaxe", function(player, tier)
 			local number = tonumber(tier)
@@ -223,6 +277,160 @@ Knit.Start()
 		chatCommand("/backpack", function(player, tier)
 			local number = tonumber(tier)
 			return if number then setGear(player, nil, number) else "Usage: /backpack 1-" .. #Config.Backpacks
+		end)
+		-- Gives a player in this server (or everyone: "all") cash, shards, a gear tier or a pet. The giver is told what
+		-- happened; each recipient gets a notice. Gifts only add (AdminGive.apply), so nothing is taken away.
+		local AnnounceService = Knit.GetService("AnnounceService")
+		-- `quiet`: a gift to everyone is announced with one banner instead of a notice each
+		local function giveTo(player: Player, recipient: Player, gift: any, quiet: boolean?): (boolean, string)
+			local data = PlayerStateService:Get(recipient)
+			if not data then
+				return false, recipient.Name .. " has no profile loaded yet"
+			end
+			local result = AdminGive.apply(data, gift, PlayerStateService:PetSlots(recipient))
+			if not result.changed then
+				return false, recipient.Name .. " " .. result.text
+			end
+			if result.gear then
+				ShopService:ApplyPickaxe(recipient)
+			end
+			PlayerStateService:ReplicateNow(recipient)
+			if recipient ~= player and not quiet then
+				ShopService.Client.Notice:Fire(recipient, player.DisplayName .. " gave you " .. result.text)
+			end
+			print(string.format("[Give] %s (%d) gave %s (%d) %s", player.Name, player.UserId, recipient.Name, recipient.UserId, result.text))
+			return true, result.text
+		end
+		local function give(player: Player, text: string): string
+			local targetName, gift, problem, message = AdminGive.parse(text)
+			if not targetName or not gift then
+				return problem or AdminGive.Usage
+			end
+			local list = Players:GetPlayers()
+			if AdminGive.isEveryone(targetName) then
+				local count, what, received = 0, "", {}
+				for _, recipient in list do
+					local ok, said = giveTo(player, recipient, gift, true)
+					if ok then count += 1; what = said; received[recipient] = true end
+				end
+				if count > 0 then
+					AnnounceService:Dev(player, message or "Gifts for everyone!", "Received " .. string.upper(what) .. "!", gift.kind, received)
+				end
+				return if count > 0 then string.format("Gave %d player%s %s", count, if count == 1 then "" else "s", what)
+					else "Nobody here could get that (they already have it, or no profile is loaded)"
+			end
+			local index, reason = AdminGive.findPlayer(targetName, list, table.find(list, player))
+			if not index then
+				return reason or "No such player"
+			end
+			local ok, said = giveTo(player, list[index], gift)
+			return if ok then "Gave " .. list[index].Name .. " " .. said else said
+		end
+		chatCommand("/give", function(player, _first, text)
+			return give(player, text)
+		end)
+		chatCommand("/giveall", function(player, _first, text)
+			return give(player, (string.gsub(text, "^%S+", "/give all", 1)))
+		end)
+		chatCommand("/event", function(_player, first, text)
+			if not first then
+				return "Usage: /event <id> [minutes]"
+			end
+			local minutes = tonumber(string.match(text, "^%S+%s+%S+%s+(%d+)")) or 15
+			return Knit.GetService("GlobalEventService"):StartEverywhere(first, minutes)
+		end)
+		chatCommand("/setlevel", function(player, _first, text)
+			local targetName, wanted = string.match(text, "^%S+%s+(%S+)%s+(%d+)%s*$")
+			if not targetName then
+				return "Usage: /setlevel <player|all> <level>"
+			end
+			local Levels = require(ReplicatedStorage.Shared.Levels)
+			local list = Players:GetPlayers()
+			local targets = list
+			if not AdminGive.isEveryone(targetName) then
+				local index, reason = AdminGive.findPlayer(targetName, list, table.find(list, player))
+				if not index then
+					return reason or "No such player"
+				end
+				targets = { list[index] }
+			end
+			local count, level = 0, 0
+			for _, target in targets do
+				local data = PlayerStateService:Get(target)
+				if data then
+					local progress = Levels.clean(tonumber(wanted), 0)
+					data.level, data.xp, level = progress.level, progress.xp, progress.level
+					PlayerStateService:ReplicateNow(target)
+					Knit.GetService("DebrisService"):NoteUnlocks(target)
+					count += 1
+					if target ~= player then
+						ShopService.Client.Notice:Fire(target, player.DisplayName .. " set your level to " .. level)
+					end
+					print(string.format("[SetLevel] %s (%d) set %s (%d) to level %d", player.Name, player.UserId, target.Name, target.UserId, level))
+				end
+			end
+			if count == 0 then
+				return "No profile loaded for that player yet"
+			end
+			return if #targets == 1 then targets[1].Name .. " is now level " .. level else string.format("Set %d players to level %d", count, level)
+		end)
+		-- Only the count changes: nothing is reset or paid, and RebirthService.Reborn doesn't fire (no badges or quests)
+		chatCommand("/setrebirth", function(player, _first, text)
+			local targetName, wanted = string.match(text, "^%S+%s+(%S+)%s+(%d+)%s*$")
+			if not targetName then
+				return "Usage: /setrebirth <player|all> <rebirths>"
+			end
+			local rebirths = math.clamp(tonumber(wanted) :: number, 0, 1000)
+			local list = Players:GetPlayers()
+			local targets = list
+			if not AdminGive.isEveryone(targetName) then
+				local index, reason = AdminGive.findPlayer(targetName, list, table.find(list, player))
+				if not index then
+					return reason or "No such player"
+				end
+				targets = { list[index] }
+			end
+			local count = 0
+			for _, target in targets do
+				local data = PlayerStateService:Get(target)
+				if data then
+					data.rebirths = rebirths
+					PlayerStateService:ReplicateNow(target)
+					Knit.GetService("DebrisService"):NoteUnlocks(target)
+					count += 1
+					if target ~= player then
+						ShopService.Client.Notice:Fire(target, player.DisplayName .. " set your rebirths to " .. rebirths)
+					end
+					print(string.format("[SetRebirth] %s (%d) set %s (%d) to rebirth %d", player.Name, player.UserId, target.Name, target.UserId, rebirths))
+				end
+			end
+			if count == 0 then
+				return "No profile loaded for that player yet"
+			end
+			return if #targets == 1 then targets[1].Name .. " is now rebirth " .. rebirths else string.format("Set %d players to rebirth %d", count, rebirths)
+		end)
+		chatCommand("/likes", function(_player, wanted)
+			local count = tonumber(wanted)
+			if not count or count < 0 or count ~= math.floor(count) then
+				return "Usage: /likes <count>"
+			end
+			local shared = Knit.GetService("LikeGoalService"):SetLikes(count)
+			return "Like goal shows " .. count .. (if shared then " on every server (if the live count loads, that wins)" else " on this server only (no DataStore)")
+		end)
+		chatCommand("/announce", function(player, _first, text)
+			local message = string.match(text, "^%S+%s+(.-)%s*$")
+			if not message or message == "" then
+				return "Usage: /announce <message>"
+			end
+			return if AnnounceService:Dev(player, message) then "Announced" else "Could not announce that (text filtering failed)"
+		end)
+		chatCommand("/feedback", function(_player, first)
+			local recent = Knit.GetService("FeedbackService"):Recent(math.clamp(tonumber(first) or 10, 1, 50))
+			for _, entry in recent do
+				print(string.format("[Feedback] %s %s (level %s, %d min): %s", os.date("!%Y-%m-%d %H:%M", entry.at), entry.name,
+					tostring(entry.level), entry.minutes or 0, entry.text))
+			end
+			return #recent .. " feedback messages printed to the output (F9)"
 		end)
 	end)
 	:catch(warn)

@@ -1,7 +1,8 @@
 --!strict
 -- A Gatherer-style upgrade view shared by the gear shop and the refinery: a
 -- portrait box with the level and cost under it, selectable stat rows showing
--- the value and its +delta, amount buttons and a big green Upgrade button.
+-- the value and its +delta, amount buttons and a big green Upgrade button. An optional
+-- second button (info.alt) shares the Upgrade row: the gear shop's EVOLVE NOW (Robux).
 -- Plain Instances built once inside an authored menu screen and marked
 -- CartoonCustom so the shared menu skin leaves them alone. The owning
 -- controller fills in every value and decides what each press does.
@@ -24,6 +25,7 @@ export type Row = { id: string, name: string, value: string, delta: string?, loc
 export type Info = {
 	levelLabel: string?, level: string, costLabel: string?, cost: string,
 	button: string, enabled: boolean, tone: string?, amounts: boolean?,
+	alt: { text: string, enabled: boolean }?, -- a second button beside Upgrade; nil hides it
 }
 export type Options = { amounts: { string }, portrait: boolean }
 
@@ -79,6 +81,8 @@ function UpgradePanel.new(parent: Instance, options: Options)
 	self.onSelect = function(_id: string) end
 	self.onAmount = function(_index: number) end
 	self.onUpgrade = function() end
+	self.onAlt = function() end
+	self.altShown = false
 
 	local root = make("Frame", { Name = "UpgradeView", BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 1 })
 	root:SetAttribute("CartoonCustom", true)
@@ -110,6 +114,10 @@ function UpgradePanel.new(parent: Instance, options: Options)
 	local upgrade, faces, caption = cartoonButton(root, "Upgrade", { "green", "purple", "slate" }, { radius = 14, edge = 3.5, lip = 6, studs = 0.86, studSize = 34 })
 	upgrade.Activated:Connect(function() if upgrade.Active then self.onUpgrade() end end)
 	self.upgrade, self.upgradeFaces, self.upgradeCaption = upgrade, faces, caption
+	local alt, altFaces, altCaption = cartoonButton(root, "Alt", { "orange", "slate" }, { radius = 14, edge = 3.5, lip = 6, studs = 0.86, studSize = 34 })
+	alt.Visible = false
+	alt.Activated:Connect(function() if alt.Active then self.onAlt() end end)
+	self.alt, self.altFaces, self.altCaption = alt, altFaces, altCaption
 
 	root.Parent = parent
 	return self
@@ -157,10 +165,21 @@ function UpgradePanel:setInfo(info: Info, amountIndex: number)
 	self.upgradeCaption.Text = info.button
 	show(self.upgradeFaces, if not info.enabled then "slate" else info.tone or "green")
 	self.upgrade.Active, self.upgrade.Selectable = info.enabled, info.enabled
+	local shownBefore = #self.amounts > 0 and self.amounts[1].button.Visible
 	for index, amount in self.amounts do
 		amount.button.Visible = info.amounts ~= false
 		show(amount.faces, if index == amountIndex then "green" else "blue")
 	end
+	local altBefore = self.altShown
+	self.altShown = info.alt ~= nil
+	self.alt.Visible = self.altShown
+	if info.alt then
+		self.altCaption.Text = info.alt.text
+		show(self.altFaces, if info.alt.enabled then "orange" else "slate")
+		self.alt.Active, self.alt.Selectable = info.alt.enabled, info.alt.enabled
+	end
+	-- the short layout widens Upgrade into the amounts' place when they hide
+	if self.width and (shownBefore ~= (info.amounts ~= false) or altBefore ~= self.altShown) then self:layout(self.width, self.height, self.wide) end
 end
 
 -- Lay everything out for a w x h area. Wide areas get the reference's two
@@ -168,14 +187,16 @@ end
 function UpgradePanel:layout(w: number, h: number, wideOverride: boolean?)
 	self.width, self.height, self.wide = w, h, wideOverride
 	local wide = if wideOverride == nil then w >= 520 else wideOverride
-	local gap = 10
-	local upgradeH = math.clamp(math.floor(h * 0.17), 44, 60)
-	local amountH = math.clamp(math.floor(h * 0.13), 36, 46)
+	-- short and wide (phones in landscape): smaller Level / Cost lines, and the amounts share the Upgrade row
+	local short = wide and h < 260
+	local gap = if short then 8 else 10
+	local upgradeH = if short then 40 else math.clamp(math.floor(h * 0.17), 44, 60)
+	local amountH = if short then upgradeH else math.clamp(math.floor(h * 0.13), 36, 46)
 	local left, rightX = 0, 0
 	if wide then
 		left = math.clamp(math.floor(w * 0.3), 170, 240)
 		rightX = left + 22
-		local infoH = 128
+		local infoH = if short then 84 else 128
 		local portraitSize = math.max(60, math.min(left, h - infoH - gap))
 		self.portrait.Visible = self.options.portrait
 		self.portrait.Position = UDim2.fromOffset(math.floor((left - portraitSize) / 2), 2)
@@ -187,10 +208,11 @@ function UpgradePanel:layout(w: number, h: number, wideOverride: boolean?)
 			limit(text, size)
 			y += height
 		end
-		place(self.levelLabel, 22, 22)
-		place(self.level, 40, 38)
-		place(self.costLabel, 22, 22)
-		place(self.cost, 40, 38)
+		local labelH, valueH = if short then 16 else 22, if short then 26 else 40
+		place(self.levelLabel, labelH, labelH)
+		place(self.level, valueH, valueH - 2)
+		place(self.costLabel, labelH, labelH)
+		place(self.cost, valueH, valueH - 2)
 	else
 		self.portrait.Visible = false
 		self.portraitRect = nil
@@ -205,7 +227,7 @@ function UpgradePanel:layout(w: number, h: number, wideOverride: boolean?)
 	local rightW = w - rightX
 	local top = if wide then 0 else 50
 	local upgradeY = h - upgradeH - 6
-	local amountY = upgradeY - gap - amountH
+	local amountY = if short then upgradeY else upgradeY - gap - amountH
 	local rowsH = math.max(0, amountY - gap - top)
 	self.rowArea.Position, self.rowArea.Size = UDim2.fromOffset(rightX, top), UDim2.fromOffset(rightW, rowsH)
 	local count = math.max(#self.order, 1)
@@ -224,15 +246,29 @@ function UpgradePanel:layout(w: number, h: number, wideOverride: boolean?)
 	end
 	local amountCount = #self.amounts
 	local amountW = math.floor((rightW - gap * (amountCount - 1)) / math.max(amountCount, 1))
-	amountW = math.min(amountW, 96)
-	local amountsX = rightX + math.floor((rightW - (amountW * amountCount + gap * (amountCount - 1))) / 2)
+	amountW = math.min(amountW, if short then 68 else 96)
+	local amountsW = amountW * amountCount + gap * (amountCount - 1)
+	local amountsX = if short then rightX else rightX + math.floor((rightW - amountsW) / 2)
+	local amountsShown = amountCount > 0 and self.amounts[1].button.Visible
 	for index, amount in self.amounts do
 		amount.button.Position = UDim2.fromOffset(amountsX + (index - 1) * (amountW + gap), amountY)
 		amount.button.Size = UDim2.fromOffset(amountW, amountH)
 		limit(amount.caption, 24)
 	end
-	self.upgrade.Position, self.upgrade.Size = UDim2.fromOffset(rightX, upgradeY), UDim2.fromOffset(rightW, upgradeH)
-	limit(self.upgradeCaption, 34)
+	-- short: Upgrade takes the rest of the amounts' row (all of it when the amounts are hidden, e.g. Evolve)
+	local upgradeX = if short and amountsShown then rightX + amountsW + gap else rightX
+	local rowW = rightW - (upgradeX - rightX)
+	if self.altShown then
+		-- Upgrade and the second button split the row
+		local half = math.floor((rowW - gap) / 2)
+		self.upgrade.Position, self.upgrade.Size = UDim2.fromOffset(upgradeX, upgradeY), UDim2.fromOffset(half, upgradeH)
+		self.alt.Position, self.alt.Size = UDim2.fromOffset(upgradeX + half + gap, upgradeY), UDim2.fromOffset(rowW - half - gap, upgradeH)
+		limit(self.upgradeCaption, 28)
+		limit(self.altCaption, 28)
+	else
+		self.upgrade.Position, self.upgrade.Size = UDim2.fromOffset(upgradeX, upgradeY), UDim2.fromOffset(rowW, upgradeH)
+		limit(self.upgradeCaption, 34)
+	end
 end
 
 return UpgradePanel

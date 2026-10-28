@@ -1,30 +1,49 @@
 --!strict
--- First-session tutorial (spec §11): arrow-guided, skippable, and every step
--- completes on the real action. Doing a later step's action first counts the
--- steps before it too, so nobody gets stuck behind a meteor they missed.
+-- First-session tutorial (spec §11): show, don't tell. Each step is a short verb and
+-- an icon on the card; the world does the explaining (a glowing trail to the target,
+-- an outline on it and a tapping hand or bouncing arrow over it, a pointing hand on
+-- HUD buttons). Skippable, and every step completes on the real action. Doing a later
+-- step's action first counts the steps before it too, so nobody gets stuck behind a
+-- meteor they missed.
 
+-- Action: "tap" = hit the target (tapping hand), "go" = walk to it (arrow),
+-- "watch" = look at it (arrow, timer), "ui" = press a HUD button (pointing hand on it).
 export type Step = {
 	Id: string,
 	Text: string,
-	Hint: string,
+	Sub: string?, -- small line under the verb (the card's orange line); a waiting meteor step shows the countdown instead
+	Icon: string, -- a Config.HudIcons key, drawn on the card
+	Action: "tap" | "go" | "watch" | "ui",
+	Button: string?, -- the HUD button a "ui" step points at (a descendant name under PlayerGui)
 }
 
 local Tutorial = {}
 
 Tutorial.Steps = {
-	{ Id = "mine_debris", Text = "Mine a debris rock", Hint = "Hold click (or tap) on a rock near you." },
-	{ Id = "meteor_lands", Text = "Watch the meteor land", Hint = "It hits the crater when the timer runs out." },
-	{ Id = "reach_crater", Text = "Run to the crater", Hint = "Everyone rushes in. Mine it before it cools!" },
-	{ Id = "mine_node", Text = "Mine a crust node", Hint = "Ore from every hit goes straight to your backpack." },
-	{ Id = "hit_core", Text = "Hit the core", Hint = "It glows once enough crust is broken." },
-	{ Id = "core_shards", Text = "Collect your shards", Hint = "Keep hitting the core until it cracks. Meteors also earn you player level XP." },
-	{ Id = "deposit", Text = "Deposit your ore", Hint = "Use the refinery in town. Ore above your level yields less per hit, so level up! Higher-level ore pays more." },
-	{ Id = "collect_bar", Text = "Collect a bar", Hint = "Your refinery makes bars. Use it again to collect them." },
-	{ Id = "sell", Text = "Sell bars", Hint = "Tap your bars at the bottom of the screen, then SELL ALL." },
-	{ Id = "buy", Text = "Buy an upgrade", Hint = "Open the SHOP, level a stat, and evolve once its Power is maxed." },
+	{ Id = "mine_debris", Text = "MINE!", Icon = "ore", Action = "tap" },
+	-- A quick win while the first meteor is on its way: the rocks' cash buys a pickaxe level. Never a wait: the meteor
+	-- landing completes it too (TutorialService), so nobody sits on an empty step.
+	{ Id = "first_upgrade", Text = "UPGRADE!", Sub = "Tap GEAR to power up your pickaxe", Icon = "equipment", Action = "ui", Button = "ShopButton" },
+	{ Id = "reach_crater", Text = "RUN!", Sub = "Follow the trail to the crater", Icon = "meteor", Action = "go" },
+	{ Id = "mine_node", Text = "MINE IT!", Sub = "Break nodes to open the core", Icon = "ore", Action = "tap" },
+	{ Id = "hit_core", Text = "HIT THE CORE!", Sub = "Keep hitting until it cracks", Icon = "meteorCrystal", Action = "tap" },
+	{ Id = "core_shards", Text = "CRACK IT!", Icon = "crystal", Action = "tap" },
+	{ Id = "deposit", Text = "SMELT!", Icon = "foundry", Action = "go" },
+	{ Id = "collect_bar", Text = "GET BARS!", Icon = "bars", Action = "go" },
+	{ Id = "sell", Text = "SELL!", Icon = "coin", Action = "ui", Button = "SellBars" },
+	-- Points at the HUD Gear button: the gear shop only opens from there
+	{ Id = "buy", Text = "UPGRADE!", Sub = "Tap GEAR - it works from anywhere", Icon = "equipment", Action = "ui", Button = "ShopButton" },
 } :: { Step }
+
+-- The ore field a new player starts in and is pointed at for "MINE!": Rust Works has the softest rocks (Config.Debris).
+-- A player who still has that step to do spawns there (TutorialService), not on the town plaza, whose nearest fields
+-- (Sulfur Ridge, Violet Quarry) are the hardest ones.
+Tutorial.StarterField = "RustWorks"
 
 -- Standing this close (horizontally) to the crater centre during an event counts as "reached"
 Tutorial.CraterRadius = 83.2
+-- A player who skips the tutorial and is still playing this many seconds later counts as having passed every
+-- funnel step left (TutorialService logs them then); one who leaves sooner doesn't
+Tutorial.SkipCreditSeconds = 300
 
 return Tutorial

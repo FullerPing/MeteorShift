@@ -17,12 +17,14 @@ return function(t: any)
 		{ name = "780x360", size = Vector2.new(780, 360), touch = true },
 		{ name = "1334x750", size = Vector2.new(1334, 750), touch = true },
 		{ name = "1920x1080", size = Vector2.new(1920, 1080), touch = false },
+		{ name = "2560x1440", size = Vector2.new(2560, 1440), touch = false },
+		{ name = "3840x2160", size = Vector2.new(3840, 2160), touch = false },
 		{ name = "1196x679 desktop", size = Vector2.new(1196, 679), touch = false, inset = 58 },
 		-- a small desktop window, the other place the column meets the screen edge
 		{ name = "1280x600 mouse", size = Vector2.new(1280, 600), touch = false },
 		{ name = "960x540 mouse", size = Vector2.new(960, 540), touch = false },
 		{ name = "800x450 mouse", size = Vector2.new(800, 450), touch = false },
-		{ name = "390x667 short portrait", size = Vector2.new(390, 667), touch = true, tightPortrait = true },
+		{ name = "390x667 short portrait", size = Vector2.new(390, 667), touch = true }, -- the compact foundry button leaves room for the guide
 		{ name = "390x844 portrait", size = Vector2.new(390, 844), touch = true },
 		{ name = "360x800 portrait", size = Vector2.new(360, 800), touch = true },
 		{ name = "780x360 tall inset", size = Vector2.new(780, 360), touch = true, inset = 60, reserveCompactNotification = true },
@@ -45,6 +47,14 @@ return function(t: any)
 		return { x = button.x, y = button.y, w = button.w, h = math.max(button.h, button.w * 105 / 80) }
 	end
 
+	t.test("the HUD keeps its size up to 1080p and grows in proportion past it", function()
+		t.eq(HudLayout.scale(Vector2.new(1440, 810)), 1)
+		t.eq(HudLayout.scale(Vector2.new(1920, 1080)), 1)
+		t.near(HudLayout.scale(Vector2.new(2560, 1440)), 4 / 3, 0.001)
+		t.eq(HudLayout.scale(Vector2.new(3840, 2160)), 2)
+		t.eq(HudLayout.scale(Vector2.new(7680, 4320)), Hud.ScaleUpMax)
+	end)
+
 	t.test("desktop meteor banner and plot tag leave room for notifications", function()
 		for _, size in { Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(960, 540), Vector2.new(800, 450) } do
 			for _, expanded in { false, true } do
@@ -62,6 +72,95 @@ return function(t: any)
 				end
 			end
 		end
+	end)
+
+	t.test("every layout places a Daily Rewards button, except a phone too narrow for one more in its row", function()
+		for _, v in viewports do
+			local l = HudLayout.compute(v.size, v.touch, v.inset)
+			-- six 44 px faces with 2 px gaps, the gear and the 12 px margins need 344 px across
+			local tooNarrow = v.size.X < v.size.Y and v.size.X < 344
+			t.eq(l.buttons.DAILY == nil, tooNarrow, v.name .. " DAILY button")
+		end
+	end)
+
+	t.test("on a desktop window Daily Rewards sits right above Index when there is room, else ends the left column", function()
+		local above, column = 0, 0
+		for _, size in { Vector2.new(1920, 1080), Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(1280, 600), Vector2.new(960, 540), Vector2.new(800, 450) } do
+			local l = HudLayout.compute(size, false, 58)
+			local daily, index, store = l.buttons.DAILY, l.buttons.INDEX, l.buttons.STORE
+			if daily.x == index.x then
+				above += 1
+				t.ok(daily.y + personalButtonBounds(daily).h <= index.y + 1e-6, tostring(size) .. " Daily is above Index")
+			else
+				column += 1
+				t.eq(daily.x, store.x, tostring(size) .. " Daily is in the left column")
+				t.ok(daily.y > store.y, tostring(size) .. " Daily is below Store")
+			end
+		end
+		t.ok(above >= 1, "the above-Index placement is exercised (" .. column .. " windows fell back to the column)")
+	end)
+
+	local desktopSizes = { Vector2.new(1920, 1080), Vector2.new(1440, 810), Vector2.new(1196, 679), Vector2.new(1280, 600), Vector2.new(960, 540), Vector2.new(800, 450) }
+
+	t.test("on a desktop window Codes sits right under Index, or ends the left column when the stack will not fit", function()
+		local under = 0
+		for _, size in desktopSizes do
+			local l = HudLayout.compute(size, false, 58)
+			local codes, index, store = l.buttons.CODES, l.buttons.INDEX, l.buttons.STORE
+			t.ok(codes ~= nil, tostring(size) .. " has a CODES button")
+			if codes and codes.x == index.x then
+				under += 1
+				t.ok(codes.y >= index.y + personalButtonBounds(index).h - 1e-6, tostring(size) .. " Codes is under Index")
+				t.ok(codes.y - (index.y + personalButtonBounds(index).h) <= 4, tostring(size) .. " Codes is right under Index")
+			elseif codes then
+				t.eq(codes.x, store.x, tostring(size) .. " Codes is in the left column")
+			end
+		end
+		t.ok(under >= 1, "the under-Index placement is exercised")
+	end)
+
+	t.test("on desktop ORE is a column tile under STORE and SPRINT sits in line with the backpack", function()
+		local inLine = 0
+		for _, size in desktopSizes do
+			local l = HudLayout.compute(size, false, 58)
+			local sprint, ore, store, pack = l.fastWalk, l.ore, l.buttons.STORE, l.backpack
+			local context = tostring(size)
+			if not ore then
+				t.ok(size.Y <= 600, context .. " only a short window leaves ORE out of the column")
+				continue
+			end
+			t.eq(ore.x, store.x, context .. " ORE is in the left column")
+			t.near(ore.w, store.w, 1e-6, context .. " ORE is as wide as STORE")
+			t.near(ore.h, store.h, 1e-6, context .. " ORE is as tall as STORE")
+			t.ok(ore.y >= store.y + personalButtonBounds(store).h - 1e-6, context .. " ORE is below STORE")
+			for buttonName, button in l.buttons do
+				if button.x == store.x and button.y > store.y and buttonName ~= "STORE" then
+					t.ok(button.y > ore.y, context .. " " .. buttonName .. " comes after ORE")
+				end
+			end
+			t.ok(HudLayout.inside(ore, screen(size)), context .. " ORE on screen")
+			for buttonName, button in l.buttons do
+				t.ok(not HudLayout.overlaps(personalButtonBounds(ore), personalButtonBounds(button)), context .. " ORE clears " .. buttonName)
+			end
+			if sprint then
+				inLine += 1
+				t.near(sprint.y + sprint.h / 2, pack.y + pack.h / 2, 1e-6, context .. " SPRINT is level with the backpack")
+				t.ok(sprint.x + sprint.w <= pack.x, context .. " SPRINT is left of the backpack")
+				t.ok(HudLayout.inside(sprint, screen(size)), context .. " SPRINT on screen")
+				local others = { foundry = l.leftCards.Production, wallet = l.leftCards.Resources, backpack = pack }
+				if l.tutorialVisible then others.training = l.tutorial end
+				for otherName, other in others do
+					t.ok(not HudLayout.overlaps(sprint, other), context .. " SPRINT clears " .. otherName)
+				end
+			end
+		end
+		t.ok(inLine >= 4, "most desktop windows get the in-line SPRINT (" .. inLine .. ")")
+	end)
+
+	t.test("phones keep SPRINT and ORE where they were", function()
+		local l = HudLayout.compute(Vector2.new(844, 390), true, 36)
+		t.ok(l.fastWalk ~= nil, "phone landscape still places SPRINT")
+		t.eq(l.ore, nil, "ORE stays above SPRINT on phones")
 	end)
 
 	t.test("personal navigation captions clear visible cards, neighbours and movement", function()
@@ -97,14 +196,18 @@ return function(t: any)
 		end
 	end)
 
-	t.test("personal captions retain the 844 landscape column at tall insets", function()
-		for _, inset in { 0, 36, 58, 60 } do
-			local l = HudLayout.compute(Vector2.new(844, 390), true, inset)
-			for _, name in { "SHOP", "INDEX", "REBIRTH" } do
-				local button = l.buttons[name]
-				t.eq(button.x, 12, "left column survives inset=" .. inset)
-				t.ok(button.y >= inset, "face clears Roblox inset")
-				t.ok(personalButtonBounds(button).y + personalButtonBounds(button).h <= (l.thumbstick :: HudLayout.Rect).y + 1e-6, "caption stops above joystick")
+	t.test("phones in landscape keep the menu L above the joystick at every inset", function()
+		for _, size in { Vector2.new(844, 390), Vector2.new(733, 392) } do
+			for _, inset in { 0, 36, 58, 60 } do
+				local l = HudLayout.compute(size, true, inset)
+				local context = tostring(size) .. " inset=" .. inset
+				local gear, index, rebirth, pets, store = l.buttons.SHOP, l.buttons.INDEX, l.buttons.REBIRTH, l.buttons.PETS, l.buttons.STORE
+				t.eq(gear.x, 12, context .. " Gear starts the L")
+				t.ok(gear.y == index.y and index.y == rebirth.y and gear.x < index.x and index.x < rebirth.x, context .. " Gear, Index, Rebirth share the top row")
+				t.ok(pets.x == gear.x and store.x == gear.x and gear.y < pets.y and pets.y < store.y, context .. " Pets and Store go down under Gear")
+				t.ok(gear.y >= inset, context .. " the menu clears Roblox's top bar")
+				local caption = personalButtonBounds(store)
+				t.ok(caption.y + caption.h <= (l.thumbstick :: HudLayout.Rect).y + 1e-6, context .. " Store's caption stops above the joystick")
 			end
 		end
 	end)
@@ -130,7 +233,7 @@ return function(t: any)
 		t.eq(backpack.x + backpack.w, 1416, "backpack hugs the right margin")
 		t.near(wallet.y + wallet.h, backpack.y + backpack.h, 1e-6, "corner panels share a baseline")
 		t.near(production.x + production.w / 2, 720, 1e-6, "production stays centred")
-		t.ok(production.w > wallet.w and production.w > backpack.w, "production has room for its two totals and sale value")
+		t.ok(production.h >= 44 and production.w > production.h, "the foundry sell button keeps a full touch target")
 		t.ok(wallet.x + wallet.w + 6 <= production.x, "wallet clears production")
 		t.ok(production.x + production.w + 6 <= backpack.x, "production clears backpack")
 		t.ok(personalButtonBounds(l.buttons.STORE).y + personalButtonBounds(l.buttons.STORE).h < wallet.y, "left captions stop above the wallet")
@@ -139,32 +242,53 @@ return function(t: any)
 		t.ok(l.tutorial.y + l.tutorial.h < production.y, "training clears the production summary")
 	end)
 
-	t.test("landscape reference stacks left navigation and aligns the bottom status strip", function()
-		for _, inset in { 0, 36, 58, 60 } do
-			local l = HudLayout.compute(Vector2.new(844, 390), true, inset)
-			local gear, index, rebirth, store = l.buttons.SHOP, l.buttons.INDEX, l.buttons.REBIRTH, l.buttons.STORE
-			local settings = l.settings :: HudLayout.Rect
-			t.eq(gear.x, index.x, "Gear and Index share the left column")
-			t.eq(gear.x, rebirth.x, "Rebirth shares the left column")
-			t.ok(gear.y + gear.h <= index.y and index.y + index.h <= rebirth.y, "Gear, Index, Rebirth stack vertically")
-			t.ok(gear.x <= 24 and gear.y >= inset, "left navigation sits below Roblox")
-			t.near(store.y, settings.y, 1e-6, "Store shares the settings row")
-			t.ok(store.x + store.w < settings.x, "Store sits immediately left of settings")
-			t.ok(settings.x + settings.w >= 844 - 24 and store.x >= 180, "top-right actions clear Roblox's left controls")
-			t.ok(l.eventPanel.y >= settings.y + settings.h, "objective is below settings")
-			t.near(l.timer.x + l.timer.w / 2, 422, 1e-6, "clock is centered")
-			t.ok(l.timer.w >= 400, "clock expands into the freed top row")
-			local wallet, foundry, backpack = l.leftCards.Resources, l.leftCards.Production, l.backpack
-			t.ok(wallet.x + wallet.w < foundry.x and foundry.x + foundry.w < backpack.x, "wallet, current summary, backpack share left-to-right order")
-			t.near(wallet.y + wallet.h, foundry.y + foundry.h, 1e-6, "wallet and summary are bottom aligned")
-			t.near(backpack.y + backpack.h, foundry.y + foundry.h, 1e-6, "backpack and summary are bottom aligned")
-			t.ok(l.tutorial.y + l.tutorial.h < math.min(wallet.y, foundry.y, backpack.y), "training sits above the strip")
-			t.near(l.tutorial.x + l.tutorial.w / 2, 422, 1e-6, "training is centered")
-			local thumb = l.thumbstick :: HudLayout.Rect
-			t.eq(thumb.w, 160, "landscape reserves the native joystick area")
-			t.eq(thumb.h, 156, "landscape reserves the native joystick area")
-			t.ok(HudLayout.inside({ x = 29, y = 296, w = 74, h = 74 }, thumb), "live 844x390 joystick circle is protected")
+	t.test("phones in landscape follow the owner's corner layout", function()
+		for _, size in { Vector2.new(844, 390), Vector2.new(733, 392), Vector2.new(780, 360), Vector2.new(685, 338) } do
+			for _, inset in { 0, 36, 58 } do
+				local l = HudLayout.compute(size, true, inset)
+				local context = tostring(size) .. " inset=" .. inset
+				local settings = l.settings :: HudLayout.Rect
+				local wallet, foundry, backpack = l.leftCards.Resources, l.leftCards.Production, l.backpack
+				local jump, mine, sprint = l.jump :: HudLayout.Rect, l.mine :: HudLayout.Rect, l.fastWalk :: HudLayout.Rect
+				t.eq(l.levelAbove, true, context .. " the level sits above the wallet")
+				t.ok(settings.x + settings.w >= size.X - 12 and settings.y + settings.h <= math.max(inset, 46), context .. " settings in the top-right corner")
+				t.near(l.timer.x + l.timer.w / 2, size.X / 2, 1e-6, context .. " clock is centred")
+				t.ok(l.timer.x >= 180 and l.timer.x + l.timer.w <= settings.x, context .. " clock clears Roblox and the gear")
+				t.eq(wallet.x, 12, context .. " wallet in the bottom-left corner")
+				t.near(foundry.x + foundry.w / 2, size.X / 2, 1e-6, context .. " foundry centred")
+				t.ok(wallet.x + wallet.w < foundry.x and foundry.x + foundry.w < backpack.x, context .. " wallet, foundry, backpack left to right")
+				t.ok(backpack.x + backpack.w <= jump.x, context .. " backpack sits beside the jump button")
+				for _, rect in { wallet, foundry, backpack } do t.near(rect.y + rect.h, size.Y - 6, 1e-6, context .. " bottom aligned") end
+				t.ok(l.tutorial.y + l.tutorial.h <= foundry.y and math.abs(l.tutorial.x + l.tutorial.w / 2 - size.X / 2) < 1e-6, context .. " training above the foundry")
+				t.ok(sprint.y > settings.y + settings.h and (sprint.y + sprint.h <= mine.y or sprint.x + sprint.w <= mine.x), context .. " sprint and ore above MINE, or beside it on short phones")
+				t.ok(sprint.x + sprint.w <= size.X, context .. " sprint on screen")
+			end
 		end
+	end)
+
+	t.test("phones in landscape show the meteor objective larger, below the top bar", function()
+		for _, size in { Vector2.new(844, 390), Vector2.new(733, 392), Vector2.new(874, 402), Vector2.new(685, 338) } do
+			for _, inset in { 36, 58 } do
+				local l = HudLayout.compute(size, true, inset)
+				local context = tostring(size) .. " inset=" .. inset
+				local objective = l.objective :: HudLayout.Rect
+				t.ok(objective ~= nil, context .. " has an objective slot")
+				t.ok(objective.w > l.timer.w * 1.3, context .. " objective is well above the clock's size")
+				t.ok(objective.y >= l.timer.y, context .. " objective at or below the clock's top-bar spot")
+				if l.buttons.PETS.y ~= l.buttons.SHOP.y then
+					t.ok(objective.y < math.max(inset, l.timer.y + 1), context .. " objective rides high beside the menu buttons")
+				end
+				t.ok(not HudLayout.overlaps(objective, l.settings :: HudLayout.Rect), context .. " objective clears the settings gear")
+				t.near(objective.x + objective.w / 2, size.X / 2, 1e-6, context .. " objective is centred")
+				local sprint = l.fastWalk :: HudLayout.Rect
+				t.ok(objective.x + objective.w <= math.min(sprint.x, (l.jump :: HudLayout.Rect).x + (l.jump :: HudLayout.Rect).w - 54), context .. " objective clears ORE and SPRINT")
+				for _, button in l.buttons do
+					t.ok(not HudLayout.overlaps(objective, button), context .. " objective clears the menu buttons")
+				end
+				t.ok(objective.y + objective.h <= l.tutorial.y, context .. " objective stays above training")
+			end
+		end
+		t.eq(HudLayout.compute(Vector2.new(844, 390), true, 58, true).objective, nil, "the open foundry keeps the clock in the bar")
 	end)
 
 	t.test("expanded landscape notifications reserve the objective without moving the status order", function()
@@ -194,6 +318,7 @@ return function(t: any)
 					t.ok(HudLayout.inside(item.rect, screen(v.size)), v.name .. " " .. item.name .. " fits")
 					local sharesTopRow = not (v.touch or l.portrait) and (item.name == "settings" or item.name == "clock")
 						or (v.touch and not l.portrait and (item.name == "settings" or item.name == "STORE") and item.rect.x >= v.size.X - 120)
+						or (l.levelAbove and item.name == "clock")
 					if sharesTopRow then
 						t.ok(item.rect.x >= 180, v.name .. " " .. item.name .. " clears Roblox controls on the left")
 					else
@@ -202,7 +327,7 @@ return function(t: any)
 					for j = i + 1, #active do
 						t.ok(not HudLayout.overlaps(item.rect, active[j].rect), v.name .. " " .. item.name .. " vs " .. active[j].name .. " expanded=" .. tostring(expanded))
 					end
-					for _, control in { l.mine, l.jump, l.thumbstick } do
+					for _, control in { l.mine, l.jump, if item.name == "wallet" and l.levelAbove then nil else l.thumbstick } do
 						t.ok(not HudLayout.overlaps(item.rect, control), v.name .. " " .. item.name .. " clears movement")
 					end
 				end
@@ -324,7 +449,7 @@ return function(t: any)
 				for _, item in protected do
 					t.ok(not HudLayout.overlaps(notice, item.rect), v.name .. " notification vs " .. item.name .. " expanded=" .. tostring(expanded))
 				end
-				local referenceLandscape = v.touch and not l.portrait and l.buttons.SHOP.x == l.buttons.INDEX.x
+				local referenceLandscape = l.levelAbove == true
 				t.eq(l.eventVisible, v.tightPortrait ~= true and not (v.touch and expanded and (l.portrait or referenceLandscape or v.reserveCompactNotification == true)), v.name .. " objective visibility expanded=" .. tostring(expanded))
 			end
 		end
@@ -369,21 +494,20 @@ return function(t: any)
 		t.eq(l.tutorialVisible, true)
 	end)
 
-	t.test("personal captions reserve the objective when the landscape notice pocket is too shallow", function()
-		for _, width in { 740, 780 } do
-			local size = Vector2.new(width, 360)
-			local single = HudLayout.compute(size, true, 60, true, true, false)
-			local caption = personalButtonBounds(single.buttons.SHOP)
-			local pocketHeight = (single.thumbstick :: HudLayout.Rect).y - (caption.y + caption.h) - 4
-			t.ok(pocketHeight < 24, "personal caption leaves less than a readable notice row")
-			t.eq(single.notification.h, 48, "brief notice stays readable below the caption")
-			t.eq(single.eventVisible, false, "brief notice reserves the objective when the caption consumes its pocket")
-			t.eq(single.notification.y, single.eventPanel.y, "brief notice uses the objective row")
-			t.ok(not HudLayout.overlaps(single.notification, caption), "brief notice clears the personal caption")
-			local reward = HudLayout.compute(size, true, 60, true, true, true)
-			t.eq(reward.notification.h, 64, "reward keeps both rows readable")
-			t.eq(reward.eventVisible, false, "reward temporarily reserves the objective slot")
-			t.eq(reward.notification.y, reward.eventPanel.y, "reward uses the objective row")
+	t.test("landscape notices clear the menu captions on narrow phones", function()
+		for _, width in { 685, 740, 780 } do
+			for _, reward in { false, true } do
+				for _, expanded in { false, true } do
+					local l = HudLayout.compute(Vector2.new(width, 360), true, 60, expanded, true, reward)
+					local context = width .. " reward=" .. tostring(reward) .. " expanded=" .. tostring(expanded)
+					t.eq(l.notification.h, if reward then 64 else 48, context .. " notice keeps readable rows")
+					t.ok(l.notification.w >= 190, context .. " notice is wide enough")
+					for name, button in l.buttons do
+						t.ok(not HudLayout.overlaps(l.notification, personalButtonBounds(button)), context .. " notice clears " .. name)
+					end
+					if expanded then t.eq(l.eventVisible, false, context .. " notice reserves the objective") end
+				end
+			end
 		end
 	end)
 
@@ -479,7 +603,8 @@ return function(t: any)
 				if layout.timerVisible ~= false then
 					t.ok(not HudLayout.overlaps(card, layout.timer), v.name .. " " .. name .. " vs clock")
 				end
-				if layout.thumbstick then
+				-- (phones in landscape: the owner put the wallet over the joystick area; it takes no touches)
+				if layout.thumbstick and not (name == "Resources" and layout.levelAbove) then
 					t.ok(not HudLayout.overlaps(card, layout.thumbstick), v.name .. " " .. name .. " vs thumbstick")
 				end
 				for j = i + 1, #names do
@@ -537,6 +662,17 @@ return function(t: any)
 			local rect = layout.buttons[name]
 			t.ok(rect.y >= previousBottom, name .. " sits below the button before it")
 			previousBottom = rect.y + rect.h
+		end
+	end)
+
+	t.test("desktop: the bottom cards share one bottom line and the side stacks share one margin", function()
+		for _, size in { Vector2.new(1920, 1080), Vector2.new(1366, 768), Vector2.new(2560, 1440) } do
+			local l = HudLayout.compute(size, false)
+			local resources, production = l.leftCards.Resources, l.leftCards.Production
+			t.near(production.y + production.h, resources.y + resources.h, 1e-6, tostring(size) .. " foundry and wallet bottoms")
+			t.near(l.backpack.y + l.backpack.h, resources.y + resources.h, 1e-6, tostring(size) .. " backpack and wallet bottoms")
+			local index = l.buttons.INDEX
+			t.near(size.X - (index.x + index.w), l.buttons.SHOP.x, 1e-6, tostring(size) .. " right stack mirrors the left column")
 		end
 	end)
 
@@ -601,8 +737,9 @@ return function(t: any)
 	end)
 
 	t.test("backpack popup height follows visible ore rows and caps future inventories", function()
-		local l = HudLayout.compute(Vector2.new(1440, 810), false)
-		for _, fixture in { { count = 0, height = 72 }, { count = 1, height = 72 }, { count = 2, height = 100 }, { count = 3, height = 128 }, { count = 7, height = 128 } } do
+		-- a big window: the Daily / Index / Codes stack leaves the popup its full six rows
+		local l = HudLayout.compute(Vector2.new(1920, 1080), false)
+		for _, fixture in { { count = 0, height = 72 }, { count = 1, height = 72 }, { count = 2, height = 100 }, { count = 3, height = 128 }, { count = 6, height = 212 }, { count = 9, height = 212 } } do
 			local popup = HudLayout.backpackPanel(l, fixture.count)
 			t.eq(popup.h, fixture.height, "ore rows=" .. fixture.count)
 			t.eq(popup.y + popup.h, l.backpack.y - 8, "changing row count keeps the popup directly above its anchor")
@@ -672,4 +809,76 @@ return function(t: any)
 		t.eq(Aim.nearest({ { distance = 3, dot = -0.5, core = false } }, 12, 0, 4), nil)
 		t.eq(Aim.nearest({ { distance = 13, dot = 1, core = false } }, 12, 0, 4), nil)
 	end)
+	t.test("HudEdit with nothing set leaves the layout as computed", function()
+		local layout = HudLayout.compute(Vector2.new(1920, 1080), false, 36, false, false, false)
+		local edited = HudLayout.applyEdits(layout, Config.HudEdit)
+		t.eq(edited.timer.x, layout.timer.x)
+		t.eq(edited.backpack.y, layout.backpack.y)
+		t.eq(edited.buttons.SHOP.x, layout.buttons.SHOP.x)
+		t.eq(edited.resourcesVisible, layout.resourcesVisible)
+		t.eq(HudLayout.isHidden(edited, "Wallet"), false)
+	end)
+
+	t.test("HudEdit nudges, scales and hides the named elements only", function()
+		local layout = HudLayout.compute(Vector2.new(1920, 1080), false, 36, false, false, false)
+		local edited = HudLayout.applyEdits(layout, {
+			Hidden = { "Backpack", "INDEX", "Level" },
+			Nudge = { Timer = { x = 40, y = -6, scale = 0.5 }, Wallet = { y = -20 }, FastWalk = { x = 5 } },
+		})
+		t.eq(edited.timer.x, layout.timer.x + 40)
+		t.eq(edited.timer.y, layout.timer.y - 6)
+		t.near(edited.timer.w, layout.timer.w * 0.5, 1e-6)
+		t.eq(edited.leftCards.Resources.y, layout.leftCards.Resources.y - 20)
+		t.eq(edited.leftCards.Production.x, layout.leftCards.Production.x, "the foundry is not touched")
+		t.eq(edited.backpackVisible, false)
+		t.eq(edited.timerVisible, layout.timerVisible)
+		t.ok(edited.buttons.INDEX == nil or edited.buttons.INDEX.x < 0, "a hidden button leaves the screen")
+		t.eq(edited.buttons.SHOP.x, layout.buttons.SHOP.x, "other buttons stay put")
+		t.eq(HudLayout.isHidden(edited, "Level"), true)
+		t.eq(HudLayout.nudged(edited, "FastWalk", { x = 10, y = 10, w = 54, h = 54 }).x, 15)
+		t.eq(HudLayout.nudged(edited, "Ore", { x = 10, y = 10, w = 54, h = 54 }).x, 10)
+		t.ok(layout.hidden == nil, "the input layout is not mutated")
+	end)
+
+	t.test("phones put the offers in line with the menu buttons, clear of everything else", function()
+		for _, viewport in viewports do
+			if viewport.touch then
+				local layout = HudLayout.compute(viewport.size, true, viewport.inset)
+				if viewport.size.X > viewport.size.Y then
+					t.ok(#layout.offers >= 1, viewport.name .. ": at least one offer cell")
+				end
+				local stick = layout.thumbstick :: HudLayout.Rect -- (its top 4 px may be grazed)
+				local others = { layout.settings, layout.mine, layout.jump, layout.fastWalk, layout.objective,
+					{ x = stick.x, y = stick.y + 4, w = stick.w, h = stick.h - 4 } }
+				for _, offer in layout.offers do
+					local aligned = false
+					for _, button in layout.buttons do
+						if math.abs(button.x - offer.x) < 0.5 or math.abs(button.y - offer.y) < 0.5 then aligned = true end
+						t.ok(not HudLayout.overlaps(offer, button), viewport.name .. ": offer clear of a menu button")
+					end
+					t.ok(aligned, viewport.name .. ": offer shares a row or column with the menu buttons")
+					t.ok(offer.x >= 0 and offer.y >= layout.inset and offer.x + offer.w <= viewport.size.X
+						and offer.y + offer.h <= viewport.size.Y, viewport.name .. ": offer on screen")
+					for _, other in others do
+						t.ok(not HudLayout.overlaps(offer, other), viewport.name .. ": offer clear of the controls")
+					end
+				end
+			end
+		end
+	end)
+
+	t.test("on a landscape phone the offers fill the two cells under Rebirth, completing the grid", function()
+		local layout = HudLayout.compute(Vector2.new(844, 390), true)
+		local rebirth = layout.buttons.REBIRTH
+		t.eq(#layout.offers, 2) -- a fourth column would squeeze the meteor objective
+		t.near(layout.offers[1].x, rebirth.x, 0.5)
+		t.near(layout.offers[1].y, layout.buttons.DAILY.y, 0.5)
+		t.near(layout.offers[2].x, rebirth.x, 0.5)
+		t.near(layout.offers[2].y, layout.buttons.CODES.y, 0.5)
+	end)
+
+	t.test("desktop leaves the offers to their column above Index", function()
+		t.eq(#HudLayout.compute(Vector2.new(1920, 1080), false).offers, 0)
+	end)
+
 end

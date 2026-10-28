@@ -2,7 +2,7 @@
 return function(t: any)
 	local Refining = require(t.lib.Refining)
 	local function line(): any
-		return { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = {}, bin = {}, progress = 0 }
+		return { line = 1, hopper = {}, bin = {}, progress = 0 }
 	end
 	t.test("vault multiplies both station capacities while defaults stay unchanged", function()
 		local data = line()
@@ -24,14 +24,15 @@ return function(t: any)
 		local module = t.shared:FindFirstChild("CharacterSpeed")
 		t.ok(module, "Shared.CharacterSpeed exists")
 		local Speed = require(module)
+		local B = Speed.BaseMultiplier
 		local speed, base = Speed.update(16, nil, nil, .15)
-		t.near(speed, 18.4, 1e-9)
+		t.near(speed, 18.4 * B, 1e-9)
 		t.eq(base, 16)
 		local restored = Speed.update(speed, speed, base, 0)
-		t.eq(restored, 16)
+		t.near(restored, 16 * B, 1e-9)
 		local adopted, newBase = Speed.update(24, speed, base, .3)
-		t.near(adopted, 28.8, 1e-9)
+		t.near(adopted, 28.8 * B, 1e-9)
 		t.eq(newBase, 24)
-		t.eq(Speed.update(adopted, adopted, newBase, 0), 24)
+		t.near((Speed.update(adopted, adopted, newBase, 0)), 24 * B, 1e-9)
 	end)
 end

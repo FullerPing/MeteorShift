@@ -6,23 +6,44 @@ local Meteor = {}
 
 -- Phase durations, in seconds (spec §5.1)
 Meteor.FirstCountdown = 90 -- first meteor after a server starts is ~1.5 minutes away (spec §4)
-Meteor.Countdown = 180 -- 3 minutes: a 343 s cycle gives a new player four meteors in the first 19 minutes (docs/economy-rework.md)
+Meteor.Countdown = 120 -- 2 minutes (owner, 2026-10-19: telemetry showed most new players leaving during the 3-minute wait): a 283 s cycle
 Meteor.ImpactDuration = 3
 -- The cooling timer (Active) is per type: Meteor.Types[id].ActiveDuration
 Meteor.CrackedDuration = 5
 Meteor.CooledDuration = 5
 Meteor.CleanupDuration = 5
-Meteor.StreakLeadTime = 10 -- streak is visible for the last N seconds of the countdown
+-- Overtime (every type): when the cooling timer runs out with the core under Below of its HP left, the meteor stays
+-- Seconds longer, once (Shared.MeteorTypes.overtime)
+Meteor.Overtime = { Below = 0.05, Seconds = 10 }
+Meteor.StreakLeadTime = 14 -- streak is visible for the last N seconds of the countdown (10 felt sudden; owner, 2026-10-19)
+-- In the last LeadTime seconds the camera swings behind the player: it looks at the countdown board over the crater
+-- until CountdownUntil seconds are left, then turns to follow the falling meteor down, and hands control back
+-- BlendOut seconds after impact. Players can turn it off with the ReduceCameraShake setting. It stays off while a menu
+-- is open and before the tutorial reaches its "first_upgrade" step (the one after the first MINE!).
+Meteor.LandingCamera = {
+	Enabled = true,
+	LeadTime = 5, -- seconds left on the countdown when the camera locks on the board
+	CountdownUntil = 3, -- seconds left when it turns to the falling meteor
+	BlendIn = 1.2,
+	BlendOut = 1.5,
+	TurnSpeed = 3, -- how quickly the view swings from the board to the meteor (higher = snappier)
+	HoldAfterImpact = 1, -- keep looking at the impact this long before blending back
+	Height = 3, -- studs the camera sits above the player's head
+	Shoulder = 3, -- studs to the right, so the player stands to one side of the view
+	MaxPitch = 40, -- degrees the camera may tilt up toward the board or the fireball
+}
 
 -- Shorter countdown while playtesting in Studio. Set to nil to use the real timings.
 Meteor.StudioCountdown = 25 :: number?
 
 -- HP sizing at impact, in Mining Power (spec §5.3, see Shared.MiningPower)
 Meteor.PowerGrowth = 1.25 -- Mining Power per pickaxe tier: tier 1 = 1.0, tier 4 ≈ 2.0, tier 8 ≈ 4.8
-Meteor.CrustSeconds = 70
-Meteor.CoreSeconds = 45
+Meteor.CrustSeconds = 60 -- was 70; a little easier (owner, 2026-10-25)
+Meteor.CoreSeconds = 38 -- was 45
 Meteor.CoreUnlockFraction = 0.6
-Meteor.ActiveWindow = 120 -- players with no input for this long don't count toward HP
+-- players with no validated swing for this long don't count toward HP; longer than a whole meteor cycle (283 s), so
+-- players who waited out the 120 s countdown still count at impact (at 120 the meteor was sized for nobody and melted)
+Meteor.ActiveWindow = 300
 Meteor.FloorPlayers = 1 -- a meteor is never smaller than this many Basic Pickaxes (HP scales with power, so the event lasts the same for any lobby size; a floor above the real player count made 1-3 players unable to crack it)
 Meteor.RescaleThreshold = 0.15 -- rescale remaining HP when server power drifts more than this
 Meteor.RescaleCooldown = 10 -- at most one rescale per this many seconds
@@ -36,6 +57,11 @@ Meteor.TopBonus = { 10, 6, 3 }
 
 -- Mining validation (spec §12.2)
 Meteor.MineRange = 12
+-- Meteor crust and core targets also count a swing from up to this many studs above the player (Shared.MiningReach):
+-- the 2x meteor's upper ring and crown sit well above head height (QA 2026-10-15: up to 29.7 studs away from the
+-- crater floor). Every one of the 36 slots is a real target (owner, 2026-10-15: the crown must break when you mine it),
+-- so this covers the crown (29.2 to 32.4 studs above the core's centre) as well. Debris rocks don't get it.
+Meteor.UpwardReach = 28
 Meteor.SwingTolerance = 0.8 -- accept swings up to 20% faster than the pickaxe allows (latency jitter)
 Meteor.HpFlushInterval = 0.1 -- node HP replication rate (10 Hz)
 Meteor.StandingInterval = 1 -- how often clients get their rank and the top three
@@ -52,11 +78,23 @@ Meteor.Knockback = {
 -- rules (odds, twist math). Everyone mines every type; what a hit yields by player level
 -- (Config.Levels, Shared.Levels.oreYield) is what keeps it fair. The Alien boss is not in
 -- the weighted schedule: Meteor.Boss brings it in. Seasonal meteors are not built yet.
-Meteor.TypeOrder = { "Iron", "Ice", "Crystal" } -- lowest to highest, the weighted schedule
+-- Each world (Config.Worlds) has its own weighted schedule, lowest to highest. Nebula Rift's three mirror World 1's odds
+-- and ore levels with ores worth 3x, so a lap there takes as long as one in World 1 at a third of the rebirth cost.
+-- The Alien boss and the hourly Quartz meteor land in World 1 only.
+Meteor.WorldTypeOrder = {
+	{ "Iron", "Ice", "Crystal" },
+	{ "Nebula", "Solar", "Eclipse" },
+}
+Meteor.TypeOrder = Meteor.WorldTypeOrder[1] -- World 1's: what Pacing and the shop price checks model by default
 
 -- The Alien boss meteor: every EveryMeteors-th meteor (about hourly) on a server where someone
 -- has at least MinRebirths rebirths (the rebirth 3 unlock). It pays a new, rarer ore.
 Meteor.Boss = { Type = "Alien", EveryMeteors = 10, MinRebirths = 3 }
+
+-- The hourly Quartz meteor (owner, 2026-10-24): lands at Minute past every hour (UTC, server clock) on every server,
+-- open to everyone. The countdown that would otherwise run past that minute becomes its countdown; if a normal meteor
+-- is down at the minute, the Quartz is queued as the next meteor instead (MeteorTypes.hourly; owner, 2026-10-25).
+Meteor.Hourly = { Type = "Quartz", Minute = 30 }
 
 Meteor.Twists = {
 	-- Ice: a node nobody has hit for IdleSeconds regains RegenPerSecond of its max HP per second.
@@ -177,6 +215,95 @@ Meteor.Types = {
 		OreMaterial = Enum.Material.Neon,
 		CoreColor = Color3.fromRGB(70, 235, 120),
 		GlowColor = Color3.fromRGB(110, 255, 160),
+	} :: MeteorType,
+	Quartz = {
+		Id = "Quartz",
+		DisplayName = "Quartz Meteor",
+		Ore = "quartz",
+		RequiredTier = 1,
+		YieldMult = 1,
+		HpMult = 2, -- a big core: the whole server mines it together
+		ActiveDuration = 300, -- the longest window: five minutes, so everyone who saw the countdown gets in
+		ShardMult = 3,
+		Weight = 0, -- never in the weighted schedule: Meteor.Hourly
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(236, 232, 246),
+			Color3.fromRGB(214, 206, 236),
+			Color3.fromRGB(250, 246, 255),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(255, 196, 236),
+		OreMaterial = Enum.Material.Glass,
+		CoreColor = Color3.fromRGB(255, 150, 220),
+		GlowColor = Color3.fromRGB(255, 190, 240),
+	} :: MeteorType,
+	-- Nebula Rift (World 2)
+	Nebula = {
+		Id = "Nebula",
+		DisplayName = "Nebula Meteor",
+		Ore = "nebula",
+		RequiredTier = 1,
+		YieldMult = 1,
+		HpMult = 1,
+		ActiveDuration = 150,
+		ShardMult = 1,
+		Weight = 60,
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(124, 92, 214),
+			Color3.fromRGB(146, 112, 232),
+			Color3.fromRGB(100, 74, 186),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(196, 170, 255),
+		OreMaterial = Enum.Material.Glass,
+		CoreColor = Color3.fromRGB(138, 92, 255),
+		GlowColor = Color3.fromRGB(170, 130, 255),
+	} :: MeteorType,
+	Solar = {
+		Id = "Solar",
+		DisplayName = "Solar Meteor",
+		Ore = "solar",
+		RequiredTier = 3,
+		YieldMult = 1,
+		HpMult = 1.1,
+		ActiveDuration = 150,
+		ShardMult = 1.5,
+		Weight = 25,
+		Twist = "None",
+		CrustColors = {
+			Color3.fromRGB(240, 160, 64),
+			Color3.fromRGB(255, 186, 90),
+			Color3.fromRGB(214, 132, 44),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(255, 226, 120),
+		OreMaterial = Enum.Material.Neon,
+		CoreColor = Color3.fromRGB(255, 181, 71),
+		GlowColor = Color3.fromRGB(255, 200, 90),
+	} :: MeteorType,
+	Eclipse = {
+		Id = "Eclipse",
+		DisplayName = "Eclipse Meteor",
+		Ore = "eclipse",
+		RequiredTier = 5,
+		YieldMult = 1,
+		HpMult = 1.2,
+		ActiveDuration = 150,
+		ShardMult = 2,
+		Weight = 15,
+		Twist = "Resonance",
+		CrustColors = {
+			Color3.fromRGB(58, 34, 86),
+			Color3.fromRGB(76, 46, 110),
+			Color3.fromRGB(44, 26, 68),
+		},
+		CrustMaterial = Enum.Material.Plastic,
+		OreColor = Color3.fromRGB(240, 140, 255),
+		OreMaterial = Enum.Material.Neon,
+		CoreColor = Color3.fromRGB(224, 112, 255),
+		GlowColor = Color3.fromRGB(230, 130, 255),
 	} :: MeteorType,
 } :: { [string]: MeteorType }
 

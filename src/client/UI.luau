@@ -10,6 +10,7 @@ local UserInputService = game:GetService("UserInputService")
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local HudIcons = require(ReplicatedStorage.Shared.Config.HudIcons)
+local HudEditConfig = require(ReplicatedStorage.Shared.Config.HudEdit)
 local Sfx = require(script.Parent.Sfx)
 local Cartoon = require(script.Parent.Cartoon)
 
@@ -382,7 +383,8 @@ function UI.hud(scope: Scope): Fusion.Computed<HudLayout.Layout>
 		table.insert(scope, insetSignal:Connect(refreshInset))
 	end
 	return scope:Computed(function(use)
-		return HudLayout.compute(use(viewport), use(touch), use(inset), use(expanded), use(notification), use(rewardNotification))
+		-- Config.HudEdit (moved, resized or hidden elements) is applied on top of the automatic layout
+		return HudLayout.applyEdits(HudLayout.compute(use(viewport), use(touch), use(inset), use(expanded), use(notification), use(rewardNotification)), HudEditConfig)
 	end)
 end
 

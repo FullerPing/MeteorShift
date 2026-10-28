@@ -6,20 +6,11 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local Config = require(ReplicatedStorage.Shared.Config)
+local Line = require(ReplicatedStorage.Shared.Line)
 local Queue = require(ReplicatedStorage.Shared.RefineryQueue)
 
-local Stations = Config.Home.Stations
-
-export type StationLevels = {
-	hopper: number,
-	conveyor: number,
-	refinery: number,
-	collector: number,
-}
-
 export type HomeData = {
-	stations: StationLevels,
+	line: number, -- the production line's level (Shared.Line): every station follows it
 	hopper: { [string]: number }, -- ore waiting
 	bin: { [string]: number }, -- bars waiting at the collection post
 	progress: number?, -- fractional ore carried between ticks
@@ -28,31 +19,29 @@ export type HomeData = {
 
 local Refining = {}
 
-local function level(stationId: string, lvl: number): Config.Level
-	local levels = Stations[stationId].Levels
-	return levels[math.clamp(lvl, 1, #levels)]
-end
-
+-- Capacities are whole ore / bars: a Vault pet's fractional multiplier must not leave fractional stock
 function Refining.hopperCapacity(data: HomeData, capacityMult: number?): number
-	return (level("hopper", data.stations.hopper).Capacity :: number) * (capacityMult or 1)
+	return math.floor((Line.station("hopper", data.line).Capacity :: number) * (capacityMult or 1))
 end
 
 function Refining.collectorCapacity(data: HomeData, capacityMult: number?): number
-	return (level("collector", data.stations.collector).Capacity :: number) * (capacityMult or 1)
+	return math.floor((Line.station("collector", data.line).Capacity :: number) * (capacityMult or 1))
 end
 
-function Refining.conveyorRate(data: HomeData): number
-	return level("conveyor", data.stations.conveyor).Rate :: number
+-- Overclock (`speedMult`) speeds up the conveyor too: the conveyor is barely faster than the
+-- refinery, so overclocking the refinery alone made the line only 12-20% faster, not ×2
+function Refining.conveyorRate(data: HomeData, speedMult: number?): number
+	return (Line.station("conveyor", data.line).Rate :: number) * (speedMult or 1)
 end
 
 function Refining.refineryRate(data: HomeData, speedMult: number?): number
-	return (level("refinery", data.stations.refinery).Rate :: number) * (speedMult or 1)
+	return (Line.station("refinery", data.line).Rate :: number) * (speedMult or 1)
 end
 
 -- Bars per second the line can make right now (ignoring stock and room). `lineMult` is the
 -- Efficient Line perk (Shared.Perks.lineMult) and scales the whole line.
 function Refining.lineRate(data: HomeData, speedMult: number?, lineMult: number?): number
-	return math.min(Refining.conveyorRate(data), Refining.refineryRate(data, speedMult)) * (lineMult or 1)
+	return math.min(Refining.conveyorRate(data, speedMult), Refining.refineryRate(data, speedMult)) * (lineMult or 1)
 end
 
 local function sum(t: { [string]: number }): number

@@ -9,27 +9,53 @@
 -- again when they respawn, and untouched rocks re-pick every RerollInterval so a
 -- player who just joined or upgraded soon finds rocks sized for them. Tougher
 -- rocks get tinted, glowing flecks.
+--
+-- A rock's Field attribute puts it in one of the ore fields (Config.Debris.Fields), which set its hits and
+-- its reward: cash worth a few seconds of the breaker's expected income (Economy:ExpectedIncome), or a
+-- better ore than iron. Rocks outside a field stay plain iron filler.
+--
+-- A field may be locked behind a level or a rebirth count (Shared.FieldGate). The server is the gate: a locked
+-- field's rocks refuse the player's swings and pets (NodeService CanHit), ORE travel there is refused, and anyone
+-- standing on its floor is put back at its Entrance. The gate models on the map are the client's picture of it.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Knit = require(ReplicatedStorage.Packages.Knit)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
+local DebrisField = require(ReplicatedStorage.Shared.DebrisField)
 local DebrisOre = require(ReplicatedStorage.Shared.DebrisOre)
+local FieldGate = require(ReplicatedStorage.Shared.FieldGate)
 local FieldTravel = require(ReplicatedStorage.Shared.FieldTravel)
+local Format = require(ReplicatedStorage.Shared.Format)
+local Levels = require(ReplicatedStorage.Shared.Levels)
+local Perks = require(ReplicatedStorage.Shared.Perks)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local StudSkin = require(ReplicatedStorage.Shared.StudSkin)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local DebrisService = Knit.CreateService({
 	Name = "DebrisService",
 	Client = {},
 })
 
+-- (player: Player, field: string) a rock was broken; field is its ore field's id, or "Filler" outside the fields
+DebrisService.RockBroken = Signal.new()
+
 local lastTravel: { [Player]: number } = {}
+local lastRefusal: { [Player]: number } = {} -- the last "this field is locked" notice, so swings don't spam it
+local warnedNoGates = false
 
 local NodeService
 local ActivityService
+local PlayerStateService
+local EconomyService
+local RewardService
+local TelemetryService
 
 -- Fleck tint by the tier a rock is sized for; tiers 1-2 keep the flecks as built
 local TIER_TINTS: { [number]: Color3 } = {
@@ -44,6 +70,8 @@ local TIER_TINTS: { [number]: Color3 } = {
 type Rock = {
 	Part: BasePart,
 	Id: number,
+	Reward: DebrisField.Reward?, -- what its field pays, nil for filler
+	Hits: number, -- hits to break for the player it is sized for
 	Flecks: { [BasePart]: { Color: Color3, Material: Enum.Material } },
 }
 
@@ -75,7 +103,7 @@ end
 -- Sizes a rock for a pickaxe (its tier tints the flecks, its Power sets the HP).
 local function size(rock: Rock, tier: number, power: number)
 	rock.Part:SetAttribute("Tier", tier)
-	NodeService:SetMaxHp(rock.Id, Config.Debris.Hp * power)
+	NodeService:SetMaxHp(rock.Id, rock.Hits * power)
 	local tint = TIER_TINTS[tier]
 	for fleck, original in rock.Flecks do
 		fleck.Color = tint or original.Color
@@ -83,40 +111,67 @@ local function size(rock: Rock, tier: number, power: number)
 	end
 end
 
--- Brings a grey stone rock into the bright studded look: plastic, tinted toward the colour of its
--- ore flecks, with the map's studs on top. Rocks keep their drops and HP; this is paint only.
+-- Brings a stone rock into the map's look: tinted toward the colour of its ore flecks, smooth (or studded when
+-- Config.Debris.Rock.Studs is on). Rocks keep their drops and HP; this is paint only.
 local function skin(part: BasePart, flecks: { [BasePart]: any })
 	local fleck = next(flecks)
 	if fleck then
 		part.Color = part.Color:Lerp(fleck.Color, Config.Debris.Rock.TintMix)
 	end
-	part.Material = Enum.Material.Plastic
-	StudSkin.apply(part)
+	if Config.Debris.Rock.Studs then
+		part.Material = Enum.Material.Plastic
+		StudSkin.apply(part)
+	else
+		part.Material = Enum.Material.SmoothPlastic
+	end
 end
 
 function DebrisService:_track(part: BasePart)
+	-- only the ore flecks are tinted by tier; other children (rock chunks) keep their colour
 	local flecks = {}
 	for _, child in part:GetDescendants() do
-		if child:IsA("BasePart") then
+		if child:IsA("BasePart") and child.Name == "OreFleck" then
 			flecks[child] = { Color = child.Color, Material = child.Material }
 		end
 	end
 	skin(part, flecks)
 
+	-- The field a rock stands in (its Field attribute) decides its hits and what it pays
+	local reward = DebrisField.reward(part:GetAttribute("Field"))
+	local hits = DebrisField.hits(reward)
+	local gated = FieldTravel.find(part:GetAttribute("Field"))
 	local rock: Rock
 	local id = NodeService:Register(part, {
 		Kind = "Debris",
-		MaxHp = Config.Debris.Hp,
+		CanHit = if gated and gated.Unlock then function(player: Player) return self:IsFieldOpen(player, gated.Id) end else nil,
+		OnRefused = if gated and gated.Unlock then function(player: Player)
+			local now = os.clock()
+			if lastRefusal[player] and now - lastRefusal[player] < 3 then return end
+			lastRefusal[player] = now
+			RewardService:Bonus(player, "locked", gated.Name .. " opens at " .. FieldGate.label(gated))
+		end else nil,
+		MaxHp = hits,
 		Ore = Config.Debris.Ore,
 		OreMult = Config.Debris.YieldFraction,
-		-- The tier changes on untouched rerolls and respawns. Read its current value
-		-- (debris always drops the default ore; the tint only shows how tough a rock is).
-		OreFor = function()
-			return DebrisOre.forTier(part:GetAttribute("Tier") :: number?), Config.Debris.YieldFraction
+		-- Filler always drops the default ore (the tier tint only shows how tough a rock is). A field's rock
+		-- drops its field's ore at the breaker's level, or none when it pays cash.
+		OreFor = function(player: Player)
+			if not reward then
+				return DebrisOre.forTier(part:GetAttribute("Tier") :: number?), Config.Debris.YieldFraction
+			end
+			local data = PlayerStateService:Get(player)
+			local share = if reward.Ore then Levels.oreYield(if data then data.level else 1, reward.Ore) else 1
+			return DebrisField.ore(reward, share)
 		end,
-		OnBroken = function()
+		OnBroken = function(player: Player)
+			if reward then
+				self:_payCash(player, reward, rock)
+				self:_payXp(player, reward, rock)
+			end
+			local field = part:GetAttribute("Field")
+			self.RockBroken:Fire(player, if reward and type(field) == "string" then field else "Filler")
 			setVisible(part, false)
-			task.delay(math.random(Config.Debris.RespawnMin, Config.Debris.RespawnMax), function()
+			task.delay(DebrisField.respawnSeconds(#Players:GetPlayers(), math.random()), function()
 				if part.Parent then
 					size(rock, pickPickaxe())
 					setVisible(part, true)
@@ -124,9 +179,40 @@ function DebrisService:_track(part: BasePart)
 			end)
 		end,
 	})
-	rock = { Part = part, Id = id, Flecks = flecks }
+	rock = { Part = part, Id = id, Reward = reward, Hits = hits, Flecks = flecks }
 	size(rock, pickPickaxe())
 	table.insert(rocks, rock)
+end
+
+-- A cash rock pays the player who broke it a stretch of their own expected income, cut to the share of
+-- their pickaxe the rock was sized for (DebrisField.sizedShare): a veteran one-shotting a rock sized for a
+-- newcomer earns that small share, not seconds of their own big income.
+function DebrisService:_payCash(player: Player, reward: DebrisField.Reward, rock: Rock)
+	local data = PlayerStateService:Get(player)
+	if not data then
+		return
+	end
+	local _, maxHp = NodeService:GetHp(rock.Id)
+	local pickaxe = PlayerStateService:GetPickaxe(player)
+	local share = DebrisField.sizedShare(maxHp, rock.Hits, pickaxe.Power)
+	local cash = math.floor(DebrisField.cash(reward, EconomyService:ExpectedIncome(player).perSecond * share, Rebirth.cost(data.rebirths), pickaxe.Swing)
+		* Perks.fieldMult(data.perks))
+	if cash > 0 then
+		PlayerStateService:AddCash(player, cash)
+		TelemetryService:earned(player, "field_cash", cash, 0)
+		RewardService:Bonus(player, "fieldCash", "+" .. Format.cash(cash))
+	end
+end
+
+-- An XP rock (the XP Mine) pays player XP, cut like cash to the share of the breaker's pickaxe it was sized for
+function DebrisService:_payXp(player: Player, reward: DebrisField.Reward, rock: Rock)
+	local _, maxHp = NodeService:GetHp(rock.Id)
+	local share = DebrisField.sizedShare(maxHp, rock.Hits, PlayerStateService:GetPickaxe(player).Power)
+	local data = PlayerStateService:Get(player)
+	local xp = Knit.GetService("LevelService"):AddXp(player, DebrisField.xp(reward, share) * Perks.fieldMult(if data then data.perks else nil))
+	if xp > 0 then
+		RewardService:Bonus(player, "fieldXp", "+" .. Format.number(math.floor(xp + 0.5)) .. " XP")
+	end
 end
 
 -- Re-picks the tier of rocks nobody has hit yet.
@@ -156,9 +242,58 @@ function DebrisService:_fieldSpot(id: string): Vector3?
 	return Vector3.new(floor.Position.X + dx, top + 3.6, floor.Position.Z + dz)
 end
 
+-- Whether the ore field `id` is open to the player (their saved level and rebirths). A gated field on a map
+-- without its Gates folder stays locked (fail closed, warned once): a missing folder must not open every gate.
+function DebrisService:IsFieldOpen(player: Player, id: string): boolean
+	local field = FieldTravel.find(id)
+	if not field then return false end
+	if not field.Unlock then return true end
+	local map = WorldMap.find()
+	if not (map and map:FindFirstChild("Gates")) then
+		if not warnedNoGates then
+			warnedNoGates = true
+			warn("[DebrisService] Map.Gates is missing: gated ore fields stay locked")
+		end
+		return false
+	end
+	local data = PlayerStateService:Get(player)
+	return data ~= nil and FieldGate.isOpen(field, data.level or 1, data.rebirths or 0)
+end
+
+-- Puts anyone standing on a field that is locked to them back at its Entrance (they walked, slid or were thrown in)
+function DebrisService:_ejectLocked()
+	local map = WorldMap.find()
+	local fields = map and map:FindFirstChild("DebrisFields")
+	if not fields then return end
+	for _, player in Players:GetPlayers() do
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if not (root and root:IsA("BasePart")) then continue end
+		for _, field in Config.Debris.Fields do
+			if not field.Unlock then continue end
+			local model = fields:FindFirstChild(field.Id)
+			local entrance = model and model:FindFirstChild("Entrance")
+			if not (entrance and entrance:IsA("BasePart")) then continue end
+			-- one FieldFloor per block (Rust and Frost have a block each side of their avenue)
+			local inside = false
+			for _, floor in (model :: Instance):GetChildren() do
+				if floor.Name == "FieldFloor" and floor:IsA("BasePart") then
+					local p = floor.CFrame:PointToObjectSpace(root.Position)
+					inside = inside or (math.abs(p.X) <= floor.Size.X / 2 + 2 and math.abs(p.Z) <= floor.Size.Z / 2 + 2
+						and p.Y >= -floor.Size.Y / 2 - 2 and p.Y <= floor.Size.Y / 2 + 40)
+				end
+			end
+			if inside and not self:IsFieldOpen(player, field.Id) then
+				player.Character:PivotTo(entrance.CFrame + Vector3.new(0, 4, 0))
+				root.AssemblyLinearVelocity = Vector3.zero
+			end
+		end
+	end
+end
+
 -- Teleports a player to an ore field; false when the request is refused.
 function DebrisService:TravelTo(player: Player, id: any): boolean
 	if not FieldTravel.find(id) then return false end
+	if not self:IsFieldOpen(player, id) then return false end
 	local character = player.Character
 	if not character then return false end
 	local root = character:FindFirstChild("HumanoidRootPart")
@@ -168,6 +303,7 @@ function DebrisService:TravelTo(player: Player, id: any): boolean
 	if not spot then return false end
 	character:PivotTo(CFrame.new(spot))
 	root.AssemblyLinearVelocity = Vector3.zero
+	TelemetryService:custom(player, "field_travel", 1, { id })
 	return true
 end
 
@@ -181,12 +317,41 @@ end
 function DebrisService:KnitInit()
 	NodeService = Knit.GetService("NodeService")
 	ActivityService = Knit.GetService("ActivityService")
+	PlayerStateService = Knit.GetService("PlayerStateService")
+	EconomyService = Knit.GetService("EconomyService")
+	RewardService = Knit.GetService("RewardService")
+	TelemetryService = Knit.GetService("TelemetryService")
+end
+
+-- The gated fields of this world each player can mine; a level-up or rebirth that opens one says so in a toast
+local openFields: { [Player]: { [string]: boolean } } = {}
+-- (also run by the /setlevel and /setrebirth commands and the DevLevel hook, which set the count without a level-up)
+function DebrisService:NoteUnlocks(player: Player)
+	-- no state yet: recording "nothing open" would announce every field they already had at their next level-up
+	if not PlayerStateService:Get(player) then return end
+	local was = openFields[player]
+	local open = {}
+	for _, field in FieldTravel.inWorld(Worlds.here().Id) do
+		if field.Unlock and self:IsFieldOpen(player, field.Id) then
+			open[field.Id] = true
+			if was and not was[field.Id] then
+				RewardService:Bonus(player, "unlock", "Unlocked " .. field.Name .. "! Travel there using TELEPORT")
+			end
+		end
+	end
+	openFields[player] = open
 end
 
 function DebrisService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		lastTravel[player] = nil
+		lastRefusal[player] = nil
+		openFields[player] = nil
 	end)
+	-- the first look (profile loaded) only records what's open
+	Knit.GetService("DataService").ProfileLoaded:Connect(function(player) task.defer(self.NoteUnlocks, self, player) end)
+	Knit.GetService("LevelService").LeveledUp:Connect(function(player) self:NoteUnlocks(player) end)
+	Knit.GetService("RebirthService").Reborn:Connect(function(player) self:NoteUnlocks(player) end)
 	local folder = WorldMap.wait():WaitForChild("Debris")
 	for _, part in folder:GetChildren() do
 		if part:IsA("BasePart") then
@@ -197,7 +362,17 @@ function DebrisService:KnitStart()
 	task.spawn(function()
 		while true do
 			task.wait(Config.Debris.RerollInterval)
-			self:_reroll()
+			SafeLoop.step("DebrisReroll", function()
+				self:_reroll()
+			end)
+		end
+	end)
+	task.spawn(function()
+		while true do
+			task.wait(0.5)
+			SafeLoop.step("DebrisEject", function()
+				self:_ejectLocked()
+			end)
 		end
 	end)
 end

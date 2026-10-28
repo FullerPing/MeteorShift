@@ -20,9 +20,10 @@ return function(t: any)
 		end
 	end)
 
-	t.test("past the list, Legacy ranks multiply the cost by Legacy.CostGrowth", function()
+	t.test("past the list, Legacy ranks step up by FirstStep, then multiply the cost by Legacy.CostGrowth", function()
 		local last = #Config.Costs
-		t.near(Rebirth.cost(last), Config.Costs[last] * Config.Legacy.CostGrowth, 1e-3)
+		t.near(Rebirth.cost(last), Config.Costs[last] * Config.Legacy.FirstStep, 1e-3)
+		t.near(Rebirth.cost(last + 1) / Rebirth.cost(last), Config.Legacy.CostGrowth, 1e-9)
 		t.near(Rebirth.cost(last + 3) / Rebirth.cost(last + 2), Config.Legacy.CostGrowth, 1e-9)
 	end)
 
@@ -46,6 +47,43 @@ return function(t: any)
 		t.eq(Rebirth.multiplier(nil), 1)
 		t.eq(Rebirth.cost(nil), Config.Costs[1])
 		t.eq(Rebirth.multiplier(-2), 1)
+	end)
+
+	t.test("no rebirths leaves prices at x1 and every listed rebirth multiplies them by PriceGrowth", function()
+		t.eq(Rebirth.priceMult(0), 1)
+		t.eq(Rebirth.priceMult(1), Config.PriceGrowth)
+		t.eq(Rebirth.priceMult(#Config.Costs), Config.PriceGrowth ^ #Config.Costs)
+		t.eq(Rebirth.priceMult(6) / Rebirth.priceMult(5), Config.PriceGrowth)
+	end)
+
+	t.test("Legacy ranks multiply prices by Legacy.PriceGrowth, stay finite and never fall", function()
+		local last = #Config.Costs
+		t.near(Rebirth.priceMult(last + 1) / Rebirth.priceMult(last), Config.Legacy.PriceGrowth, 1e-9)
+		t.near(Rebirth.priceMult(last + 4) / Rebirth.priceMult(last + 3), Config.Legacy.PriceGrowth, 1e-9)
+		local before = 0
+		for rebirths = 0, 40 do
+			local mult = Rebirth.priceMult(rebirths)
+			t.ok(mult >= before, "rank " .. rebirths)
+			before = mult
+		end
+		t.ok(Rebirth.priceMult(200) < math.huge, "rank 200 is finite")
+	end)
+
+	t.test("prices lag the cash multiplier by the same ratio at every rank", function()
+		local last = #Config.Costs
+		for _, rebirths in { 1, 5, last, last + 1, last + 6 } do
+			local ratio = Rebirth.multiplier(rebirths) / Rebirth.priceMult(rebirths)
+			local expected = (Config.CashMult / Config.PriceGrowth) ^ math.min(rebirths, last)
+			if rebirths > last then
+				expected *= (Config.Legacy.MultGrowth / Config.Legacy.PriceGrowth) ^ (rebirths - last)
+			end
+			t.near(ratio / expected, 1, 1e-9, "rank " .. rebirths)
+		end
+	end)
+
+	t.test("a missing or negative count leaves prices at x1", function()
+		t.eq(Rebirth.priceMult(nil), 1)
+		t.eq(Rebirth.priceMult(-3), 1)
 	end)
 
 	t.test("overstay shards grow with the cash earned beyond the cost, up to the cap", function()

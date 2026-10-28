@@ -19,7 +19,22 @@ modules.DebrisConfig = modules.Config.Debris
 if fs.isFile("src/shared/DebrisOre.luau") then
 	modules.DebrisOre = load("src/shared/DebrisOre.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
 end
+modules.Income = load("src/shared/Income.luau")
+modules.FieldTravel = load("src/shared/FieldTravel.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
+modules.FieldGate = load("src/shared/FieldGate.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" } } } })
+modules.DebrisField = load("src/shared/DebrisField.luau", { script = { Parent = { Config = { Debris = "DebrisConfig" }, FieldTravel = "FieldTravel", Income = "Income" } } })
 modules.MiningPower = { power = function(tier) return 1.25 ^ (tier - 1) end }
+-- the player's level only matters to what an ore rock yields; stubs keep this harness off the economy modules
+modules.Levels = { oreYield = function(level) return if level >= 5 then 1 else 0.5 end }
+modules.Rebirth = { cost = function() return 1000000 end }
+modules.Format = { cash = function(n) return "$" .. n end }
+modules.Signal = { new = function() return { Fire = function() end } end }
+-- the map the service sees: a v3 map has a Gates folder (fields can lock); the archived v2 map has none
+local currentMap = { FindFirstChild = function(_, name) return if name == "Gates" then {} else nil end }
+modules.WorldMap = { find = function() return currentMap end }
+modules.RequestGate = {}
+modules.StudSkin = { apply = function() end }
+modules.SafeLoop = { step = function(_, fn) fn() end }
 
 local passed, failed = 0, 0
 local function eq(actual, expected, message)
@@ -30,8 +45,8 @@ local function test(name, fn)
 	if ok then passed += 1 else failed += 1; print("FAIL " .. name .. ": " .. tostring(err)) end
 end
 
-local function fixture(tier)
-	local state = { tier = tier, hp = 1, maxHp = 1, delayed = {} }
+local function fixture(tier, field)
+	local state = { tier = tier, hp = 1, maxHp = 1, delayed = {}, cash = 0, toasts = {}, level = 1, rebirths = 0, income = 100 }
 	local node = {}
 	function node:Register(_, def) state.def = def; return 17 end
 	function node:SetMaxHp(id, hp) eq(id, 17); state.hp = hp; state.maxHp = hp end
@@ -41,18 +56,35 @@ local function fixture(tier)
 		GetService = function(name)
 			if name == "NodeService" then return node end
 			if name == "ActivityService" then return { GetActivePickaxes = function() return { { Tier = state.tier, Power = 1.25 ^ (state.tier - 1) } } end } end
+			if name == "PlayerStateService" then
+				return {
+					Get = function() return { level = state.level, rebirths = state.rebirths } end,
+					GetPickaxe = function() return { Power = state.breakerPower or 1.25 ^ (state.tier - 1) } end,
+					AddCash = function(_, _, amount) state.cash += amount end,
+				}
+			end
+			if name == "EconomyService" then return { ExpectedIncome = function() return { perSecond = state.income } end } end
+			if name == "TelemetryService" then return { custom = function() end, earned = function() end } end
+			if name == "RewardService" then return { Bonus = function(_, _, kind, text) table.insert(state.toasts, kind .. ":" .. text) end } end
 			error("Unexpected service " .. name)
 		end,
 	}
-	local shared = { Config = "Config", MiningPower = "MiningPower", DebrisOre = "DebrisOre" }
+	local shared = { Config = "Config", MiningPower = "MiningPower", DebrisOre = "DebrisOre", DebrisField = "DebrisField", FieldTravel = "FieldTravel",
+		Levels = "Levels", Rebirth = "Rebirth", Format = "Format", FieldGate = "FieldGate", WorldMap = "WorldMap", RequestGate = "RequestGate", StudSkin = "StudSkin" }
+	local players = { PlayerRemoving = { Connect = function() end } }
 	local service = load("src/server/Services/DebrisService.luau", {
-		game = { GetService = function(_, name) eq(name, "ReplicatedStorage"); return { Packages = { Knit = "Knit" }, Shared = shared } end },
+		script = { Parent = { Parent = { Lib = { SafeLoop = "SafeLoop" } } } },
+		game = { GetService = function(_, name)
+			if name == "Players" then return players end
+			eq(name, "ReplicatedStorage")
+			return { Packages = { Knit = "Knit", Signal = "Signal" }, Shared = shared }
+		end },
 		task = { delay = function(_, fn) table.insert(state.delayed, fn) end },
 	})
-	local fleck = { Color = roblox.Color3.fromRGB(176, 152, 112), Material = roblox.Enum.Material.Metal, Transparency = 0 }
+	local fleck = { Name = "OreFleck", Color = roblox.Color3.fromRGB(176, 152, 112), Material = roblox.Enum.Material.Metal, Transparency = 0 }
 	function fleck:IsA(name) return name == "BasePart" end
-	local attrs = {}
-	local part = { Parent = true, Transparency = 0, CanQuery = true, CanCollide = true }
+	local attrs = { Field = field }
+	local part = { Parent = true, Transparency = 0, CanQuery = true, CanCollide = true, Color = roblox.Color3.fromRGB(120, 120, 120) }
 	function part:GetDescendants() return { fleck } end
 	function part:SetAttribute(name, value) attrs[name] = value end
 	function part:GetAttribute(name) return attrs[name] end
@@ -104,6 +136,114 @@ test("damaged rocks retain their ore until respawn", function()
 	eq(drop(), "iron")
 	eq(part.CanQuery, true)
 	eq(state.hp, 4 * 1.25 ^ 4, "existing tier HP")
+end)
+
+test("a Rust Works rock pays cash, not ore, and takes its field's hits", function()
+	local _, state, part, _, drop = fixture(1, "RustWorks")
+	eq(drop(), nil, "a cash rock drops no ore")
+	eq(state.maxHp, 4, "Rust Works hits")
+	state.def.OnBroken({})
+	eq(state.cash, 300, "three seconds of a 100-a-second income")
+	eq(#state.toasts, 1)
+	eq(part.CanQuery, false)
+	state.delayed[1]()
+	eq(state.maxHp, 4, "respawn keeps the field's hits")
+end)
+
+test("a Frost Yard rock takes more hits and pays more", function()
+	local _, state = fixture(1, "FrostYard")
+	eq(state.maxHp, 10)
+	state.def.OnBroken({})
+	eq(state.cash, 900)
+end)
+
+test("cash scales with the breaker's income", function()
+	local _, state = fixture(1, "RustWorks")
+	state.income = 1000
+	state.def.OnBroken({})
+	eq(state.cash, 3000)
+end)
+
+test("an ore field rock drops its field's ore, cut by a player level short of it, and pays no cash", function()
+	local _, state, _, _, drop = fixture(1, "SulfurRidge")
+	eq(state.maxHp, 16)
+	local ore, mult = drop()
+	eq(ore, "crystal")
+	eq(mult, 0.3 * 0.5, "level 1 is short of crystal")
+	state.level = 5
+	local _, full = drop()
+	eq(full, 0.3, "at the clearance level the yield is whole")
+	state.def.OnBroken({})
+	eq(state.cash, 0, "ore rocks pay no cash")
+end)
+
+test("a rock without a field, or in an unknown one, is plain filler", function()
+	for _, field in { false, "Nowhere" } do
+		local _, state, _, _, drop = fixture(1, field or nil)
+		eq(drop(), "iron")
+		eq(state.maxHp, 4)
+		state.def.OnBroken({})
+		eq(state.cash, 0)
+	end
+end)
+
+test("a locked level field refuses hits and travel until the player reaches its level", function()
+	local service, state = fixture(1, "GlassScar")
+	local player = setmetatable({}, { __index = function(_, key) error("a locked field must not look at the player's " .. key) end })
+	eq(service:IsFieldOpen(player, "GlassScar"), false)
+	eq(service:IsFieldOpen(player, "RustWorks"), true)
+	eq(state.def.CanHit ~= nil, true, "gated rocks give NodeService a CanHit (it guards swings and pet hits)")
+	eq(state.def.CanHit(player), false)
+	eq(service:TravelTo(player, "GlassScar"), false)
+	state.level = 40
+	eq(state.def.CanHit(player), true, "opens as soon as the level is reached, no rejoin")
+end)
+
+test("a rebirth field ignores level", function()
+	local service, state = fixture(1, "Starfall")
+	state.level = 99
+	eq(state.def.CanHit({}), false)
+	state.rebirths = 1
+	eq(state.def.CanHit({}), true)
+	eq(service:IsFieldOpen({}, "HaloLedge"), false)
+end)
+
+test("cash scales down for a breaker stronger than the pickaxe the rock was sized for", function()
+	local _, state = fixture(1, "RustWorks")
+	state.breakerPower = 10 -- the rock was sized for Power 1
+	state.def.OnBroken({})
+	eq(state.cash, 30, "a tenth of three seconds of a 100-a-second income")
+end)
+
+test("on a map without gates, gated fields fail closed and open fields stay open", function()
+	local saved = currentMap
+	currentMap = { FindFirstChild = function() return nil end }
+	local ok, err = pcall(function()
+		local service, state = fixture(1, "GlassScar")
+		state.level = 99
+		eq(service:IsFieldOpen({}, "GlassScar"), false)
+		eq(state.def.CanHit({}), false)
+		eq(service:IsFieldOpen({}, "RustWorks"), true)
+	end)
+	currentMap = saved
+	assert(ok, err)
+end)
+
+test("a refused swing on a locked rock says why, once in a while", function()
+	local _, state = fixture(1, "VioletQuarry")
+	local player = {}
+	eq(state.def.OnRefused ~= nil, true, "gated rocks tell NodeService what to do on a refused swing")
+	state.def.OnRefused(player)
+	state.def.OnRefused(player)
+	eq(#state.toasts, 1, "one notice, not one per swing")
+	eq(state.toasts[1], "locked:Violet Quarry opens at Level 12")
+end)
+
+test("open fields and filler rocks have no hit gate", function()
+	local _, rust = fixture(1, "RustWorks")
+	eq(rust.def.CanHit, nil)
+	local _, filler = fixture(1)
+	eq(filler.def.CanHit, nil)
 end)
 
 if modules.DebrisOre then
