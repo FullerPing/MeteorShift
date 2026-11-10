@@ -1,11 +1,12 @@
 --!strict
--- Who may use the dev chat commands (/meteor, /pickaxe, /backpack). Server-only, so the list never
+-- Who may use the dev chat commands (/meteor, /pickaxe, /backpack, /give). Server-only, so the list never
 -- reaches clients. Studio always allows them so playtesting needs no setup; a live server allows
 -- only the user ids below. Add a teammate by appending a line: `[<userId>] = "<name>",`.
 local Admins = {}
 
 Admins.List = {
 	[3245458673] = "FullPinger",
+	[11840820393] = "FullerPing",
 }
 
 -- `list` and `isStudio` are parameters so the rule can be tested without a running place

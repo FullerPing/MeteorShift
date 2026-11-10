@@ -10,11 +10,13 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 export type Entry = {
 	Player: Player,
 	Contribution: number,
 	HitCore: boolean,
+	Core: number, -- the core-only part of Contribution, for the minimum core share (Lib.Rewards)
 	Ore: number,
 	Xp: number, -- awarded meteor XP, independent of the profile's level-up remainder
 }
@@ -38,7 +40,7 @@ local lastSent: { [Player]: Sent } = {}
 local function entryFor(player: Player): Entry
 	local entry = entries[player]
 	if not entry then
-		entry = { Player = player, Contribution = 0, HitCore = false, Ore = 0, Xp = 0 }
+		entry = { Player = player, Contribution = 0, HitCore = false, Core = 0, Ore = 0, Xp = 0 }
 		entries[player] = entry
 	end
 	return entry
@@ -69,7 +71,9 @@ function ContributionService:AddCore(player: Player, power: number)
 		return
 	end
 	local entry = entryFor(player)
-	entry.Contribution += power * Config.Meteor.CoreContributionMult
+	local core = power * Config.Meteor.CoreContributionMult
+	entry.Contribution += core
+	entry.Core += core
 	entry.HitCore = true
 end
 
@@ -150,7 +154,9 @@ function ContributionService:KnitStart()
 		while true do
 			task.wait(Config.Meteor.StandingInterval)
 			if tracking then
-				self:_publish()
+				SafeLoop.step("ContributionPublish", function()
+					self:_publish()
+				end)
 			end
 		end
 	end)

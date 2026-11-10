@@ -17,10 +17,12 @@ local Format = require(ReplicatedStorage.Shared.Format)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Perks = require(ReplicatedStorage.Shared.Perks)
+local Relics = require(ReplicatedStorage.Shared.Relics)
 local Levels = require(ReplicatedStorage.Shared.Levels)
 local CharacterSpeed = require(ReplicatedStorage.Shared.CharacterSpeed)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
+local PlayerSettings = require(ReplicatedStorage.Shared.PlayerSettings)
 local Refining = require(script.Parent.Parent.Lib.Refining)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
@@ -56,7 +58,10 @@ local warnedNoStations = false
 type SpeedState = { humanoid: Humanoid, applied: number, base: number, loadout: string }
 local petSpeed: { [Player]: SpeedState } = {}
 local fastWalk: { [Player]: boolean } = {}
+local onRoad: { [Player]: boolean } = {} -- standing on the ring road (CharacterSpeed.onRoad), checked a few times a second
 local lastFastRequest: { [Player]: number } = {}
+local lastSettingRequest: { [Player]: number } = {}
+local characterAdded: { [Player]: RBXScriptConnection } = {}
 
 local function sum(t: { [string]: number }): number
 	local total = 0
@@ -86,7 +91,7 @@ end
 function PlayerStateService:PetSlots(player: Player): number
 	local data = self:Get(player)
 	if not data then return Pets.slots(0, false) end
-	return Pets.slots(data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"), Perks.petSlots(data.perks))
+	return Pets.slots(data.rebirths, MonetizationService:ExtraPetSlots(player) > 0, Perks.petSlots(data.perks))
 end
 
 -- The equipped pets' perks (Shared.Pets): miner, hauler, pack, swift, merchant
@@ -102,7 +107,8 @@ end
 
 function PlayerStateService:GetPetBonuses(player: Player): Pets.Bonuses
 	local data = self:Get(player)
-	return if data then Pets.bonuses({ owned = data.pets.owned, equipped = self:GetActivePets(player) }) else Pets.bonuses(Pets.fresh())
+	-- relics (Shared.Relics) go on top of the pets' capped totals
+	return if data then Relics.addTo(Pets.bonuses({ owned = data.pets.owned, equipped = self:GetActivePets(player) }), data.relics) :: any else Pets.bonuses(Pets.fresh())
 end
 
 -- The pickaxe as it plays right now (Shared.Gear): the tier's name and ore per hit with
@@ -111,23 +117,25 @@ end
 function PlayerStateService:GetPickaxe(player: Player): any
 	local data = self:Get(player)
 	if not data then
-		return Gear.pickaxe(1, Gear.freshPickaxeStats(1))
+		return Gear.pickaxe(1, 1)
 	end
-	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeStats)
+	local pickaxe = Gear.pickaxe(data.pickaxeTier, data.pickaxeLevel)
 	local bonuses = self:GetPetBonuses(player)
 	if bonuses.swift > 0 then
 		pickaxe.Swing *= 1 - bonuses.swift
 	end
-	pickaxe.CritChance = math.clamp(pickaxe.CritChance + bonuses.crit, 0, 1)
+	pickaxe.CritChance = math.clamp(pickaxe.CritChance + bonuses.crit + Perks.critChance(data.perks), 0, 1)
+	pickaxe.CritMult += Perks.critBonus(data.perks)
 	return pickaxe
 end
 
--- Backpack capacity: the leveled Capacity, the Bigger Backpack pass and a Pack pet
+-- Backpack capacity: the leveled Capacity, the Bigger Backpack pass and a Pack pet, in whole ore
+-- (a fractional capacity left fractional ore in the backpack, hopper and bars)
 function PlayerStateService:GetCapacity(player: Player): number
 	local data = self:Get(player)
-	local base = if data then Gear.capacity(data.backpackTier, data.backpackStats) else Gear.capacity(1, Gear.freshBackpackStats(1))
+	local base = if data then Gear.capacity(data.backpackTier, data.backpackLevel) else Gear.capacity(1, 1)
 	local pack = if data then self:GetPetBonuses(player).pack else 0
-	return base * MonetizationService:BackpackMult(player) * (1 + pack)
+	return math.floor(base * MonetizationService:BackpackMult(player) * (1 + pack))
 end
 
 function PlayerStateService:GetHopperCapacity(player: Player): number
@@ -157,11 +165,12 @@ function PlayerStateService:PublishPets(player: Player)
 	local humanoid = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
 	if not humanoid then return end
 	local fast = fastWalk[player] == true
-	local loadout = idText .. ":" .. levelText .. (if fast then ":fast" else "")
+	local road = onRoad[player] == true
+	local loadout = idText .. ":" .. levelText .. (if fast then ":fast" else "") .. (if road then ":road" else "")
 	local previous = petSpeed[player]
 	if previous and previous.humanoid == humanoid and previous.loadout == loadout then return end
 	local same = previous and previous.humanoid == humanoid
-	local applied, base = CharacterSpeed.update(humanoid.WalkSpeed, if same then previous.applied else nil, if same then previous.base else nil, self:GetPetBonuses(player).sprint, fast)
+	local applied, base = CharacterSpeed.update(humanoid.WalkSpeed, if same then previous.applied else nil, if same then previous.base else nil, self:GetPetBonuses(player).sprint, fast, road)
 	petSpeed[player] = { humanoid = humanoid, applied = applied, base = base, loadout = loadout }
 	humanoid.WalkSpeed = applied
 end
@@ -216,10 +225,10 @@ function PlayerStateService:_sendState(player: Player)
 	if not data then
 		return
 	end
-	if data.stations == nil then
+	if data.line == nil then
 		if not warnedNoStations then
 			warnedNoStations = true
-			warn("[PlayerStateService] profile has no stations table; State not sent")
+			warn("[PlayerStateService] profile has no production line level; State not sent")
 		end
 		return
 	end
@@ -237,16 +246,17 @@ function PlayerStateService:_sendState(player: Player)
 		refineryBlocked = "hopper"
 	end
 	local line = {
-		hopper = { level = data.stations.hopper, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data, vaultMult) },
-		conveyor = { level = data.stations.conveyor, rate = Refining.conveyorRate(data) * lineMult },
+		level = data.line, -- one level for the whole line (Shared.Line); each station repeats it
+		hopper = { level = data.line, amount = sum(data.hopper), capacity = Refining.hopperCapacity(data, vaultMult) },
+		conveyor = { level = data.line, rate = Refining.conveyorRate(data, speedMult) * lineMult },
 		refinery = {
-			level = data.stations.refinery,
+			level = data.line,
 			rate = Refining.refineryRate(data, speedMult) * lineMult,
 			activeOre = RefineryQueue.nextOre(data.hopper, data.refinePriority),
 			progress = math.clamp(data.progress or 0, 0, 1),
 			blocked = refineryBlocked,
 		},
-		collector = { level = data.stations.collector, amount = sum(data.bin), capacity = Refining.collectorCapacity(data, vaultMult) },
+		collector = { level = data.line, amount = sum(data.bin), capacity = Refining.collectorCapacity(data, vaultMult) },
 		rate = Refining.lineRate(data, speedMult, lineMult),
 	}
 
@@ -257,8 +267,8 @@ function PlayerStateService:_sendState(player: Player)
 		xpNeeded = Levels.xpToNext(data.level) or 0, -- 0 at the max level
 		pickaxeTier = data.pickaxeTier,
 		backpackTier = data.backpackTier,
-		pickaxeStats = table.clone(data.pickaxeStats), -- stat levels (Shared.Gear)
-		backpackStats = table.clone(data.backpackStats),
+		pickaxeLevel = data.pickaxeLevel, -- gear levels (Shared.Gear)
+		backpackLevel = data.backpackLevel,
 		swing = pickaxe.Swing, -- seconds between swings, as leveled and with a Swift pet
 		reach = pickaxe.Reach, -- studs
 		pets = { -- Shared.Pets: owned with level and XP, the ones out, the slots and their perks
@@ -268,6 +278,7 @@ function PlayerStateService:_sendState(player: Player)
 			bonuses = self:GetPetBonuses(player),
 			hatches = table.clone(data.pets.hatches), -- pity counts per egg
 		},
+		relics = { owned = table.clone(data.relics.owned), fragments = data.relics.fragments }, -- Shared.Relics
 		backpack = data.backpack,
 		carried = sum(data.backpack),
 		capacity = self:GetCapacity(player),
@@ -287,10 +298,23 @@ function PlayerStateService:_sendState(player: Player)
 		perks = table.clone(data.perks), -- Colony Perks: level of each (Shared.Perks)
 		overflow = data.overflow or 0, -- bar-sale cash beyond the next rebirth's cost (overstay shards)
 		index = data.index, -- mineral index: mineral id -> count found (spec §8.2)
-		credits = data.credits, -- unused Call a Meteor credits (spec §9.2)
+		credits = data.credits, -- unused Call a Meteor, Boss Meteor and Rebirth Keep credits (spec §9.2)
+		purchased = { starterPack = data.flags.starterPack == true, extraPetSlot = data.flags.extraPetSlot == true }, -- one-off products
 		overclockLeft = data.overclockLeft, -- seconds of Refinery Overclock left
 		oreBoostLeft = data.oreBoostLeft,
+		settings = table.clone(data.settings), -- saved Settings toggles (Shared.PlayerSettings); missing = default
 	})
+end
+
+-- Saves one Settings toggle. The client has already applied it as a player attribute.
+function PlayerStateService.Client:SetSetting(player: Player, name: any, value: any)
+	local allowed, stamp = RequestGate.check(lastSettingRequest[player], os.clock(), 0.1)
+	lastSettingRequest[player] = stamp
+	local data = self.Server:Get(player)
+	if not allowed or not data or typeof(name) ~= "string" or PlayerSettings.Defaults[name] == nil or typeof(value) ~= "boolean" then
+		return
+	end
+	data.settings[name] = value
 end
 
 -- Writes leaderstats only when the shown value changed, so small cash gains
@@ -475,7 +499,7 @@ end
 
 function PlayerStateService:KnitStart()
 	local function addLeaderstats(player: Player)
-		player.CharacterAdded:Connect(function(character)
+		characterAdded[player] = player.CharacterAdded:Connect(function(character)
 			task.spawn(function()
 				character:WaitForChild("Humanoid", 5)
 				if player.Character == character then self:PublishPets(player) end
@@ -506,19 +530,42 @@ function PlayerStateService:KnitStart()
 	Players.PlayerRemoving:Connect(function(player)
 		petSpeed[player] = nil
 		fastWalk[player] = nil
+		onRoad[player] = nil
 		lastFastRequest[player] = nil
 		oreRemainder[player] = nil
 		lastFullNotice[player] = nil
 		stateDirty[player] = nil
 		leaderstatsDirty[player] = nil
+		lastSettingRequest[player] = nil
+		local connection = characterAdded[player]
+		if connection then connection:Disconnect() end
+		characterAdded[player] = nil
 	end)
 
-	local sinceFlush = 0
+	local sinceFlush, sinceRoad = 0, 0
 	RunService.Heartbeat:Connect(function(dt)
 		sinceFlush += dt
 		if sinceFlush >= Config.Net.StateFlushInterval then
+			for _, player in Players:GetPlayers() do
+				local data = self:Get(player)
+				if data then data.stats.playSeconds = (data.stats.playSeconds or 0) + sinceFlush end
+			end
 			sinceFlush = 0
 			self:_flush()
+		end
+		-- the ring road's fast lane: re-apply the speed only when a player steps on or off it
+		sinceRoad += dt
+		if sinceRoad >= 0.2 then
+			sinceRoad = 0
+			for _, player in Players:GetPlayers() do
+				local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				local now = root ~= nil and CharacterSpeed.onRoad(root.Position.X, root.Position.Z)
+				if now ~= (onRoad[player] == true) then
+					onRoad[player] = now
+					player:SetAttribute("OnRoad", now)
+					self:PublishPets(player)
+				end
+			end
 		end
 	end)
 end

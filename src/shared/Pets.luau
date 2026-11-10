@@ -9,16 +9,18 @@
 --   slots(rebirths, extra, bonus)  how many pets can be out, including the optional slot pass
 --                           and the Pet Bond perk's bonus slots
 --   minerActive(last, now)  whether a real validated swing is inside the miner window
+--   copies(entry)           how many of a pet you own (every duplicate hatch is one more; all share its level)
+--   outCount(equipped, id)  how many copies of a pet are out
 --   xpToNext(level)         XP to the next level, nil at the max
 --   addXp(entry, xp)        adds XP to a { level, xp } entry, levelling up; returns levels gained
 --   clean(saved, rebirths, extra) a saved `pets` table made legal: known pets, levels in range,
---                           equipped ones owned, unique and within the slots
+--                           equipped ones owned, no more copies out than owned, and within the slots
 
 local Config = require(script.Parent.Config.Pets)
 
 local Pets = {}
 
-export type Entry = { level: number, xp: number }
+export type Entry = { level: number, xp: number, copies: number?, fused: boolean? } -- copies: nil means 1; fused: Config.Fuse
 export type Saved = { owned: { [string]: Entry }, equipped: { string }, hatches: { [string]: number }? }
 export type PerkValue = { role: string, value: number }
 export type Bonuses = {
@@ -35,18 +37,53 @@ function Pets.def(petId: string): Config.Pet?
 	return byId[petId]
 end
 
--- Each pet carries its own range. Preserve order so the first perk stays the main role.
-function Pets.perksOf(def: Config.Pet, level: number): { PerkValue }
+-- Each pet carries its own range. Preserve order so the first perk stays the main role. A fused pet's perks are
+-- multiplied by Config.Fuse.Mult.
+function Pets.perksOf(def: Config.Pet, level: number, fused: boolean?): { PerkValue }
 	local fraction = (math.clamp(level, 1, Config.MaxLevel) - 1) / math.max(Config.MaxLevel - 1, 1)
+	local mult = if fused then Config.Fuse.Mult else 1
 	local perks: { PerkValue } = {}
 	for _, perk in def.Perks do
-		table.insert(perks, { role = perk.Role, value = perk.Min + (perk.Max - perk.Min) * fraction })
+		table.insert(perks, { role = perk.Role, value = (perk.Min + (perk.Max - perk.Min) * fraction) * mult })
 	end
 	return perks
 end
 
+-- Relic Fragments to fuse this pet, nil when it can never be fused (pass and group pets, or no price for its rarity)
+function Pets.fuseCost(def: Config.Pet): number?
+	if def.Pass or def.Group then return nil end
+	return Config.Fuse.Fragments[def.Rarity]
+end
+
+-- Whether this entry can be fused with `fragments` in hand: not yet fused, enough copies and fragments
+function Pets.canFuse(def: Config.Pet, entry: Entry?, fragments: number): boolean
+	local cost = Pets.fuseCost(def)
+	return cost ~= nil and entry ~= nil and entry.fused ~= true and Pets.copies(entry) >= Config.Fuse.Copies and fragments >= cost
+end
+
+-- Fuses the entry in place (call canFuse first): uses up all but one of the Copies
+function Pets.fuse(entry: Entry)
+	local left = Pets.copies(entry) - (Config.Fuse.Copies - 1)
+	entry.copies = if left > 1 then left else nil
+	entry.fused = true
+end
+
 local function finite(value: number): boolean
 	return value == value and math.abs(value) < math.huge
+end
+
+function Pets.copies(entry: Entry?): number
+	if not entry then return 0 end
+	local n = entry.copies
+	return if type(n) == "number" and finite(n) and n >= 1 then math.floor(n) else 1
+end
+
+function Pets.outCount(equipped: { string }, petId: string): number
+	local n = 0
+	for _, id in equipped do
+		if id == petId then n += 1 end
+	end
+	return n
 end
 
 function Pets.minerActive(lastSwing: number?, now: number): boolean
@@ -86,15 +123,33 @@ for index, id in Config.RarityOrder do
 	rarityIndex[id] = index
 end
 
--- The pets an egg can hatch of one rarity (pass pets are never in an egg)
-function Pets.eggPets(rarity: string): { Config.Pet }
+-- The pets an egg can hatch of one rarity (pass and group pets are never in an egg). A pet with Eggs hatches only
+-- from those; an Own egg hatches only its exclusives, any other egg the shared pool plus pets that list it.
+-- Without an egg: the shared pool.
+function Pets.eggPets(rarity: string, egg: Config.Egg?): { Config.Pet }
 	local out = {}
 	for _, pet in Config.List do
-		if pet.Rarity == rarity and not pet.Pass then
-			table.insert(out, pet)
+		if pet.Rarity == rarity and not pet.Pass and not pet.Group then
+			local listed = pet.Eggs ~= nil and egg ~= nil and table.find(pet.Eggs, egg.Id) ~= nil
+			if (egg and egg.Own and listed) or (not (egg and egg.Own) and (pet.Eggs == nil or listed)) then
+				table.insert(out, pet)
+			end
 		end
 	end
 	return out
+end
+
+-- What an egg's Hatchery sign says, from Config (PetService writes it onto the stand, so signs never go stale)
+function Pets.eggSign(egg: Config.Egg): { title: string, rows: { { name: string, odds: string } }, footer: string }
+	local rows = {}
+	for _, rarity in Config.RarityOrder do
+		local odds = egg.Odds[rarity]
+		if odds and odds > 0 then table.insert(rows, { name = Config.Rarities[rarity].Name, odds = string.format("%g%%", odds) }) end
+	end
+	local footer = if egg.MinRebirths then "Unlocks at Rebirth " .. egg.MinRebirths
+		elseif egg.Pity then (if egg.PityFrom == "legendary" then "Legendary" else "Epic+") .. " guaranteed in " .. egg.Pity
+		else ""
+	return { title = string.upper(egg.Name), rows = rows, footer = footer }
 end
 
 function Pets.egg(eggId: string): Config.Egg?
@@ -131,7 +186,7 @@ function Pets.roll(egg: Config.Egg, roll: number, pity: number, pick: number): (
 			end
 		end
 	end
-	local pool = Pets.eggPets(chosen :: string)
+	local pool = Pets.eggPets(chosen :: string, egg)
 	local pet = pool[math.min(math.floor(math.clamp(pick, 0, 1 - 1e-9) * #pool) + 1, #pool)]
 	local newPity = if rarityIndex[pet.Rarity] >= floor then 0 else pity + 1
 	return pet.Id, newPity
@@ -182,13 +237,13 @@ function Pets.bonuses(pets: Saved): Bonuses
 	for _, role in Config.RoleOrder do
 		totals[role] = 0
 	end
-	local seen: { [string]: boolean } = {}
+	local out: { [string]: number } = {}
 	for _, petId in pets.equipped do
 		local def = byId[petId]
 		local entry = pets.owned[petId]
-		if def and entry and not seen[petId] then
-			seen[petId] = true
-			for _, perk in Pets.perksOf(def, entry.level) do
+		if def and entry and (out[petId] or 0) < Pets.copies(entry) then
+			out[petId] = (out[petId] or 0) + 1
+			for _, perk in Pets.perksOf(def, entry.level, entry.fused) do
 				totals[perk.role] += perk.value
 			end
 		end
@@ -203,7 +258,7 @@ end
 function Pets.cloneOwned(owned: { [string]: Entry }): { [string]: Entry }
 	local copy = {}
 	for petId, entry in owned do
-		copy[petId] = { level = entry.level, xp = entry.xp }
+		copy[petId] = { level = entry.level, xp = entry.xp, copies = entry.copies, fused = entry.fused }
 	end
 	return copy
 end
@@ -229,7 +284,8 @@ function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?, bonusSlo
 			if type(petId) == "string" and byId[petId] and type(entry) == "table" then
 				local level = if type(entry.level) == "number" then math.clamp(math.floor(entry.level), 1, Config.MaxLevel) else 1
 				local xp = if type(entry.xp) == "number" and level < Config.MaxLevel then math.max(entry.xp, 0) else 0
-				owned[petId] = { level = level, xp = xp }
+				local copies = Pets.copies(entry)
+				owned[petId] = { level = level, xp = xp, copies = if copies > 1 then copies else nil, fused = if entry.fused == true then true else nil }
 			end
 		end
 	end
@@ -237,12 +293,12 @@ function Pets.clean(saved: any, rebirths: number?, extraSlot: boolean?, bonusSlo
 		owned[petId] = owned[petId] or entry
 	end
 	local equipped: { string } = {}
-	local seen: { [string]: boolean } = {}
+	local out: { [string]: number } = {}
 	local limit = Pets.slots(rebirths, extraSlot, bonusSlots)
 	if type(saved) == "table" and type(saved.equipped) == "table" then
 		for _, petId in saved.equipped do
-			if type(petId) == "string" and owned[petId] and not seen[petId] and #equipped < limit then
-				seen[petId] = true
+			if type(petId) == "string" and owned[petId] and (out[petId] or 0) < Pets.copies(owned[petId]) and #equipped < limit then
+				out[petId] = (out[petId] or 0) + 1
 				table.insert(equipped, petId)
 			end
 		end

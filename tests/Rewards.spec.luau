@@ -10,8 +10,9 @@ return function(t: any)
 	local PER_HITTER = Meteor.ShardBonusPerHitter
 	local TOP = Meteor.TopBonus
 
-	local function entry(contribution: number, hitCore: boolean)
-		return { Contribution = contribution, HitCore = hitCore }
+	-- `core` defaults to the whole contribution for a core hitter
+	local function entry(contribution: number, hitCore: boolean, core: number?)
+		return { Contribution = contribution, HitCore = hitCore, Core = core or (if hitCore then contribution else 0) }
 	end
 
 	local function round(n: number): number
@@ -31,7 +32,8 @@ return function(t: any)
 	end)
 
 	t.test("the pool is split by contribution share among core hitters", function()
-		-- Contribution shares 50% / 30% / 20% / 0%; the crust-only 1000 doesn't dilute them
+		-- Contribution shares 50% / 30% / 20% / 0%; the crust-only 1000 doesn't dilute them,
+		-- and the 0% tapper is under the minimum core share, so it's not a core hitter
 		local entries = {
 			entry(50, true),
 			entry(30, true),
@@ -40,13 +42,13 @@ return function(t: any)
 			entry(1000, false),
 		}
 		local rewards = Rewards.compute(entries, 1)
-		local pool = PER_HITTER * 4
+		local pool = PER_HITTER * 3
 		t.eq(rewards[1].Bonus, round(pool * 0.5), "50% share")
 		t.eq(rewards[2].Bonus, round(pool * 0.3), "30% share")
 		t.eq(rewards[3].Bonus, round(pool * 0.2), "20% share")
-		t.eq(rewards[4].Bonus, 0, "0% share")
+		t.eq(rewards[4], nil, "0% share")
 		t.eq(rewards[5], nil, "crust-only miner")
-		local paid = rewards[1].Bonus + rewards[2].Bonus + rewards[3].Bonus + rewards[4].Bonus
+		local paid = rewards[1].Bonus + rewards[2].Bonus + rewards[3].Bonus
 		t.ok(math.abs(paid - pool) <= 2, string.format("pool %d paid out as %d", pool, paid))
 	end)
 
@@ -102,6 +104,24 @@ return function(t: any)
 		t.eq(paid[1].Total, FLOOR)
 		t.eq(paid[2], nil)
 		t.eq(paid[3].Total, FLOOR)
+	end)
+
+	t.test("a core tap under the minimum core share earns no floor and doesn't grow the pool", function()
+		-- 1 of 1000 core contribution (0.1%); a big crust total doesn't count toward the core share
+		local entries = { entry(999, true), entry(5000, true, 1) }
+		local rewards = Rewards.compute(entries, 1)
+		t.eq(rewards[2], nil, "tapper")
+		t.eq(rewards[1].Bonus, round(PER_HITTER), "pool sized for one hitter")
+		t.eq(rewards[1].Top, TOP[1], "the real hitter places first")
+		t.eq(Rewards.consolation(entries, 0.1)[2], nil, "no consolation floor either")
+
+		local fair = Rewards.compute({ entry(95, true), entry(5, true) }, 1)
+		t.eq(fair[2].Floor, FLOOR, "5% share qualifies")
+	end)
+
+	t.test("a lone core hitter always qualifies, however small", function()
+		local rewards = Rewards.compute({ entry(0.001, true), entry(5000, false) }, 1)
+		t.eq(rewards[1].Floor, FLOOR)
 	end)
 
 	t.test("consolation: a core barely scratched pays nothing", function()

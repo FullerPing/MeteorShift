@@ -15,29 +15,29 @@ return function(t: any)
 	end
 
 	t.test("default order keeps the existing refinery order", function()
-		ids(Queue.order(nil), { "iron", "frost", "crystal", "alien" })
+		ids(Queue.order(nil), { "iron", "frost", "crystal", "alien", "quartz", "nebula", "solar", "eclipse" })
 	end)
 
 	t.test("saved choices come first without duplicates or unknown preferred ids", function()
-		ids(Queue.order({ "crystal", "crystal", 17, "unknown", "frost" }), { "crystal", "frost", "iron", "alien" })
+		ids(Queue.order({ "crystal", "crystal", 17, "unknown", "frost" }), { "crystal", "frost", "iron", "alien", "quartz", "nebula", "solar", "eclipse" })
 	end)
 
 	t.test("malformed saved priority falls back without losing ore types", function()
 		for _, malformed in { false, 42, "crystal", { label = "frost" } } do
-			ids(Queue.order(malformed), { "iron", "frost", "crystal", "alien" })
+			ids(Queue.order(malformed), { "iron", "frost", "crystal", "alien", "quartz", "nebula", "solar", "eclipse" })
 		end
 	end)
 
 	t.test("future positive stock joins the configured ids alphabetically", function()
 		ids(Queue.order({ "frost" }, {
 			zeta = 3, amber = 2, iron = 9, empty = 0, invalid = -2, nan = 0 / 0, infinite = math.huge, [1] = 4,
-		}), { "frost", "iron", "crystal", "alien", "amber", "zeta" })
+		}), { "frost", "iron", "crystal", "alien", "quartz", "nebula", "solar", "eclipse", "amber", "zeta" })
 	end)
 
 	t.test("valid client priorities normalize partial and reset choices", function()
-		ids(Queue.validate({ "crystal" }), { "crystal", "iron", "frost", "alien" })
-		ids(Queue.validate({ "frost", "crystal", "iron" }), { "frost", "crystal", "iron", "alien" })
-		ids(Queue.validate({}), { "iron", "frost", "crystal", "alien" })
+		ids(Queue.validate({ "crystal" }), { "crystal", "iron", "frost", "alien", "quartz", "nebula", "solar", "eclipse" })
+		ids(Queue.validate({ "frost", "crystal", "iron" }), { "frost", "crystal", "iron", "alien", "quartz", "nebula", "solar", "eclipse" })
+		ids(Queue.validate({}), { "iron", "frost", "crystal", "alien", "quartz", "nebula", "solar", "eclipse" })
 	end)
 
 	t.test("client priorities reject holes dictionaries duplicates and unknown ids", function()

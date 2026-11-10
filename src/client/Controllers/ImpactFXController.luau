@@ -2,12 +2,13 @@
 -- Extra spectacle for every meteor landing, on top of MeteorFXController's shockwave and
 -- LandingFXController's Ice and Crystal ground art: a light pillar, rolling shock rings, dust thrown
 -- up around the bowl, a spray of chips and embers, a burst and a falling "rain" in the meteor
--- type's own style (Config.ImpactFX.Types), a pool that glows then cools, a bloom pulse and a small
--- FOV punch. All local, cosmetic and short-lived; skipped when Reduce Effects is on.
+-- type's own style (Config.ImpactFX.Types), rocks of the crust thrown out on an arc (Chunks), a pool that glows then
+-- cools, a bloom pulse and a small FOV punch. All local, cosmetic and short-lived; skipped when Reduce Effects is on.
 
 local Lighting = game:GetService("Lighting")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 
 local Knit = require(ReplicatedStorage.Packages.Knit)
@@ -71,6 +72,57 @@ local function pulseBloom(strength: number)
 	bloom.Parent = Lighting
 	local tween = fade(bloom, settings.Seconds, { Intensity = 0 })
 	tween.Completed:Once(function() bloom:Destroy() end)
+end
+
+-- Rocks of the crust thrown out of the crater: anchored, non-colliding parts flown on a ballistic arc by one Heartbeat
+-- connection. A rock stops where it meets the crater floor (inside the opening) or the rim ground (outside it), then fades.
+local function chunks(position: Vector3, floorY: number, meteorType: any, scale: number)
+	local spec = tuning.Chunks
+	local count = math.max(3, math.floor(spec.Count * scale))
+	local crater = Config.LandingFX.Crater
+	local rimY = position.Y + (crater.RimY - crater.Center.Y)
+	local flying = {}
+	for k = 1, count do
+		local size = spec.Size[1] + math.random() * (spec.Size[2] - spec.Size[1])
+		local part = Instance.new("Part")
+		part.Name = "ImpactChunk"
+		part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch = true, false, false, false
+		part.Size = Vector3.new(size, size * (0.6 + math.random() * 0.4), size * (0.7 + math.random() * 0.3))
+		part.Material = meteorType.CrustMaterial
+		part.Color = meteorType.CrustColors[math.random(1, #meteorType.CrustColors)]
+		part.CFrame = CFrame.new(position + Vector3.new(0, 8, 0)) * CFrame.Angles(math.random() * 6, math.random() * 6, math.random() * 6)
+		part.Parent = workspace.CurrentCamera
+		local angle = (k / count) * math.pi * 2 + (math.random() - 0.5) * 0.5
+		local speed = spec.Speed[1] + math.random() * (spec.Speed[2] - spec.Speed[1])
+		local up = spec.Up[1] + math.random() * (spec.Up[2] - spec.Up[1])
+		table.insert(flying, { part = part, velocity = Vector3.new(math.cos(angle) * speed, up, math.sin(angle) * speed),
+			spin = (math.random() - 0.5) * spec.Spin, resting = false })
+	end
+	local started = os.clock()
+	local connection: RBXScriptConnection
+	connection = RunService.Heartbeat:Connect(function(dt)
+		local age = os.clock() - started
+		local fading = math.clamp((age - (spec.Seconds - spec.Fade)) / spec.Fade, 0, 1)
+		for _, rock in flying do
+			local part = rock.part
+			if not rock.resting then
+				rock.velocity -= Vector3.new(0, spec.Gravity * dt, 0)
+				local nextPosition = part.Position + rock.velocity * dt
+				local out = Vector2.new(nextPosition.X - position.X, nextPosition.Z - position.Z).Magnitude
+				local ground = (if out > crater.OpeningRadius then rimY else floorY) + part.Size.Y / 2
+				if nextPosition.Y <= ground and rock.velocity.Y < 0 then
+					nextPosition = Vector3.new(nextPosition.X, ground, nextPosition.Z)
+					rock.resting = true
+				end
+				part.CFrame = (part.CFrame - part.Position + nextPosition) * CFrame.Angles(rock.spin * dt, rock.spin * dt * 0.7, 0)
+			end
+			part.Transparency = fading
+		end
+		if age >= spec.Seconds then
+			connection:Disconnect()
+			for _, rock in flying do rock.part:Destroy() end
+		end
+	end)
 end
 
 local punching = false
@@ -169,6 +221,7 @@ function ImpactFXController:_land(position: Vector3, typeId: string?, golden: bo
 	if flavor and flavor.Burst then burst(source, flavor.Burst, scale) end
 	if golden then burst(source, tuning.Golden.Burst, scale) end
 	if flavor and flavor.Rain and not mobile() then rain(position, flavor.Rain, scale) end
+	chunks(position, floorY, meteorType, scale)
 
 	pulseBloom(strength)
 	punchFov(strength)

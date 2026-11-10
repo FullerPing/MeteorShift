@@ -2,7 +2,7 @@
 -- Run in Studio Edit mode after syncing source. Build once, then edit StarterGui.
 -- Re-running replaces these generated menus; the owner's button reference is preserved.
 local authors = game.StarterPlayer.StarterPlayerScripts.Client.NativeMenus
-local names = { "Shop", "Refinery", "Index", "Rebirth", "Store", "Hatch", "Settings", "Backpack", "WelcomeBack" }
+local names = { "Shop", "Refinery", "Index", "Rebirth", "Store", "Hatch", "Settings", "Backpack", "WelcomeBack", "Pets" }
 local results = {}
 for _, name in names do
 	local module = authors:FindFirstChild(name)
@@ -27,7 +27,8 @@ for _, definition in {
 	{ "GearShop", "ShopButton", "Gear", Icons.equipment },
 	{ "MineralIndex", "IndexButton", "Index", Icons.index },
 	{ "Rebirth", "RebirthButton", "Rebirth", Icons.rebirth },
-	{ "Store", "StoreButton", "Store", Icons.premium },
+	{ "Store", "StoreButton", "Store", Icons.store },
+	{ "PetsMenu", "PetsButton", "Pets", Icons.pets },
 } do
 	ExactNavButton.author(game.StarterGui[definition[1]], definition[2], definition[3], definition[4])
 end

@@ -43,4 +43,12 @@ return function(t)
 		t.ok(FX.Mobile.Scale > 0 and FX.Mobile.Scale < 1)
 		t.ok(FX.Fov.Punch <= 12, "the camera never lurches")
 	end)
+
+	t.test("thrown rocks are few, arc up and fade out before they are cleared", function()
+		local c = FX.Chunks
+		t.ok(c.Count > 0 and c.Count <= 16, "a handful of real parts")
+		t.ok(c.Up[1] > 0 and c.Up[2] >= c.Up[1] and c.Speed[2] >= c.Speed[1], "ranges")
+		t.ok(c.Fade > 0 and c.Fade < c.Seconds, "fades before it is destroyed")
+		t.ok(c.Gravity > 0, "they fall")
+	end)
 end

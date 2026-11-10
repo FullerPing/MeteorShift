@@ -36,7 +36,7 @@ return function(t: any)
 		map:Destroy(); character:Destroy()
 	end)
 	t.test("boundary kills outside characters and below the kill plane", function()
-		for _, position in { Vector3.new(271, 3, 3000), Vector3.new(0, 3, 2729), Vector3.new(0, -70.1, 3000) } do
+		for _, position in { Vector3.new(541, 3, 0), Vector3.new(0, 3, -541), Vector3.new(0, -70.1, 0) } do
 			local map, character, root, humanoid = fixture()
 			root.Position = position
 			t.eq(Boundary.enforce(map, character), true)

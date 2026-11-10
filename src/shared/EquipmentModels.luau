@@ -1,8 +1,11 @@
 --!strict
 -- Shared geometry for shop ViewportFrames and the equipped pickaxe. Builders
--- return unparented, anchored models; no assets, scripts or physics are needed.
+-- return unparented, anchored models; no scripts or physics are needed.
 -- Pickaxe shafts follow Y, their heads follow X, and backpack fronts face -Z.
+-- The Blender meshes in ReplicatedStorage.MeshArt.equipment (tools/blender-assets)
+-- are used when present; the part-built models below are the fallback.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Config = require(script.Parent.Config)
 
 local EquipmentModels = {}
@@ -79,6 +82,46 @@ local function orb(model: Model, name: string, position: Vector3, size: number, 
 	part(model, name, V(size, size, size), CFrame.new(position), color, material, "Ball")
 end
 
+-- Mesh pivots sit at the grip (pickaxe) and on the strap face (backpack). These
+-- offsets move them to where the part-built models keep theirs, so tools, the
+-- worn backpack and the Gear Hall mounts line up the same either way.
+local PICKAXE_MESH_PIVOT = CFrame.new(0, 0.85, 0)
+local BACKPACK_MESH_PIVOT = CFrame.new(0, 0, -0.65)
+-- Tiers past this have no model of their own yet: they wear the last modeled tier's look in their own colour
+local MODELED_TIERS = 8
+local PICKAXE_GLOW: { [number]: Color3 } = { [7] = Color3.fromRGB(150, 97, 255) }
+local BACKPACK_GLOW: { [number]: Color3 } = { [3] = GOLD, [7] = Color3.fromRGB(169, 126, 255) }
+
+local function meshModel(asset: string, name: string, tier: number, pivot: CFrame, accent: Color3, glow: Color3): Model?
+	local art = ReplicatedStorage:FindFirstChild("MeshArt")
+	local group = art and art:FindFirstChild("equipment")
+	local source = group and group:FindFirstChild(asset)
+	if not (source and source:IsA("Model") and source.PrimaryPart) then
+		return nil
+	end
+	local model = source:Clone()
+	model.Name = name
+	model:SetAttribute("EquipmentTier", tier)
+	model:PivotTo(CFrame.identity)
+	local primary = model.PrimaryPart :: BasePart
+	primary.PivotOffset = primary.CFrame:ToObjectSpace(pivot)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.Anchored = true
+			descendant.CanCollide, descendant.CanTouch, descendant.CanQuery = false, false, false
+			descendant.CastShadow = false
+			descendant.Massless = true
+			if descendant:GetAttribute("Tint") then
+				descendant.Color = accent
+			elseif descendant.Material == Enum.Material.Neon then
+				descendant.Color = glow
+			end
+		end
+	end
+	model:PivotTo(CFrame.identity)
+	return model
+end
+
 local function shaft(model: Model, tier: number, accent: Color3)
 	local wood = Color3.fromRGB(113, 75, 47)
 	block(model, "Shaft", V(0.3, 4.15, 0.32), V(0, -0.15, 0), if tier == 1 then wood else DARK,
@@ -95,11 +138,15 @@ end
 
 function EquipmentModels.pickaxe(tier: number): Model
 	local item = Config.Pickaxes[tier] or Config.Pickaxes[1]
-	tier = item.Tier
+	tier = math.min(item.Tier, MODELED_TIERS) -- the look; the model still records item.Tier
+	local accent = item.Color
+	local mesh = meshModel("pickaxe_t" .. tier, item.Name, item.Tier, PICKAXE_MESH_PIVOT, accent, PICKAXE_GLOW[tier] or accent)
+	if mesh then
+		return mesh
+	end
 	local model = Instance.new("Model")
 	model.Name = item.Name
-	model:SetAttribute("EquipmentTier", tier)
-	local accent = item.Color
+	model:SetAttribute("EquipmentTier", item.Tier)
 	shaft(model, tier, accent)
 	if tier == 1 then
 		block(model, "ForgedHead", V(2.7, 0.46, 0.55), V(0, 1.65, 0), accent, METAL)
@@ -189,11 +236,15 @@ end
 
 function EquipmentModels.backpack(tier: number): Model
 	local item = Config.Backpacks[tier] or Config.Backpacks[1]
-	tier = item.Tier
+	tier = math.min(item.Tier, MODELED_TIERS) -- the look; the model still records item.Tier
+	local accent = Config.Pickaxes[item.Tier].Color
+	local mesh = meshModel("backpack_t" .. tier, item.Name, item.Tier, BACKPACK_MESH_PIVOT, accent, BACKPACK_GLOW[tier] or accent)
+	if mesh then
+		return mesh
+	end
 	local model = Instance.new("Model")
 	model.Name = item.Name
-	model:SetAttribute("EquipmentTier", tier)
-	local accent = Config.Pickaxes[tier].Color
+	model:SetAttribute("EquipmentTier", item.Tier)
 	straps(model, 2.3, DARK)
 	if tier == 1 then
 		block(model, "CanvasBody", V(1.8, 2.1, 1.05), V(0, -0.12, 0), Color3.fromRGB(160, 134, 93), Enum.Material.Fabric)

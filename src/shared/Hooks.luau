@@ -46,6 +46,15 @@ function Hooks.goldenNodeOre(perHit: number, isBreaker: boolean): number
 	return perHit * (if isBreaker then node.Breaker else node.Contributor)
 end
 
+-- Minimum share of the Golden Node's Mining Power a hitter must have dealt for the assist lump, so one
+-- tap doesn't earn it (audit A10). Lives here rather than Config.Hooks until it needs tuning.
+local GOLDEN_ASSIST_SHARE = 0.05
+
+-- Whether a hitter who dealt `power` of the `total` Mining Power on the Golden Node earns the assist
+function Hooks.goldenAssist(power: number, total: number): boolean
+	return total > 0 and power / total >= GOLDEN_ASSIST_SHARE
+end
+
 -- A crumb of shards for a broken crust node: `roll` and `amountRoll` are uniform in [0, 1).
 function Hooks.shardCrumb(roll: number, amountRoll: number): number
 	local crumb = Settings.ShardCrumb

@@ -26,6 +26,7 @@ local UI = require(script.Parent.Parent.UI)
 local HudView = require(script.Parent.Parent.HudView)
 local NativeHudMenus = require(script.Parent.Parent.NativeHudMenus)
 local Sfx = require(script.Parent.Parent.Sfx)
+local RewardFX = require(script.Parent.Parent.RewardFX)
 
 local Children = Fusion.Children
 local OnEvent = Fusion.OnEvent
@@ -167,16 +168,30 @@ function HUDController:KnitStart()
 		end)
 	end)
 
-	local toastToken = 0
-	local function showRichToast(text: string)
-		toastToken += 1
-		local token = toastToken
+	-- Toasts queue: each shows at least TOAST_MIN s (TOAST_TIME when nothing waits); a repeat of one shown or waiting is
+	-- dropped, and only the newest TOAST_QUEUE wait
+	local TOAST_MIN, TOAST_TIME, TOAST_QUEUE = 1.2, 2.5, 3
+	local toastQueue: { string } = {}
+	local toastBusy = false
+	local function pumpToasts()
+		if toastBusy then return end
+		local text = table.remove(toastQueue, 1)
+		if not text then toast:set(nil); return end
+		toastBusy = true
 		toast:set(text)
-		task.delay(2.5, function()
-			if toastToken == token then
-				toast:set(nil)
-			end
+		local started = os.clock()
+		task.spawn(function()
+			task.wait(TOAST_MIN)
+			while #toastQueue == 0 and os.clock() - started < TOAST_TIME do task.wait(0.1) end
+			toastBusy = false
+			pumpToasts()
 		end)
+	end
+	local function showRichToast(text: string)
+		if text == Fusion.peek(toast) or table.find(toastQueue, text) then return end
+		table.insert(toastQueue, text)
+		if #toastQueue > TOAST_QUEUE then table.remove(toastQueue, 1) end
+		pumpToasts()
 	end
 	local function showToast(text: string, color: Color3?, highlighted: string?)
 		showRichToast(HudMessages.toast(text, color, highlighted))
@@ -209,23 +224,20 @@ function HUDController:KnitStart()
 	RefineryService.Notice:Connect(showToast)
 	EconomyService.Notice:Connect(showToast)
 	UpgradeService.Notice:Connect(showToast)
-	UpgradeService.Upgraded:Connect(function(stationId: string, level: number)
-		local names = { hopper = "Hopper", conveyor = "Conveyor", refinery = "Refinery", collector = "Collection Post" }
-		Sfx.play("Purchase")
-		showToast((names[stationId] or stationId) .. " upgraded to Lv " .. level .. "!")
+	UpgradeService.Upgraded:Connect(function(level: number)
+		showToast(Config.Home.Line.Name .. " upgraded to Lv " .. level .. "!")
 	end)
 	ShopService.Notice:Connect(showToast)
 	ShopService.Purchased:Connect(function(kind: string, tier: number)
 		local item = if kind == "pickaxe" then Config.Pickaxes[tier] else Config.Backpacks[tier]
-		Sfx.play("Purchase")
 		if item then
 			showToast("Evolved to the " .. item.Name .. "!")
 		end
 	end)
 	PetService.Notice:Connect(showToast)
+	Knit.GetService("WorldService").Notice:Connect(showToast)
 	PetService.Bought:Connect(function(petId: string)
 		local pet = Pets.def(petId)
-		Sfx.play("Purchase")
 		if pet then
 			showToast("You got " .. pet.Name .. "!")
 		end
@@ -241,7 +253,6 @@ function HUDController:KnitStart()
 		end
 	end)
 	LevelService.LevelUp:Connect(function(level: number)
-		Sfx.play("Purchase")
 		showToast("Player level " .. level .. "!")
 	end)
 	-- Personal variable rewards (Config.Hooks): shard crumbs, Golden Node lumps, supply crates, welcome-back finds
@@ -249,16 +260,18 @@ function HUDController:KnitStart()
 		crumb = Color3.fromRGB(150, 230, 255),
 		golden = Color3.fromRGB(255, 214, 64),
 		crate = Color3.fromRGB(139, 240, 195),
+		fieldCash = Color3.fromRGB(255, 214, 64),
 		welcomeBack = Color3.fromRGB(255, 214, 64),
+		locked = Color3.fromRGB(255, 150, 140),
+		relic = Color3.fromRGB(214, 160, 255),
+		fieldXp = Color3.fromRGB(150, 200, 255),
+		unlock = Color3.fromRGB(140, 255, 150), -- a new ore field opened (DebrisService)
 	}
 	RewardService.Bonus:Connect(function(message)
-		Sfx.play("Purchase")
 		showToast(message.text, BONUS_COLORS[message.kind])
 	end)
-	ShopService.Upgraded:Connect(function(kind: string, stat: string, level: number)
-		local names = if kind == "pickaxe" then Config.Gear.Pickaxe.Names else Config.Gear.Backpack.Names
-		Sfx.play("Purchase")
-		showToast((names[stat] or stat) .. " upgraded to level " .. level .. "!")
+	ShopService.Upgraded:Connect(function(kind: string, level: number)
+		showToast((if kind == "pickaxe" then "Pickaxe" else "Backpack") .. " upgraded to level " .. level .. "!")
 	end)
 
 	-- Clock and core HP polling (cheap: a handful of attribute reads)
@@ -344,7 +357,9 @@ function HUDController:KnitStart()
 
 	-- Sky countdown over the crater (the board itself is saved in the map)
 	task.spawn(function()
-		local board = workspace:WaitForChild("Map"):WaitForChild("Crater"):WaitForChild("SkyTimer"):WaitForChild("Board")
+		-- no time limit (math.huge): the board streams in late, or not at all in a world without one; a plain
+		-- WaitForChild warns "Infinite yield possible" after 5 s
+		local board = workspace:WaitForChild("Map"):WaitForChild("Crater", math.huge):WaitForChild("SkyTimer", math.huge):WaitForChild("Board", math.huge)
 		scope:Hydrate(board:WaitForChild("Title"))({
 			Text = timerTitle,
 			Font = FONT,
@@ -380,7 +395,8 @@ function HUDController:KnitStart()
 			HudView.main(scope, hud, {
 				playerState = playerState, cashShown = cashShown, meteorState = meteorState,
 				phase = phase, secondsLeft = secondsLeft, timerText = timerText, timerColor = timerColor, timeProgress = timeProgress,
-				saleBusy = saleBusy, sellBars = sellBars,
+				serverNow = serverNow, saleBusy = saleBusy, sellBars = sellBars,
+				standing = standing, coreHp = coreHp, coreMaxHp = coreMaxHp, inEvent = inEvent,
 				openRefinery = function() Knit.GetController("RefineryController"):Open() end,
 			}),
 
@@ -389,56 +405,6 @@ function HUDController:KnitStart()
 				meteorState = meteorState, standing = standing, coreHp = coreHp,
 				coreMaxHp = coreMaxHp, inEvent = inEvent,
 			}),
-			-- One reserved notification area: keep the personal reward directly below
-			-- the announcement, with toasts retaining priority in the first row.
-			UI.label(scope, {
-				Name = "Toast",
-				Position = scope:Computed(function(use) local r = use(hud).notification; return UDim2.fromOffset(r.x, r.y) end),
-				Size = scope:Computed(function(use) local r = use(hud).notification; return UDim2.fromOffset(r.w, if use(rewardActive) then math.floor((r.h - 4) * 0.55) else r.h) end),
-				BackgroundTransparency = 1,
-				Font = FONT,
-				RichText = true,
-				TextScaled = true,
-				TextStrokeColor3 = UI.OUTLINE,
-				TextStrokeTransparency = 0,
-				TextWrapped = true,
-				Text = scope:Computed(function(use)
-					local personal = use(meteorReward)
-					local a = use(announcement)
-					return use(toast) or (if personal then HudMessages.meteorOutcome(personal.cracked, personal.ore)
-						elseif a then HudMessages.toast(a.text) else "")
-				end),
-				TextSize = 28,
-				TextColor3 = scope:Computed(function(use) return if use(toast) ~= nil then WHITE else ORANGE end),
-				Visible = scope:Computed(function(use) return use(toast) ~= nil or use(announcement) ~= nil or use(meteorReward) ~= nil end),
-				[Children] = {
-					scope:New("UITextSizeConstraint")({ MinTextSize = 12, MaxTextSize = scope:Computed(function(use) return if use(hud).notificationCompact then 18 elseif use(hud).touch then 24 else 28 end) }),
-				},
-			}),
-
-			UI.label(scope, {
-				Name = "MeteorReward",
-				Position = scope:Computed(function(use)
-					local r = use(hud).notification
-					return UDim2.fromOffset(r.x, r.y + math.floor((r.h - 4) * 0.55) + 4)
-				end),
-				Size = scope:Computed(function(use)
-					local r = use(hud).notification
-					return UDim2.fromOffset(r.w, r.h - math.floor((r.h - 4) * 0.55) - 4)
-				end),
-				RichText = true, TextScaled = true, TextWrapped = false,
-				TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0,
-				Text = scope:Computed(function(use)
-					local r = use(meteorReward)
-					return if r then HudMessages.meteorReward(r.shards, r.top, Config.Meteor.TopBonus, r.xp or 0) else ""
-				end),
-				TextSize = 24, TextColor3 = WHITE, Visible = rewardActive,
-				[Children] = { scope:New("UITextSizeConstraint")({
-					MinTextSize = 10,
-					MaxTextSize = scope:Computed(function(use) return if use(hud).notificationCompact then 16 elseif use(hud).touch then 20 else 24 end),
-				}) },
-			}),
-
 			-- Studio-only playtest helpers
 			if RunService:IsStudio()
 				then scope:New("Frame")({
@@ -489,13 +455,76 @@ function HUDController:KnitStart()
 		},
 	})
 
+	-- Toasts and the meteor reward lines draw over open menus (DisplayOrder 20-100), so they get their own ScreenGui
+	scope:New("ScreenGui")({
+		Name = "HudToasts",
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		DisplayOrder = 110,
+		ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+		Parent = player:WaitForChild("PlayerGui"),
+		[Children] = {
+			-- One reserved notification area: keep the personal reward directly below
+			-- the announcement, with toasts retaining priority in the first row.
+			UI.label(scope, {
+				Name = "Toast",
+				Position = scope:Computed(function(use) local r = use(hud).notification; return UDim2.fromOffset(r.x, r.y) end),
+				Size = scope:Computed(function(use) local r = use(hud).notification; return UDim2.fromOffset(r.w, if use(rewardActive) then math.floor((r.h - 4) * 0.55) else r.h) end),
+				BackgroundTransparency = 1,
+				Font = FONT,
+				RichText = true,
+				TextScaled = true,
+				TextStrokeColor3 = UI.OUTLINE,
+				TextStrokeTransparency = 0,
+				TextWrapped = true,
+				Text = scope:Computed(function(use)
+					local personal = use(meteorReward)
+					local a = use(announcement)
+					return use(toast) or (if personal then HudMessages.meteorOutcome(personal.cracked, personal.ore)
+						elseif a then HudMessages.toast(a.text) else "")
+				end),
+				TextSize = 28,
+				TextColor3 = scope:Computed(function(use) return if use(toast) ~= nil then WHITE else ORANGE end),
+				Visible = scope:Computed(function(use) return use(toast) ~= nil or use(announcement) ~= nil or use(meteorReward) ~= nil end),
+				[Children] = {
+					scope:New("UITextSizeConstraint")({ MinTextSize = 12, MaxTextSize = scope:Computed(function(use) return if use(hud).notificationCompact then 18 elseif use(hud).touch then 24 else 28 end) }),
+				},
+			}),
+
+			UI.label(scope, {
+				Name = "MeteorReward",
+				Position = scope:Computed(function(use)
+					local r = use(hud).notification
+					return UDim2.fromOffset(r.x, r.y + math.floor((r.h - 4) * 0.55) + 4)
+				end),
+				Size = scope:Computed(function(use)
+					local r = use(hud).notification
+					return UDim2.fromOffset(r.w, r.h - math.floor((r.h - 4) * 0.55) - 4)
+				end),
+				RichText = true, TextScaled = true, TextWrapped = false,
+				TextStrokeColor3 = UI.OUTLINE, TextStrokeTransparency = 0,
+				Text = scope:Computed(function(use)
+					local r = use(meteorReward)
+					return if r then HudMessages.meteorReward(r.shards, r.top, Config.Meteor.TopBonus, r.xp or 0) else ""
+				end),
+				TextSize = 24, TextColor3 = WHITE, Visible = rewardActive,
+				[Children] = { scope:New("UITextSizeConstraint")({
+					MinTextSize = 10,
+					MaxTextSize = scope:Computed(function(use) return if use(hud).notificationCompact then 16 elseif use(hud).touch then 20 else 24 end),
+				}) },
+			}),
+		},
+	})
+
 	self.Gui = ui
+	scope:Observer(playerState):onBind(function() if Fusion.peek(playerState) ~= nil then player:SetAttribute("HudReady", true) end end)
 	NativeHudMenus.start()
 	local showWelcomeBack = require(script.Parent.Parent.NativeWelcomeBack).start(function() whileAway:set(nil) end)
 	scope:Observer(whileAway):onBind(function() showWelcomeBack(Fusion.peek(whileAway)) end)
 
 	-- "+$4.8M" rises off the cash counter on every sale
 	EconomyService.Sold:Connect(function(bars: number, cash: number)
+		Sfx.play("SellCoins")
 		Sfx.play("Sell")
 		showRichToast(HudMessages.sale(bars, cash))
 		local layout = Fusion.peek(hud)
@@ -503,6 +532,17 @@ function HUDController:KnitStart()
 		-- HudView draws the wallet at a 292-wide base; the cash line starts at (62, 56).
 		local currentScale = card.w / 292
 		local cardY = card.y
+		-- coins burst off the player and fly into the wallet
+		local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart") :: BasePart?
+		local camera = workspace.CurrentCamera
+		if root and camera then
+			local point, visible = camera:WorldToViewportPoint(root.Position)
+			local from = if visible then Vector2.new(point.X, point.Y) else camera.ViewportSize / 2
+			local wallet = Vector2.new(card.x + 40 * currentScale, cardY + 68 * currentScale)
+			RewardFX.coins(ui, from, wallet, 4 + math.floor(math.log10(math.max(cash, 1))), Config.HudIcons.coin, function()
+				Sfx.play("OrePickup", nil, nil, 1.6)
+			end)
+		end
 		local floater = Instance.new("TextLabel")
 		floater.BackgroundTransparency = 1
 		floater.Position = UDim2.fromOffset(card.x + 62 * currentScale, cardY + 56 * currentScale)

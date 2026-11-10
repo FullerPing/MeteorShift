@@ -11,9 +11,11 @@
 --             (PlayerStateService, EconomyService)
 --
 -- Pets level on your own validated hits (Config.Pets.XpPerHit), never on a pet's. Pets are
--- hatched with earned Core Shards and visible odds/pity. Pass pets are fixed
+-- hatched with Core Shards and visible odds/pity. Where PolicyService restricts paid random items,
+-- only shards earned in game open eggs (Shared.ShardWallet). Pass pets are fixed
 -- entitlements; no purchase can roll a pet or change odds.
 
+local GroupService = game:GetService("GroupService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -21,8 +23,13 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Pets = require(ReplicatedStorage.Shared.Pets)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
+local Relics = require(ReplicatedStorage.Shared.Relics)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Price = require(ReplicatedStorage.Shared.Price)
+local Purchases = require(ReplicatedStorage.Shared.Purchases)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
+local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 
 local PetService = Knit.CreateService({
 	Name = "PetService",
@@ -32,23 +39,28 @@ local PetService = Knit.CreateService({
 		Bought = Knit.CreateSignal(), -- (petId) a pass pet arrived
 		Hatched = Knit.CreateSignal(), -- (eggId, petId, duplicate)
 		Working = Knit.CreateSignal(), -- (ownerUserId, role, targetPosition?), presentation only
+		GroupStand = Knit.CreateSignal(), -- the group stand by the spawn was used: prompt the join, then claim
 	},
 })
 
 PetService.PetBought = Signal.new() -- (player, petId)
+PetService.EggHatched = Signal.new() -- (player, eggId, petId, duplicate) after a hatch
 
 local TICK = 0.1
 local IDLE_RETRY = 0.4 -- how soon a miner pet looks again when it found nothing in reach
+local WORK_RANGE = 150 -- studs: pet work effects only go to players near enough to see them
 
 local PlayerStateService
 local NodeService
 local MonetizationService
+local PlayerPolicyService
 
 -- Per player: when the miner pet swings next, and the fraction of ore the hauler owes
 local nextSwing: { [Player]: number } = {}
 local haulCarry: { [Player]: number } = {}
 local lastRequest: { [Player]: number } = {}
 local lastWork: { [Player]: { [string]: number } } = {}
+local lastGroupCheck: { [Player]: number } = {}
 
 local function slotsFree(player: Player, data: any): boolean
 	return #data.pets.equipped < PlayerStateService:PetSlots(player)
@@ -61,7 +73,27 @@ function PetService:Work(player: Player, role: string, targetPosition: Vector3?)
 	local now = os.clock()
 	if now - (times[role] or 0) < .25 then return end
 	times[role] = now
-	self.Client.Working:FireAll(player.UserId, role, targetPosition)
+	-- Presentation only, and frequent while mining: send it to the owner and players close by, not the server
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+	local origin = if root then root.Position else targetPosition
+	for _, other in Players:GetPlayers() do
+		local otherCharacter = other.Character
+		local otherRoot = otherCharacter and otherCharacter:FindFirstChild("HumanoidRootPart") :: BasePart?
+		if other == player or (origin and otherRoot and (otherRoot.Position - origin).Magnitude <= WORK_RANGE) then
+			self.Client.Working:Fire(other, player.UserId, role, targetPosition)
+		end
+	end
+end
+
+-- Puts a pet out and spends a banked Pet Max on it (Shared.Purchases.applyPetMaxCredit)
+function PetService:_putOut(player: Player, data: any, petId: string)
+	table.insert(data.pets.equipped, petId)
+	local maxed = Purchases.applyPetMaxCredit(data, petId)
+	if maxed then
+		self.Client.Leveled:Fire(player, petId, maxed)
+		self.Client.Notice:Fire(player, "Your saved Pet Max took this pet to max level!")
+	end
 end
 
 function PetService:Equip(player: Player, petId: string): boolean
@@ -70,14 +102,14 @@ function PetService:Equip(player: Player, petId: string): boolean
 	if not data or not def or not data.pets.owned[petId] then
 		return false
 	end
-	if table.find(data.pets.equipped, petId) then
+	if Pets.outCount(data.pets.equipped, petId) >= Pets.copies(data.pets.owned[petId]) then
 		return false
 	end
 	if not slotsFree(player, data) then
 		self.Client.Notice:Fire(player, string.format("All %d pet slots are in use. Unequip a pet first. Rebirths, Pet Bond and Extra Pet Slot open more.", PlayerStateService:PetSlots(player)))
 		return false
 	end
-	table.insert(data.pets.equipped, petId)
+	self:_putOut(player, data, petId)
 	PlayerStateService:ReplicateNow(player)
 	return true
 end
@@ -96,13 +128,38 @@ function PetService:Unequip(player: Player, petId: string): boolean
 	return true
 end
 
+-- Fuses a pet (Config.Pets.Fuse): Copies of it and Relic Fragments make it Fused, its perks x Mult. Extra copies that
+-- were out and are now used up go back in the bag.
+function PetService:Fuse(player: Player, petId: string): boolean
+	local data = PlayerStateService:Get(player)
+	local def = Pets.def(petId)
+	if not data or not def then return false end
+	local entry = data.pets.owned[petId]
+	local relics = Relics.clean(data.relics)
+	if not Pets.canFuse(def, entry, relics.fragments) then return false end
+	relics.fragments -= Pets.fuseCost(def) :: number
+	data.relics = relics
+	Pets.fuse(entry)
+	while Pets.outCount(data.pets.equipped, petId) > Pets.copies(entry) do
+		table.remove(data.pets.equipped, table.find(data.pets.equipped, petId) :: number)
+	end
+	self.Client.Notice:Fire(player, def.Name .. " is now Fused: its perks are x" .. Config.Pets.Fuse.Mult .. "!")
+	PlayerStateService:ReplicateNow(player)
+	return true
+end
+
 -- Buys a pet with Core Shards (never random) and puts it out when a slot is free.
 -- Hatches an egg for Core Shards. The pet comes from Pets.roll (the egg's published odds plus
--- its pity count); a duplicate gives DuplicateXp to the pet you own. Returns the pet id.
+-- its pity count); a duplicate is one more copy of the pet you own. Returns the pet id.
 function PetService:Hatch(player: Player, eggId: string): string?
 	local data = PlayerStateService:Get(player)
 	local egg = Pets.egg(eggId)
 	if not data or not egg then
+		return nil
+	end
+	if (egg.World or 1) ~= Worlds.here().Id then
+		local world = Worlds.find(egg.World or 1)
+		self.Client.Notice:Fire(player, string.format("The %s hatches in %s.", egg.Name, if world then world.Name else "another world"))
 		return nil
 	end
 	if (data.rebirths or 0) < (egg.MinRebirths or 0) then
@@ -114,40 +171,57 @@ function PetService:Hatch(player: Player, eggId: string): string?
 		self.Client.Notice:Fire(player, shortfall)
 		return nil
 	end
-	data.shards -= egg.Cost
+	-- Eggs are random: where paid random items are restricted, Robux-bought shards can't open them
+	local restricted = not PlayerPolicyService:CanUsePaidRandomItems(player)
+	if ShardWallet.forEggs(data, restricted) < egg.Cost then
+		self.Client.Notice:Fire(player, string.format(
+			"Eggs open with Core Shards earned in game here. You have %d earned shards; the %s needs %d. Bought shards still buy perks and evolves.",
+			ShardWallet.earned(data), egg.Name, egg.Cost))
+		return nil
+	end
+	ShardWallet.spend(data, egg.Cost, true)
 	local petId, pity = Pets.roll(egg, math.random(), data.pets.hatches[eggId] or 0, math.random())
 	data.pets.hatches[eggId] = pity
 	local entry = data.pets.owned[petId]
 	local duplicate = entry ~= nil
 	if entry then
-		Pets.addXp(entry, Config.Pets.DuplicateXp)
+		entry.copies = Pets.copies(entry) + 1
 	else
 		data.pets.owned[petId] = { level = 1, xp = 0 }
-		if slotsFree(player, data) then
-			table.insert(data.pets.equipped, petId)
-		end
 		self.PetBought:Fire(player, petId)
+	end
+	if slotsFree(player, data) then
+		self:_putOut(player, data, petId)
 	end
 	PlayerStateService:ReplicateNow(player)
 	self.Client.Hatched:Fire(player, eggId, petId, duplicate)
+	self.EggHatched:Fire(player, eggId, petId, duplicate)
 	return petId
 end
 
 -- Gives the player every pet whose pass they own and don't have yet (equipped if a slot is
--- free). Called when a profile and the passes are known and when a pass is bought.
+-- free), and takes back a pass pet whose pass Roblox says they no longer own (refunded or revoked;
+-- never on a failed lookup). Called when a profile and the passes are known and when a pass is bought.
 function PetService:SyncPassPets(player: Player)
 	local data = PlayerStateService:Get(player)
 	if not data then
 		return
 	end
 	if MonetizationService:PassesResolved(player) then
-		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:HasPass(player, "ExtraPetSlot"), Perks.petSlots(data.perks))
+		data.pets = Pets.clean(data.pets, data.rebirths, MonetizationService:ExtraPetSlots(player) > 0, Perks.petSlots(data.perks))
+	end
+	for _, def in Config.Pets.List do
+		if def.Pass and data.pets.owned[def.Id] and MonetizationService:PassKnownNotOwned(player, def.Pass) then
+			data.pets.owned[def.Id] = nil
+			local index = table.find(data.pets.equipped, def.Id)
+			if index then table.remove(data.pets.equipped, index) end
+		end
 	end
 	for _, def in Config.Pets.List do
 		if def.Pass and not data.pets.owned[def.Id] and MonetizationService:HasPass(player, def.Pass) then
 			data.pets.owned[def.Id] = { level = 1, xp = 0 }
 			if slotsFree(player, data) then
-				table.insert(data.pets.equipped, def.Id)
+				self:_putOut(player, data, def.Id)
 			end
 			PlayerStateService:ReplicateNow(player)
 			self.Client.Bought:Fire(player, def.Id)
@@ -157,16 +231,72 @@ function PetService:SyncPassPets(player: Player)
 	PlayerStateService:ReplicateNow(player)
 end
 
--- Every equipped pet earns XP from one validated hit of the owner's.
+-- Is the player in the game's group (Config.Pets.GroupReward)? `fresh` asks Roblox again (a web call), for someone
+-- who joined mid-session; otherwise the membership Roblox cached at join. A failed lookup counts as no.
+local function inGroup(player: Player, fresh: boolean): boolean
+	local groupId = Config.Pets.GroupReward.GroupId
+	if groupId == 0 then
+		return false
+	end
+	local ok, result = pcall(function()
+		if not fresh then
+			return player:IsInGroup(groupId)
+		end
+		for _, group in GroupService:GetGroupsAsync(player.UserId) do
+			if group.Id == groupId then
+				return true
+			end
+		end
+		return false
+	end)
+	return ok and result == true
+end
+
+-- The group reward: a member gets its pet once (equipped if a slot is free). True when they own it afterwards.
+function PetService:GiveGroupPet(player: Player, fresh: boolean): boolean
+	local data = PlayerStateService:Get(player)
+	local petId = Config.Pets.GroupReward.Pet
+	if not data then
+		return false
+	end
+	if data.pets.owned[petId] then
+		return true
+	end
+	if not inGroup(player, fresh) then
+		return false
+	end
+	data.pets.owned[petId] = { level = 1, xp = 0 }
+	if slotsFree(player, data) then
+		self:_putOut(player, data, petId)
+	end
+	PlayerStateService:ReplicateNow(player)
+	self.Client.Bought:Fire(player, petId)
+	self.PetBought:Fire(player, petId)
+	return true
+end
+
+function PetService.Client:ClaimGroupPet(player: Player): boolean
+	-- a fresh lookup is a web call: one every 5 s per player
+	local now = os.clock()
+	if now - (lastGroupCheck[player] or -math.huge) < 5 then
+		return false
+	end
+	lastGroupCheck[player] = now
+	return self.Server:GiveGroupPet(player, true)
+end
+
+-- Every equipped pet earns XP from one validated hit of the owner's (copies share one level, so once per pet).
 function PetService:_award(player: Player, kind: string)
 	local xp = Config.Pets.XpPerHit[kind]
 	local data = PlayerStateService:Get(player)
 	if not xp or not data then
 		return
 	end
+	local seen: { [string]: boolean } = {}
 	for _, petId in PlayerStateService:GetActivePets(player) do
 		local entry = data.pets.owned[petId]
-		if entry then
+		if entry and not seen[petId] then
+			seen[petId] = true
 			local gained = Pets.addXp(entry, xp)
 			if gained > 0 then
 				self.Client.Leveled:Fire(player, petId, entry.level)
@@ -244,6 +374,13 @@ function PetService.Client:Unequip(player: Player, petId: string): boolean
 	return self.Server:Unequip(player, petId)
 end
 
+function PetService.Client:Fuse(player: Player, petId: string): boolean
+	if typeof(petId) ~= "string" or throttled(player) then
+		return false
+	end
+	return self.Server:Fuse(player, petId)
+end
+
 function PetService.Client:Hatch(player: Player, eggId: string): string?
 	if typeof(eggId) ~= "string" or throttled(player) then
 		return nil
@@ -251,10 +388,96 @@ function PetService.Client:Hatch(player: Player, eggId: string): string?
 	return self.Server:Hatch(player, eggId)
 end
 
+-- Eggs hatch at the Hatchery (Map.TownSquare.Hatchery.<eggId>): one prompt on each egg's plinth
+-- The stand's odds card (Top.OddsCard) and price (Price.Lettering) are authored labels found by position: the title on
+-- top, the footer at the bottom and a name/odds pair per row between; rows are rebuilt from Pets.eggSign.
+function PetService:_writeSign(stand: Instance, egg: Config.Egg)
+	local sign = Pets.eggSign(egg)
+	local price = stand:FindFirstChild("Price")
+	local lettering = price and price:FindFirstChild("Lettering")
+	local priceLabel = lettering and lettering:FindFirstChildWhichIsA("TextLabel", true)
+	if priceLabel then priceLabel.Text = tostring(egg.Cost) end
+	local top = stand:FindFirstChild("Top")
+	local card = top and top:FindFirstChild("OddsCard")
+	local frame = card and card:FindFirstChildWhichIsA("Frame")
+	if not frame then return end
+	local names, values = {}, {}
+	for _, label in frame:GetChildren() do
+		if not label:IsA("TextLabel") then continue end
+		local y = label.Position.Y.Scale
+		if y < 0.15 then label.Text = sign.title
+		elseif y > 0.85 then label.Text = sign.footer
+		elseif label.Position.X.Scale < 0.3 then table.insert(names, label)
+		else table.insert(values, label) end
+	end
+	if #names == 0 or #values == 0 then return end
+	local nameTemplate, valueTemplate = names[1]:Clone(), values[1]:Clone()
+	for _, label in names do label:Destroy() end
+	for _, label in values do label:Destroy() end
+	local step = math.min(0.124, 0.6 / #sign.rows) -- five rows fill the card between title and footer
+	for index, row in sign.rows do
+		local y = 0.25 + (index - 1) * step
+		for _, pair in { { nameTemplate, row.name }, { valueTemplate, row.odds } } do
+			local label = pair[1]:Clone()
+			label.Text = pair[2]
+			label.Position = UDim2.fromScale(label.Position.X.Scale, y)
+			label.Parent = frame
+		end
+	end
+end
+
+function PetService:_connectHatchery()
+	local townSquare = WorldMap.wait():FindFirstChild("TownSquare")
+	local hatchery = if townSquare then townSquare:FindFirstChild("Hatchery") else nil
+	if not hatchery then
+		warn("[PetService] Map.TownSquare.Hatchery is missing; eggs can't be hatched")
+		return
+	end
+	for _, egg in Config.Pets.Eggs do
+		if (egg.World or 1) ~= Worlds.here().Id then continue end
+		local stand = hatchery:FindFirstChild(egg.Id)
+		local anchor = stand and (stand:FindFirstChild("Plinth") or stand:FindFirstChildWhichIsA("BasePart", true))
+		if not (anchor and anchor:IsA("BasePart")) then
+			warn("[PetService] the Hatchery has no stand for " .. egg.Id)
+			continue
+		end
+		self:_writeSign(stand, egg)
+		local prompt = anchor:FindFirstChildWhichIsA("ProximityPrompt") or Instance.new("ProximityPrompt")
+		prompt.Name = "HatchPrompt"
+		prompt.ActionText = "Hatch (" .. egg.Cost .. " shards)"
+		prompt.ObjectText = egg.Name
+		prompt.HoldDuration = 0.25
+		prompt.MaxActivationDistance = 12
+		prompt.RequiresLineOfSight = false
+		prompt.Parent = anchor
+		prompt.Triggered:Connect(function(player)
+			if not throttled(player) then self:Hatch(player, egg.Id) end
+		end)
+	end
+end
+
+-- The group stand by the spawn: any model named GroupPetStand on the map with a part named Prompt gets a "Free Pet"
+-- prompt; the client shows Roblox's join dialog (only a client can) and then calls ClaimGroupPet
+function PetService:_wireGroupStand(stand: Instance)
+	local part = stand:FindFirstChild("Prompt", true)
+	if not part or not part:IsA("BasePart") or part:FindFirstChild("GroupPrompt") then return end
+	local def = Pets.def(Config.Pets.GroupReward.Pet)
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "GroupPrompt"
+	prompt.ActionText = "Join Group: Free Pet"
+	prompt.ObjectText = if def then def.Name else "Free Pet"
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = 14
+	prompt.RequiresLineOfSight = false
+	prompt.Parent = part
+	prompt.Triggered:Connect(function(player) self.Client.GroupStand:Fire(player) end)
+end
+
 function PetService:KnitInit()
 	PlayerStateService = Knit.GetService("PlayerStateService")
 	NodeService = Knit.GetService("NodeService")
 	MonetizationService = Knit.GetService("MonetizationService")
+	PlayerPolicyService = Knit.GetService("PlayerPolicyService")
 end
 
 function PetService:KnitStart()
@@ -269,10 +492,21 @@ function PetService:KnitStart()
 				task.wait(0.5)
 			end
 			self:SyncPassPets(player)
+			self:GiveGroupPet(player, false)
 		end)
 	end)
 	MonetizationService.PassBought:Connect(function(player: Player)
 		self:SyncPassPets(player)
+	end)
+	task.spawn(function() self:_connectHatchery() end)
+	task.spawn(function()
+		local map = WorldMap.wait()
+		for _, d in map:GetDescendants() do
+			if d.Name == "GroupPetStand" and d:IsA("Model") then self:_wireGroupStand(d) end
+		end
+		map.DescendantAdded:Connect(function(d)
+			if d.Name == "GroupPetStand" and d:IsA("Model") then task.defer(function() self:_wireGroupStand(d) end) end
+		end)
 	end)
 	MonetizationService.PassesReady:Connect(function(player: Player) self:SyncPassPets(player) end)
 	NodeService.Hit:Connect(function(player: Player, kind: string, part: BasePart)
@@ -288,6 +522,7 @@ function PetService:KnitStart()
 		haulCarry[player] = nil
 		lastRequest[player] = nil
 		lastWork[player] = nil
+		lastGroupCheck[player] = nil
 	end)
 
 	task.spawn(function()

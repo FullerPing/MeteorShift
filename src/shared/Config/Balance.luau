@@ -1,5 +1,5 @@
 --!strict
--- Assumptions of the economy pacing model (Shared.Pacing, spec §7.4, docs/balance.md).
+-- Assumptions of the economy pacing model (Shared.Pacing, spec §7.4, docs/guide/balance.md).
 -- These describe how a typical free player behaves, not game rules: nothing in
 -- gameplay reads them. Prices, rates and meteor timings come from the other Config files.
 -- Every meteor type comes up by Meteor.Types weights and every player can mine it.

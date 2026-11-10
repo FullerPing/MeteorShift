@@ -3,62 +3,76 @@
 -- state and its Escape/ButtonB dismissal; this module creates no GUI controls.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local Format = require(ReplicatedStorage.Shared.Format)
+local Palette = require(ReplicatedStorage.Shared.MenuPalette)
 local NativeUI = require(script.Parent.NativeUI)
+local Menu = require(script.Parent.NativeMenus.WelcomeBack)
 local WelcomeBack = {}
 
--- Preserve the existing while-away report copy and formatting exactly.
-local function formatReport(report: any): string
-	if not report then return "" end
-	local hours = report.away / 3600
-	local awayText = if hours >= 1
-		then string.format("%.1f hours", hours)
-		else string.format("%d minutes", math.floor(report.away / 60))
-	local lines = {
-		"You were gone " .. awayText .. ".",
-		"Your production line made " .. Format.number(report.bars) .. " bars (" .. Format.cash(report.value) .. ").",
-	}
-	if report.capped then
-		table.insert(lines, "Offline time is capped at " .. math.floor(report.seconds / 3600) .. " hours.")
+-- "2h 14m", "40m", "1m"
+local function duration(seconds: number): string
+	local minutes = math.max(1, math.floor(seconds / 60))
+	local hours = math.floor(minutes / 60)
+	if hours >= 1 then
+		local rest = minutes % 60
+		return if rest > 0 then string.format("%dh %dm", hours, rest) else string.format("%dh", hours)
 	end
-	if report.blocked == "hopper" then
-		table.insert(lines, "Your hopper ran dry. Fill it up before you log off!")
-	elseif report.blocked == "collector" then
-		table.insert(lines, "Your collection post filled up. Upgrade it to store more!")
-	end
-	table.insert(lines, "Pick them up at the refinery.")
-	return table.concat(lines, "\n")
+	return string.format("%dm", minutes)
+end
+
+-- The line under the offline time: why the line stopped, if it did, then where to pick the bars up
+local function noteText(report: any): string
+	if report.blocked == "hopper" then return "Your hopper ran dry. Fill it up before you log off!" end
+	if report.blocked == "collector" then return "Your collection post filled up. Upgrade it to store more!" end
+	if report.capped then return "The Offline Training perk keeps your line going longer. Pick your bars up at the Foundry." end
+	return "Pick your bars up at the Foundry, then tap SELL on your HUD."
 end
 
 function WelcomeBack.start(onDismiss: () -> ()): (any?) -> ()
-	local gui = NativeUI.get("WelcomeBack")
+	local gui = NativeUI.getFresh("WelcomeBack", Menu.build, Menu.LAYOUT)
 	local panel = gui:WaitForChild("Panel") :: Frame
-	local body = panel:WaitForChild("Body") :: ScrollingFrame
-	local reportText = body:WaitForChild("Report") :: TextLabel
+	local intro = panel:WaitForChild("Intro") :: TextLabel
+	local report = panel:WaitForChild("Report") :: Frame
+	local bars = report:WaitForChild("Bars"):WaitForChild("Value") :: TextLabel
+	local worth = report:WaitForChild("Worth"):WaitForChild("Value") :: TextLabel
+	local time = panel:WaitForChild("Time") :: Frame
+	local used = time:WaitForChild("Used") :: TextLabel
+	local fill = time:WaitForChild("Bar"):WaitForChild("Fill") :: Frame
+	local note = panel:WaitForChild("Note") :: TextLabel
 	local nice = panel:WaitForChild("Nice") :: TextButton
 	local close = panel:WaitForChild("Close") :: TextButton
 	local dimmer = gui:WaitForChild("Dimmer") :: TextButton
+	-- WelcomeBackOpen (MenuFlags) keeps Daily, the nav tiles and mining out while it is up
+	local player = Players.LocalPlayer
+	local function setShown(shown: boolean)
+		gui.Enabled = shown
+		player:SetAttribute("WelcomeBackOpen", shown)
+	end
 	local function dismiss()
 		if not gui.Enabled then return end
-		gui.Enabled = false
+		setShown(false)
 		onDismiss()
 	end
 	nice.Activated:Connect(dismiss)
 	close.Activated:Connect(dismiss)
 	dimmer.Activated:Connect(dismiss)
-	NativeUI.onLayoutChanged(function(layout)
-		local width = math.min(390, math.max(1, layout.viewport.X - 24))
-		local height = math.min(260, math.max(1, layout.viewport.Y - layout.inset - 24))
-		panel.AnchorPoint = Vector2.zero
-		panel.Position = UDim2.fromOffset((layout.viewport.X - width) / 2, layout.inset + (layout.viewport.Y - layout.inset - height) / 2)
-		panel.Size = UDim2.fromOffset(width, height)
-		body.Size = UDim2.new(1, -36, 0, math.max(0, height - 128))
-	end)
-	gui.Enabled = false
-	return function(report: any?)
-		gui.Enabled = report ~= nil
-		reportText.Text = formatReport(report)
-		if report then body.CanvasPosition = Vector2.zero end
+	NativeUI.fitWhole(panel, Menu.SIZE)
+	setShown(false)
+	return function(data: any?)
+		setShown(data ~= nil)
+		if not data then return end
+		intro.Text = string.format("While you were away for <font color=\"#%s\">%s</font>, your production line kept working.",
+			Palette.UP:ToHex(), duration(data.away))
+		bars.Text = Format.number(data.bars)
+		worth.Text = Format.cash(data.value)
+		-- the cap only shows when it was hit: the time used of the cap, a full orange bar
+		local capped = data.capped == true
+		used.Text = if capped then duration(data.seconds) .. " of " .. duration(data.seconds) .. " · capped" else duration(data.seconds)
+		used.TextColor3 = if capped then Palette.UNMET else Palette.UP
+		fill.Size = UDim2.fromScale(1, 1)
+		fill.BackgroundColor3 = if capped then Palette.ORANGE_FILL else Palette.LIME_BOTTOM
+		note.Text = noteText(data)
 	end
 end
 

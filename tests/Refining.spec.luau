@@ -9,7 +9,7 @@ return function(t: any)
 
 	local function freshData(hopper: { [string]: number }, bin: { [string]: number })
 		return {
-			stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 },
+			line = 1,
 			hopper = hopper,
 			bin = bin,
 			progress = 0,
@@ -25,13 +25,13 @@ return function(t: any)
 		t.eq(blocked, nil)
 	end)
 
-	t.test("a speed multiplier (Refinery Overclock) scales the refinery, still capped by the conveyor", function()
+	t.test("a speed multiplier (Refinery Overclock) doubles the whole line, conveyor included", function()
 		local data = freshData({ iron = 1000 }, {})
 		local _, n = Refining.run(data, 40, 2)
-		-- refinery 0.25 * 2 = 0.5/s, but the conveyor carries only 0.3/s: 0.3 * 40 = 12
-		t.eq(n, 12)
+		-- min(conveyor 0.3, refinery 0.25) * 2 = 0.5/s * 40 = 20 (was 12: only the refinery sped up)
+		t.eq(n, 20)
 		t.eq(Refining.refineryRate(data, 2), Refining.refineryRate(data) * 2)
-		t.eq(Refining.lineRate(data, 2), Refining.conveyorRate(data))
+		t.eq(Refining.lineRate(data, 2), Refining.lineRate(data) * 2)
 	end)
 
 	t.test("limited by hopper stock", function()
@@ -139,8 +139,8 @@ return function(t: any)
 	end)
 
 	t.test("the refinery runs at full speed whatever the player's level", function()
-		local low = { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = { crystal = 5 }, bin = {}, level = 1 }
-		local high = { stations = low.stations, hopper = { crystal = 5 }, bin = {}, level = 50 }
+		local low = { line = 1, hopper = { crystal = 5 }, bin = {}, level = 1 }
+		local high = { line = low.line, hopper = { crystal = 5 }, bin = {}, level = 50 }
 		local _, lowBars = Refining.run(low, 20)
 		local _, highBars = Refining.run(high, 20)
 		t.eq(lowBars, highBars)
@@ -148,7 +148,7 @@ return function(t: any)
 	end)
 
 	t.test("an Efficient Line multiplier speeds the line up", function()
-		local function data() return { stations = { hopper = 1, conveyor = 1, refinery = 1, collector = 1 }, hopper = { iron = 1000 }, bin = {} } end
+		local function data() return { line = 1, hopper = { iron = 1000 }, bin = {} } end
 		t.near(Refining.lineRate(data(), 1, 1.2), Refining.lineRate(data(), 1, 1) * 1.2, 1e-9)
 	end)
 end

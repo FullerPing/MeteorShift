@@ -24,13 +24,20 @@ local Config = require(ReplicatedStorage.Shared.Config)
 local Gear = require(ReplicatedStorage.Shared.Gear)
 local Pets = require(ReplicatedStorage.Shared.Pets)
 local Levels = require(ReplicatedStorage.Shared.Levels)
+local Line = require(ReplicatedStorage.Shared.Line)
 local Perks = require(ReplicatedStorage.Shared.Perks)
+local PlayerSettings = require(ReplicatedStorage.Shared.PlayerSettings)
+local ShardWallet = require(ReplicatedStorage.Shared.ShardWallet)
 local ProfileLoadMessage = require(ReplicatedStorage.Shared.ProfileLoadMessage)
 local Template = require(script.Parent.Parent.Lib.ProfileTemplate)
+local GearMigration = require(script.Parent.Parent.Lib.GearMigration)
+local CashMigration = require(script.Parent.Parent.Lib.CashMigration)
 
 local STORE_NAME = "PlayerData_v1"
 local AUTOSAVE_INTERVAL = 60
-local LOCK_STALE_AFTER = 30 * 60 -- a lock older than this belongs to a dead server
+-- A lock older than this belongs to a dead server: a live one refreshes it with every autosave, so after a crash
+-- the player waits minutes, not half an hour (they retry LOAD_RETRIES x RETRY_DELAY, then get a rejoin message)
+local LOCK_STALE_AFTER = 5 * AUTOSAVE_INTERVAL
 local LOAD_RETRIES = 8
 local RETRY_DELAY = 5
 
@@ -39,6 +46,7 @@ export type Profile = {
 	Data: typeof(Template),
 	Loaded: number, -- os.time() when loaded
 	Memory: boolean, -- true when running on the in-memory fallback
+	SeenBefore: number, -- Data.lastSeen as loaded (0 for a new player); RefineryService moves lastSeen up on load
 }
 
 local DataService = Knit.CreateService({
@@ -102,18 +110,50 @@ local function migrate(data: { [any]: any }): { [any]: any }
 		data.hopperLevel = nil
 		data.version = 2
 	end
-	-- v2 -> v3: the pickaxe and backpack tiers became evolution tiers with stat levels.
+	-- v2 -> v3: the pickaxe and backpack tiers became evolution tiers with levels.
 	-- Everyone starts at the first level of the tier they already own, which is the
-	-- same Mining Power, swing, damage and capacity as before.
+	-- same Mining Power, swing, damage and capacity as before (the v7 step below
+	-- gives a fresh item's level when there are no stats to convert).
 	if (data.version or 1) < 3 then
-		data.pickaxeStats = Gear.freshPickaxeStats(data.pickaxeTier or 1)
-		data.backpackStats = Gear.freshBackpackStats(data.backpackTier or 1)
+		data.pickaxeStats, data.backpackStats = nil, nil
 		data.version = 3
 	end
 	data.pickaxeTier = math.clamp(math.floor(data.pickaxeTier or 1), 1, #Config.Pickaxes)
 	data.backpackTier = math.clamp(math.floor(data.backpackTier or 1), 1, #Config.Backpacks)
-	data.pickaxeStats = Gear.cleanPickaxeStats(data.pickaxeTier, data.pickaxeStats)
-	data.backpackStats = Gear.cleanBackpackStats(data.backpackTier, data.backpackStats)
+	-- v6 -> v7: one level per item instead of four pickaxe stats and the backpack's capacity.
+	-- Surplus Speed, Reach and Crit levels come back as cash (Lib.GearMigration).
+	if (data.version or 1) < 7 then
+		local refund = GearMigration.run(data)
+		if refund > 0 then
+			data.flags = data.flags or {}
+			data.flags.gearRefund = refund -- ShopService tells the player once on join
+		end
+	end
+	-- v7 -> v8: the level restarts at 1 with every tier (Lib.GearMigration)
+	if (data.version or 1) < 8 then
+		GearMigration.toTierLevels(data)
+	end
+	data.pickaxeLevel = Gear.cleanLevel(data.pickaxeTier, data.pickaxeLevel)
+	data.backpackLevel = Gear.cleanLevel(data.backpackTier, data.backpackLevel)
+	-- v10 -> v11: the four station levels became one production line level, the best of the
+	-- four, so nothing already bought is lost (Shared.Line)
+	if (data.version or 1) < 11 then
+		data.line = Line.fromStations(data.stations)
+		data.stations = nil
+	end
+	data.line = Line.clean(data.line)
+	-- v13 -> v14 (2026-10-22): a rebirth went from x5 sales with x3 prices (about x1.67 net) to a plain x2 with flat
+	-- prices. The count stays as saved (the same rank is already worth more); cash and the overstay counter are divided
+	-- by the old price multiplier so they buy what they did (owner, 2026-10-24; Lib.CashMigration)
+	if (data.version or 1) < 14 then
+		data.cash = CashMigration.convert(data.cash, data.rebirths)
+		data.overflow = CashMigration.convert(data.overflow, data.rebirths)
+	end
+	-- v12 was an unreleased trial (a `trialFlag` key nothing read). v13 tracks the Robux-bought share of the
+	-- shards (paidShards; shards bought before now count as earned), saved settings and the Pet Max credit
+	data.trialFlag = nil
+	data.paidShards = ShardWallet.paid(data)
+	data.settings = PlayerSettings.clean(data.settings)
 	-- v5 -> v6 (economy rework): colony perks and the rebirth overflow counter. Nothing is refunded or
 	-- taken: the gear and stations a profile owns stay, only the prices and gates change.
 	data.perks = Perks.clean(data.perks)
@@ -224,6 +264,27 @@ function DataService:Save(player: Player): boolean
 	return write(profile, false)
 end
 
+-- Teleporting to another world (WorldService): save and give the lock back now, so the next place loads the profile
+-- at once instead of waiting for this server to notice the player left. Autosaves stop; the final save on leave still
+-- runs but aborts once the next server holds the lock. Hold takes the lock back when the teleport fails.
+function DataService:ReleaseForTeleport(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	profile.Data.lastSeen = os.time()
+	return write(profile, true)
+end
+
+function DataService:Hold(player: Player)
+	local profile = profiles[player]
+	if not profile then
+		return
+	end
+	released[profile] = nil
+	write(profile, false)
+end
+
 function DataService:_load(player: Player)
 	if unavailable then
 		player:Kick(ProfileLoadMessage.message("unavailable"))
@@ -249,7 +310,7 @@ function DataService:_load(player: Player)
 	if not player.Parent then
 		-- Left while loading: give the lock back
 		if store then
-			write({ Player = player, Data = data or deepCopy(Template), Loaded = os.time(), Memory = false }, true)
+			write({ Player = player, Data = data or deepCopy(Template), Loaded = os.time(), Memory = false, SeenBefore = 0 }, true)
 		end
 		return
 	end
@@ -262,6 +323,7 @@ function DataService:_load(player: Player)
 		Data = profileData :: any,
 		Loaded = os.time(),
 		Memory = store == nil,
+		SeenBefore = profileData.lastSeen or 0,
 	}
 	profiles[player] = profile
 	self.ProfileLoaded:Fire(player, profile)

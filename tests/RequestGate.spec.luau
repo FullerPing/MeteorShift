@@ -84,4 +84,34 @@ return function(t: any)
 		t.eq(remote(0.10, true), true)
 		t.eq(expensiveChecks, 2)
 	end)
+
+	t.test("pace: one early swing passes, but steady early swings can't beat the rate", function()
+		-- interval 1 s, up to 20% early
+		local ok, due = RequestGate.pace(nil, 0, 1, 0.2)
+		t.eq(ok, true)
+		t.eq(due, 1)
+		ok, due = RequestGate.pace(1, 0.85, 1, 0.2)
+		t.eq(ok, true, "one swing 15% early")
+		t.eq(due, 2)
+		ok = RequestGate.pace(2, 1.7, 1, 0.2)
+		t.eq(ok, false, "the next one 15% early again is too soon")
+
+		-- a client swinging every 0.8 s: admitted swings average no faster than 1 per second
+		local stored: number? = nil
+		local admitted = 0
+		for i = 0, 100 do
+			local allowed, nextDue = RequestGate.pace(stored, i * 0.8, 1, 0.2)
+			if allowed then
+				admitted += 1
+				stored = nextDue
+			end
+		end
+		t.ok(admitted <= 82, "admitted " .. admitted .. " swings in 80 s")
+	end)
+
+	t.test("pace: a late swing builds no credit", function()
+		local ok, due = RequestGate.pace(1, 5, 1, 0.2)
+		t.eq(ok, true)
+		t.eq(due, 6)
+	end)
 end

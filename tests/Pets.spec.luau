@@ -11,13 +11,14 @@ return function(t: any)
 		packMule = { { "pack", 0.15, 0.30 } },
 		sparkHare = { { "swift", 0.05, 0.12 } },
 		jetWisp = { { "swift", 0.08, 0.18 }, { "sprint", 0.06, 0.15 } },
-		cargoMole = { { "hauler", 0.012, 0.03 }, { "pack", 0.08, 0.18 } },
+		cargoMole = { { "hauler", 0.006, 0.015 }, { "pack", 0.08, 0.18 } },
 		coinMagpie = { { "merchant", 0.08, 0.20 } },
 		graniteGolem = { { "pack", 0.20, 0.38 }, { "vault", 0.25, 0.60 } },
 		crystalStag = { { "crit", 0.04, 0.10 }, { "miner", 0.12, 0.25 } },
 		auroraOwl = { { "merchant", 0.12, 0.28 }, { "shards", 0.06, 0.15 } },
-		lodeWyrm = { { "hauler", 0.015, 0.0375 }, { "vault", 0.35, 0.80 } },
+		lodeWyrm = { { "hauler", 0.008, 0.02 }, { "vault", 0.35, 0.80 } },
 		meteorDrake = { { "miner", 0.22, 0.36 }, { "yield", 0.08, 0.18 }, { "shards", 0.08, 0.20 } },
+		cometFox = { { "swift", 0.06, 0.14 }, { "sprint", 0.05, 0.12 } },
 		drillbot = { { "miner", 0.25, 0.40 }, { "swift", 0.08, 0.20 }, { "yield", 0.10, 0.20 } },
 		solarPhoenix = { { "miner", 0.50, 1.00 }, { "merchant", 0.15, 0.35 }, { "scholar", 0.15, 0.35 } },
 	} :: { [string]: { { any } } }
@@ -43,7 +44,7 @@ return function(t: any)
 	end
 
 	t.test("the 11 roles carry their display text and caps without shared ranges", function()
-		local caps = { miner = 1, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
+		local caps = { miner = 1.5, hauler = 0.03, pack = 0.60, swift = 0.30, merchant = 0.45,
 			yield = 0.40, sprint = 0.30, vault = 1, crit = 0.15, scholar = 0.60, shards = 0.30 }
 		t.eq(#Config.RoleOrder, 11)
 		local seen = {}
@@ -77,12 +78,14 @@ return function(t: any)
 		end
 	end)
 
-	t.test("premium pets retain fixed passes at the reduced 99 and 199 Robux prices", function()
-		for petId, price in { drillbot = 99, solarPhoenix = 199 } do
+	t.test("premium pets retain fixed passes priced by Config.Monetization", function()
+		-- the shop reads the price from Config.Monetization via the pet's Pass key (PetsController), so no number is hard-coded here
+		for _, petId in { "drillbot", "solarPhoenix" } do
 			local def = Pets.def(petId) :: any
-			t.eq(def.Robux, price)
 			t.eq(def.Rarity, "premium")
-			t.ok(require(t.shared.Config).Monetization.Passes[def.Pass] ~= nil)
+			local pass = require(t.shared.Config).Monetization.Passes[def.Pass]
+			t.ok(pass ~= nil, petId .. " pass exists in Config.Monetization")
+			t.ok(pass ~= nil and (pass.Robux or 0) > 0, petId .. " price comes from Config.Monetization")
 		end
 	end)
 
@@ -177,7 +180,9 @@ return function(t: any)
 		t.eq(bonuses.scholar, 0)
 		t.eq(bonuses.shards, 0)
 		saved.equipped = { "drillbot", "drillbot", "ghost" }
-		t.near(Pets.bonuses(saved).miner, 0.25, 1e-9, "a pet only counts once, unknown ones never")
+		t.near(Pets.bonuses(saved).miner, 0.25, 1e-9, "one copy only counts once, unknown pets never")
+		saved.owned.drillbot.copies = 2
+		t.near(Pets.bonuses(saved).miner, 0.50, 1e-9, "two copies out count twice")
 		saved.equipped = { "coinMagpie", "jetWisp" }
 		t.eq(Pets.bonuses(saved).swift, 0, "unowned pets do not count")
 	end)
@@ -189,11 +194,15 @@ return function(t: any)
 			table.insert(saved.equipped, def.Id)
 		end
 		local bonuses = Pets.bonuses(saved)
-		local capped = { miner = 1, hauler = 0.06, pack = 0.60, swift = 0.30, merchant = 0.45,
-			yield = 0.40, sprint = 0.15, vault = 1, crit = 0.10, scholar = 0.51, shards = 0.30 }
-		for role, value in capped do
-			t.near(bonuses[role], value, 1e-9, role)
+		-- every pet at level 10: each role is its pets' sum, stopped at the role's cap
+		local sums = {}
+		for _, def in Config.List do
+			for _, perk in def.Perks do sums[perk.Role] = (sums[perk.Role] or 0) + perk.Max end
 		end
+		for _, role in Config.RoleOrder do
+			t.near(bonuses[role], math.min(sums[role] or 0, Config.Roles[role].Cap), 1e-9, role)
+		end
+		t.near(bonuses.miner, 1.5, 1e-9, "miner reaches its cap")
 		local empty = Pets.bonuses(Pets.fresh())
 		for _, role in Config.RoleOrder do
 			t.eq(empty[role], 0, "empty " .. role)
@@ -216,6 +225,22 @@ return function(t: any)
 		t.eq(#cleaned.equipped, 2, "limited to the slots")
 		t.eq(cleaned.equipped[1], "packMule")
 		t.eq(cleaned.equipped[2], "jetWisp")
+	end)
+
+	t.test("copies: duplicates are extra copies, and no more are out than owned", function()
+		t.eq(Pets.copies(nil), 0)
+		t.eq(Pets.copies({ level = 1, xp = 0 }), 1)
+		t.eq(Pets.copies({ level = 1, xp = 0, copies = 3.7 }), 3)
+		t.eq(Pets.copies({ level = 1, xp = 0, copies = 0 / 0 }), 1)
+		local cleaned = Pets.clean({
+			owned = { packMule = { level = 4, xp = 0, copies = 2 }, jetWisp = { level = 1, xp = 0, copies = -5 } },
+			equipped = { "packMule", "packMule", "packMule", "jetWisp", "jetWisp" },
+		}, 4)
+		t.eq(cleaned.owned.packMule.copies, 2)
+		t.eq(cleaned.owned.jetWisp.copies, nil, "a single copy saves as nil")
+		t.eq(Pets.outCount(cleaned.equipped, "packMule"), 2)
+		t.eq(Pets.outCount(cleaned.equipped, "jetWisp"), 1)
+		t.eq(Pets.cloneOwned(cleaned.owned).packMule.copies, 2)
 	end)
 
 	t.test("clean preserves a fourth owned pet when ExtraPetSlot is validated", function()
@@ -253,8 +278,17 @@ return function(t: any)
 		end
 	end)
 
-	t.test("the 14 pets have the perk counts required by their rarity", function()
-		t.eq(#Config.List, 14)
+	t.test("the group reward is a Rare no egg drops, and points at the owner's group", function()
+		local reward = Config.GroupReward
+		local def = Pets.def(reward.Pet) :: any
+		t.ok(def ~= nil and def.Group == true, "the reward pet is marked Group")
+		t.eq(def.Rarity, "rare")
+		t.eq(table.find(Pets.eggPets("rare"), def), nil, "never hatches")
+		t.eq(reward.GroupId, 526085770, "the owner's group")
+	end)
+
+	t.test("the 24 pets have the perk counts required by their rarity", function()
+		t.eq(#Config.List, 24)
 		for _, pet in Config.List do
 			t.ok(Config.Rarities[pet.Rarity] ~= nil, pet.Id .. " rarity")
 			local count = #pet.Perks
@@ -275,7 +309,7 @@ return function(t: any)
 			local total = 0
 			for rarity, odds in egg.Odds do
 				total += odds
-				t.ok(#Pets.eggPets(rarity) > 0, egg.Id .. " has no " .. rarity .. " pets")
+				t.ok(#Pets.eggPets(rarity, egg) > 0, egg.Id .. " has no " .. rarity .. " pets")
 			end
 			t.near(total, 100, 1e-9, egg.Id)
 			t.ok(egg.Cost > 0 and egg.Pity > 0)
@@ -340,30 +374,29 @@ return function(t: any)
 
 	t.test("both eggs retain their costs, odds, pity and deterministic catalog picks", function()
 		local meteor, crystal = Pets.egg("meteorEgg"), Pets.egg("crystalEgg")
-		t.eq(meteor.Cost, 30)
-		t.eq(meteor.Pity, 30)
-		t.eq(crystal.Cost, 120)
-		t.eq(crystal.Pity, 12)
+		t.eq(meteor.Cost, 15)
+		t.eq(meteor.Pity, 40)
+		t.eq(crystal.Cost, 60)
+		t.eq(crystal.Pity, 15)
 		t.eq(meteor.PityFrom, "epic")
 		t.eq(crystal.PityFrom, "epic")
-		for rarity, odds in { common = 55, uncommon = 28, rare = 12, epic = 4.5, legendary = 0.5 } do
+		for rarity, odds in { common = 60, uncommon = 28, rare = 9.5, epic = 2.25, legendary = 0.25 } do
 			t.eq(meteor.Odds[rarity], odds)
 		end
-		for rarity, odds in { uncommon = 38, rare = 40, epic = 18, legendary = 4 } do
+		for rarity, odds in { uncommon = 40, rare = 42, epic = 15.5, legendary = 2.5 } do
 			t.eq(crystal.Odds[rarity], odds)
 		end
 		t.eq(crystal.Odds.common, nil)
 		t.eq(meteor.Odds.premium, nil)
 		t.eq(crystal.Odds.premium, nil)
-		for _, case in { { 0, "pebblePup" }, { 0.56, "packMule" }, { 0.84, "jetWisp" }, { 0.96, "crystalStag" }, { 0.999, "meteorDrake" } } do
+		for _, case in { { 0, "pebblePup" }, { 0.61, "packMule" }, { 0.89, "jetWisp" }, { 0.98, "crystalStag" }, { 0.999, "meteorDrake" } } do
 			t.eq(Pets.roll(meteor, case[1], 0, 0), case[2])
 		end
-		t.eq(Pets.roll(meteor, 0.84, 0, 0.999), "graniteGolem")
-		t.eq(Pets.roll(meteor, 0.96, 0, 0.999), "auroraOwl")
-		for _, case in { { 0, "packMule" }, { 0.39, "jetWisp" }, { 0.80, "crystalStag" }, { 0.99, "meteorDrake" } } do
+		t.eq(Pets.roll(meteor, 0.89, 0, 0.999), "nebulaJelly")
+		t.eq(Pets.roll(meteor, 0.98, 0, 0.999), "auroraOwl")
+		for _, case in { { 0, "packMule" }, { 0.41, "jetWisp" }, { 0.83, "crystalStag" }, { 0.99, "meteorDrake" } } do
 			t.eq(Pets.roll(crystal, case[1], 0, 0), case[2])
 		end
-		t.eq(Config.DuplicateXp, 400)
 	end)
 
 	t.test("pity: the Pity-th hatch is Epic or better and the count resets on one", function()
@@ -374,7 +407,7 @@ return function(t: any)
 		local rarity = Pets.def(id).Rarity
 		t.ok(rarity == "epic" or rarity == "legendary", "pity gave " .. rarity)
 		t.eq(reset, 0)
-		local _, epicReset = Pets.roll(egg, 0.96, 3, 0) -- an Epic by luck resets too
+		local _, epicReset = Pets.roll(egg, 0.98, 3, 0) -- an Epic by luck resets too
 		t.eq(epicReset, 0)
 	end)
 
@@ -396,7 +429,7 @@ return function(t: any)
 			longest = math.max(longest, drought)
 		end
 		t.ok(longest < egg.Pity, "longest drought " .. longest)
-		t.ok(math.abs(counts.common / n - 0.55) < 0.03, "common share " .. counts.common / n)
+		t.ok(math.abs(counts.common / n - 0.60) < 0.03, "common share " .. counts.common / n)
 	end)
 
 	t.test("the Solar Phoenix keeps its exact 50% to 100% miner perk", function()
@@ -404,5 +437,87 @@ return function(t: any)
 		t.near(Pets.bonuses(saved).miner, 0.5, 1e-9)
 		saved.owned.solarPhoenix.level = Config.MaxLevel
 		t.near(Pets.bonuses(saved).miner, 1.0, 1e-9)
+	end)
+
+	t.test("egg exclusives hatch only from their own eggs, and own eggs hatch only exclusives", function()
+		for _, egg in Config.Eggs do
+			for rarity in egg.Odds do
+				for _, pet in Pets.eggPets(rarity, egg) do
+					if egg.Own then
+						t.ok(pet.Eggs ~= nil and table.find(pet.Eggs, egg.Id) ~= nil, pet.Id .. " in " .. egg.Id)
+					else
+						t.ok(pet.Eggs == nil or table.find(pet.Eggs, egg.Id) ~= nil, pet.Id .. " is exclusive but hatches from " .. egg.Id)
+					end
+				end
+			end
+		end
+		-- every exclusive pet can hatch from an egg that lists it, at its rarity
+		for _, pet in Config.List do
+			if pet.Eggs then
+				for _, eggId in pet.Eggs do
+					local egg = Pets.egg(eggId)
+					t.ok(egg ~= nil and (egg.Odds[pet.Rarity] or 0) > 0, pet.Id .. " has no way to hatch from " .. eggId)
+				end
+			end
+		end
+		local magma = Pets.egg("magmaEgg") :: any
+		local id = Pets.roll(magma, 0.99, 0, 0)
+		t.eq(id, "galaxyGriffin")
+	end)
+
+	t.test("the Nebula Egg is World 2's: every free Epic and Legendary, the exclusives included", function()
+		local nebula = Pets.egg("nebulaEgg") :: any
+		t.eq(nebula.World, 2)
+		for _, rarity in { "epic", "legendary" } do
+			local pool = Pets.eggPets(rarity, nebula)
+			for _, pet in Config.List do
+				if pet.Rarity == rarity and not pet.Pass and not pet.Group then
+					t.ok(table.find(pool, pet) ~= nil, pet.Id .. " should hatch from the Nebula Egg")
+				end
+			end
+		end
+		t.ok(table.find(Pets.eggPets("epic", Pets.egg("crystalEgg")), Pets.def("frostYeti")) == nil, "exclusives stay out of other eggs")
+	end)
+
+	t.test("fusing: three copies and the fragments make a pet Fused, its perks x Mult", function()
+		local def = Pets.def("pebblePup") :: any
+		local cost = Pets.fuseCost(def) :: number
+		t.ok(cost > 0)
+		t.eq(Pets.fuseCost(Pets.def("drillbot") :: any), nil, "pass pets never fuse")
+		t.eq(Pets.fuseCost(Pets.def("cometFox") :: any), nil, "the group pet never fuses")
+		local entry = { level = 10, xp = 0, copies = 2 }
+		t.ok(not Pets.canFuse(def, entry, 999), "two copies are not enough")
+		entry.copies = 4
+		t.ok(not Pets.canFuse(def, entry, cost - 1), "short of fragments")
+		t.ok(Pets.canFuse(def, entry, cost))
+		Pets.fuse(entry)
+		t.eq(entry.copies, 2)
+		t.eq(entry.fused, true)
+		t.ok(not Pets.canFuse(def, entry, 999), "only once")
+		local plain = Pets.perksOf(def, 10)[1].value
+		t.near(Pets.perksOf(def, 10, true)[1].value, plain * Config.Fuse.Mult, 1e-9)
+		local saved = { owned = { pebblePup = entry }, equipped = { "pebblePup" } }
+		t.near(Pets.bonuses(saved)[def.Perks[1].Role], plain * Config.Fuse.Mult, 1e-9)
+		local cleaned = Pets.clean({ owned = { pebblePup = { level = 3, xp = 0, fused = true }, packMule = { level = 1, xp = 0, fused = "yes" } }, equipped = {} }, 0)
+		t.eq(cleaned.owned.pebblePup.fused, true)
+		t.eq(cleaned.owned.packMule.fused, nil)
+		t.eq(Pets.cloneOwned(cleaned.owned).pebblePup.fused, true)
+		-- exactly three: the copies drop back to one
+		local three = { level = 1, xp = 0, copies = 3 }
+		Pets.fuse(three)
+		t.eq(three.copies, nil)
+	end)
+
+	t.test("eggSign lists the odds rarest last and names the gate or pity", function()
+		local Pets = require(t.shared.Pets)
+		local meteor = Pets.eggSign(Pets.egg("meteorEgg") :: any)
+		t.eq(meteor.title, "METEOR EGG")
+		t.eq(meteor.rows[1].name, "Common")
+		t.eq(meteor.rows[#meteor.rows].name, "Legendary")
+		t.eq(meteor.footer, "Epic+ guaranteed in 40")
+		local void = Pets.eggSign(Pets.egg("voidEgg") :: any)
+		t.eq(#void.rows, 2)
+		t.eq(void.rows[2].odds, "30%")
+		t.eq(void.footer, "Unlocks at Rebirth 5")
 	end)
 end

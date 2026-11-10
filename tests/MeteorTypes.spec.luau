@@ -14,6 +14,17 @@ return function(t: any)
 	local crystalFrom = (Types.Iron.Weight + Types.Ice.Weight) / total
 	local EPS = 1e-9
 
+	t.test("the admin meteor is an Iron any beginner can mine, paying more for less work", function()
+		local Hooks = require(t.shared.Config.Hooks)
+		local admin = MeteorTypes.admin(Types.Iron)
+		t.eq(admin.Id, "Iron", "keeps its Id, so every effect keyed by type works")
+		t.eq(admin.RequiredTier, 1)
+		t.eq(admin.YieldMult, Types.Iron.YieldMult * Hooks.AdminMeteor.PayMult)
+		t.ok(admin.HpMult < Types.Iron.HpMult, "cracks faster")
+		t.ok(admin.ShardMult > Types.Iron.ShardMult, "bigger shard pool")
+		t.eq(Types.Iron.DisplayName, "Iron Meteor", "the real Iron is untouched")
+	end)
+
 	t.test("config: every type in TypeOrder is complete and sellable", function()
 		t.eq(#Meteor.TypeOrder, 3, "the roll bands in this spec assume Iron, Ice and Crystal only")
 		for index, id in Meteor.TypeOrder do
@@ -96,5 +107,43 @@ return function(t: any)
 		t.eq(golden.Golden, true)
 		t.eq(first.Golden, nil, "the original is untouched")
 		t.eq(golden.YieldMult, first.YieldMult * Config.Hooks.GoldenMeteor.PayMult)
+	end)
+
+	t.test("the hourly Quartz meteor lands at its minute and takes the countdown that would run past it", function()
+		local hour = 1_800_000_000 - 1_800_000_000 % 3600 -- a whole UTC hour
+		local minute = Meteor.Hourly.Minute * 60
+		t.eq(MeteorTypes.nextHourly(hour), hour + minute)
+		t.eq(MeteorTypes.nextHourly(hour + minute - 0.5), hour + minute)
+		t.eq(MeteorTypes.nextHourly(hour + minute), hour + minute + 3600, "strictly after now")
+		local served = hour + minute - 3600 -- the previous hour's Quartz landed: nothing missed
+		-- an hour away: a normal meteor; 2 minutes away with a 2-minute countdown: this one is the Quartz, on the minute
+		t.eq(MeteorTypes.hourly(hour + minute - 3000, 120, served), nil)
+		local at, slot = MeteorTypes.hourly(hour + minute - 100, 120, served)
+		t.eq(at, hour + minute)
+		t.eq(slot, hour + minute)
+		-- 5 minutes away: a normal meteor goes now instead of everyone waiting for the minute
+		t.eq(MeteorTypes.hourly(hour + minute - 300, 120, served), nil)
+		-- the minute passed while that meteor was down: the next countdown, at its usual length, is the Quartz
+		local late = hour + minute + 200
+		t.eq(MeteorTypes.hourlyQueued(late, hour + minute - 3600), true)
+		local queuedAt, queuedSlot = MeteorTypes.hourly(late, 120, hour + minute - 3600)
+		t.eq(queuedAt, late + 120)
+		t.eq(queuedSlot, hour + minute)
+		-- once served it isn't queued again
+		t.eq(MeteorTypes.hourlyQueued(late, hour + minute), false)
+		t.eq(MeteorTypes.hourly(late + 400, 120, hour + minute), nil)
+		t.eq(MeteorTypes.hourlyQueued(late, nil), false, "no state yet")
+		local quartz = Meteor.Types[Meteor.Hourly.Type]
+		t.eq(quartz.Weight, 0, "never in the weighted rotation")
+		t.eq(quartz.RequiredTier, 1, "open to everyone")
+		t.ok(table.find(Home.OreOrder, quartz.Ore) ~= nil, "its ore sells")
+	end)
+
+	t.test("overtime only for a core under 5% when the timer runs out", function()
+		t.ok(MeteorTypes.overtime(4, 100), "4% left")
+		t.ok(not MeteorTypes.overtime(5, 100), "5% is not under 5%")
+		t.ok(not MeteorTypes.overtime(60, 100), "far from cracked")
+		t.ok(not MeteorTypes.overtime(0, 100), "already cracked")
+		t.ok(not MeteorTypes.overtime(0, 0), "no core")
 	end)
 end

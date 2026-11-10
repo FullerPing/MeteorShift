@@ -15,20 +15,22 @@ export type Perk = {
 
 Perks.UnlockRebirths = 1
 
-Perks.Order = { "headStart", "stationMemory", "efficientLine", "offlineTraining", "petBond" }
+Perks.Order = { "headStart", "stationMemory", "efficientLine", "offlineTraining", "petBond", "critChance", "critPower", "fieldExpert", "shardSense" }
 
 Perks.List = {
 	headStart = {
 		Id = "headStart",
 		Name = "Head Start",
-		Text = "After a rebirth you start with your pickaxe and backpack %s tier(s) up (never past what your level allows).",
+		-- Starting cash after a rebirth, as a percent of the next rebirth's cost. (It used to floor the gear tiers,
+		-- but tiers survive a rebirth anyway, so it almost never did anything.)
+		Text = "After a rebirth you start with %s%% of the next rebirth's cost in cash.",
 		Costs = { 40, 80, 160, 320 },
-		Effect = { 1, 2, 3, 4 },
+		Effect = { 3, 6, 10, 15 },
 	},
 	stationMemory = {
 		Id = "stationMemory",
 		Name = "Station Memory",
-		Text = "A rebirth keeps %s of your hopper, conveyor and collection post levels.",
+		Text = "A rebirth keeps %s of your production line level.",
 		Costs = { 30, 60, 120, 240 },
 		Effect = { 0.25, 0.5, 0.75, 1 },
 	},
@@ -52,6 +54,36 @@ Perks.List = {
 		Text = "%s more pet slot(s).",
 		Costs = { 100, 250 },
 		Effect = { 1, 2 },
+	},
+	-- Mining perks (owner feedback, 2026-10-23: more perks, e.g. crit chance and damage). Crits land extra Mining
+	-- Power on meteors, and meteor sizing counts them (MiningPower.playerRate), so they speed you up, not the lobby.
+	critChance = {
+		Id = "critChance",
+		Name = "Lucky Strike",
+		Text = "Adds %s to your pickaxe's critical-hit chance.",
+		Costs = { 40, 80, 140, 220, 320 },
+		Effect = { 0.01, 0.02, 0.03, 0.04, 0.05 },
+	},
+	critPower = {
+		Id = "critPower",
+		Name = "Heavy Hitter",
+		Text = "Critical hits deal %s more damage.",
+		Costs = { 60, 120, 200, 300 },
+		Effect = { 0.25, 0.5, 0.75, 1 },
+	},
+	fieldExpert = {
+		Id = "fieldExpert",
+		Name = "Field Expert",
+		Text = "Ore-field rocks pay %s more cash and XP.",
+		Costs = { 50, 100, 180, 280 },
+		Effect = { 0.1, 0.2, 0.3, 0.4 },
+	},
+	shardSense = {
+		Id = "shardSense",
+		Name = "Shard Sense",
+		Text = "Meteor cores give you %s more Core Shards.",
+		Costs = { 80, 160, 280, 420 },
+		Effect = { 0.05, 0.1, 0.15, 0.2 },
 	},
 } :: { [string]: Perk }
 

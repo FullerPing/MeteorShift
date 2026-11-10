@@ -1603,6 +1603,8 @@ local function build(state: State, typeId: string)
 end
 
 local function blockedInStudio(): boolean
+	-- the player's Reduce effects setting skips the whole (purely cosmetic) scene
+	if game:GetService("Players").LocalPlayer:GetAttribute("ReduceEffects") == true then return true end
 	-- Studio isolation control: ReplicatedStorage.DevLandingFX = false turns these effects off
 	return RunService:IsStudio() and ReplicatedStorage:GetAttribute("DevLandingFX") == false
 end
@@ -1655,6 +1657,9 @@ function LandingFXController:KnitStart()
 		if record and record.ready and camera then
 			record.folder.Parent = camera
 		end
+	end)
+	game:GetService("Players").LocalPlayer:GetAttributeChangedSignal("ReduceEffects"):Connect(function()
+		onState(MeteorService.State:Get())
 	end)
 	if RunService:IsStudio() then
 		ReplicatedStorage:GetAttributeChangedSignal("DevLandingFX"):Connect(function()

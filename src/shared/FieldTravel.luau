@@ -21,6 +21,15 @@ function FieldTravel.find(id: any): Debris.Field?
 	return nil
 end
 
+-- The fields of world `worldId` (Config.Debris.Fields' World, 1 when left out), in their listed order
+function FieldTravel.inWorld(worldId: number): { Debris.Field }
+	local list = {}
+	for _, field in Debris.Fields do
+		if (field.World or 1) == worldId then table.insert(list, field) end
+	end
+	return list
+end
+
 -- The first offset `isFree(dx, dz)` accepts, or the centre when every spot is blocked.
 function FieldTravel.pick(isFree: (number, number) -> boolean): (number, number)
 	for _, offset in FieldTravel.Offsets do

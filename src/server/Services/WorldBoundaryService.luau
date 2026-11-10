@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Boundary = require(ReplicatedStorage.Shared.WorldBoundary)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local WorldBoundaryService = Knit.CreateService({ Name = "WorldBoundaryService", Client = {} })
 
@@ -11,12 +12,14 @@ function WorldBoundaryService:KnitStart()
 	task.spawn(function()
 		while true do
 			task.wait(0.25)
-			local map = WorldMap.find()
-			if map and map:IsA("Model") then
-				for _, player in Players:GetPlayers() do
-					Boundary.enforce(map, player.Character)
+			SafeLoop.step("WorldBoundary", function()
+				local map = WorldMap.find()
+				if map and map:IsA("Model") then
+					for _, player in Players:GetPlayers() do
+						Boundary.enforce(map, player.Character)
+					end
 				end
-			end
+			end)
 		end
 	end)
 end

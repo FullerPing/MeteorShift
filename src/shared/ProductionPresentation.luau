@@ -8,6 +8,9 @@ local ORE_COLORS: { [string]: Color3 } = {
 	iron = Color3.fromRGB(196, 170, 150),
 	frost = Color3.fromRGB(96, 226, 255),
 	crystal = Color3.fromRGB(255, 122, 214),
+	nebula = Color3.fromRGB(196, 170, 255),
+	solar = Color3.fromRGB(255, 226, 120),
+	eclipse = Color3.fromRGB(240, 140, 255),
 }
 local NEUTRAL = Color3.fromRGB(144, 144, 144)
 local WHITE = Color3.new(1, 1, 1)

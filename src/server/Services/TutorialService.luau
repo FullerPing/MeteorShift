@@ -14,6 +14,9 @@ local Knit = require(ReplicatedStorage.Packages.Knit)
 local Config = require(ReplicatedStorage.Shared.Config)
 local Phase = require(ReplicatedStorage.Shared.Phase)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
+local Intro = require(ReplicatedStorage.Shared.Intro)
+local Worlds = require(ReplicatedStorage.Shared.Worlds)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 
 local Steps = Config.Tutorial.Steps
 
@@ -22,6 +25,8 @@ local TutorialService = Knit.CreateService({
 	Client = {
 		-- { index, total } for the step to do next, nil when the tutorial is done or skipped
 		Step = Knit.CreateProperty(nil),
+		-- true while the first-join "How to play" intro is still to be shown
+		Intro = Knit.CreateProperty(false),
 	},
 })
 
@@ -40,7 +45,10 @@ function TutorialService:_publish(player: Player)
 	if not data then
 		return
 	end
-	if data.flags.tutorialDone then
+	-- Nebula Rift and later worlds have no intro or tutorial: players arrive there at rebirth 25 (Config.Worlds)
+	local firstWorld = Worlds.here().Id == 1
+	self.Client.Intro:SetFor(player, firstWorld and Intro.shouldShow(data.flags, data.tutorialStep))
+	if data.flags.tutorialDone or not firstWorld then
 		self.Client.Step:SetFor(player, nil)
 	else
 		self.Client.Step:SetFor(player, { index = data.tutorialStep, total = #Steps })
@@ -70,6 +78,15 @@ function TutorialService:Did(player: Player, stepId: string)
 	self:_publish(player)
 end
 
+-- The intro was closed (finished or skipped): never show it again
+function TutorialService.Client:IntroDone(player: Player)
+	local data = PlayerStateService:Get(player)
+	if data and data.flags.introSeen ~= true then
+		data.flags.introSeen = true
+		self.Server:_publish(player)
+	end
+end
+
 function TutorialService.Client:Skip(player: Player)
 	local allowed, stamp = RequestGate.check(lastSkipRequest[player], os.clock(), 1)
 	lastSkipRequest[player] = stamp
@@ -78,6 +95,15 @@ function TutorialService.Client:Skip(player: Player)
 	if data and not data.flags.tutorialDone then
 		data.flags.tutorialDone = true
 		self.Server:_publish(player)
+		-- still playing after Config.Tutorial.SkipCreditSeconds: the funnel steps left count as passed
+		task.delay(Config.Tutorial.SkipCreditSeconds, function()
+			local now = PlayerStateService:Get(player)
+			if player.Parent ~= Players or not now then return end
+			for index = now.tutorialStep, #Steps do
+				TelemetryService:funnel(player, index, Steps[index].Id)
+			end
+			now.tutorialStep = #Steps + 1
+		end)
 	end
 end
 
@@ -87,20 +113,22 @@ function TutorialService:_watchCrater()
 	local radius = Config.Tutorial.CraterRadius
 	while true do
 		task.wait(0.5)
-		local phase = MeteorService:GetPhase()
-		if phase ~= Phase.Impact and phase ~= Phase.Active then
-			continue
-		end
-		local center = spawn.Position * Vector3.new(1, 0, 1)
-		for _, player in Players:GetPlayers() do
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
-			if root and self:IsBefore(player, "reach_crater") then
-				if (root.Position * Vector3.new(1, 0, 1) - center).Magnitude <= radius then
-					self:Did(player, "reach_crater")
+		SafeLoop.step("TutorialCrater", function()
+			local phase = MeteorService:GetPhase()
+			if phase ~= Phase.Impact and phase ~= Phase.Active then
+				return
+			end
+			local center = spawn.Position * Vector3.new(1, 0, 1)
+			for _, player in Players:GetPlayers() do
+				local character = player.Character
+				local root = character and character:FindFirstChild("HumanoidRootPart") :: BasePart?
+				if root and self:IsBefore(player, "reach_crater") then
+					if (root.Position * Vector3.new(1, 0, 1) - center).Magnitude <= radius then
+						self:Did(player, "reach_crater")
+					end
 				end
 			end
-		end
+		end)
 	end
 end
 
@@ -111,8 +139,13 @@ function TutorialService:KnitInit()
 end
 
 function TutorialService:KnitStart()
+	local characterAdded: { [Player]: RBXScriptConnection } = {}
 	Players.PlayerRemoving:Connect(function(player)
 		lastSkipRequest[player] = nil
+		if characterAdded[player] then
+			characterAdded[player]:Disconnect()
+			characterAdded[player] = nil
+		end
 	end)
 	local DataService = Knit.GetService("DataService")
 	local NodeService = Knit.GetService("NodeService")
@@ -129,16 +162,51 @@ function TutorialService:KnitStart()
 		self:_publish(player) -- profiles loaded before this service started (no-op without one)
 	end
 
-	local hitSteps = { Debris = "mine_debris", Crust = "mine_node", Core = "hit_core" }
+	-- A player who still has "MINE!" to do starts in the starter field (Config.Tutorial.StarterField), next to its
+	-- soft rocks, instead of on the town plaza: on each spawn, once their profile is in
+	local DebrisService = Knit.GetService("DebrisService")
+	local function startInField(player: Player, character: Model)
+		task.spawn(function()
+			local waited = 0
+			while not PlayerStateService:Get(player) and waited < 20 and player.Parent do
+				task.wait(0.5)
+				waited += 0.5
+			end
+			if not character:WaitForChild("HumanoidRootPart", 10) then return end
+			task.wait(0.3) -- let the spawn settle, or Roblox moves the character back onto the SpawnLocation
+			if player.Character == character and self:IsBefore(player, "mine_debris") then
+				DebrisService:TravelTo(player, Config.Tutorial.StarterField)
+			end
+		end)
+	end
+	local function watch(player: Player)
+		if characterAdded[player] then return end -- PlayerAdded and the startup sweep can both see a player
+		characterAdded[player] = player.CharacterAdded:Connect(function(character) startInField(player, character) end)
+		if player.Character then startInField(player, player.Character) end
+	end
+	Players.PlayerAdded:Connect(watch)
+	for _, player in Players:GetPlayers() do watch(player) end
+
+	-- Crust hits do not finish "mine_node": it waits until enough nodes broke to open the core
+	local hitSteps = { Debris = "mine_debris", Core = "hit_core" }
 	NodeService.Hit:Connect(function(player, kind)
 		local stepId = hitSteps[kind]
 		if stepId then
 			self:Did(player, stepId)
 		end
 	end)
+	MeteorService.CoreUnlocked:Connect(function()
+		for _, player in Players:GetPlayers() do
+			-- only players who already ran to the crater: a newcomer must not skip the early steps
+			if not self:IsBefore(player, "reach_crater") then
+				self:Did(player, "mine_node")
+			end
+		end
+	end)
+	-- the early UPGRADE! step never holds anyone up: the first meteor landing completes it too
 	MeteorService.Landed:Connect(function()
 		for _, player in Players:GetPlayers() do
-			self:Did(player, "meteor_lands")
+			self:Did(player, "first_upgrade")
 		end
 	end)
 	RewardService.ShardsAwarded:Connect(function(player)
@@ -161,15 +229,13 @@ function TutorialService:KnitStart()
 	EconomyService.BarsSold:Connect(function(player)
 		self:Did(player, "sell")
 	end)
-	ShopService.ItemBought:Connect(function(player)
-		self:Did(player, "buy")
-	end)
-	ShopService.StatUpgraded:Connect(function(player)
-		self:Did(player, "buy")
-	end)
-	UpgradeService.StationUpgraded:Connect(function(player)
-		self:Did(player, "buy")
-	end)
+	-- An upgrade early on is the UPGRADE! step; later it is the last step (and, as before, skips what is left)
+	local function upgraded(player: Player)
+		self:Did(player, if self:IsBefore(player, "first_upgrade") then "first_upgrade" else "buy")
+	end
+	ShopService.ItemBought:Connect(upgraded)
+	ShopService.StatUpgraded:Connect(upgraded)
+	UpgradeService.LineUpgraded:Connect(upgraded)
 
 	task.spawn(self._watchCrater, self)
 end

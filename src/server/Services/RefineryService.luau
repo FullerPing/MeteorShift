@@ -10,6 +10,9 @@ local WorldMap = require(ReplicatedStorage.Shared.WorldMap)
 local Hooks = require(ReplicatedStorage.Shared.Hooks)
 local Perks = require(ReplicatedStorage.Shared.Perks)
 local Format = require(ReplicatedStorage.Shared.Format)
+local Income = require(ReplicatedStorage.Shared.Income)
+local Rebirth = require(ReplicatedStorage.Shared.Rebirth)
+local SafeLoop = require(script.Parent.Parent.Lib.SafeLoop)
 local RefineryQueue = require(ReplicatedStorage.Shared.RefineryQueue)
 local RequestGate = require(ReplicatedStorage.Shared.RequestGate)
 local Refining = require(script.Parent.Parent.Lib.Refining)
@@ -157,7 +160,8 @@ function RefineryService:Collect(player: Player): number
 end
 
 -- Offline catch-up (spec §6.4): the line keeps running on hopper stock for the
--- time away, capped, and stops when the collection post is full.
+-- time away, capped, and stops when the collection post is full. After Home.OfflineMinAway the colony
+-- crew also earns cash for the capped time (Config.Home.OfflineCrewShare).
 function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	local data = PlayerStateService:Get(player)
 	if not data or awaySeconds <= 0 then
@@ -167,8 +171,18 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 	local seconds = math.min(awaySeconds, cap)
 	local made, bars, blocked = Refining.run(data, seconds, nil, PlayerStateService:GetVaultMultiplier(player), Perks.lineMult(data.perks))
 	blockedBy[player] = blocked
-	-- Welcome back (Config.Hooks.WelcomeBack): the catch-up sometimes finds extra bars
-	local bonus = if bars > 0 then Hooks.welcomeBack(math.random()) else 1
+	local longAway = awaySeconds >= Config.Home.OfflineMinAway
+	local crewCash = if longAway then Income.grant(
+		seconds * Config.Home.OfflineCrewShare,
+		EconomyService:ExpectedIncome(player).perSecond,
+		0,
+		Rebirth.cost(data.rebirths) * Config.Home.OfflineCeilingShare
+	) else 0
+	-- Welcome back (Config.Hooks.WelcomeBack): the catch-up sometimes finds extra bars and crew cash
+	local bonus = if longAway and (bars > 0 or crewCash > 0) then Hooks.welcomeBack(math.random()) else 1
+	if bonus > 1 and crewCash > 0 then
+		crewCash = math.floor(crewCash * bonus)
+	end
 	local bonusBars = 0
 	if bonus > 1 then
 		local room = math.max(Refining.collectorCapacity(data, PlayerStateService:GetVaultMultiplier(player)) - sum(data.bin), 0)
@@ -182,15 +196,18 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 			end
 		end
 		bars += bonusBars
-		if bonusBars <= 0 then
+		if bonusBars <= 0 and crewCash <= 0 then
 			bonus = 1
 		end
 	end
 	if bonus > 1 then
-		RewardService:Bonus(player, "welcomeBack", string.format("Lucky find! Your plot made ×%s while you were away (+%s bars).", Format.number(bonus), Format.number(bonusBars)))
+		RewardService:Bonus(player, "welcomeBack", string.format("Lucky find! Your colony made ×%s while you were away.", Format.number(bonus)))
 	end
-	-- What the bars sell for at the Trading Post, sale multipliers included
-	local value = math.floor(PlayerStateService:BarValue(made) * EconomyService:SaleMultiplier(player))
+	if crewCash > 0 then
+		PlayerStateService:AddCash(player, crewCash)
+	end
+	-- What the bars sell for, sale multipliers included, plus the crew's cash (already paid)
+	local value = math.floor(PlayerStateService:BarValue(made) * EconomyService:SaleMultiplier(player, true)) + crewCash
 	self.Client.WhileAway:Fire(player, {
 		seconds = seconds,
 		away = awaySeconds,
@@ -198,6 +215,7 @@ function RefineryService:CatchUp(player: Player, awaySeconds: number)
 		bars = bars,
 		bonus = bonus,
 		value = value,
+		crew = crewCash,
 		blocked = blocked,
 	})
 	self.CaughtUp:Fire(player, awaySeconds, bars)
@@ -216,28 +234,32 @@ function RefineryService:UseShared(player: Player)
 end
 
 function RefineryService:_connectShared()
-	local point = WorldMap.refineryPoint(WorldMap.wait())
-	if not point then
+	local map = WorldMap.wait()
+	if not WorldMap.refineryPoint(map) then
 		warn("[RefineryService] TownSquare.Refinery requires its exact UsePoint part")
 		return
 	end
-	local existing = point:FindFirstChild("UseRefinery")
-	local prompt: ProximityPrompt
-	if existing and existing:IsA("ProximityPrompt") then
-		prompt = existing
-	else
-		prompt = Instance.new("ProximityPrompt")
-		prompt.Name = "UseRefinery"
-		prompt.ActionText = "Use refinery"
-		prompt.ObjectText = "Town refinery"
-		prompt.KeyboardKeyCode = Enum.KeyCode.E
-		prompt.HoldDuration = 0
-		prompt.MaxActivationDistance = 14
-		prompt.Parent = point
+	-- the Foundry, the Commissary and every ore chute on the map: all open the same menu
+	for _, point in WorldMap.refineryPoints(map) do
+		local existing = point:FindFirstChild("UseRefinery")
+		local prompt: ProximityPrompt
+		if existing and existing:IsA("ProximityPrompt") then
+			prompt = existing
+		else
+			prompt = Instance.new("ProximityPrompt")
+			prompt.Name = "UseRefinery"
+			prompt.ActionText = "Use refinery"
+			prompt.ObjectText = if point == WorldMap.refineryPoint(map) then "Town refinery"
+				elseif point == WorldMap.commissaryPoint(map) then "Foundry commissary" else "Ore chute"
+			prompt.KeyboardKeyCode = Enum.KeyCode.E
+			prompt.HoldDuration = 0
+			prompt.MaxActivationDistance = 14
+			prompt.Parent = point
+		end
+		prompt.Triggered:Connect(function(who)
+			self:UseShared(who)
+		end)
 	end
-	prompt.Triggered:Connect(function(who)
-		self:UseShared(who)
-	end)
 end
 
 -- Transactions require a living character near the shared UsePoint.
@@ -248,7 +270,7 @@ end
 function RefineryService.Client:Deposit(player: Player): number
 	if not remoteReady(player, "deposit", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
-		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to deposit ore.")
+		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry, the Commissary or an ore chute to deposit ore.")
 		return 0
 	end
 	return self.Server:Deposit(player)
@@ -257,7 +279,7 @@ end
 function RefineryService.Client:Claim(player: Player): number
 	if not remoteReady(player, "claim", 1) then return 0 end
 	if not self.Server:CanUseMenu(player) then
-		self.Server.Client.Notice:Fire(player, "Move closer to the refinery to claim bars.")
+		self.Server.Client.Notice:Fire(player, "Move closer to the Foundry, the Commissary or an ore chute to claim bars.")
 		return 0
 	end
 	return self.Server:Collect(player)
@@ -323,31 +345,34 @@ function RefineryService:KnitStart()
 			local dt = now - last
 			last = now
 			for _, player in Players:GetPlayers() do
-				local data = PlayerStateService:Get(player)
-				if data then
-					local before = blockedBy[player]
-					local progressBefore = data.progress
-					local speedMult = MonetizationService:RefinerySpeedMult(data)
-					local vaultMult = PlayerStateService:GetVaultMultiplier(player)
-					local vaultChanged = lastVault[player] ~= vaultMult
-					lastVault[player] = vaultMult
-					local _, made, blocked = Refining.run(data, dt, speedMult, PlayerStateService:GetVaultMultiplier(player), Perks.lineMult(data.perks))
-					blockedBy[player] = blocked
-					-- Refinery Overclock only counts down while the player is online
-					local oreBoostBefore = data.oreBoostLeft or 0
-					data.oreBoostLeft = math.max(oreBoostBefore - dt, 0)
-					local oreBoostEnded = oreBoostBefore > 0 and data.oreBoostLeft <= 0
-					local overclockEnded = false
-					if speedMult > 1 then
-						data.overclockLeft = math.max((data.overclockLeft or 0) - dt, 0)
-						overclockEnded = data.overclockLeft <= 0
+				-- One player's broken profile must not stop everyone's line and Overclock countdown (SafeLoop)
+				SafeLoop.step("RefineryTick", function()
+					local data = PlayerStateService:Get(player)
+					if data then
+						local before = blockedBy[player]
+						local progressBefore = data.progress
+						local speedMult = MonetizationService:RefinerySpeedMult(data)
+						local vaultMult = PlayerStateService:GetVaultMultiplier(player)
+						local vaultChanged = lastVault[player] ~= vaultMult
+						lastVault[player] = vaultMult
+						local _, made, blocked = Refining.run(data, dt, speedMult, PlayerStateService:GetVaultMultiplier(player), Perks.lineMult(data.perks))
+						blockedBy[player] = blocked
+						-- Refinery Overclock only counts down while the player is online
+						local oreBoostBefore = data.oreBoostLeft or 0
+						data.oreBoostLeft = math.max(oreBoostBefore - dt, 0)
+						local oreBoostEnded = oreBoostBefore > 0 and data.oreBoostLeft <= 0
+						local overclockEnded = false
+						if speedMult > 1 then
+							data.overclockLeft = math.max((data.overclockLeft or 0) - dt, 0)
+							overclockEnded = data.overclockLeft <= 0
+						end
+						if made > 0 or blocked ~= before or overclockEnded or oreBoostEnded or vaultChanged then
+							self:Refresh(player)
+						elseif data.progress ~= progressBefore or oreBoostBefore > 0 or speedMult > 1 then
+							PlayerStateService:Replicate(player)
+						end
 					end
-					if made > 0 or blocked ~= before or overclockEnded or oreBoostEnded or vaultChanged then
-						self:Refresh(player)
-					elseif data.progress ~= progressBefore or oreBoostBefore > 0 then
-						PlayerStateService:Replicate(player)
-					end
-				end
+				end)
 			end
 		end
 	end)

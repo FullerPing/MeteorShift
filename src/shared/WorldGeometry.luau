@@ -3,32 +3,70 @@
 local WorldGeometry = {}
 WorldGeometry.Settings = {
 	MeteorScale = 2,
-	BuildingScale = 0.5,
-	StageOffset = Vector3.new(0, 0, 3000),
+	StageOffset = Vector3.zero, -- the map is authored in place
 	LandingRadius = 125, -- persistent landing parts; ballistic particles can travel farther
-	BoundaryHalf = 270,
+	BoundaryHalf = 540,
 	LoopRadius = 134,
-	TownAvenueZ = -130,
-	TownSpineX = -55,
-	TradingBranchZ = -215,
-	SpawnRowsZ = { -257, -229 },
-	WelcomeZ = -265,
+	-- The south approach: a cream plaza SouthPlazaHalf wide each side of X = 0 runs from just behind the Refinery to
+	-- the ring road. The Refinery faces north (front and UsePoint toward the crater); the six spawn points are
+	-- invisible and stand between its front and the ring road, so players spawn in front of it looking at the meteor.
+	SouthPlazaHalf = 40,
+	SpawnRowsZ = { -153, -148 },
+	SpawnColumnsX = { -18, 0, 18 },
 	KillPlaneY = -70,
 	PathWidth = 18,
-	MainPathWidth = 24,
 	CraterRampWidth = 24,
+	-- Map v3 "Caldera Terraces" (docs/design/caldera-map-v3.md): height is progress. Rings of ground by distance from
+	-- the crater, cliffs between them, and the Crown plateau on the north side of T2.
+	Tiers = {
+		{ id = "T0", inner = 0, outer = 250, y = 0 },
+		{ id = "T1", inner = 266, outer = 360, y = 16 },
+		{ id = "T2", inner = 372, outer = math.huge, y = 32 },
+	},
+	Crown = { x0 = -150, x1 = 150, z0 = 400, z1 = 540, y = 56 }, -- runs to the north wall: no dead alley behind it
+	ExpressRadius = 280, -- the Terrace Express ring on T1, a fast lane like the ring road
+	ExpressWidth = 16,
+	-- Eight gold avenues every 45 degrees (atan2(z, x)) from the ring road to the wall, also fast lanes. The north one
+	-- ends at the Crown; the south one starts behind the Refinery so the spawn plaza stays calm and ends at the Rebirth
+	-- Terrace's front. `stops` is where the paving (and the fast lane) ends; the others run to the wall.
+	Avenues = { width = 24, from = 143, angles = { 0, 45, 90, 135, 180, 225, 270, 315 }, starts = { [270] = 196 }, stops = { [90] = 392, [270] = 302 } },
+	-- Slides down beside three avenues, `offset` studs off the centre line (side +1 = counter-clockwise of it), from the
+	-- tier edge (the Crown for the north one) to the ring road's outer edge
+	Slides = { offset = 22, width = 8, list = { { angle = 45, side = -1 }, { angle = 135, side = 1 }, { angle = 90, side = 1 } } },
+	-- width/depth are the axis-aligned footprint. Buildings turned toward the crater also carry `facing` (the way their
+	-- front looks) and `lat` x `dep` (their own frame: across the front, then front-to-back); width/depth then bound
+	-- that rotated rectangle. Ore fields (`field = true`) bound their rocks, gates and chute; `entrance` is on the
+	-- avenue in front of their gate (Rust and Frost: between their two blocks). Positions come from tools/map-v3/plan.py.
 	Zones = {
+		{ id = "Spawn", x = 0, z = -150.5, width = 48, depth = 13, entrance = Vector3.new(0, 0, -144), pathWidth = 24 },
 		{ id = "Refinery", x = 0, z = -177, width = 38, depth = 32, entrance = Vector3.new(0, 3, -158.5), pathWidth = 18 },
-		{ id = "GearHall", x = 128, z = -185, width = 50, depth = 36, entrance = Vector3.new(128, 0, -165.5), pathWidth = 18 },
-		{ id = "Hatchery", x = -135, z = -185, width = 64, depth = 36, entrance = Vector3.new(-135, 0, -165), pathWidth = 18 },
-		{ id = "TradingPost", x = 60, z = -245, width = 28, depth = 20, entrance = Vector3.new(60, 0, -232), pathWidth = 14 },
-		{ id = "Spawn", x = -20, z = -241, width = 96, depth = 54, entrance = Vector3.new(-55, 0, -215), pathWidth = 24 },
-		{ id = "Rebirth", x = -214, z = -55, width = 36, depth = 36, entrance = Vector3.new(-196.5, 0, -55), pathWidth = 18 },
-		{ id = "Museum", x = 214, z = -55, width = 42, depth = 38, entrance = Vector3.new(192, 0, -55), pathWidth = 18 },
-		{ id = "RustWorks", x = -130, z = 185, width = 100, depth = 92, entrance = Vector3.new(-130, 0, 139), pathWidth = 18 },
-		{ id = "FrostYard", x = 130, z = 185, width = 100, depth = 92, entrance = Vector3.new(130, 0, 139), pathWidth = 18 },
-		{ id = "VioletQuarry", x = -214, z = 77, width = 92, depth = 96, entrance = Vector3.new(-168, 0, 77), pathWidth = 18 },
-		{ id = "SulfurRidge", x = 214, z = 77, width = 92, depth = 96, entrance = Vector3.new(168, 0, 77), pathWidth = 18 },
+		-- the Hatchery's five egg stands stand in an arc facing the crater (rebuilt in Studio, owner 2026-10-24), slid 8 studs
+		-- west of the old spot to stay off the south plaza (it used to mirror the Gear Hall, removed the same day)
+		{ id = "Hatchery", x = -83.9, z = -181.4, width = 112, depth = 84, lat = 100, dep = 49, facing = Vector3.new(0.3827, 0, 0.9239), entrance = Vector3.new(-73.6, 0, -156.5), pathWidth = 18 },
+		{ id = "Commissary", x = 95.1, z = 151.1, width = 39, depth = 38, lat = 30, dep = 28, facing = Vector3.new(-0.3827, 0, -0.9239), entrance = Vector3.new(88.6, 0, 135.5), pathWidth = 18 },
+		-- the three leaderboards in one row east of the spawn, 24 studs apart, each turned to face the crater and its ring
+		-- road (owner, 2026-10-24): Top Rebirths, Top Playtime, Top Miners (LeaderboardEast), where the Gear Hall stood
+		-- (removed the same day: the gear shop opens from the HUD). The group pet stand has Top Miners' old spot.
+		{ id = "LeaderboardEast", x = 100.0, z = -131.9, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.6041, 0, 0.7969), entrance = Vector3.new(96.6, 0, -127.4), pathWidth = 14 },
+		{ id = "LeaderboardRebirths", x = 55.7, z = -150.3, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.3473, 0, 0.9377), entrance = Vector3.new(53.7, 0, -145.0), pathWidth = 14 },
+		{ id = "LeaderboardPlaytime", x = 77.8, z = -141.1, width = 19, depth = 19, lat = 18, dep = 5, facing = Vector3.new(-0.4830, 0, 0.8756), entrance = Vector3.new(75.1, 0, -136.1), pathWidth = 14 },
+		{ id = "Rebirth", x = 0, z = -320, width = 40, depth = 36, entrance = Vector3.new(0, 16, -299), pathWidth = 18 },
+		-- Rust Works' 47 rocks fill both T0 wedges beside the west avenue (135-225 degrees, r 160-238; placed in Studio,
+		-- owner 2026-10-24); this box is its gate and old blocks, since a box around a wedge would cover the Hatchery
+		{ id = "RustWorks", x = -189, z = 0, width = 54, depth = 218, entrance = Vector3.new(-189, 0, 0), pathWidth = 18, field = true },
+		{ id = "FrostYard", x = 189, z = 0, width = 54, depth = 218, entrance = Vector3.new(189, 0, 0), pathWidth = 18, field = true },
+		{ id = "VioletQuarry", x = -311.25, z = 73.25, width = 37.5, depth = 115.5, entrance = Vector3.new(-306, 16, 10), pathWidth = 18, field = true },
+		{ id = "SulfurRidge", x = 311.25, z = 73.25, width = 37.5, depth = 115.5, entrance = Vector3.new(306, 16, 10), pathWidth = 18, field = true },
+		{ id = "EmberShelf", x = -422, z = 84.25, width = 76, depth = 137.5, entrance = Vector3.new(-422, 32, 10), pathWidth = 18, field = true },
+		{ id = "GlassScar", x = 455, z = 87.25, width = 123.1, depth = 143.5, entrance = Vector3.new(455, 32, 10), pathWidth = 18, field = true },
+		-- the Crown's two gardens either side of its promenade (rebuilt in Studio, owner 2026-10-25): each field fills its
+		-- half; the entrances are on the promenade, outside the floors, where a locked player is put back
+		{ id = "Starfall", x = -80, z = 470, width = 128, depth = 128, entrance = Vector3.new(-8, 56, 425), pathWidth = 18, field = true },
+		{ id = "HaloLedge", x = 80, z = 470, width = 128, depth = 128, entrance = Vector3.new(8, 56, 425), pathWidth = 18, field = true },
+		-- the XP Mine on T2 straight behind the south avenue, reached by a ramp up the cliff where the Rebirth shrine stood:
+		-- 12 rocks across by 6 deep with uneven gaps (11 to 27 studs, seeded 20261024; placed in Studio, not by tools/map-v3;
+		-- the entrance is on its crater side)
+		{ id = "XpMine", x = 0, z = -444, width = 208, depth = 110, entrance = Vector3.new(0, 32, -382), pathWidth = 18, field = true },
 	},
 }
 
@@ -59,6 +97,33 @@ end
 
 function WorldGeometry.toFinal(position: Vector3): Vector3
 	return position - WorldGeometry.Settings.StageOffset
+end
+
+-- The ground a point stands on: "T0", "T1", "T2", "Crown", or "Cliff" in the band between two tiers
+function WorldGeometry.tierAt(x: number, z: number): string
+	local s = WorldGeometry.Settings
+	local c = s.Crown
+	if x >= c.x0 and x <= c.x1 and z >= c.z0 and z <= c.z1 then return "Crown" end
+	local r = math.sqrt(x * x + z * z)
+	for _, tier in s.Tiers do
+		if r >= tier.inner and r < tier.outer then return tier.id end
+	end
+	return "Cliff"
+end
+
+-- Whether a position stands on the Crown plateau's top (not on T2 below its edge)
+function WorldGeometry.onCrown(position: Vector3): boolean
+	local c = WorldGeometry.Settings.Crown
+	return WorldGeometry.tierAt(position.X, position.Z) == "Crown" and position.Y > c.y - 6
+end
+
+-- The ground height of a tier id ("Crown" included)
+function WorldGeometry.tierY(id: string): number
+	if id == "Crown" then return WorldGeometry.Settings.Crown.y end
+	for _, tier in WorldGeometry.Settings.Tiers do
+		if tier.id == id then return tier.y end
+	end
+	error("Unknown tier: " .. id)
 end
 
 function WorldGeometry.inside(position: any): boolean

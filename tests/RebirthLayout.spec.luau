@@ -1,91 +1,84 @@
 --!strict
--- Rebirth stays compact and readable; short screens scroll only its body.
+-- The Rebirth menu: the Gear Shop's wide frame on a roomy window, one column on a small screen. Only its body scrolls,
+-- so REBIRTH, the note, PERKS and the premium keep-everything button are always reachable, and nothing leaves the panel.
 return function(t: any)
 	local RebirthLayout = require(t.shared.RebirthLayout)
+	local ShopLayout = require(t.shared.EquipmentShopLayout)
+	local MenuFit = require(t.shared.MenuFit)
 	local viewports = {
 		Vector2.new(320, 568), Vector2.new(390, 667), Vector2.new(430, 932),
 		Vector2.new(667, 375), Vector2.new(844, 390),
-		Vector2.new(1375, 659), Vector2.new(1920, 1080),
+		Vector2.new(1024, 600), Vector2.new(1375, 659), Vector2.new(1920, 1080), Vector2.new(2560, 1440),
 	}
-	local function layout(viewport: Vector2, inset: number): any
-		t.ok(type(RebirthLayout.compute) == "function", "rebirth geometry compute is available")
-		return RebirthLayout.compute(viewport, inset)
+	-- the layout the controller would use on this screen, in virtual pixels
+	local function layout(viewport: Vector2, inset: number): (any, any)
+		local view = ShopLayout.view(viewport, inset)
+		return RebirthLayout.compute(view.viewport, view.inset, view.wide), view
+	end
+	local function inside(r: any, p: any, context: string)
+		t.ok(r.x >= 0 and r.y >= 0, context .. " starts inside the panel")
+		t.ok(r.x + r.w <= p.w + 0.01 and r.y + r.h <= p.h - RebirthLayout.LIP + 0.01, context .. " ends inside the panel body")
+	end
+	local function apart(a: any, b: any, context: string)
+		local clear = a.x + a.w <= b.x or b.x + b.w <= a.x or a.y + a.h <= b.y or b.y + b.h <= a.y
+		t.ok(clear, context)
 	end
 
-	t.test("rebirth panel clears the inset and every viewport edge", function()
+	t.test("the panel and its ribbon stay on the screen, under the top bar", function()
 		for _, viewport in viewports do
 			for _, inset in { 36, 58 } do
-				local p = layout(viewport, inset).panel
+				local l, view = layout(viewport, inset)
+				local p = l.panel
 				local context = tostring(viewport) .. " inset=" .. inset
-				t.ok(p.x >= 12 and p.y >= inset + 12, context .. " clears left and top")
-				t.ok(p.x + p.w <= viewport.X - 12, context .. " clears right")
-				t.ok(p.y + p.h <= viewport.Y - 12, context .. " clears bottom")
-				t.ok(p.w > 0 and p.w <= 400 and p.h > 0 and p.h <= 400, context .. " compact panel bounds")
+				local ribbonTop = if l.wide then p.y - RebirthLayout.RIBBON else p.y - 24
+				t.ok(p.x >= 0 and p.x + p.w <= view.viewport.X + 0.01, context .. " fits the width")
+				t.ok(ribbonTop >= view.inset - 0.01, context .. " ribbon clears the top bar")
+				t.ok(p.y + p.h + RebirthLayout.LIP <= view.viewport.Y + 0.01, context .. " fits the height")
 			end
 		end
 	end)
 
-	t.test("desktop panel is compact and centered below the top inset", function()
-		local p = layout(Vector2.new(1920, 1080), 58).panel
-		t.eq(p.w, 400)
-		t.eq(p.h, 400)
-		t.near(p.x + p.w / 2, 960, 0.01, "horizontal center")
-		t.near(p.y + p.h / 2, 569, 0.01, "center of unobstructed height")
+	t.test("a roomy window gets the Gear Shop's frame", function()
+		local l = layout(Vector2.new(1920, 1080), 58)
+		t.ok(l.wide, "1080p is wide")
+		t.eq(l.panel.w, 760)
+		t.eq(l.panel.h + RebirthLayout.RIBBON, 501)
+		local phone = layout(Vector2.new(844, 390), 58)
+		t.ok(not phone.wide, "a phone in landscape uses the column")
 	end)
 
-	t.test("header has a 44 px close budget above the body", function()
+	t.test("every control sits inside the panel and none overlap", function()
 		for _, viewport in viewports do
 			local l = layout(viewport, 58)
-			t.ok(l.contentY >= 8 + 44 + 12, "body clears the close target by twelve pixels")
-			t.ok(l.panel.w >= 20 + 28 + 12 + 44 + 12, "title and close have separate horizontal room")
-			t.ok(l.panel.w - 32 >= 44, "body remains usable between sixteen pixel edges")
+			local p = l.panel
+			local context = tostring(viewport)
+			for _, name in { "content", "requirement", "confirm", "footer", "keep", "perks" } do
+				inside(l[name], p, context .. " " .. name)
+			end
+			apart(l.content, l.requirement, context .. " body clears the requirement")
+			apart(l.content, l.confirm, context .. " body clears REBIRTH")
+			apart(l.confirm, l.footer, context .. " REBIRTH clears the note")
+			apart(l.confirm, l.keep, context .. " REBIRTH clears keep-everything")
+			apart(l.confirm, l.perks, context .. " REBIRTH clears PERKS")
+			apart(l.keep, l.perks, context .. " keep-everything clears PERKS")
+			t.ok(l.content.y >= 50, context .. " the body clears the title ribbon")
 		end
 	end)
 
-	t.test("confirmation and notice remain reachable outside the scrolling body", function()
+	t.test("the actions stay comfortable to press and the body keeps a window", function()
 		for _, viewport in viewports do
-			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
-				t.ok(l.contentH > 0, "body has a visible window")
-				t.ok(l.contentY + l.contentH + 12 <= l.confirmY, "body clears confirmation")
-				t.ok(l.confirmY >= 0 and l.confirmY + 48 + 6 <= l.footerY, "48 px confirmation clears notice")
-				t.ok(l.footerY + 26 <= l.panel.h - 12, "notice clears the bottom edge")
-			end
+			local l = layout(viewport, 58)
+			local context = tostring(viewport)
+			t.ok(l.confirm.h >= 48 and l.keep.h >= 40 and l.perks.h >= 40, context .. " touch targets")
+			t.ok(l.keep.h < l.confirm.h, context .. " keep-everything is lighter than REBIRTH")
+			t.ok(l.content.h >= 100, context .. " the body has a usable window")
 		end
+		local wide = layout(Vector2.new(1920, 1080), 58)
+		t.ok(wide.content.h >= 340, "the wide body shows the reward and both lists without scrolling")
 	end)
 
-	t.test("compact phone portraits show the entire body without vertical scrolling", function()
-		for _, viewport in { Vector2.new(320, 568), Vector2.new(390, 667), Vector2.new(430, 932) } do
-			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
-				t.ok(l.contentH >= l.canvasH, "portrait shows paragraph, multiplier and progress together")
-				t.ok(l.contentH <= 240, "portrait body remains compact")
-				t.ok(l.panel.w <= viewport.X - 24, "portrait width fits")
-			end
-		end
-	end)
-
-	t.test("short landscapes scroll the full body without shrinking the confirmation", function()
-		for _, viewport in { Vector2.new(667, 375), Vector2.new(844, 390) } do
-			for _, inset in { 36, 58 } do
-				local l = layout(viewport, inset)
-				t.ok(l.canvasH > l.contentH, "short landscape retains scrollable content")
-				t.ok(l.canvasH >= 202 + 20 + 4, "cash progress remains reachable at the canvas end")
-				t.eq(l.panel.h - l.confirmY, 92, "confirmation keeps its position above the footer")
-			end
-		end
-		local measured = layout(Vector2.new(844, 390), 58)
-		t.eq(measured.panel.h, 308)
-		t.eq(measured.contentH, 140)
-	end)
-
-	t.test("body canvas preserves the same readable content after a viewport resize", function()
-		local desktop = layout(Vector2.new(1920, 1080), 58)
-		local phone = layout(Vector2.new(320, 568), 58)
-		local short = layout(Vector2.new(844, 390), 58)
-		t.eq(desktop.canvasH, 226, "paragraph, multiplier and progress budget")
-		t.eq(phone.canvasH, desktop.canvasH, "portrait preserves the content")
-		t.eq(short.canvasH, desktop.canvasH, "short screen scrolls the content")
-		t.ok(desktop.contentH >= desktop.canvasH, "desktop needs no body scrolling")
+	t.test("small screens are drawn no smaller than MenuFit allows", function()
+		local _, view = layout(Vector2.new(844, 390), 58)
+		t.ok(view.scale >= MenuFit.MinScale - 0.001, "text stays readable")
 	end)
 end

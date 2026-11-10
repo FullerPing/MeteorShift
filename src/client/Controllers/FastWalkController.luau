@@ -1,6 +1,6 @@
 --!strict
--- The FAST WALK toggle: a round button (and Left Shift on keyboard) that asks
--- PlayerStateService to multiply your walk speed (Shared.CharacterSpeed). The server owns
+-- The SPRINT toggle (formerly FAST WALK): a round button (and Left Shift on keyboard) that asks
+-- PlayerStateService to multiply your walk speed again on top of the boosted base (Shared.CharacterSpeed). The server owns
 -- the speed and mirrors the choice in the FastWalk player attribute, which the button
 -- shows. On touch the button sits left of Roblox's jump button, otherwise just above the
 -- backpack card; it hides while a panel is open.
@@ -11,13 +11,14 @@ local UserInputService = game:GetService("UserInputService")
 local Knit = require(ReplicatedStorage.Packages.Knit)
 local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local UI = require(script.Parent.Parent.UI)
+local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local Cartoon = require(script.Parent.Parent.Cartoon)
 
 local player = Players.LocalPlayer
 local FastWalkController = Knit.CreateController({ Name = "FastWalkController" })
 
 local SIZE = 54
-local PANEL_FLAGS = { "ShopOpen", "IndexOpen", "RebirthOpen", "StoreOpen", "SettingsOpen", "RefineryOpen", "HatchOpen", "BackpackOpen" }
+local PANEL_FLAGS = require(script.Parent.Parent.MenuFlags).ALL
 
 function FastWalkController:KnitStart()
 	local PlayerStateService = Knit.GetService("PlayerStateService")
@@ -50,7 +51,7 @@ function FastWalkController:KnitStart()
 	label.ZIndex = 2
 	local pad = Instance.new("UIPadding")
 	pad.PaddingLeft, pad.PaddingRight = UDim.new(0.14, 0), UDim.new(0.14, 0)
-	pad.PaddingTop, pad.PaddingBottom = UDim.new(0.2, 0), UDim.new(0.2, 0)
+	pad.PaddingTop, pad.PaddingBottom = UDim.new(0.3, 0), UDim.new(0.3, 0)
 	pad.Parent = label
 	Cartoon.outlineLabel(label)
 	label.Parent = button
@@ -67,14 +68,17 @@ function FastWalkController:KnitStart()
 	local function refresh()
 		on.Visible = enabled()
 		off.Visible = not enabled()
-		button.Visible = not panelOpen()
 		local layout = Fusion.peek(hud)
+		button.Visible = not panelOpen() and not HudLayout.isHidden(layout, "FastWalk")
 		local jump, pack = layout.jump, layout.backpack
-		if jump then
-			button.Position = UDim2.fromOffset(jump.x - 10 - SIZE, jump.y + jump.h - SIZE)
-		else
-			button.Position = UDim2.fromOffset(pack.x + pack.w - SIZE, pack.y - SIZE - 8)
-		end
+		-- Config.HudEdit nudges: the button is SIZE square, the rest follows the layout
+		-- phones in landscape give it a spot on the right (layout.fastWalk); elsewhere it sits beside jump
+		local rect = if layout.fastWalk then table.clone(layout.fastWalk)
+			elseif jump then { x = jump.x - 10 - SIZE, y = jump.y + jump.h - SIZE, w = SIZE, h = SIZE }
+			else { x = pack.x + pack.w - SIZE, y = pack.y - SIZE - 8, w = SIZE, h = SIZE }
+		rect = HudLayout.nudged(layout, "FastWalk", rect)
+		button.Position = UDim2.fromOffset(rect.x, rect.y)
+		button.Size = UDim2.fromOffset(rect.w, rect.h)
 	end
 	local function toggle()
 		task.spawn(function() PlayerStateService:SetFastWalk(not enabled()) end)

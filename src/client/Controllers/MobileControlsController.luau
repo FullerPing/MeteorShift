@@ -20,6 +20,7 @@ local Fusion = require(ReplicatedStorage.Packages.Fusion)
 local HudLayout = require(ReplicatedStorage.Shared.HudLayout)
 local UI = require(script.Parent.Parent.UI)
 local Cartoon = require(script.Parent.Parent.Cartoon)
+local MenuFlags = require(script.Parent.Parent.MenuFlags)
 
 local Children, OnEvent = Fusion.Children, Fusion.OnEvent
 local player = Players.LocalPlayer
@@ -63,13 +64,11 @@ function MobileControlsController:KnitStart()
 		end))
 		return flag
 	end
-	local shopOpen = playerFlag("ShopOpen")
-	local indexOpen = playerFlag("IndexOpen")
-	local rebirthOpen = playerFlag("RebirthOpen")
-	local storeOpen = playerFlag("StoreOpen")
-	local settingsOpen = playerFlag("SettingsOpen")
-	local refineryOpen = playerFlag("RefineryOpen")
-	local hatchOpen = playerFlag("HatchOpen")
+	local menuFlags = MenuFlags.except("BackpackOpen")
+	local menuOpen = scope:Value(MenuFlags.anyOpen(menuFlags))
+	for _, connection in MenuFlags.onChanged(menuFlags, function() menuOpen:set(MenuFlags.anyOpen(menuFlags)) end) do
+		table.insert(scope, connection)
+	end
 	local backpackOpen = playerFlag("BackpackOpen")
 	-- The backpack popup at its tallest (three ore rows) on top of the button
 	local function backpackCoversMine(layout: any): boolean
@@ -90,13 +89,7 @@ function MobileControlsController:KnitStart()
 		return use(hud).mine ~= nil
 			and use(touchInput)
 			and use(equipped)
-			and not use(shopOpen)
-			and not use(indexOpen)
-			and not use(rebirthOpen)
-			and not use(storeOpen)
-			and not use(settingsOpen)
-			and not use(refineryOpen)
-			and not use(hatchOpen)
+			and not use(menuOpen)
 			and not (use(backpackOpen) and backpackCoversMine(use(hud)))
 	end)
 	-- A hidden button cannot be released, so stop swinging when it goes away

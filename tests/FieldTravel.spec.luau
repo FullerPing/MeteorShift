@@ -4,8 +4,10 @@ return function(t)
 	local StudSkin = require(t.shared.StudSkin)
 	local Config = require(t.shared.Config)
 
-	t.test("the four ore fields are valid travel targets and nothing else is", function()
-		t.eq(#Config.Debris.Fields, 4)
+	t.test("the nine ore fields (with the XP Mine) and Nebula Rift's three are valid travel targets and nothing else is", function()
+		t.eq(#FieldTravel.inWorld(1), 9)
+		t.eq(#FieldTravel.inWorld(2), 3)
+		t.eq(#Config.Debris.Fields, 12)
 		for _, field in Config.Debris.Fields do
 			t.ok(FieldTravel.find(field.Id), field.Id)
 		end
@@ -14,9 +16,9 @@ return function(t)
 		t.eq(FieldTravel.find(nil), nil)
 	end)
 
-	t.test("the field ids match the world zones", function()
-		local Geometry = require(t.shared.WorldGeometry)
-		for _, field in Config.Debris.Fields do
+	t.test("World 1's field ids match its zones", function()
+		local Geometry = require(t.shared.WorldGeometry) -- World 1's map; Nebula Rift is its own place
+		for _, field in FieldTravel.inWorld(1) do
 			t.ok(Geometry.zone(field.Id), field.Id)
 		end
 	end)
